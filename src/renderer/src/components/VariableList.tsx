@@ -60,7 +60,7 @@ const VariableList: React.FC<VariableListProps> = ({ variables, setVariables, on
                 style={{ flex: 1 }}
               />
               {onInsertVariable && (
-                <Tooltip title="Insert into prompt">
+                <Tooltip title={t('common.insert_variable_into_prompt')}>
                   <Button type="text" onClick={() => onInsertVariable(variable.name)}>
                     <ImportOutlined />
                   </Button>
