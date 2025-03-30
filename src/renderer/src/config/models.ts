@@ -165,7 +165,15 @@ const visionAllowedModels = [
   'gemma-3(?:-[\\w-]+)'
 ]
 
-const visionExcludedModels = ['gpt-4-\\d+-preview', 'gpt-4-turbo-preview', 'gpt-4-32k', 'gpt-4-\\d+', 'o1-mini', 'o1-preview', 'AIDC-AI/Marco-o1']
+const visionExcludedModels = [
+  'gpt-4-\\d+-preview',
+  'gpt-4-turbo-preview',
+  'gpt-4-32k',
+  'gpt-4-\\d+',
+  'o1-mini',
+  'o1-preview',
+  'AIDC-AI/Marco-o1'
+]
 export const VISION_REGEX = new RegExp(
   `\\b(?!(?:${visionExcludedModels.join('|')})\\b)(${visionAllowedModels.join('|')})\\b`,
   'i'
@@ -203,7 +211,13 @@ export const FUNCTION_CALLING_MODELS = [
   'gemini(?:-[\\w-]+)?' // 提前排除了gemini的嵌入模型
 ]
 
-const FUNCTION_CALLING_EXCLUDED_MODELS = ['aqa(?:-[\\w-]+)?', 'imagen(?:-[\\w-]+)?', 'o1-mini', 'o1-preview', 'AIDC-AI/Marco-o1']
+const FUNCTION_CALLING_EXCLUDED_MODELS = [
+  'aqa(?:-[\\w-]+)?',
+  'imagen(?:-[\\w-]+)?',
+  'o1-mini',
+  'o1-preview',
+  'AIDC-AI/Marco-o1'
+]
 
 export const FUNCTION_CALLING_REGEX = new RegExp(
   `\\b(?!(?:${FUNCTION_CALLING_EXCLUDED_MODELS.join('|')})\\b)(?:${FUNCTION_CALLING_MODELS.join('|')})\\b`,
