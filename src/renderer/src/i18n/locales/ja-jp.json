@@ -44,6 +44,11 @@
       "save.success": "保存に成功しました",
       "save.title": "エージェントに保存",
       "search": "アシスタントを検索...",
+      "settings.mcp": "MCP サーバー",
+      "settings.mcp.enableFirst": "まず MCP 設定でこのサーバーを有効にしてください",
+      "settings.mcp.title": "MCP 設定",
+      "settings.mcp.noServersAvailable": "利用可能な MCP サーバーがありません。設定でサーバーを追加してください",
+      "settings.mcp.description": "デフォルトで有効な MCP サーバー",
       "settings.default_model": "デフォルトモデル",
       "settings.knowledge_base": "ナレッジベース設定",
       "settings.model": "モデル設定",
@@ -145,7 +150,10 @@
         "history": "チャット履歴",
         "last": "最後のメッセージです",
         "next": "次のメッセージ",
-        "prev": "前のメッセージ"
+        "prev": "前のメッセージ",
+        "top": "トップに戻る",
+        "bottom": "下部に戻る",
+        "close": "閉じる"
       },
       "resend": "再送信",
       "save": "保存",
@@ -224,7 +232,10 @@
       "topics.title": "トピック",
       "topics.unpinned": "固定解除",
       "translate": "翻訳",
-      "topics.export.siyuan": "思源笔记にエクスポート"
+      "topics.export.siyuan": "思源笔记にエクスポート",
+      "topics.export.wait_for_title_naming": "タイトルを生成中...",
+      "topics.export.title_naming_success": "タイトルの生成に成功しました",
+      "topics.export.title_naming_failed": "タイトルの生成に失敗しました。デフォルトのタイトルを使用します"
     },
     "code_block": {
       "collapse": "折りたたむ",
@@ -553,7 +564,8 @@
         "close": "ミニアプリを閉じる",
         "minimize": "ミニアプリを最小化",
         "devtools": "開発者ツール",
-        "openExternal": "ブラウザで開く"
+        "openExternal": "ブラウザで開く",
+        "rightclick_copyurl": "右クリックでURLをコピー"
       },
       "sidebar.add.title": "サイドバーに追加",
       "sidebar.remove.title": "サイドバーから削除",
@@ -919,7 +931,9 @@
           "new_folder.button.confirm": "確認",
           "new_folder.button.cancel": "キャンセル",
           "new_folder.button": "新しいフォルダー"
-        }
+        },
+        "message_title.use_topic_naming.title": "トピック命名モデルを使用してメッセージのタイトルを作成",
+        "message_title.use_topic_naming.help": "この設定は、すべてのMarkdownエクスポート方法に影響します。"
       },
       "display.assistant.title": "アシスタント設定",
       "display.custom.css": "カスタムCSS",
@@ -1044,7 +1058,10 @@
           "noToolsAvailable": "利用可能なツールはありません"
         },
         "deleteServer": "サーバーを削除",
-        "deleteServerConfirm": "このサーバーを削除してもよろしいですか？"
+        "deleteServerConfirm": "このサーバーを削除してもよろしいですか？",
+        "registry": "パッケージ管理レジストリ",
+        "registryTooltip": "デフォルトのレジストリでネットワークの問題が発生した場合、パッケージインストールに使用するレジストリを選択してください。",
+        "registryDefault": "デフォルト"
       },
       "messages.divider": "メッセージ間に区切り線を表示",
       "messages.grid_columns": "メッセージグリッドの表示列数",
@@ -1194,7 +1211,7 @@
         "reset_defaults_confirm": "すべてのショートカットをリセットしてもよろしいですか？",
         "reset_to_default": "デフォルトにリセット",
         "search_message": "メッセージを検索",
-        "show_app": "アプリを表示",
+        "show_app": "アプリを表示/非表示",
         "show_settings": "設定を開く",
         "title": "ショートカット",
         "toggle_new_context": "コンテキストをクリア",
