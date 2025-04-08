@@ -1329,6 +1329,11 @@
         "reset_help": "如果音色或模型显示异常，可以尝试重置所有自定义项",
         "api_settings": "API设置",
         "service_type": "服务类型",
+        "play": "播放语音",
+        "stop": "停止播放",
+        "speak": "播放语音",
+        "stop_global": "停止所有语音播放",
+        "stopped": "已停止语音播放"
         "service_type.openai": "OpenAI",
         "service_type.edge": "Edge TTS",
         "service_type.refresh": "刷新TTS服务类型设置",
