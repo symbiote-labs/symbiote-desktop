@@ -51,9 +51,6 @@
       "settings.mcp.title": "MCP Settings",
       "settings.mcp.noServersAvailable": "No MCP servers available. Add servers in settings",
       "settings.mcp.description": "Default enabled MCP servers",
-      "settings.mcp.promptModeTitle": "MCP Prompt Mode",
-      "settings.mcp.promptMode": "Enable MCP Prompt Mode",
-      "settings.mcp.promptModeDescription": "Allow AI to call MCP tools using XML tags in responses. This is an alternative to function calling and uses the same tools.",
       "settings.model": "Model Settings",
       "settings.preset_messages": "Preset Messages",
       "settings.prompt": "Prompt Settings",
@@ -106,13 +103,6 @@
       "default.description": "Hello, I'm Default Assistant. You can start chatting with me right away",
       "default.name": "Default Assistant",
       "default.topic.name": "Default Topic",
-      "tts": {
-        "play": "Play speech",
-        "stop": "Stop playback",
-        "speak": "Play speech",
-        "stop_global": "Stop all speech playback",
-        "stopped": "Speech playback stopped"
-      },
       "history": {
         "assistant_node": "Assistant",
         "click_to_navigate": "Click to navigate to the message",
@@ -145,7 +135,6 @@
       "input.translate": "Translate to {{target_language}}",
       "input.upload": "Upload image or document file",
       "input.upload.document": "Upload document file (model does not support images)",
-      "input.mcp_prompt_mode": "MCP Prompt Mode",
       "input.web_search": "Enable web search",
       "input.web_search.button.ok": "Go to Settings",
       "input.web_search.enable": "Enable web search",
