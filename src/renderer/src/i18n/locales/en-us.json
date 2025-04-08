@@ -1331,6 +1331,11 @@
         "service_type": "Service Type",
         "service_type.openai": "OpenAI",
         "service_type.edge": "Edge TTS",
+        "play": "Play speech",
+        "stop": "Stop playback",
+        "speak": "Play speech",
+        "stop_global": "Stop all speech playback",
+        "stopped": "Speech playback stopped"
         "service_type.refresh": "Refresh TTS service type settings",
         "service_type.refreshed": "TTS service type settings refreshed",
         "api_key": "API Key",
