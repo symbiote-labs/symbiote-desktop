@@ -49,6 +49,9 @@
       "settings.mcp.title": "MCP 设置",
       "settings.mcp.noServersAvailable": "无可用 MCP 服务器。请在设置中添加服务器",
       "settings.mcp.description": "默认启用的 MCP 服务器",
+      "settings.mcp.promptModeTitle": "MCP提示词模式",
+      "settings.mcp.promptMode": "启用MCP提示词模式",
+      "settings.mcp.promptModeDescription": "允许AI使用XML标签在响应中调用MCP工具。这是函数调用的替代方式，使用相同的工具。",
       "settings.default_model": "默认模型",
       "settings.knowledge_base": "知识库设置",
       "settings.model": "模型设置",
@@ -103,6 +106,13 @@
       "default.description": "你好，我是默认助手。你可以立刻开始跟我聊天。",
       "default.name": "默认助手",
       "default.topic.name": "默认话题",
+      "tts": {
+        "play": "播放语音",
+        "stop": "停止播放",
+        "speak": "播放语音",
+        "stop_global": "停止所有语音播放",
+        "stopped": "已停止语音播放"
+      },
       "history": {
         "assistant_node": "助手",
         "click_to_navigate": "点击跳转到对应消息",
@@ -137,6 +147,7 @@
       "input.upload": "上传图片或文档",
       "input.upload.upload_from_local": "上传本地文件...",
       "input.upload.document": "上传文档（模型不支持图片）",
+      "input.mcp_prompt_mode": "MCP提示词模式",
       "input.web_search": "开启网络搜索",
       "input.web_search.button.ok": "去设置",
       "input.web_search.enable": "开启网络搜索",
@@ -1329,11 +1340,6 @@
         "reset_help": "如果音色或模型显示异常，可以尝试重置所有自定义项",
         "api_settings": "API设置",
         "service_type": "服务类型",
-        "play": "播放语音",
-        "stop": "停止播放",
-        "speak": "播放语音",
-        "stop_global": "停止所有语音播放",
-        "stopped": "已停止语音播放"
         "service_type.openai": "OpenAI",
         "service_type.edge": "Edge TTS",
         "service_type.refresh": "刷新TTS服务类型设置",
