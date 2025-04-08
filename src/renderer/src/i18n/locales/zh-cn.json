@@ -103,6 +103,13 @@
       "default.description": "你好，我是默认助手。你可以立刻开始跟我聊天。",
       "default.name": "默认助手",
       "default.topic.name": "默认话题",
+      "tts": {
+        "play": "播放语音",
+        "stop": "停止播放",
+        "speak": "播放语音",
+        "stop_global": "停止所有语音播放",
+        "stopped": "已停止语音播放"
+      },
       "history": {
         "assistant_node": "助手",
         "click_to_navigate": "点击跳转到对应消息",
