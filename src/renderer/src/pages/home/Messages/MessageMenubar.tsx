@@ -399,7 +399,11 @@ const MessageMenubar: FC<Props> = (props) => {
         </Tooltip>
       )}
       {isAssistantMessage && ttsEnabled && (
-        <TTSButton message={message} className="message-action-button" />
+        <Tooltip title={t('chat.tts.play')} mouseEnterDelay={0.8}>
+          <ActionButton className="message-action-button" onClick={() => TTSService.speakFromMessage(message)}>
+            <SoundOutlined />
+          </ActionButton>
+        </Tooltip>
       )}
       {!isUserMessage && (
         <Dropdown
