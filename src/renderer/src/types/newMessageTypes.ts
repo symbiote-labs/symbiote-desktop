@@ -206,7 +206,10 @@ export type Message = {
   foldSelected?: boolean
 
   // 块集合
-  blocks: MessageBlock['id'][]
+  blocks: {
+    id: MessageBlock['id']
+    timestamp: number
+  }[]
 }
 
 // Redux状态类型
