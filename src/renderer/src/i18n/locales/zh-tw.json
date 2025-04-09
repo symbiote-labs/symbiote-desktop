@@ -103,6 +103,13 @@
       "default.description": "你好，我是預設助手。你可以立即開始與我聊天。",
       "default.name": "預設助手",
       "default.topic.name": "預設話題",
+  "tts": {
+    "play": "播放語音",
+    "stop": "停止播放",
+    "speak": "播放語音",
+    "stop_global": "停止所有語音播放",
+    "stopped": "已停止語音播放"
+  },
       "history": {
         "assistant_node": "助手",
         "click_to_navigate": "點擊跳轉到對應訊息",
@@ -1327,6 +1334,28 @@
       "privacy": {
         "title": "隱私設定",
         "enable_privacy_mode": "匿名發送錯誤報告和資料統計"
+      },
+      "tts": {
+        "title": "語音設定",
+        "enable": "啟用語音合成",
+        "enable.help": "啟用後可以將文字轉換為語音",
+        "reset": "重置",
+        "reset_title": "重置自定義音色和模型",
+        "reset_confirm": "確定要重置所有自定義音色和模型嗎？這將刪除所有已添加的自定義項。",
+        "reset_success": "重置成功",
+        "reset_help": "如果音色或模型顯示異常，可以嘗試重置所有自定義項",
+        "api_settings": "API設定",
+        "service_type": "服務類型",
+        "service_type.openai": "OpenAI",
+        "service_type.edge": "Edge TTS",
+        "test": "測試",
+        "error": {
+          "failed": "語音合成失敗",
+          "not_enabled": "語音合成未啟用",
+          "no_edge_voice": "未選擇Edge TTS音色"
+        },
+        "help": "使用OpenAI的TTS API需要API金鑰。Edge TTS使用瀏覽器功能，不需要API金鑰。",
+        "learn_more": "了解更多"
       }
     },
     "translate": {

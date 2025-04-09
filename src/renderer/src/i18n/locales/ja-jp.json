@@ -103,6 +103,13 @@
       "default.description": "こんにちは、私はデフォルトのアシスタントです。すぐにチャットを始められます。",
       "default.name": "デフォルトアシスタント",
       "default.topic.name": "デフォルトトピック",
+  "tts": {
+    "play": "音声を再生",
+    "stop": "再生を停止",
+    "speak": "音声を再生",
+    "stop_global": "すべての音声再生を停止",
+    "stopped": "音声再生を停止しました"
+  },
       "history": {
         "assistant_node": "アシスタント",
         "click_to_navigate": "メッセージに移動",
@@ -1327,6 +1334,28 @@
       "privacy": {
         "title": "プライバシー設定",
         "enable_privacy_mode": "匿名エラーレポートとデータ統計の送信"
+      },
+      "tts": {
+        "title": "音声合成設定",
+        "enable": "音声合成を有効にする",
+        "enable.help": "テキストを音声に変換する機能を有効にします",
+        "reset": "リセット",
+        "reset_title": "カスタム音声とモデルをリセット",
+        "reset_confirm": "すべてのカスタム音声とモデルをリセットしますか？追加したすべてのカスタム項目が削除されます。",
+        "reset_success": "リセットに成功しました",
+        "reset_help": "音声やモデルの表示に異常がある場合は、すべてのカスタム項目をリセットしてみてください",
+        "api_settings": "API設定",
+        "service_type": "サービスタイプ",
+        "service_type.openai": "OpenAI",
+        "service_type.edge": "Edge TTS",
+        "test": "テスト",
+        "error": {
+          "failed": "音声合成に失敗しました",
+          "not_enabled": "音声合成が有効になっていません",
+          "no_edge_voice": "Edge TTSの音声が選択されていません"
+        },
+        "help": "OpenAIのTTS APIを使用するには、APIキーが必要です。Edge TTSはブラウザの機能を使用するため、APIキーは不要です。",
+        "learn_more": "詳細はこちら"
       }
     },
     "translate": {
