@@ -123,11 +123,11 @@ export interface SettingsState {
   ttsEdgeVoice: string
   // TTS过滤选项
   ttsFilterOptions: {
-    filterThinkingProcess: boolean  // 过滤思考过程
-    filterMarkdown: boolean         // 过滤Markdown标记
-    filterCodeBlocks: boolean       // 过滤代码块
-    filterHtmlTags: boolean         // 过滤HTML标签
-    maxTextLength: number           // 最大文本长度
+    filterThinkingProcess: boolean // 过滤思考过程
+    filterMarkdown: boolean // 过滤Markdown标记
+    filterCodeBlocks: boolean // 过滤代码块
+    filterHtmlTags: boolean // 过滤HTML标签
+    maxTextLength: number // 最大文本长度
   }
   // Quick Panel Triggers
   enableQuickPanelTriggers: boolean
@@ -242,11 +242,11 @@ export const initialState: SettingsState = {
   // Edge TTS配置
   ttsEdgeVoice: 'zh-CN-XiaoxiaoNeural', // 默认使用小小的声音
   ttsFilterOptions: {
-    filterThinkingProcess: true,  // 默认过滤思考过程
-    filterMarkdown: true,         // 默认过滤Markdown标记
-    filterCodeBlocks: true,       // 默认过滤代码块
-    filterHtmlTags: true,         // 默认过滤HTML标签
-    maxTextLength: 4000           // 默认最大文本长度
+    filterThinkingProcess: true, // 默认过滤思考过程
+    filterMarkdown: true, // 默认过滤Markdown标记
+    filterCodeBlocks: true, // 默认过滤代码块
+    filterHtmlTags: true, // 默认过滤HTML标签
+    maxTextLength: 4000 // 默认最大文本长度
   },
   // Quick Panel Triggers
   enableQuickPanelTriggers: false,
@@ -542,84 +542,87 @@ const settingsSlice = createSlice({
     setTtsCustomVoices: (state, action: PayloadAction<string[]>) => {
       // 确保所有值都是字符串
       state.ttsCustomVoices = action.payload
-        .filter(voice => voice !== null && voice !== undefined)
-        .map(voice => typeof voice === 'string' ? voice : String(voice))
+        .filter((voice) => voice !== null && voice !== undefined)
+        .map((voice) => (typeof voice === 'string' ? voice : String(voice)))
     },
     setTtsCustomModels: (state, action: PayloadAction<string[]>) => {
       // 确保所有值都是字符串
       state.ttsCustomModels = action.payload
-        .filter(model => model !== null && model !== undefined)
-        .map(model => typeof model === 'string' ? model : String(model))
+        .filter((model) => model !== null && model !== undefined)
+        .map((model) => (typeof model === 'string' ? model : String(model)))
     },
     resetTtsCustomValues: (state) => {
       // 重置所有自定义音色和模型
-      state.ttsCustomVoices = [];
-      state.ttsCustomModels = [];
+      state.ttsCustomVoices = []
+      state.ttsCustomModels = []
     },
     addTtsCustomVoice: (state, action: PayloadAction<string>) => {
       // 确保添加的是字符串
-      const voiceStr = typeof action.payload === 'string' ? action.payload : String(action.payload);
+      const voiceStr = typeof action.payload === 'string' ? action.payload : String(action.payload)
 
       // 检查是否已存在相同的音色
-      const exists = state.ttsCustomVoices.some(voice => {
+      const exists = state.ttsCustomVoices.some((voice) => {
         if (typeof voice === 'string') {
-          return voice === voiceStr;
+          return voice === voiceStr
         }
-        return String(voice) === voiceStr;
-      });
+        return String(voice) === voiceStr
+      })
 
       if (!exists) {
-        state.ttsCustomVoices.push(voiceStr);
+        state.ttsCustomVoices.push(voiceStr)
       }
     },
     addTtsCustomModel: (state, action: PayloadAction<string>) => {
       // 确保添加的是字符串
-      const modelStr = typeof action.payload === 'string' ? action.payload : String(action.payload);
+      const modelStr = typeof action.payload === 'string' ? action.payload : String(action.payload)
 
       // 检查是否已存在相同的模型
-      const exists = state.ttsCustomModels.some(model => {
+      const exists = state.ttsCustomModels.some((model) => {
         if (typeof model === 'string') {
-          return model === modelStr;
+          return model === modelStr
         }
-        return String(model) === modelStr;
-      });
+        return String(model) === modelStr
+      })
 
       if (!exists) {
-        state.ttsCustomModels.push(modelStr);
+        state.ttsCustomModels.push(modelStr)
       }
     },
     removeTtsCustomVoice: (state, action: PayloadAction<string>) => {
       // 确保删除的是字符串
-      const voiceStr = typeof action.payload === 'string' ? action.payload : String(action.payload);
+      const voiceStr = typeof action.payload === 'string' ? action.payload : String(action.payload)
 
       // 过滤掉要删除的音色
-      state.ttsCustomVoices = state.ttsCustomVoices.filter(voice => {
+      state.ttsCustomVoices = state.ttsCustomVoices.filter((voice) => {
         if (typeof voice === 'string') {
-          return voice !== voiceStr;
+          return voice !== voiceStr
         }
-        return String(voice) !== voiceStr;
-      });
+        return String(voice) !== voiceStr
+      })
     },
     removeTtsCustomModel: (state, action: PayloadAction<string>) => {
       // 确保删除的是字符串
-      const modelStr = typeof action.payload === 'string' ? action.payload : String(action.payload);
+      const modelStr = typeof action.payload === 'string' ? action.payload : String(action.payload)
 
       // 过滤掉要删除的模型
-      state.ttsCustomModels = state.ttsCustomModels.filter(model => {
+      state.ttsCustomModels = state.ttsCustomModels.filter((model) => {
         if (typeof model === 'string') {
-          return model !== modelStr;
+          return model !== modelStr
         }
-        return String(model) !== modelStr;
-      });
+        return String(model) !== modelStr
+      })
     },
     // TTS过滤选项的action
-    setTtsFilterOptions: (state, action: PayloadAction<{
-      filterThinkingProcess?: boolean
-      filterMarkdown?: boolean
-      filterCodeBlocks?: boolean
-      filterHtmlTags?: boolean
-      maxTextLength?: number
-    }>) => {
+    setTtsFilterOptions: (
+      state,
+      action: PayloadAction<{
+        filterThinkingProcess?: boolean
+        filterMarkdown?: boolean
+        filterCodeBlocks?: boolean
+        filterHtmlTags?: boolean
+        maxTextLength?: number
+      }>
+    ) => {
       state.ttsFilterOptions = {
         ...state.ttsFilterOptions,
         ...action.payload
@@ -634,8 +637,6 @@ const settingsSlice = createSlice({
     }
   }
 })
-
-const settingsActions = settingsSlice.actions
 
 export const {
   setShowAssistants,
@@ -719,8 +720,8 @@ export const {
   setMaxKeepAliveMinapps,
   setShowOpenedMinappsInSidebar,
   setEnableDataCollection,
+  setEnableQuickPanelTriggers,
   setExportMenuOptions,
-  // TTS相关的action
   setTtsEnabled,
   setTtsServiceType,
   setTtsApiKey,
@@ -735,9 +736,7 @@ export const {
   addTtsCustomModel,
   removeTtsCustomVoice,
   removeTtsCustomModel,
-  setTtsFilterOptions,
-  // Quick Panel Triggers action
-  setEnableQuickPanelTriggers
-} = settingsActions
+  setTtsFilterOptions
+} = settingsSlice.actions
 
 export default settingsSlice.reducer
