@@ -1,5 +1,6 @@
 import { PlusOutlined, ReloadOutlined, SoundOutlined } from '@ant-design/icons'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import TTSService from '@renderer/services/TTSService'
 import store, { useAppDispatch } from '@renderer/store'
 import {
   addTtsCustomModel,
@@ -16,14 +17,21 @@ import {
   setTtsServiceType,
   setTtsVoice
 } from '@renderer/store/settings'
-import { Button, Form, Input, Select, Space, Switch, Tag, message } from 'antd'
-import { FC, useState, useEffect } from 'react'
+import { Button, Form, Input, message, Select, Space, Switch, Tag } from 'antd'
+import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
-import { SettingContainer, SettingDivider, SettingGroup, SettingHelpText, SettingRow, SettingRowTitle, SettingTitle } from '..'
-import TTSService from '@renderer/services/TTSService'
+import {
+  SettingContainer,
+  SettingDivider,
+  SettingGroup,
+  SettingHelpText,
+  SettingRow,
+  SettingRowTitle,
+  SettingTitle
+} from '..'
 
 const CustomVoiceInput = styled.div`
   margin-top: 16px;
@@ -90,13 +98,16 @@ const TTSSettings: FC = () => {
   const ttsEdgeVoice = useSelector((state: any) => state.settings.ttsEdgeVoice || 'zh-CN-XiaoxiaoNeural')
   const ttsCustomVoices = useSelector((state: any) => state.settings.ttsCustomVoices || [])
   const ttsCustomModels = useSelector((state: any) => state.settings.ttsCustomModels || [])
-  const ttsFilterOptions = useSelector((state: any) => state.settings.ttsFilterOptions || {
-    filterThinkingProcess: true,
-    filterMarkdown: true,
-    filterCodeBlocks: true,
-    filterHtmlTags: true,
-    maxTextLength: 4000
-  })
+  const ttsFilterOptions = useSelector(
+    (state: any) =>
+      state.settings.ttsFilterOptions || {
+        filterThinkingProcess: true,
+        filterMarkdown: true,
+        filterCodeBlocks: true,
+        filterHtmlTags: true,
+        maxTextLength: 4000
+      }
+  )
 
   // 新增自定义音色和模型的状态
   const [newVoice, setNewVoice] = useState('')
@@ -147,7 +158,7 @@ const TTSSettings: FC = () => {
       console.log('语音列表长度:', voices.length)
 
       // 转换浏览器语音列表为选项格式
-      const browserVoices = voices.map(voice => ({
+      const browserVoices = voices.map((voice) => ({
         label: `${voice.name} (${voice.lang})${voice.default ? ' - 默认' : ''}`,
         value: voice.name,
         lang: voice.lang,
@@ -155,7 +166,7 @@ const TTSSettings: FC = () => {
       }))
 
       // 添加语言信息到预定义语音
-      const enhancedPredefinedVoices = predefinedVoices.map(voice => ({
+      const enhancedPredefinedVoices = predefinedVoices.map((voice) => ({
         ...voice,
         lang: voice.value.split('-').slice(0, 2).join('-'),
         isNative: false // 标记为非浏览器原生语音
@@ -171,7 +182,7 @@ const TTSSettings: FC = () => {
 
       // 去除重复项，优先保留浏览器原生语音
       const uniqueVoices = allVoices.filter((voice, index, self) => {
-        const firstIndex = self.findIndex(v => v.value === voice.value)
+        const firstIndex = self.findIndex((v) => v.value === voice.value)
         // 如果是原生语音或者是第一次出现，则保留
         return voice.isNative || firstIndex === index
       })
@@ -202,7 +213,10 @@ const TTSSettings: FC = () => {
   // 刷新语音列表
   const refreshVoices = () => {
     console.log('手动刷新语音列表')
-    message.loading({ content: t('settings.tts.edge_voice.refreshing', { defaultValue: '正在刷新语音列表...' }), key: 'refresh-voices' })
+    message.loading({
+      content: t('settings.tts.edge_voice.refreshing', { defaultValue: '正在刷新语音列表...' }),
+      key: 'refresh-voices'
+    })
 
     // 先清空当前列表
     setAvailableVoices([])
@@ -216,13 +230,19 @@ const TTSSettings: FC = () => {
         getVoices()
         setTimeout(() => {
           getVoices()
-          message.success({ content: t('settings.tts.edge_voice.refreshed', { defaultValue: '语音列表已刷新' }), key: 'refresh-voices' })
+          message.success({
+            content: t('settings.tts.edge_voice.refreshed', { defaultValue: '语音列表已刷新' }),
+            key: 'refresh-voices'
+          })
         }, 1000)
       }, 500)
     } else {
       // 如果浏览器不支持Web Speech API，使用预定义的语音列表
       setAvailableVoices(predefinedVoices)
-      message.success({ content: t('settings.tts.edge_voice.refreshed', { defaultValue: '语音列表已刷新' }), key: 'refresh-voices' })
+      message.success({
+        content: t('settings.tts.edge_voice.refreshed', { defaultValue: '语音列表已刷新' }),
+        key: 'refresh-voices'
+      })
     }
   }
 
@@ -255,7 +275,7 @@ const TTSSettings: FC = () => {
       return () => {
         // 清理事件监听器和定时器
         window.speechSynthesis.onvoiceschanged = null
-        timers.forEach(timer => clearTimeout(timer))
+        timers.forEach((timer) => clearTimeout(timer))
       }
     } else {
       // 如果浏览器不支持Web Speech API，使用预定义的语音列表
@@ -318,7 +338,7 @@ const TTSSettings: FC = () => {
     }
 
     // 确保添加的是字符串
-    const voiceStr = typeof newVoice === 'string' ? newVoice : String(newVoice);
+    const voiceStr = typeof newVoice === 'string' ? newVoice : String(newVoice)
     dispatch(addTtsCustomVoice(voiceStr))
     setNewVoice('')
   }
@@ -331,7 +351,7 @@ const TTSSettings: FC = () => {
     }
 
     // 确保添加的是字符串
-    const modelStr = typeof newModel === 'string' ? newModel : String(newModel);
+    const modelStr = typeof newModel === 'string' ? newModel : String(newModel)
     dispatch(addTtsCustomModel(modelStr))
     setNewModel('')
   }
@@ -339,14 +359,14 @@ const TTSSettings: FC = () => {
   // 删除自定义音色
   const handleRemoveVoice = (voice: string) => {
     // 确保删除的是字符串
-    const voiceStr = typeof voice === 'string' ? voice : String(voice);
+    const voiceStr = typeof voice === 'string' ? voice : String(voice)
     dispatch(removeTtsCustomVoice(voiceStr))
   }
 
   // 删除自定义模型
   const handleRemoveModel = (model: string) => {
     // 确保删除的是字符串
-    const modelStr = typeof model === 'string' ? model : String(model);
+    const modelStr = typeof model === 'string' ? model : String(model)
     dispatch(removeTtsCustomModel(modelStr))
   }
 
@@ -377,11 +397,10 @@ const TTSSettings: FC = () => {
             danger
             onClick={() => {
               if (window.confirm(t('settings.tts.reset_confirm'))) {
-                dispatch(resetTtsCustomValues());
-                window.message.success({ content: t('settings.tts.reset_success'), key: 'reset-tts' });
+                dispatch(resetTtsCustomValues())
+                window.message.success({ content: t('settings.tts.reset_success'), key: 'reset-tts' })
               }
-            }}
-          >
+            }}>
             {t('settings.tts.reset')}
           </Button>
         </SettingRow>
@@ -430,7 +449,10 @@ const TTSSettings: FC = () => {
                   const currentType = store.getState().settings.ttsServiceType
                   console.log('强制刷新TTS服务类型:', currentType)
                   dispatch(setTtsServiceType(currentType))
-                  window.message.success({ content: t('settings.tts.service_type.refreshed', { defaultValue: '已刷新TTS服务类型设置' }), key: 'tts-refresh' })
+                  window.message.success({
+                    content: t('settings.tts.service_type.refreshed', { defaultValue: '已刷新TTS服务类型设置' }),
+                    key: 'tts-refresh'
+                  })
                 }}
                 disabled={!ttsEnabled}
                 title={t('settings.tts.service_type.refresh', { defaultValue: '刷新TTS服务类型设置' })}
@@ -467,15 +489,25 @@ const TTSSettings: FC = () => {
                 <Select
                   value={ttsEdgeVoice}
                   onChange={(value) => dispatch(setTtsEdgeVoice(value))}
-                  options={availableVoices.length > 0 ? availableVoices : [
-                    { label: t('settings.tts.edge_voice.loading'), value: '' }
-                  ]}
+                  options={
+                    availableVoices.length > 0
+                      ? availableVoices
+                      : [{ label: t('settings.tts.edge_voice.loading'), value: '' }]
+                  }
                   disabled={!ttsEnabled}
                   style={{ flex: 1 }}
                   showSearch
                   optionFilterProp="label"
-                  placeholder={availableVoices.length === 0 ? t('settings.tts.edge_voice.loading') : t('settings.tts.voice.placeholder')}
-                  notFoundContent={availableVoices.length === 0 ? t('settings.tts.edge_voice.loading') : t('settings.tts.edge_voice.not_found')}
+                  placeholder={
+                    availableVoices.length === 0
+                      ? t('settings.tts.edge_voice.loading')
+                      : t('settings.tts.voice.placeholder')
+                  }
+                  notFoundContent={
+                    availableVoices.length === 0
+                      ? t('settings.tts.edge_voice.loading')
+                      : t('settings.tts.edge_voice.not_found')
+                  }
                 />
                 <Button
                   icon={<ReloadOutlined />}
@@ -484,11 +516,7 @@ const TTSSettings: FC = () => {
                   title={t('settings.tts.edge_voice.refresh')}
                 />
               </VoiceSelectContainer>
-              {availableVoices.length === 0 && (
-                <LoadingText>
-                  {t('settings.tts.edge_voice.loading')}
-                </LoadingText>
-              )}
+              {availableVoices.length === 0 && <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>}
             </Form.Item>
           )}
 
@@ -502,8 +530,8 @@ const TTSSettings: FC = () => {
                   onChange={(value) => dispatch(setTtsVoice(value))}
                   options={ttsCustomVoices.map((voice: any) => {
                     // 确保voice是字符串
-                    const voiceStr = typeof voice === 'string' ? voice : String(voice);
-                    return { label: voiceStr, value: voiceStr };
+                    const voiceStr = typeof voice === 'string' ? voice : String(voice)
+                    return { label: voiceStr, value: voiceStr }
                   })}
                   disabled={!ttsEnabled}
                   style={{ width: '100%' }}
@@ -519,22 +547,19 @@ const TTSSettings: FC = () => {
                 {ttsCustomVoices && ttsCustomVoices.length > 0 ? (
                   ttsCustomVoices.map((voice: any, index: number) => {
                     // 确保voice是字符串
-                    const voiceStr = typeof voice === 'string' ? voice : String(voice);
+                    const voiceStr = typeof voice === 'string' ? voice : String(voice)
                     return (
                       <Tag
                         key={`${voiceStr}-${index}`}
                         closable
                         onClose={() => handleRemoveVoice(voiceStr)}
-                        style={{ padding: '4px 8px' }}
-                      >
+                        style={{ padding: '4px 8px' }}>
                         {voiceStr}
                       </Tag>
-                    );
+                    )
                   })
                 ) : (
-                  <EmptyText>
-                    {t('settings.tts.voice_empty')}
-                  </EmptyText>
+                  <EmptyText>{t('settings.tts.voice_empty')}</EmptyText>
                 )}
               </TagsContainer>
 
@@ -552,8 +577,7 @@ const TTSSettings: FC = () => {
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={handleAddVoice}
-                    disabled={!ttsEnabled || !newVoice}
-                  >
+                    disabled={!ttsEnabled || !newVoice}>
                     {t('settings.tts.voice_add')}
                   </Button>
                 </InputGroup>
@@ -566,8 +590,8 @@ const TTSSettings: FC = () => {
                   onChange={(value) => dispatch(setTtsModel(value))}
                   options={ttsCustomModels.map((model: any) => {
                     // 确保model是字符串
-                    const modelStr = typeof model === 'string' ? model : String(model);
-                    return { label: modelStr, value: modelStr };
+                    const modelStr = typeof model === 'string' ? model : String(model)
+                    return { label: modelStr, value: modelStr }
                   })}
                   disabled={!ttsEnabled}
                   style={{ width: '100%' }}
@@ -583,22 +607,19 @@ const TTSSettings: FC = () => {
                 {ttsCustomModels && ttsCustomModels.length > 0 ? (
                   ttsCustomModels.map((model: any, index: number) => {
                     // 确保model是字符串
-                    const modelStr = typeof model === 'string' ? model : String(model);
+                    const modelStr = typeof model === 'string' ? model : String(model)
                     return (
                       <Tag
                         key={`${modelStr}-${index}`}
                         closable
                         onClose={() => handleRemoveModel(modelStr)}
-                        style={{ padding: '4px 8px' }}
-                      >
+                        style={{ padding: '4px 8px' }}>
                         {modelStr}
                       </Tag>
-                    );
+                    )
                   })
                 ) : (
-                  <EmptyText>
-                    {t('settings.tts.model_empty')}
-                  </EmptyText>
+                  <EmptyText>{t('settings.tts.model_empty')}</EmptyText>
                 )}
               </TagsContainer>
 
@@ -616,8 +637,7 @@ const TTSSettings: FC = () => {
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={handleAddModel}
-                    disabled={!ttsEnabled || !newModel}
-                  >
+                    disabled={!ttsEnabled || !newModel}>
                     {t('settings.tts.model_add')}
                   </Button>
                 </InputGroup>
@@ -632,28 +652,32 @@ const TTSSettings: FC = () => {
                 checked={ttsFilterOptions.filterThinkingProcess}
                 onChange={(checked) => dispatch(setTtsFilterOptions({ filterThinkingProcess: checked }))}
                 disabled={!ttsEnabled}
-              /> {t('settings.tts.filter.thinking_process')}
+              />{' '}
+              {t('settings.tts.filter.thinking_process')}
             </FilterOptionItem>
             <FilterOptionItem>
               <Switch
                 checked={ttsFilterOptions.filterMarkdown}
                 onChange={(checked) => dispatch(setTtsFilterOptions({ filterMarkdown: checked }))}
                 disabled={!ttsEnabled}
-              /> {t('settings.tts.filter.markdown')}
+              />{' '}
+              {t('settings.tts.filter.markdown')}
             </FilterOptionItem>
             <FilterOptionItem>
               <Switch
                 checked={ttsFilterOptions.filterCodeBlocks}
                 onChange={(checked) => dispatch(setTtsFilterOptions({ filterCodeBlocks: checked }))}
                 disabled={!ttsEnabled}
-              /> {t('settings.tts.filter.code_blocks')}
+              />{' '}
+              {t('settings.tts.filter.code_blocks')}
             </FilterOptionItem>
             <FilterOptionItem>
               <Switch
                 checked={ttsFilterOptions.filterHtmlTags}
                 onChange={(checked) => dispatch(setTtsFilterOptions({ filterHtmlTags: checked }))}
                 disabled={!ttsEnabled}
-              /> {t('settings.tts.filter.html_tags')}
+              />{' '}
+              {t('settings.tts.filter.html_tags')}
             </FilterOptionItem>
             <FilterOptionItem>
               <LengthLabel>{t('settings.tts.max_text_length')}:</LengthLabel>
@@ -667,7 +691,7 @@ const TTSSettings: FC = () => {
                   { label: '2000', value: 2000 },
                   { label: '4000', value: 4000 },
                   { label: '8000', value: 8000 },
-                  { label: '16000', value: 16000 },
+                  { label: '16000', value: 16000 }
                 ]}
               />
             </FilterOptionItem>
@@ -681,8 +705,7 @@ const TTSSettings: FC = () => {
                 !ttsEnabled ||
                 (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
                 (ttsServiceType === 'edge' && !ttsEdgeVoice)
-              }
-            >
+              }>
               {t('settings.tts.test')}
             </Button>
           </Form.Item>
