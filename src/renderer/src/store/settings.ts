@@ -232,7 +232,7 @@ export const initialState: SettingsState = {
   enableDataCollection: false,
   // TTS配置
   ttsEnabled: false,
-  ttsServiceType: 'openai', // 默认使用OpenAI TTS
+  ttsServiceType: 'openai', // 默认使用 OpenAI TTS
   ttsApiKey: '',
   ttsApiUrl: 'https://api.openai.com/v1/audio/speech',
   ttsVoice: '',
