@@ -129,6 +129,9 @@ export interface SettingsState {
     filterHtmlTags: boolean         // 过滤HTML标签
     maxTextLength: number           // 最大文本长度
   }
+  // Quick Panel Triggers
+  enableQuickPanelTriggers: boolean
+  // Export Menu Options
   exportMenuOptions: {
     image: boolean
     markdown: boolean
@@ -144,7 +147,7 @@ export interface SettingsState {
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
 
-const initialState: SettingsState = {
+export const initialState: SettingsState = {
   showAssistants: true,
   showTopics: true,
   sendMessageShortcut: 'Enter',
@@ -245,6 +248,9 @@ const initialState: SettingsState = {
     filterHtmlTags: true,         // 默认过滤HTML标签
     maxTextLength: 4000           // 默认最大文本长度
   },
+  // Quick Panel Triggers
+  enableQuickPanelTriggers: false,
+  // Export Menu Options
   exportMenuOptions: {
     image: true,
     markdown: true,
@@ -511,9 +517,6 @@ const settingsSlice = createSlice({
     setEnableDataCollection: (state, action: PayloadAction<boolean>) => {
       state.enableDataCollection = action.payload
     },
-    setExportMenuOptions: (state, action: PayloadAction<typeof initialState.exportMenuOptions>) => {
-      state.exportMenuOptions = action.payload
-    },
     // TTS相关的action
     setTtsEnabled: (state, action: PayloadAction<boolean>) => {
       state.ttsEnabled = action.payload
@@ -621,6 +624,13 @@ const settingsSlice = createSlice({
         ...state.ttsFilterOptions,
         ...action.payload
       }
+    },
+    // Quick Panel Triggers action
+    setEnableQuickPanelTriggers: (state, action: PayloadAction<boolean>) => {
+      state.enableQuickPanelTriggers = action.payload
+    },
+    setExportMenuOptions: (state, action: PayloadAction<typeof initialState.exportMenuOptions>) => {
+      state.exportMenuOptions = action.payload
     }
   }
 })
@@ -725,7 +735,9 @@ export const {
   addTtsCustomModel,
   removeTtsCustomVoice,
   removeTtsCustomModel,
-  setTtsFilterOptions
+  setTtsFilterOptions,
+  // Quick Panel Triggers action
+  setEnableQuickPanelTriggers
 } = settingsActions
 
 export default settingsSlice.reducer
