@@ -34,7 +34,6 @@ import {
 } from '..'
 
 const CustomVoiceInput = styled.div`
-  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -66,6 +65,10 @@ const FlexContainer = styled.div`
 
 const FilterOptionItem = styled.div`
   margin-bottom: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
 `
 
 const LengthLabel = styled.span`
@@ -378,9 +381,7 @@ const TTSSettings: FC = () => {
           {t('settings.tts.title')}
         </Space>
       </SettingTitle>
-
       <SettingDivider />
-
       <SettingGroup>
         <SettingRow>
           <SettingRowTitle>{t('settings.tts.enable')}</SettingRowTitle>
@@ -406,12 +407,9 @@ const TTSSettings: FC = () => {
         </SettingRow>
         <SettingHelpText>{t('settings.tts.reset_help')}</SettingHelpText>
       </SettingGroup>
-
-      <SettingDivider />
-
       <SettingGroup>
         <SettingRowTitle>{t('settings.tts.api_settings')}</SettingRowTitle>
-        <Form layout="vertical" style={{ width: '100%' }}>
+        <Form layout="vertical" style={{ width: '100%', marginTop: 16 }}>
           {/* TTS服务类型选择 */}
           <Form.Item label={t('settings.tts.service_type')} style={{ marginBottom: 16 }}>
             <FlexContainer>
@@ -711,12 +709,8 @@ const TTSSettings: FC = () => {
           </Form.Item>
         </Form>
       </SettingGroup>
-
-      <SettingDivider />
-
-      <SettingHelpText>
-        {t('settings.tts.help')}
-        <br />
+      <SettingHelpText style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+        <span>{t('settings.tts.help')}</span>
         <a href="https://platform.openai.com/docs/guides/text-to-speech" target="_blank" rel="noopener noreferrer">
           {t('settings.tts.learn_more')}
         </a>

@@ -1336,7 +1336,7 @@
         "enable_privacy_mode": "匿名发送错误报告和数据统计"
       },
       "tts": {
-        "title": "语音合成设置",
+        "title": "语音设置",
         "enable": "启用语音合成",
         "enable.help": "启用后可以将文本转换为语音",
         "reset": "重置",
