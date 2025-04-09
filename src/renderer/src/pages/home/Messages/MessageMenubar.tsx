@@ -64,7 +64,6 @@ const MessageMenubar: FC<Props> = (props) => {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
   const assistantModel = assistant?.model
@@ -188,63 +187,7 @@ const MessageMenubar: FC<Props> = (props) => {
     [isTranslating, message, editMessage, setStreamMessage, commitStreamMessage, clearStreamMessage, t]
   )
 
-  // 处理TTS功能
-  const handleTTS = useCallback(async () => {
-    console.log('点击TTS按钮，当前状态:', isSpeaking ? '正在播放' : '未播放')
-
-    if (isSpeaking) {
-      // 如果正在播放，则停止
-      console.log('正在播放，执行停止操作')
-      TTSService.stop()
-      setIsSpeaking(false)
-      return
-    }
-
-    // 先停止所有正在进行的TTS播放
-    console.log('开始新的播放，先停止现有播放')
-    TTSService.stop()
-
-    // 等待一下，确保之前的播放已经完全停止
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    setIsSpeaking(true)
-    try {
-      console.log('开始播放消息:', message.id)
-      await TTSService.speakFromMessage(message)
-
-      // 监听播放结束
-      let checkPlayingStatusInterval: number | null = null
-
-      const checkPlayingStatus = () => {
-        if (!TTSService.isCurrentlyPlaying()) {
-          console.log('TTS播放已结束，重置状态')
-          setIsSpeaking(false)
-          if (checkPlayingStatusInterval !== null) {
-            clearInterval(checkPlayingStatusInterval)
-            checkPlayingStatusInterval = null
-          }
-        }
-      }
-
-      checkPlayingStatusInterval = window.setInterval(checkPlayingStatus, 500) as unknown as number
-
-      // 添加一个安全机制，确保即使出错也会重置状态
-      setTimeout(() => {
-        if (isSpeaking) {
-          console.log('TTS播放超时，强制重置状态')
-          TTSService.stop()
-          setIsSpeaking(false)
-          if (checkPlayingStatusInterval !== null) {
-            clearInterval(checkPlayingStatusInterval)
-            checkPlayingStatusInterval = null
-          }
-        }
-      }, 30000) // 30秒后检查
-    } catch (error) {
-      console.error('TTS error:', error)
-      setIsSpeaking(false)
-    }
-  }, [isSpeaking, message])
+  // TTS功能已移至TTSButton组件
 
   const dropdownItems = useMemo(
     () => [
@@ -428,7 +371,7 @@ const MessageMenubar: FC<Props> = (props) => {
           </ActionButton>
         </Tooltip>
       )}
-      {isAssistantMessage && (
+      {isAssistantMessage && ttsEnabled && (
         <TTSButton message={message} className="message-action-button" />
       )}
       {!isUserMessage && (
@@ -457,13 +400,6 @@ const MessageMenubar: FC<Props> = (props) => {
             </ActionButton>
           </Tooltip>
         </Dropdown>
-      )}
-      {!isUserMessage && ttsEnabled && (
-        <Tooltip title={isSpeaking ? t('chat.tts.stop') : t('chat.tts.speak')} mouseEnterDelay={0.8}>
-          <ActionButton className="message-action-button" onClick={handleTTS}>
-            <SoundOutlined style={isSpeaking ? { color: 'var(--color-primary)' } : undefined} />
-          </ActionButton>
-        </Tooltip>
       )}
       {isAssistantMessage && isGrouped && (
         <Tooltip title={t('chat.message.useful')} mouseEnterDelay={0.8}>
