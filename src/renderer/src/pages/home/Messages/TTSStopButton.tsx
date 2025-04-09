@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { SoundOutlined } from '@ant-design/icons'
-import { Button, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import styled from 'styled-components'
 import { useCallback, useEffect, useState } from 'react'
 import TTSService from '@renderer/services/TTSService'
@@ -47,13 +47,9 @@ const TTSStopButton: React.FC = () => {
   return (
     <StopButtonContainer>
       <Tooltip title={t('chat.tts.stop_global')}>
-        <StyledButton
-          type="primary"
-          shape="circle"
-          icon={<SoundOutlined />}
-          onClick={handleStopTTS}
-          size="large"
-        />
+        <ActionButton onClick={handleStopTTS}>
+          <SoundOutlined />
+        </ActionButton>
       </Tooltip>
     </StopButtonContainer>
   )
@@ -66,8 +62,26 @@ const StopButtonContainer = styled.div`
   z-index: 1000;
 `
 
-const StyledButton = styled(Button)`
+const ActionButton = styled.div`
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+  transition: all 0.2s ease;
+  background-color: var(--color-primary);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  &:hover {
+    background-color: var(--color-primary-soft);
+  }
+  .anticon {
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-white);
+  }
 `
 
 export default TTSStopButton
