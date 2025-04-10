@@ -22,8 +22,8 @@ import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
-import TTSService from '@renderer/services/TTSService'
 import { translateText } from '@renderer/services/TranslateService'
+import TTSService from '@renderer/services/TTSService'
 import { RootState } from '@renderer/store'
 import type { Message, Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
@@ -165,24 +165,31 @@ const MessageMenubar: FC<Props> = (props) => {
         content: content.trim(),
         metadata: {
           ...message.metadata,
-          generateImage: imageUrls.length > 0 ? {
-            type: 'url',
-            images: imageUrls
-          } : undefined
+          generateImage:
+            imageUrls.length > 0
+              ? {
+                  type: 'url',
+                  images: imageUrls
+                }
+              : undefined
         }
       })
 
-      resendMessage && handleResendUserMessage({
-        ...message,
-        content: content.trim(),
-        metadata: {
-          ...message.metadata,
-          generateImage: imageUrls.length > 0 ? {
-            type: 'url',
-            images: imageUrls
-          } : undefined
-        }
-      })
+      resendMessage &&
+        handleResendUserMessage({
+          ...message,
+          content: content.trim(),
+          metadata: {
+            ...message.metadata,
+            generateImage:
+              imageUrls.length > 0
+                ? {
+                    type: 'url',
+                    images: imageUrls
+                  }
+                : undefined
+          }
+        })
     }
   }, [message, editMessage, handleResendUserMessage, t])
 

@@ -1,5 +1,5 @@
+import { ChildProcess, spawn } from 'node:child_process'
 import fs from 'node:fs'
-import { spawn, ChildProcess } from 'node:child_process'
 import path from 'node:path'
 
 import { isMac, isWin } from '@main/constant'
@@ -361,7 +361,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
       })
 
       // 等待一段时间确保服务器启动
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       return { success: true, pid: asrServerProcess.pid }
     } catch (error) {
@@ -386,7 +386,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
       asrServerProcess.kill()
 
       // 等待一段时间确保进程已经退出
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       asrServerProcess = null
       return { success: true }
