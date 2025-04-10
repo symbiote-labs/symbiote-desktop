@@ -15,7 +15,8 @@ class TTSService {
    */
   speak = async (text: string): Promise<void> => {
     try {
-      const { ttsEnabled, ttsServiceType, ttsApiKey, ttsApiUrl, ttsVoice, ttsModel, ttsEdgeVoice } = store.getState().settings
+      const { ttsEnabled, ttsServiceType, ttsApiKey, ttsApiUrl, ttsVoice, ttsModel, ttsEdgeVoice } =
+        store.getState().settings
 
       if (!ttsEnabled) {
         window.message.error({ content: i18n.t('settings.tts.error.not_enabled'), key: 'tts-error' })
@@ -26,7 +27,10 @@ class TTSService {
       this.stop()
 
       // 显示加载提示
-      window.message.loading({ content: i18n.t('settings.tts.processing', { defaultValue: '正在生成语音...' }), key: 'tts-loading' })
+      window.message.loading({
+        content: i18n.t('settings.tts.processing', { defaultValue: '正在生成语音...' }),
+        key: 'tts-loading'
+      })
 
       // 初始化为空的Blob，防止类型错误
       let audioBlob: Blob = new Blob([], { type: 'audio/wav' })
@@ -125,7 +129,7 @@ class TTSService {
           const utterance = new SpeechSynthesisUtterance(text)
 
           // 获取可用的语音合成声音
-          let voices = window.speechSynthesis.getVoices()
+          const voices = window.speechSynthesis.getVoices()
           console.log('初始可用的语音合成声音:', voices)
 
           // 如果没有可用的声音，等待声音加载
@@ -204,9 +208,8 @@ class TTSService {
             // 遍历映射表中的候选音色
             for (const candidateVoice of voiceMapping[ttsEdgeVoice]) {
               // 尝试找到匹配的音色
-              const matchedVoice = updatedVoices.find(voice =>
-                voice.name.includes(candidateVoice) ||
-                voice.voiceURI.includes(candidateVoice)
+              const matchedVoice = updatedVoices.find(
+                (voice) => voice.name.includes(candidateVoice) || voice.voiceURI.includes(candidateVoice)
               )
 
               if (matchedVoice) {
@@ -219,7 +222,7 @@ class TTSService {
 
           // 如果映射表没有找到匹配，尝试精确匹配名称
           if (!selectedVoice) {
-            selectedVoice = updatedVoices.find(voice => voice.name === ttsEdgeVoice)
+            selectedVoice = updatedVoices.find((voice) => voice.name === ttsEdgeVoice)
             if (selectedVoice) {
               console.log('找到精确匹配的语音:', selectedVoice.name)
             }
@@ -234,15 +237,16 @@ class TTSService {
               console.log('检测到Neural音色值，提取语言代码:', langCode)
 
               // 先尝试匹配包含语言代码的语音
-              selectedVoice = updatedVoices.find(voice =>
-                voice.lang.startsWith(langCode) &&
-                (voice.name.includes(langParts[2]) || // 匹配人名部分，如Xiaoxiao
-                 voice.name.toLowerCase().includes(langParts[2].toLowerCase()))
+              selectedVoice = updatedVoices.find(
+                (voice) =>
+                  voice.lang.startsWith(langCode) &&
+                  (voice.name.includes(langParts[2]) || // 匹配人名部分，如Xiaoxiao
+                    voice.name.toLowerCase().includes(langParts[2].toLowerCase()))
               )
 
               // 如果没有找到，就匹配该语言的任何语音
               if (!selectedVoice) {
-                selectedVoice = updatedVoices.find(voice => voice.lang.startsWith(langCode))
+                selectedVoice = updatedVoices.find((voice) => voice.lang.startsWith(langCode))
                 if (selectedVoice) {
                   console.log('找到匹配语言的语音:', selectedVoice.name)
                 }
@@ -255,9 +259,10 @@ class TTSService {
             console.log('尝试模糊匹配语音:', ttsEdgeVoice)
 
             // 尝试匹配名称中包含的部分
-            selectedVoice = updatedVoices.find(voice =>
-              voice.name.toLowerCase().includes(ttsEdgeVoice.toLowerCase()) ||
-              ttsEdgeVoice.toLowerCase().includes(voice.name.toLowerCase())
+            selectedVoice = updatedVoices.find(
+              (voice) =>
+                voice.name.toLowerCase().includes(ttsEdgeVoice.toLowerCase()) ||
+                ttsEdgeVoice.toLowerCase().includes(voice.name.toLowerCase())
             )
 
             if (selectedVoice) {
@@ -282,7 +287,7 @@ class TTSService {
 
             if (langCode) {
               console.log('尝试根据语言代码匹配语音:', langCode)
-              selectedVoice = updatedVoices.find(voice => voice.lang.startsWith(langCode))
+              selectedVoice = updatedVoices.find((voice) => voice.lang.startsWith(langCode))
 
               if (selectedVoice) {
                 console.log('找到匹配语言代码的语音:', selectedVoice.name)
@@ -293,7 +298,7 @@ class TTSService {
           // 如果还是没有找到，使用默认语音或第一个可用的语音
           if (!selectedVoice) {
             // 先尝试使用默认语音
-            selectedVoice = updatedVoices.find(voice => voice.default)
+            selectedVoice = updatedVoices.find((voice) => voice.default)
 
             // 如果没有默认语音，使用第一个可用的语音
             if (!selectedVoice && updatedVoices.length > 0) {
@@ -310,7 +315,7 @@ class TTSService {
           }
 
           // 设置语音合成参数
-          utterance.rate = 1.0  // 语速（0.1-10）
+          utterance.rate = 1.0 // 语速（0.1-10）
           utterance.pitch = 1.0 // 音调（0-2）
           utterance.volume = 1.0 // 音量（0-1）
 
@@ -332,7 +337,7 @@ class TTSService {
             console.log('文本过长，分段处理以确保完整播放')
 
             // 将文本按句子分段
-            const sentences = text.split(/[.!?\u3002\uff01\uff1f]/).filter(s => s.trim().length > 0)
+            const sentences = text.split(/[.!?\u3002\uff01\uff1f]/).filter((s) => s.trim().length > 0)
             console.log(`将文本分为 ${sentences.length} 个句子进行播放`)
 
             // 创建多个语音合成器实例
@@ -359,33 +364,67 @@ class TTSService {
           // 创建一个有效的音频文件作为占位符
           // 这是一个最小的有效WAV文件头
           const wavHeader = new Uint8Array([
-            0x52, 0x49, 0x46, 0x46, // "RIFF"
-            0x24, 0x00, 0x00, 0x00, // 文件大小
-            0x57, 0x41, 0x56, 0x45, // "WAVE"
-            0x66, 0x6d, 0x74, 0x20, // "fmt "
-            0x10, 0x00, 0x00, 0x00, // fmt块大小
-            0x01, 0x00,             // 格式类型
-            0x01, 0x00,             // 通道数
-            0x44, 0xac, 0x00, 0x00, // 采样率
-            0x88, 0x58, 0x01, 0x00, // 字节率
-            0x02, 0x00,             // 块对齐
-            0x10, 0x00,             // 位深度
-            0x64, 0x61, 0x74, 0x61, // "data"
-            0x10, 0x00, 0x00, 0x00  // 数据大小 (16 bytes)
-          ]);
+            0x52,
+            0x49,
+            0x46,
+            0x46, // "RIFF"
+            0x24,
+            0x00,
+            0x00,
+            0x00, // 文件大小
+            0x57,
+            0x41,
+            0x56,
+            0x45, // "WAVE"
+            0x66,
+            0x6d,
+            0x74,
+            0x20, // "fmt "
+            0x10,
+            0x00,
+            0x00,
+            0x00, // fmt块大小
+            0x01,
+            0x00, // 格式类型
+            0x01,
+            0x00, // 通道数
+            0x44,
+            0xac,
+            0x00,
+            0x00, // 采样率
+            0x88,
+            0x58,
+            0x01,
+            0x00, // 字节率
+            0x02,
+            0x00, // 块对齐
+            0x10,
+            0x00, // 位深度
+            0x64,
+            0x61,
+            0x74,
+            0x61, // "data"
+            0x10,
+            0x00,
+            0x00,
+            0x00 // 数据大小 (16 bytes)
+          ])
 
           // 添加一些样本数据
-          const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-          const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length);
-          combinedArray.set(wavHeader);
-          combinedArray.set(dummyAudio, wavHeader.length);
+          const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+          const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length)
+          combinedArray.set(wavHeader)
+          combinedArray.set(dummyAudio, wavHeader.length)
 
           // 创建一个有效的WAV文件
           let localAudioBlob = new Blob([combinedArray], { type: 'audio/wav' })
           console.log('创建了有效WAV文件，大小:', localAudioBlob.size, 'bytes')
 
           // 显示成功消息
-          window.message.success({ content: i18n.t('settings.tts.playing', { defaultValue: '语音播放中...' }), key: 'tts-loading' })
+          window.message.success({
+            content: i18n.t('settings.tts.playing', { defaultValue: '语音播放中...' }),
+            key: 'tts-loading'
+          })
 
           // 在Edge TTS模式下，我们不需要播放音频元素，因为浏览器已经在播放语音
           // 我们只需要创建一个有效的音频Blob作为占位符
@@ -459,26 +498,57 @@ class TTSService {
             // 创建一个有效的音频数据
             // 这是一个最小的有效WAV文件头
             const wavHeader = new Uint8Array([
-              0x52, 0x49, 0x46, 0x46, // "RIFF"
-              0x24, 0x00, 0x00, 0x00, // 文件大小
-              0x57, 0x41, 0x56, 0x45, // "WAVE"
-              0x66, 0x6d, 0x74, 0x20, // "fmt "
-              0x10, 0x00, 0x00, 0x00, // fmt块大小
-              0x01, 0x00,             // 格式类型
-              0x01, 0x00,             // 通道数
-              0x44, 0xac, 0x00, 0x00, // 采样率
-              0x88, 0x58, 0x01, 0x00, // 字节率
-              0x02, 0x00,             // 块对齐
-              0x10, 0x00,             // 位深度
-              0x64, 0x61, 0x74, 0x61, // "data"
-              0x00, 0x00, 0x00, 0x00  // 数据大小
-            ]);
+              0x52,
+              0x49,
+              0x46,
+              0x46, // "RIFF"
+              0x24,
+              0x00,
+              0x00,
+              0x00, // 文件大小
+              0x57,
+              0x41,
+              0x56,
+              0x45, // "WAVE"
+              0x66,
+              0x6d,
+              0x74,
+              0x20, // "fmt "
+              0x10,
+              0x00,
+              0x00,
+              0x00, // fmt块大小
+              0x01,
+              0x00, // 格式类型
+              0x01,
+              0x00, // 通道数
+              0x44,
+              0xac,
+              0x00,
+              0x00, // 采样率
+              0x88,
+              0x58,
+              0x01,
+              0x00, // 字节率
+              0x02,
+              0x00, // 块对齐
+              0x10,
+              0x00, // 位深度
+              0x64,
+              0x61,
+              0x74,
+              0x61, // "data"
+              0x00,
+              0x00,
+              0x00,
+              0x00 // 数据大小
+            ])
 
             // 添加一些样本数据
-            const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-            const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length);
-            combinedArray.set(wavHeader);
-            combinedArray.set(dummyAudio, wavHeader.length);
+            const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+            const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length)
+            combinedArray.set(wavHeader)
+            combinedArray.set(dummyAudio, wavHeader.length)
 
             localAudioBlob = new Blob([combinedArray], { type: 'audio/wav' })
             console.log('创建了有效WAV文件，大小:', localAudioBlob.size, 'bytes')
@@ -527,12 +597,12 @@ class TTSService {
             mediaRecorder.start()
 
             // 录制500毫秒
-            await new Promise<void>(resolve => setTimeout(resolve, 500))
+            await new Promise<void>((resolve) => setTimeout(resolve, 500))
 
             mediaRecorder.stop()
 
             // 等待录制完成
-            await new Promise<void>(resolve => {
+            await new Promise<void>((resolve) => {
               mediaRecorder.onstop = () => {
                 fallbackAudioBlob = new Blob(fallbackAudioChunks, { type: 'audio/wav' })
                 oscillator.stop()
@@ -611,26 +681,57 @@ class TTSService {
         // 创建一个有效的音频文件作为占位符
         // 这是一个最小的有效WAV文件头
         const wavHeader = new Uint8Array([
-          0x52, 0x49, 0x46, 0x46, // "RIFF"
-          0x24, 0x00, 0x00, 0x00, // 文件大小
-          0x57, 0x41, 0x56, 0x45, // "WAVE"
-          0x66, 0x6d, 0x74, 0x20, // "fmt "
-          0x10, 0x00, 0x00, 0x00, // fmt块大小
-          0x01, 0x00,             // 格式类型
-          0x01, 0x00,             // 通道数
-          0x44, 0xac, 0x00, 0x00, // 采样率
-          0x88, 0x58, 0x01, 0x00, // 字节率
-          0x02, 0x00,             // 块对齐
-          0x10, 0x00,             // 位深度
-          0x64, 0x61, 0x74, 0x61, // "data"
-          0x10, 0x00, 0x00, 0x00  // 数据大小 (16 bytes)
-        ]);
+          0x52,
+          0x49,
+          0x46,
+          0x46, // "RIFF"
+          0x24,
+          0x00,
+          0x00,
+          0x00, // 文件大小
+          0x57,
+          0x41,
+          0x56,
+          0x45, // "WAVE"
+          0x66,
+          0x6d,
+          0x74,
+          0x20, // "fmt "
+          0x10,
+          0x00,
+          0x00,
+          0x00, // fmt块大小
+          0x01,
+          0x00, // 格式类型
+          0x01,
+          0x00, // 通道数
+          0x44,
+          0xac,
+          0x00,
+          0x00, // 采样率
+          0x88,
+          0x58,
+          0x01,
+          0x00, // 字节率
+          0x02,
+          0x00, // 块对齐
+          0x10,
+          0x00, // 位深度
+          0x64,
+          0x61,
+          0x74,
+          0x61, // "data"
+          0x10,
+          0x00,
+          0x00,
+          0x00 // 数据大小 (16 bytes)
+        ])
 
         // 添加一些样本数据
-        const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-        const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length);
-        combinedArray.set(wavHeader);
-        combinedArray.set(dummyAudio, wavHeader.length);
+        const dummyAudio = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+        const combinedArray = new Uint8Array(wavHeader.length + dummyAudio.length)
+        combinedArray.set(wavHeader)
+        combinedArray.set(dummyAudio, wavHeader.length)
 
         audioBlob = new Blob([combinedArray], { type: 'audio/wav' })
         console.log('创建了有效WAV文件，大小:', audioBlob.size, 'bytes')
@@ -689,17 +790,20 @@ class TTSService {
    */
   private cleanTextForSpeech(text: string): string {
     // 获取最新的TTS设置
-    const { ttsFilterOptions = {
-      filterThinkingProcess: true,
-      filterMarkdown: true,
-      filterCodeBlocks: true,
-      filterHtmlTags: true,
-      maxTextLength: 4000
-    }, ttsServiceType } = store.getState().settings;
+    const {
+      ttsFilterOptions = {
+        filterThinkingProcess: true,
+        filterMarkdown: true,
+        filterCodeBlocks: true,
+        filterHtmlTags: true,
+        maxTextLength: 4000
+      },
+      ttsServiceType
+    } = store.getState().settings
 
     // 输出当前的TTS服务类型，便于调试
     console.log('清理文本时使用的TTS服务类型:', ttsServiceType || 'openai')
-    let cleanedText = text;
+    let cleanedText = text
 
     // 根据过滤选项进行处理
 
@@ -708,23 +812,23 @@ class TTSService {
       cleanedText = cleanedText
         // 移除加粗和斜体标记
         .replace(/\*\*([^*]+)\*\*/g, '$1') // **bold** -> bold
-        .replace(/\*([^*]+)\*/g, '$1')       // *italic* -> italic
-        .replace(/__([^_]+)__/g, '$1')       // __bold__ -> bold
-        .replace(/_([^_]+)_/g, '$1')         // _italic_ -> italic
+        .replace(/\*([^*]+)\*/g, '$1') // *italic* -> italic
+        .replace(/__([^_]+)__/g, '$1') // __bold__ -> bold
+        .replace(/_([^_]+)_/g, '$1') // _italic_ -> italic
         // 移除链接格式，只保留链接文本
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'); // [text](url) -> text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [text](url) -> text
     }
 
     // 移除代码块
     if (ttsFilterOptions.filterCodeBlocks) {
       cleanedText = cleanedText
-        .replace(/```[\s\S]*?```/g, '')      // 移除代码块
-        .replace(/`([^`]+)`/g, '$1');       // `code` -> code
+        .replace(/```[\s\S]*?```/g, '') // 移除代码块
+        .replace(/`([^`]+)`/g, '$1') // `code` -> code
     }
 
     // 移除HTML标签
     if (ttsFilterOptions.filterHtmlTags) {
-      cleanedText = cleanedText.replace(/<[^>]*>/g, '');
+      cleanedText = cleanedText.replace(/<[^>]*>/g, '')
     }
 
     // 基本清理（始终执行）
@@ -734,9 +838,9 @@ class TTSService {
       // 将多个连续的换行替换为单个换行
       .replace(/\n+/g, '\n')
       // 移除行首和行尾的空白字符
-      .trim();
+      .trim()
 
-    return cleanedText;
+    return cleanedText
   }
 
   /**
@@ -746,95 +850,99 @@ class TTSService {
    */
   private removeThinkingProcess(text: string): string {
     // 获取最新的TTS设置
-    const { ttsFilterOptions = {
-      filterThinkingProcess: true,
-      filterMarkdown: true,
-      filterCodeBlocks: true,
-      filterHtmlTags: true,
-      maxTextLength: 4000
-    }, ttsServiceType } = store.getState().settings;
+    const {
+      ttsFilterOptions = {
+        filterThinkingProcess: true,
+        filterMarkdown: true,
+        filterCodeBlocks: true,
+        filterHtmlTags: true,
+        maxTextLength: 4000
+      },
+      ttsServiceType
+    } = store.getState().settings
 
     // 输出当前的TTS服务类型，便于调试
     console.log('移除思考过程时使用的TTS服务类型:', ttsServiceType || 'openai')
 
     // 如果不需要过滤思考过程，直接返回原文本
     if (!ttsFilterOptions.filterThinkingProcess) {
-      return text;
+      return text
     }
     // 如果整个文本都是{'text': '...'}格式，则不处理
     // 这种情况可能是伪思考过程，实际上是整个回答
-    const isFullTextJson = text.trim().startsWith('{') &&
-                          text.includes('"text":') &&
-                          text.trim().endsWith('}') &&
-                          !text.includes('\n\n');
+    const isFullTextJson =
+      text.trim().startsWith('{') && text.includes('"text":') && text.trim().endsWith('}') && !text.includes('\n\n')
 
     // 如果文本中包含多个段落或明显的思考过程标记，则处理
-    const hasThinkingMarkers = text.includes('<think>') ||
-                              text.includes('<thinking>') ||
-                              text.includes('[THINKING]') ||
-                              text.includes('```thinking');
+    const hasThinkingMarkers =
+      text.includes('<think>') ||
+      text.includes('<thinking>') ||
+      text.includes('[THINKING]') ||
+      text.includes('```thinking')
 
     // 如果文本以JSON格式开头，且不是整个文本都是JSON，或者包含思考过程标记
     if ((text.trim().startsWith('{') && text.includes('"text":') && !isFullTextJson) || hasThinkingMarkers) {
       // 尝试提取JSON中的text字段
       try {
-        const match = text.match(/"text":\s*"([^"]+)"/);
+        const match = text.match(/"text":\s*"([^"]+)"/)
         if (match && match[1]) {
           // 只返回text字段的内容
-          return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
         }
       } catch (e) {
-        console.error('解析JSON失败:', e);
+        console.error('解析JSON失败:', e)
       }
     }
 
     // 直接检查是否以<think>开头
-    const trimmedText = text.trim();
-    console.log('检查是否以<think>开头:', trimmedText.startsWith('<think>'));
+    const trimmedText = text.trim()
+    console.log('检查是否以<think>开头:', trimmedText.startsWith('<think>'))
 
     if (trimmedText.startsWith('<think>')) {
       // 如果文本以<think>开头，则尝试找到对应的</think>结尾标签
-      const endTagIndex = text.indexOf('</think>');
-      console.log('结束标签位置:', endTagIndex);
+      const endTagIndex = text.indexOf('</think>')
+      console.log('结束标签位置:', endTagIndex)
 
       if (endTagIndex !== -1) {
         // 找到结束标签，去除<think>...</think>部分
-        const thinkContent = text.substring(0, endTagIndex + 9); // 思考过程部分
-        const afterThinkTag = text.substring(endTagIndex + 9).trim(); // 9是</think>的长度
+        const thinkContent = text.substring(0, endTagIndex + 9) // 思考过程部分
+        const afterThinkTag = text.substring(endTagIndex + 9).trim() // 9是</think>的长度
 
-        console.log('思考过程内容长度:', thinkContent.length);
-        console.log('思考过程后的内容长度:', afterThinkTag.length);
-        console.log('思考过程后的内容开头:', afterThinkTag.substring(0, 50));
+        console.log('思考过程内容长度:', thinkContent.length)
+        console.log('思考过程后的内容长度:', afterThinkTag.length)
+        console.log('思考过程后的内容开头:', afterThinkTag.substring(0, 50))
 
         if (afterThinkTag) {
-          console.log('找到<think>标签，已移除思考过程');
-          return afterThinkTag;
+          console.log('找到<think>标签，已移除思考过程')
+          return afterThinkTag
         } else {
           // 如果思考过程后没有内容，则尝试提取思考过程中的有用信息
-          console.log('思考过程后没有内容，尝试提取思考过程中的有用信息');
+          console.log('思考过程后没有内容，尝试提取思考过程中的有用信息')
 
           // 提取<think>和</think>之间的内容
-          const thinkContentText = text.substring(text.indexOf('<think>') + 7, endTagIndex).trim();
+          const thinkContentText = text.substring(text.indexOf('<think>') + 7, endTagIndex).trim()
 
           // 如果思考过程中包含“这是”或“This is”等关键词，可能是有用的信息
-          if (thinkContentText.includes('这是') ||
-              thinkContentText.includes('This is') ||
-              thinkContentText.includes('The error') ||
-              thinkContentText.includes('错误')) {
-
+          if (
+            thinkContentText.includes('这是') ||
+            thinkContentText.includes('This is') ||
+            thinkContentText.includes('The error') ||
+            thinkContentText.includes('错误')
+          ) {
             // 尝试找到最后一个段落，可能包含总结信息
-            const paragraphs = thinkContentText.split(/\n\s*\n/);
+            const paragraphs = thinkContentText.split(/\n\s*\n/)
             if (paragraphs.length > 0) {
-              const lastParagraph = paragraphs[paragraphs.length - 1].trim();
-              if (lastParagraph.length > 50) { // 确保段落足够长
-                console.log('从思考过程中提取了最后一个段落');
-                return lastParagraph;
+              const lastParagraph = paragraphs[paragraphs.length - 1].trim()
+              if (lastParagraph.length > 50) {
+                // 确保段落足够长
+                console.log('从思考过程中提取了最后一个段落')
+                return lastParagraph
               }
             }
 
             // 如果没有找到合适的段落，返回整个思考过程
-            console.log('返回整个思考过程内容');
-            return thinkContentText;
+            console.log('返回整个思考过程内容')
+            return thinkContentText
           }
         }
       }
@@ -842,35 +950,35 @@ class TTSService {
 
     // 先处理<think>标签
     if (text.includes('<think>')) {
-      const startIndex = text.indexOf('<think>');
-      const endIndex = text.indexOf('</think>');
+      const startIndex = text.indexOf('<think>')
+      const endIndex = text.indexOf('</think>')
 
       if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-        console.log('找到<think>标签，起始位置:', startIndex, '结束位置:', endIndex);
+        console.log('找到<think>标签，起始位置:', startIndex, '结束位置:', endIndex)
 
         // 提取<think>和</think>之间的内容
-        const thinkContent = text.substring(startIndex + 7, endIndex);
+        const thinkContent = text.substring(startIndex + 7, endIndex)
 
         // 提取</think>后面的内容
-        const afterThinkContent = text.substring(endIndex + 9).trim(); // 9是</think>的长度
+        const afterThinkContent = text.substring(endIndex + 9).trim() // 9是</think>的长度
 
-        console.log('<think>内容长度:', thinkContent.length);
-        console.log('</think>后内容长度:', afterThinkContent.length);
+        console.log('<think>内容长度:', thinkContent.length)
+        console.log('</think>后内容长度:', afterThinkContent.length)
 
         if (afterThinkContent) {
           // 如果</think>后面有内容，则使用该内容
-          console.log('使用</think>后面的内容');
-          return afterThinkContent;
+          console.log('使用</think>后面的内容')
+          return afterThinkContent
         } else {
           // 如果</think>后面没有内容，则使用思考过程中的内容
-          console.log('使用<think>标签中的内容');
-          return thinkContent;
+          console.log('使用<think>标签中的内容')
+          return thinkContent
         }
       }
     }
 
     // 如果没有<think>标签或处理失败，则移除其他思考过程标记
-    let processedText = text
+    const processedText = text
       // 移除HTML标记的思考过程
       .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -881,30 +989,37 @@ class TTSService {
       .replace(/```thinking[\s\S]*?```/gi, '')
       .replace(/```think[\s\S]*?```/gi, '')
       // 移除开头的“我先思考一下”类似的句子
-      .replace(/^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(我|让我|让我们|我们|我先|我来)(思考|分析|理解|看一下|想一想)[^\n]*\n/i, '')
+      .replace(
+        /^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(我|让我|让我们|我们|我先|我来)(思考|分析|理解|看一下|想一想)[^\n]*\n/i,
+        ''
+      )
       // 移除开头的“Let me think”类似的句子
-      .replace(/^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(Let me|I'll|I will|I need to|Let's|I'm going to)\s+(think|analyze|understand|consider|break down)[^\n]*\n/i, '')
+      .replace(
+        /^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(Let me|I'll|I will|I need to|Let's|I'm going to)\s+(think|analyze|understand|consider|break down)[^\n]*\n/i,
+        ''
+      )
       // 移除开头的“To answer this question”类似的句子
-      .replace(/^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(To answer this|To solve this|To address this|To respond to this)[^\n]*\n/i, '')
+      .replace(
+        /^(\s*)(\S+\s+)?(\S+\s+)?(\S+\s+)?(To answer this|To solve this|To address this|To respond to this)[^\n]*\n/i,
+        ''
+      )
 
     // 如果文本中包含“我的回答是”或“我的答案是”，只保留这之后的内容
     const answerMarkers = [
       /[\n\r]+(\s*)(我的|最终|最终的|正确的|完整的)?(回答|答案|结论|解决方案)(是|如下|就是|就是如下)[\s:：]*/i,
       /[\n\r]+(\s*)(My|The|Final|Complete|Correct)\s+(answer|response|solution|conclusion)\s+(is|would be|follows)[\s:]*/i
-    ];
+    ]
 
     for (const marker of answerMarkers) {
-      const parts = processedText.split(marker);
+      const parts = processedText.split(marker)
       if (parts.length > 1) {
         // 取最后一个匹配后的内容
-        return parts[parts.length - 1].trim();
+        return parts[parts.length - 1].trim()
       }
     }
 
-    return processedText;
+    return processedText
   }
-
-
 
   /**
    * 从消息中提取文本并转换为语音
@@ -923,25 +1038,25 @@ class TTSService {
     console.log('原始文本开头:', text.substring(0, 100))
 
     // 先移除思考过程
-    const processedText = this.removeThinkingProcess(text);
-    console.log('移除思考过程后文本长度:', processedText.length);
-    console.log('处理后文本开头:', processedText.substring(0, 100));
-    text = processedText;
+    const processedText = this.removeThinkingProcess(text)
+    console.log('移除思考过程后文本长度:', processedText.length)
+    console.log('处理后文本开头:', processedText.substring(0, 100))
+    text = processedText
 
     // 清理文本，移除不需要的标点符号
     text = this.cleanTextForSpeech(text)
     console.log('清理标点符号后文本长度:', text.length)
 
     // 获取最新的TTS设置
-    const latestSettings = store.getState().settings;
+    const latestSettings = store.getState().settings
     const ttsFilterOptions = latestSettings.ttsFilterOptions || {
       filterThinkingProcess: true,
       filterMarkdown: true,
       filterCodeBlocks: true,
       filterHtmlTags: true,
       maxTextLength: 4000
-    };
-    const ttsServiceType = latestSettings.ttsServiceType;
+    }
+    const ttsServiceType = latestSettings.ttsServiceType
 
     // 输出当前的TTS服务类型，便于调试
     console.log('当前消息播放使用的TTS服务类型:', ttsServiceType || 'openai')
@@ -956,7 +1071,7 @@ class TTSService {
 
     // 如果消息过长，可能会导致TTS API超时或失败
     // 根据设置的最大文本长度进行截断
-    const maxLength = ttsFilterOptions.maxTextLength || 4000; // 默认为4000
+    const maxLength = ttsFilterOptions.maxTextLength || 4000 // 默认为4000
     if (text.length > maxLength) {
       text = text.substring(0, maxLength) + '...'
       console.log(`文本过长，已截断为${maxLength}个字符`)
@@ -1006,7 +1121,7 @@ class TTSService {
 
           const fadeOut = () => {
             if (currentStep < fadeOutSteps && this.audio) {
-              this.audio.volume = Math.max(0, originalVolume - (fadeStep * currentStep))
+              this.audio.volume = Math.max(0, originalVolume - fadeStep * currentStep)
               currentStep++
               setTimeout(fadeOut, fadeOutInterval)
             } else {
