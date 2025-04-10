@@ -1,5 +1,20 @@
 {
   "translation": {
+    "voice_call": {
+      "title": "Voice Call",
+      "start": "Start Voice Call",
+      "end": "End Call",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "pause": "Pause",
+      "resume": "Resume",
+      "you": "You",
+      "ai": "AI",
+      "press_to_talk": "Press to Talk",
+      "release_to_send": "Release to Send",
+      "initialization_failed": "Failed to initialize voice call",
+      "error": "Voice call error"
+    },
     "agents": {
       "add.button": "Add to Assistant",
       "add.knowledge_base": "Knowledge Base",
