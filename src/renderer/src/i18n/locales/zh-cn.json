@@ -1,5 +1,20 @@
 {
   "translation": {
+    "voice_call": {
+      "title": "语音通话",
+      "start": "开始语音通话",
+      "end": "结束通话",
+      "mute": "静音",
+      "unmute": "取消静音",
+      "pause": "暂停",
+      "resume": "继续",
+      "you": "您",
+      "ai": "AI",
+      "press_to_talk": "长按说话",
+      "release_to_send": "松开发送",
+      "initialization_failed": "初始化语音通话失败",
+      "error": "语音通话出错"
+    },
     "agents": {
       "add.button": "添加到助手",
       "add.knowledge_base": "知识库",

@@ -64,6 +64,9 @@
                 startRecognition();
             } else if (data.type === 'stop') {
                 stopRecognition();
+            } else if (data.type === 'reset') {
+                // 强制重置语音识别
+                forceResetRecognition();
             } else {
                 console.warn('[Browser Page] Received unknown command type:', data.type);
             }
@@ -361,6 +364,30 @@
                 console.log('[Browser Page] Recognition not active, nothing to stop.');
                 updateStatus("识别未运行。");
             }
+        }
+
+        function forceResetRecognition() {
+            console.log('[Browser Page] Force resetting recognition...');
+            updateStatus("强制重置语音识别...");
+
+            // 先尝试停止当前的识别
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.error('[Browser Page] Error stopping recognition during reset:', e);
+                }
+            }
+
+            // 强制设置为null，丢弃所有后续结果
+            recognition = null;
+
+            // 通知服务器已重置
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'status', message: 'reset_complete' }));
+            }
+
+            updateStatus("语音识别已重置，等待新指令。");
         }
     </script>
 </body>

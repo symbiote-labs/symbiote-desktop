@@ -126,25 +126,36 @@ class ASRService {
 
           // 如果没有收到最终结果，显示处理完成消息
           window.message.success({ content: i18n.t('settings.asr.completed'), key: 'asr-processing' })
+        } else if (data.message === 'reset_complete') {
+          // 语音识别已重置
+          console.log('[ASRService] 语音识别已强制重置')
+          this.isRecording = false
+          this.resultCallback = null
+
+          // 显示重置完成消息
+          window.message.info({ content: '语音识别已重置', key: 'asr-reset' })
 
           // 如果有回调函数，调用一次空字符串，触发按钮状态重置
           if (this.resultCallback && typeof this.resultCallback === 'function') {
             // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
-            this.resultCallback('')
+            setTimeout(() => this.resultCallback(''), 100)
           }
         }
       } else if (data.type === 'result' && data.data) {
         // 处理识别结果
         console.log('[ASRService] 收到识别结果:', data.data)
         if (this.resultCallback && typeof this.resultCallback === 'function') {
-          // 只在收到最终结果时才调用回调
-          if (data.data.isFinal && data.data.text && data.data.text.trim()) {
-            console.log('[ASRService] 收到最终结果，调用回调函数，文本:', data.data.text)
-            this.resultCallback(data.data.text)
-            window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
-          } else if (!data.data.isFinal) {
-            // 非最终结果，只输出日志，不调用回调
-            console.log('[ASRService] 收到中间结果，文本:', data.data.text)
+          // 将所有结果都传递给回调函数，并包含isFinal状态
+          if (data.data.text && data.data.text.trim()) {
+            if (data.data.isFinal) {
+              console.log('[ASRService] 收到最终结果，调用回调函数，文本:', data.data.text)
+              this.resultCallback(data.data.text, true)
+              window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
+            } else {
+              // 非最终结果，也调用回调，但标记为非最终
+              console.log('[ASRService] 收到中间结果，调用回调函数，文本:', data.data.text)
+              this.resultCallback(data.data.text, false)
+            }
           } else {
             console.log('[ASRService] 识别结果为空，不调用回调')
           }
@@ -189,9 +200,9 @@ class ASRService {
   }
 
   // 存储结果回调函数
-  resultCallback: ((text: string) => void) | null = null
+  resultCallback: ((text: string, isFinal?: boolean) => void) | null = null
 
-  startRecording = async (onTranscribed?: (text: string) => void): Promise<void> => {
+  startRecording = async (onTranscribed?: (text: string, isFinal?: boolean) => void): Promise<void> => {
     try {
       const { asrEnabled, asrServiceType } = store.getState().settings
 
@@ -295,7 +306,7 @@ class ASRService {
    * @param onTranscribed 转录完成后的回调函数
    * @returns Promise<void>
    */
-  stopRecording = async (onTranscribed: (text: string) => void): Promise<void> => {
+  stopRecording = async (onTranscribed: (text: string, isFinal?: boolean) => void): Promise<void> => {
     const { asrServiceType } = store.getState().settings
 
     // 如果是使用本地服务器
@@ -318,7 +329,8 @@ class ASRService {
           // 立即调用回调函数，使按钮状态立即更新
           if (onTranscribed) {
             // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
-            setTimeout(() => onTranscribed(''), 100)
+            // 传递false表示这不是最终结果，只是状态更新
+            setTimeout(() => onTranscribed('', false), 100)
           }
         } else {
           throw new Error('WebSocket连接未就绪')
@@ -493,14 +505,21 @@ class ASRService {
     // 如果是使用本地服务器
     if (asrServiceType === 'local') {
       if (this.isRecording) {
+        // 先重置状态和回调，确保不会处理后续结果
+        this.isRecording = false
+        this.resultCallback = null
+
         // 发送停止命令
         if (this.ws && this.wsConnected) {
           this.ws.send(JSON.stringify({ type: 'stop' }))
-        }
 
-        // 重置状态
-        this.isRecording = false
-        this.resultCallback = null
+          // 发送一个额外的命令，要求浏览器强制重置语音识别
+          setTimeout(() => {
+            if (this.ws && this.wsConnected) {
+              this.ws.send(JSON.stringify({ type: 'reset' }))
+            }
+          }, 100)
+        }
 
         console.log('语音识别已取消')
         window.message.info({ content: i18n.t('settings.asr.canceled'), key: 'asr-recording' })

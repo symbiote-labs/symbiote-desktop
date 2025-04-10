@@ -124,6 +124,13 @@ wss.on('connection', (ws) => {
       } else {
         console.log('[Server] Cannot relay STOP: Browser not connected')
       }
+    } else if (data.type === 'reset' && ws === electronConnection) {
+      if (browserConnection && browserConnection.readyState === WebSocket.OPEN) {
+        console.log('[Server] Relaying RESET command to browser')
+        browserConnection.send(JSON.stringify({ type: 'reset' }))
+      } else {
+        console.log('[Server] Cannot relay RESET: Browser not connected')
+      }
     }
     // 浏览器发送识别结果
     else if (data.type === 'result' && ws === browserConnection) {
