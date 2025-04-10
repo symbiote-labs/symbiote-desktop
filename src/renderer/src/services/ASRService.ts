@@ -153,7 +153,10 @@ class ASRService {
         }
       } else if (data.type === 'error') {
         console.error('[ASRService] 收到错误消息:', data.message || data.data)
-        window.message.error({ content: `语音识别错误: ${data.message || data.data?.error || '未知错误'}`, key: 'asr-error' })
+        window.message.error({
+          content: `语音识别错误: ${data.message || data.data?.error || '未知错误'}`,
+          key: 'asr-error'
+        })
       }
     } catch (error) {
       console.error('[ASRService] 解析WebSocket消息失败:', error, event.data)
@@ -175,7 +178,9 @@ class ASRService {
     }
 
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempt), 30000)
-    console.log(`[ASRService] 将在 ${delay}ms 后尝试重连 (尝试 ${this.reconnectAttempt + 1}/${this.maxReconnectAttempts})`)
+    console.log(
+      `[ASRService] 将在 ${delay}ms 后尝试重连 (尝试 ${this.reconnectAttempt + 1}/${this.maxReconnectAttempts})`
+    )
 
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectAttempt++
@@ -222,7 +227,7 @@ class ASRService {
             })
 
             // 等待一秒
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            await new Promise((resolve) => setTimeout(resolve, 1000))
             waitAttempts++
           }
 
@@ -355,7 +360,7 @@ class ASRService {
 
       // 停止所有轨道
       if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop())
+        this.stream.getTracks().forEach((track) => track.stop())
         this.stream = null
       }
 
@@ -391,7 +396,7 @@ class ASRService {
       this.isRecording = false
       this.mediaRecorder = null
       if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop())
+        this.stream.getTracks().forEach((track) => track.stop())
         this.stream = null
       }
     }
@@ -420,7 +425,7 @@ class ASRService {
       const response = await fetch(asrApiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${asrApiKey}`
+          Authorization: `Bearer ${asrApiKey}`
         },
         body: formData
       })
@@ -510,7 +515,7 @@ class ASRService {
 
       // 停止所有轨道
       if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop())
+        this.stream.getTracks().forEach((track) => track.stop())
         this.stream = null
       }
 

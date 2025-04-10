@@ -18,6 +18,10 @@ export enum IpcChannel {
   App_InstallUvBinary = 'app:install-uv-binary',
   App_InstallBunBinary = 'app:install-bun-binary',
 
+  // ASR Server
+  Asr_StartServer = 'start-asr-server',
+  Asr_StopServer = 'stop-asr-server',
+
   // Open
   Open_Path = 'open:path',
   Open_Website = 'open:website',
@@ -146,5 +150,10 @@ export enum IpcChannel {
   MiniWindowReload = 'miniwindow-reload',
 
   ReduxStateChange = 'redux-state-change',
-  ReduxStoreReady = 'redux-store-ready'
+  ReduxStoreReady = 'redux-store-ready',
+
+  // Search Window
+  SearchWindow_Open = 'search-window:open',
+  SearchWindow_Close = 'search-window:close',
+  SearchWindow_OpenUrl = 'search-window:open-url'
 }

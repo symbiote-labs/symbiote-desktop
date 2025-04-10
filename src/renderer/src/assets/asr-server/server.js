@@ -9,33 +9,33 @@ const port = 8080 // Define the port
 // 获取index.html文件的路径
 function getIndexHtmlPath() {
   // 在开发环境中，直接使用相对路径
-  const devPath = path.join(__dirname, 'index.html');
+  const devPath = path.join(__dirname, 'index.html')
 
   // 在pkg打包后，文件会被包含在可执行文件中
   // 使用process.pkg检测是否是打包环境
   if (process.pkg) {
     // 在打包环境中，使用绝对路径
-    return path.join(path.dirname(process.execPath), 'index.html');
+    return path.join(path.dirname(process.execPath), 'index.html')
   }
 
   // 如果文件存在，返回开发路径
   try {
     if (require('fs').existsSync(devPath)) {
-      return devPath;
+      return devPath
     }
   } catch (e) {
-    console.error('Error checking file existence:', e);
+    console.error('Error checking file existence:', e)
   }
 
   // 如果都不存在，尝试使用当前目录
-  return path.join(process.cwd(), 'index.html');
+  return path.join(process.cwd(), 'index.html')
 }
 
 // 提供网页给浏览器
 app.get('/', (req, res) => {
-  const indexPath = getIndexHtmlPath();
-  console.log(`Serving index.html from: ${indexPath}`);
-  res.sendFile(indexPath);
+  const indexPath = getIndexHtmlPath()
+  console.log(`Serving index.html from: ${indexPath}`)
+  res.sendFile(indexPath)
 })
 
 const server = http.createServer(app)
@@ -65,8 +65,8 @@ wss.on('connection', (ws) => {
         console.log('[Server] Browser identified and connected')
         // Notify Electron that the browser is ready
         if (electronConnection && electronConnection.readyState === WebSocket.OPEN) {
-            electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }));
-            console.log('[Server] Sent browser_ready status to Electron');
+          electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }))
+          console.log('[Server] Sent browser_ready status to Electron')
         }
         // Notify Electron if it's already connected
         if (electronConnection) {
@@ -92,8 +92,8 @@ wss.on('connection', (ws) => {
         console.log('[Server] Electron identified and connected')
         // If browser is already connected when Electron connects, notify Electron immediately
         if (browserConnection && browserConnection.readyState === WebSocket.OPEN) {
-            electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }));
-            console.log('[Server] Sent initial browser_ready status to Electron');
+          electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }))
+          console.log('[Server] Sent initial browser_ready status to Electron')
         }
         ws.on('close', () => {
           console.log('[Server] Electron disconnected')

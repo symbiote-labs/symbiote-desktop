@@ -3,7 +3,6 @@ import { LOAD_MORE_COUNT } from '@renderer/config/constant'
 import db from '@renderer/databases'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useMessageOperations, useTopicLoading, useTopicMessages } from '@renderer/hooks/useMessageOperations'
-
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { autoRenameTopic, getTopic } from '@renderer/hooks/useTopic'

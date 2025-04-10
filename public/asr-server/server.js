@@ -39,8 +39,8 @@ wss.on('connection', (ws) => {
         console.log('[Server] Browser identified and connected')
         // Notify Electron that the browser is ready
         if (electronConnection && electronConnection.readyState === WebSocket.OPEN) {
-            electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }));
-            console.log('[Server] Sent browser_ready status to Electron');
+          electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }))
+          console.log('[Server] Sent browser_ready status to Electron')
         }
         // Notify Electron if it's already connected
         if (electronConnection) {
@@ -66,8 +66,8 @@ wss.on('connection', (ws) => {
         console.log('[Server] Electron identified and connected')
         // If browser is already connected when Electron connects, notify Electron immediately
         if (browserConnection && browserConnection.readyState === WebSocket.OPEN) {
-            electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }));
-            console.log('[Server] Sent initial browser_ready status to Electron');
+          electronConnection.send(JSON.stringify({ type: 'status', message: 'browser_ready' }))
+          console.log('[Server] Sent initial browser_ready status to Electron')
         }
         ws.on('close', () => {
           console.log('[Server] Electron disconnected')
