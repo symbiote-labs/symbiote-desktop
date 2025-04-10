@@ -286,7 +286,7 @@ const TTSSettings: FC = () => {
       setAvailableVoices(predefinedVoices)
       return () => {}
     }
-  }, [])
+  }, [getVoices, predefinedVoices])
 
   // 测试TTS功能
   const testTTS = async () => {
