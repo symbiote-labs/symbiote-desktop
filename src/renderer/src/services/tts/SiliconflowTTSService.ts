@@ -69,8 +69,8 @@ export class SiliconflowTTSService implements TTSServiceInterface {
       model: this.model,
       input: text,
       voice: this.voice,
-      // 强制使用mp3格式，因为浏览器支持性最好
-      response_format: 'mp3',
+      // 使用配置的响应格式，默认为mp3
+      response_format: this.responseFormat,
       stream: false,
       speed: this.speed
     };

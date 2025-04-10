@@ -255,12 +255,12 @@ export class EdgeTTSService implements TTSServiceInterface {
               mediaRecorder.stop();
             }
           }, 10000); // 10秒超时
-        } catch (error) {
+        } catch (error: any) {
           console.error('浏览器TTS语音合成失败:', error);
-          reject(new Error(`浏览器TTS语音合成失败: ${error.message}`));
+          reject(new Error(`浏览器TTS语音合成失败: ${error?.message || '未知错误'}`));
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('浏览器TTS语音合成失败:', error);
       // 即使失败也返回一个空的Blob，而不是抛出异常
       // 这样可以避免在UI上显示错误消息
