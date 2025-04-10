@@ -119,19 +119,19 @@ class ASRService {
           console.log('[ASRService] 浏览器断开连接')
           this.browserReady = false
           window.message.error({ content: '语音识别浏览器断开连接', key: 'browser-status' })
-        }
-      } else if (data.type === 'status' && data.message === 'stopped') {
-        // 语音识别已停止
-        console.log('[ASRService] 语音识别已停止')
-        this.isRecording = false
+        } else if (data.message === 'stopped') {
+          // 语音识别已停止
+          console.log('[ASRService] 语音识别已停止')
+          this.isRecording = false
 
-        // 如果没有收到最终结果，显示处理完成消息
-        window.message.success({ content: i18n.t('settings.asr.completed'), key: 'asr-processing' })
+          // 如果没有收到最终结果，显示处理完成消息
+          window.message.success({ content: i18n.t('settings.asr.completed'), key: 'asr-processing' })
 
-        // 如果有回调函数，调用一次空字符串，触发按钮状态重置
-        if (this.resultCallback && typeof this.resultCallback === 'function') {
-          // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
-          this.resultCallback('')
+          // 如果有回调函数，调用一次空字符串，触发按钮状态重置
+          if (this.resultCallback && typeof this.resultCallback === 'function') {
+            // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
+            this.resultCallback('')
+          }
         }
       } else if (data.type === 'result' && data.data) {
         // 处理识别结果
