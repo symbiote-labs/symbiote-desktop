@@ -1,5 +1,4 @@
 import fs from 'node:fs'
-import path from 'node:path'
 
 import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
@@ -146,7 +145,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
         })
       )
       await fileManager.clearTemp()
-      await fs.writeFileSync(log.transports.file.getFile().path, '')
+      fs.writeFileSync(log.transports.file.getFile().path, '')
       return { success: true }
     } catch (error: any) {
       log.error('Failed to clear cache:', error)
