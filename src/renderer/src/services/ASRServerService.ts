@@ -1,4 +1,5 @@
 import i18n from '@renderer/i18n'
+import { IpcChannel } from '@shared/IpcChannel'
 
 // 使用window.electron而不是直接导入electron模块
 // 这样可以避免__dirname不可用的问题
@@ -23,7 +24,7 @@ class ASRServerService {
       window.message.loading({ content: i18n.t('settings.asr.server.starting'), key: 'asr-server' })
 
       // 使用IPC调用主进程启动服务器
-      const result = await window.electron.ipcRenderer.invoke('start-asr-server')
+      const result = await window.electron.ipcRenderer.invoke(IpcChannel.ASR_StartServer)
 
       if (result.success) {
         this.isServerRunning = true
@@ -65,7 +66,7 @@ class ASRServerService {
       window.message.loading({ content: i18n.t('settings.asr.server.stopping'), key: 'asr-server' })
 
       // 使用IPC调用主进程停止服务器
-      const result = await window.electron.ipcRenderer.invoke('stop-asr-server', this.serverProcess)
+      const result = await window.electron.ipcRenderer.invoke(IpcChannel.ASR_StopServer, this.serverProcess)
 
       if (result.success) {
         this.isServerRunning = false
