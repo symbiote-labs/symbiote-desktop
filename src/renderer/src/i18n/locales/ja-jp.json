@@ -1507,6 +1507,21 @@
       "quit": "終了",
       "show_window": "ウィンドウを表示",
       "visualization": "可視化"
+    },
+    "voice_call": {
+      "title": "[to be translated]:语音通话",
+      "start": "[to be translated]:开始语音通话",
+      "end": "[to be translated]:结束通话",
+      "mute": "[to be translated]:静音",
+      "unmute": "[to be translated]:取消静音",
+      "pause": "[to be translated]:暂停",
+      "resume": "[to be translated]:继续",
+      "you": "[to be translated]:您",
+      "ai": "[to be translated]:AI",
+      "press_to_talk": "[to be translated]:长按说话",
+      "release_to_send": "[to be translated]:松开发送",
+      "initialization_failed": "[to be translated]:初始化语音通话失败",
+      "error": "[to be translated]:语音通话出错"
     }
   }
 }

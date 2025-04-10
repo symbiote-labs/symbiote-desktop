@@ -8,5 +8,5 @@ export interface TTSServiceInterface {
    * @param text 要合成的文本
    * @returns 返回音频Blob对象的Promise
    */
-  synthesize(text: string): Promise<Blob>;
+  synthesize(text: string): Promise<Blob>
 }

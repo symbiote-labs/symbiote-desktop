@@ -14,19 +14,19 @@ import {
   setTtsEnabled,
   setTtsFilterOptions,
   setTtsModel,
+  setTtsMsOutputFormat,
+  setTtsMsVoice,
   setTtsServiceType,
-  setTtsVoice,
   setTtsSiliconflowApiKey,
   setTtsSiliconflowApiUrl,
-  setTtsSiliconflowVoice,
   setTtsSiliconflowModel,
   setTtsSiliconflowResponseFormat,
   setTtsSiliconflowSpeed,
-  setTtsMsVoice,
-  setTtsMsOutputFormat
+  setTtsSiliconflowVoice,
+  setTtsVoice
 } from '@renderer/store/settings'
 import { Button, Form, Input, InputNumber, message, Select, Space, Switch, Tabs, Tag } from 'antd'
-import { FC, useEffect, useState, useCallback } from 'react'
+import { FC, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -176,32 +176,30 @@ const TTSSettings: FC = () => {
   // 免费在线TTS可用的语音列表
   const [msTtsVoices, setMsTtsVoices] = useState<{ label: string; value: string }[]>([])
 
-
-
   // 获取免费在线TTS可用的语音列表
   const getMsTtsVoices = useCallback(async () => {
     try {
       // 调用API获取免费在线TTS语音列表
-      const response = await window.api.msTTS.getVoices();
-      console.log('获取到的免费在线TTS语音列表:', response);
+      const response = await window.api.msTTS.getVoices()
+      console.log('获取到的免费在线TTS语音列表:', response)
 
       // 转换为选项格式
       const voices = response.map((voice: any) => ({
         label: `${voice.ShortName} (${voice.Gender === 'Female' ? '女声' : '男声'})`,
         value: voice.ShortName
-      }));
+      }))
 
       // 按语言和性别排序
       voices.sort((a: any, b: any) => {
-        const localeA = a.value.split('-')[0] + a.value.split('-')[1];
-        const localeB = b.value.split('-')[0] + b.value.split('-')[1];
-        if (localeA !== localeB) return localeA.localeCompare(localeB);
-        return a.label.localeCompare(b.label);
-      });
+        const localeA = a.value.split('-')[0] + a.value.split('-')[1]
+        const localeB = b.value.split('-')[0] + b.value.split('-')[1]
+        if (localeA !== localeB) return localeA.localeCompare(localeB)
+        return a.label.localeCompare(b.label)
+      })
 
-      setMsTtsVoices(voices);
+      setMsTtsVoices(voices)
     } catch (error) {
-      console.error('获取免费在线TTS语音列表失败:', error);
+      console.error('获取免费在线TTS语音列表失败:', error)
       // 如果获取失败，设置一些默认的中文语音
       setMsTtsVoices([
         { label: 'zh-CN-XiaoxiaoNeural (女声)', value: 'zh-CN-XiaoxiaoNeural' },
@@ -211,10 +209,10 @@ const TTSSettings: FC = () => {
         { label: 'zh-CN-XiaomoNeural (女声)', value: 'zh-CN-XiaomoNeural' },
         { label: 'zh-CN-XiaoxuanNeural (女声)', value: 'zh-CN-XiaoxuanNeural' },
         { label: 'zh-CN-XiaoruiNeural (女声)', value: 'zh-CN-XiaoruiNeural' },
-        { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' },
-      ]);
+        { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' }
+      ])
     }
-  }, []);
+  }, [])
 
   // 获取浏览器可用的语音列表
   const getVoices = useCallback(() => {
@@ -323,8 +321,8 @@ const TTSSettings: FC = () => {
   // 获取免费在线TTS语音列表
   useEffect(() => {
     // 获取免费在线TTS语音列表
-    getMsTtsVoices();
-  }, [getMsTtsVoices]);
+    getMsTtsVoices()
+  }, [getMsTtsVoices])
 
   useEffect(() => {
     // 初始化语音合成引擎
@@ -634,9 +632,7 @@ const TTSSettings: FC = () => {
                           <Select
                             value={ttsSiliconflowModel}
                             onChange={(value) => dispatch(setTtsSiliconflowModel(value))}
-                            options={[
-                              { label: 'FunAudioLLM/CosyVoice2-0.5B', value: 'FunAudioLLM/CosyVoice2-0.5B' }
-                            ]}
+                            options={[{ label: 'FunAudioLLM/CosyVoice2-0.5B', value: 'FunAudioLLM/CosyVoice2-0.5B' }]}
                             disabled={!ttsEnabled}
                             style={{ width: '100%' }}
                             placeholder={t('settings.tts.siliconflow_model.placeholder')}
@@ -726,24 +722,28 @@ const TTSSettings: FC = () => {
                         <Form.Item label={t('settings.tts.mstts.voice')} style={{ marginBottom: 16 }}>
                           <VoiceSelectContainer>
                             <Select
-                            value={ttsMsVoice}
-                            onChange={(value) => dispatch(setTtsMsVoice(value))}
-                            disabled={!ttsEnabled}
-                            style={{ width: '100%' }}
-                            options={msTtsVoices.length > 0 ? msTtsVoices : [
-                              { label: 'zh-CN-XiaoxiaoNeural (女声)', value: 'zh-CN-XiaoxiaoNeural' },
-                              { label: 'zh-CN-YunxiNeural (男声)', value: 'zh-CN-YunxiNeural' },
-                              { label: 'zh-CN-YunyangNeural (男声)', value: 'zh-CN-YunyangNeural' },
-                              { label: 'zh-CN-XiaohanNeural (女声)', value: 'zh-CN-XiaohanNeural' },
-                              { label: 'zh-CN-XiaomoNeural (女声)', value: 'zh-CN-XiaomoNeural' },
-                              { label: 'zh-CN-XiaoxuanNeural (女声)', value: 'zh-CN-XiaoxuanNeural' },
-                              { label: 'zh-CN-XiaoruiNeural (女声)', value: 'zh-CN-XiaoruiNeural' },
-                              { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' },
-                            ]}
-                            showSearch
-                            optionFilterProp="label"
-                            placeholder={t('settings.tts.voice.placeholder', { defaultValue: '请选择音色' })}
-                            notFoundContent={t('settings.tts.voice.not_found', { defaultValue: '未找到音色' })}
+                              value={ttsMsVoice}
+                              onChange={(value) => dispatch(setTtsMsVoice(value))}
+                              disabled={!ttsEnabled}
+                              style={{ width: '100%' }}
+                              options={
+                                msTtsVoices.length > 0
+                                  ? msTtsVoices
+                                  : [
+                                      { label: 'zh-CN-XiaoxiaoNeural (女声)', value: 'zh-CN-XiaoxiaoNeural' },
+                                      { label: 'zh-CN-YunxiNeural (男声)', value: 'zh-CN-YunxiNeural' },
+                                      { label: 'zh-CN-YunyangNeural (男声)', value: 'zh-CN-YunyangNeural' },
+                                      { label: 'zh-CN-XiaohanNeural (女声)', value: 'zh-CN-XiaohanNeural' },
+                                      { label: 'zh-CN-XiaomoNeural (女声)', value: 'zh-CN-XiaomoNeural' },
+                                      { label: 'zh-CN-XiaoxuanNeural (女声)', value: 'zh-CN-XiaoxuanNeural' },
+                                      { label: 'zh-CN-XiaoruiNeural (女声)', value: 'zh-CN-XiaoruiNeural' },
+                                      { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' }
+                                    ]
+                              }
+                              showSearch
+                              optionFilterProp="label"
+                              placeholder={t('settings.tts.voice.placeholder', { defaultValue: '请选择音色' })}
+                              notFoundContent={t('settings.tts.voice.not_found', { defaultValue: '未找到音色' })}
                             />
                             <Button
                               icon={<ReloadOutlined />}
@@ -754,7 +754,10 @@ const TTSSettings: FC = () => {
                           </VoiceSelectContainer>
                           {msTtsVoices.length > 0 && (
                             <InfoText>
-                              {t('settings.tts.mstts.available_count', { count: msTtsVoices.length, defaultValue: '可用语音: {{count}}个' })}
+                              {t('settings.tts.mstts.available_count', {
+                                count: msTtsVoices.length,
+                                defaultValue: '可用语音: {{count}}个'
+                              })}
                             </InfoText>
                           )}
                         </Form.Item>
@@ -767,11 +770,15 @@ const TTSSettings: FC = () => {
                             options={[
                               { label: 'MP3 (24kHz, 48kbps)', value: 'audio-24khz-48kbitrate-mono-mp3' },
                               { label: 'MP3 (24kHz, 96kbps)', value: 'audio-24khz-96kbitrate-mono-mp3' },
-                              { label: 'Webm (24kHz)', value: 'webm-24khz-16bit-mono-opus' },
+                              { label: 'Webm (24kHz)', value: 'webm-24khz-16bit-mono-opus' }
                             ]}
                           />
                         </Form.Item>
-                        <InfoText>{t('settings.tts.mstts.info', { defaultValue: '免费在线TTS服务不需要API密钥，完全免费使用。' })}</InfoText>
+                        <InfoText>
+                          {t('settings.tts.mstts.info', {
+                            defaultValue: '免费在线TTS服务不需要API密钥，完全免费使用。'
+                          })}
+                        </InfoText>
                       </>
                     )}
 
@@ -960,11 +967,8 @@ const TTSSettings: FC = () => {
                           !ttsEnabled ||
                           (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
                           (ttsServiceType === 'edge' && !ttsEdgeVoice) ||
-                          (ttsServiceType === 'siliconflow' && (
-                            !ttsSiliconflowApiKey ||
-                            !ttsSiliconflowVoice ||
-                            !ttsSiliconflowModel
-                          ))
+                          (ttsServiceType === 'siliconflow' &&
+                            (!ttsSiliconflowApiKey || !ttsSiliconflowVoice || !ttsSiliconflowModel))
                         }>
                         {t('settings.tts.test')}
                       </Button>

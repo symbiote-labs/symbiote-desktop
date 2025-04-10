@@ -12,43 +12,43 @@ export class TTSTextFilter {
   public static filterText(
     text: string,
     options: {
-      filterThinkingProcess: boolean;
-      filterMarkdown: boolean;
-      filterCodeBlocks: boolean;
-      filterHtmlTags: boolean;
-      maxTextLength: number;
+      filterThinkingProcess: boolean
+      filterMarkdown: boolean
+      filterCodeBlocks: boolean
+      filterHtmlTags: boolean
+      maxTextLength: number
     }
   ): string {
-    if (!text) return '';
+    if (!text) return ''
 
-    let filteredText = text;
+    let filteredText = text
 
     // 过滤思考过程
     if (options.filterThinkingProcess) {
-      filteredText = this.filterThinkingProcess(filteredText);
+      filteredText = this.filterThinkingProcess(filteredText)
     }
 
     // 过滤Markdown标记
     if (options.filterMarkdown) {
-      filteredText = this.filterMarkdown(filteredText);
+      filteredText = this.filterMarkdown(filteredText)
     }
 
     // 过滤代码块
     if (options.filterCodeBlocks) {
-      filteredText = this.filterCodeBlocks(filteredText);
+      filteredText = this.filterCodeBlocks(filteredText)
     }
 
     // 过滤HTML标签
     if (options.filterHtmlTags) {
-      filteredText = this.filterHtmlTags(filteredText);
+      filteredText = this.filterHtmlTags(filteredText)
     }
 
     // 限制文本长度
     if (options.maxTextLength > 0 && filteredText.length > options.maxTextLength) {
-      filteredText = filteredText.substring(0, options.maxTextLength);
+      filteredText = filteredText.substring(0, options.maxTextLength)
     }
 
-    return filteredText.trim();
+    return filteredText.trim()
   }
 
   /**
@@ -58,27 +58,27 @@ export class TTSTextFilter {
    */
   private static filterThinkingProcess(text: string): string {
     // 过滤<think>标签内容
-    text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
-    
+    text = text.replace(/<think>[\s\S]*?<\/think>/g, '')
+
     // 过滤未闭合的<think>标签
     if (text.includes('<think>')) {
-      const parts = text.split('<think>');
-      text = parts[0];
+      const parts = text.split('<think>')
+      text = parts[0]
     }
-    
+
     // 过滤思考过程部分（###Thinking和###Response格式）
-    const thinkingMatch = text.match(/###\s*Thinking[\s\S]*?(?=###\s*Response|$)/);
+    const thinkingMatch = text.match(/###\s*Thinking[\s\S]*?(?=###\s*Response|$)/)
     if (thinkingMatch) {
-      text = text.replace(thinkingMatch[0], '');
+      text = text.replace(thinkingMatch[0], '')
     }
-    
+
     // 如果有Response部分，只保留Response部分
-    const responseMatch = text.match(/###\s*Response\s*([\s\S]*?)(?=###|$)/);
+    const responseMatch = text.match(/###\s*Response\s*([\s\S]*?)(?=###|$)/)
     if (responseMatch) {
-      text = responseMatch[1];
+      text = responseMatch[1]
     }
-    
-    return text;
+
+    return text
   }
 
   /**
@@ -88,29 +88,29 @@ export class TTSTextFilter {
    */
   private static filterMarkdown(text: string): string {
     // 过滤标题标记
-    text = text.replace(/#{1,6}\s+/g, '');
-    
+    text = text.replace(/#{1,6}\s+/g, '')
+
     // 过滤粗体和斜体标记
-    text = text.replace(/(\*\*|__)(.*?)\1/g, '$2');
-    text = text.replace(/(\*|_)(.*?)\1/g, '$2');
-    
+    text = text.replace(/(\*\*|__)(.*?)\1/g, '$2')
+    text = text.replace(/(\*|_)(.*?)\1/g, '$2')
+
     // 过滤链接
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
-    
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+
     // 过滤图片
-    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '');
-    
+    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '')
+
     // 过滤引用
-    text = text.replace(/^\s*>\s+/gm, '');
-    
+    text = text.replace(/^\s*>\s+/gm, '')
+
     // 过滤水平线
-    text = text.replace(/^\s*[-*_]{3,}\s*$/gm, '');
-    
+    text = text.replace(/^\s*[-*_]{3,}\s*$/gm, '')
+
     // 过滤列表标记
-    text = text.replace(/^\s*[-*+]\s+/gm, '');
-    text = text.replace(/^\s*\d+\.\s+/gm, '');
-    
-    return text;
+    text = text.replace(/^\s*[-*+]\s+/gm, '')
+    text = text.replace(/^\s*\d+\.\s+/gm, '')
+
+    return text
   }
 
   /**
@@ -120,15 +120,15 @@ export class TTSTextFilter {
    */
   private static filterCodeBlocks(text: string): string {
     // 过滤围栏式代码块
-    text = text.replace(/```[\s\S]*?```/g, '');
-    
+    text = text.replace(/```[\s\S]*?```/g, '')
+
     // 过滤缩进式代码块
-    text = text.replace(/(?:^|\n)( {4}|\t).*(?:\n|$)/g, '\n');
-    
+    text = text.replace(/(?:^|\n)( {4}|\t).*(?:\n|$)/g, '\n')
+
     // 过滤行内代码
-    text = text.replace(/`([^`]+)`/g, '$1');
-    
-    return text;
+    text = text.replace(/`([^`]+)`/g, '$1')
+
+    return text
   }
 
   /**
@@ -138,11 +138,11 @@ export class TTSTextFilter {
    */
   private static filterHtmlTags(text: string): string {
     // 过滤HTML标签
-    text = text.replace(/<[^>]*>/g, '');
-    
+    text = text.replace(/<[^>]*>/g, '')
+
     // 过滤HTML实体
-    text = text.replace(/&[a-zA-Z0-9#]+;/g, ' ');
-    
-    return text;
+    text = text.replace(/&[a-zA-Z0-9#]+;/g, ' ')
+
+    return text
   }
 }

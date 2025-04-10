@@ -3,8 +3,9 @@
  * 这个文件仅作兼容性保留，将在后续版本中移除
  */
 
-import { TTSService as NewTTSService } from './tts/index'
 import { Message } from '@renderer/types'
+
+import { TTSService as NewTTSService } from './tts/index'
 
 /**
  * TTS服务，用于将文本转换为语音
