@@ -1378,7 +1378,14 @@
         "max_text_length": "Maximum text length",
         "test": "Test Speech",
         "help": "Text-to-speech functionality supports converting text to natural-sounding speech.",
-        "learn_more": "Learn more"
+        "learn_more": "Learn more",
+        "tab_title": "[to be translated]:语音合成",
+        "error": {
+          "not_enabled": "[to be translated]:语音合成功能未启用",
+          "no_api_key": "[to be translated]:未设置API密钥",
+          "no_edge_voice": "[to be translated]:未选择浏览器 TTS音色",
+          "browser_not_support": "[to be translated]:浏览器不支持语音合成"
+        }
       },
       "asr": {
         "title": "Speech Recognition",
@@ -1423,8 +1430,15 @@
         "error": {
           "not_enabled": "Speech recognition is not enabled",
           "start_failed": "Failed to start recording",
-          "transcribe_failed": "Failed to transcribe speech"
+          "transcribe_failed": "Failed to transcribe speech",
+          "no_api_key": "[to be translated]:未设置API密钥",
+          "browser_not_support": "[to be translated]:浏览器不支持语音识别"
         }
+      },
+      "voice": {
+        "title": "[to be translated]:语音功能",
+        "help": "[to be translated]:语音功能包括文本转语音(TTS)和语音识别(ASR)。",
+        "learn_more": "[to be translated]:了解更多"
       }
     },
     "translate": {

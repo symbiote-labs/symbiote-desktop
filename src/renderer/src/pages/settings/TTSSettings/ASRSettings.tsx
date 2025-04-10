@@ -105,7 +105,7 @@ const ASRSettings: FC = () => {
         {/* 浏览器ASR设置 */}
         {asrServiceType === 'browser' && (
           <Form.Item>
-            <Alert type="info" message={t('settings.asr.browser.info')} />
+            <Alert type="info">{t('settings.asr.browser.info')}</Alert>
           </Form.Item>
         )}
 
@@ -113,7 +113,7 @@ const ASRSettings: FC = () => {
         {asrServiceType === 'local' && (
           <>
             <Form.Item>
-              <Alert type="info" message={t('settings.asr.local.info')} />
+              <Alert type="info">{t('settings.asr.local.info')}</Alert>
             </Form.Item>
             <Form.Item>
               <Space direction="vertical" style={{ width: '100%' }}>

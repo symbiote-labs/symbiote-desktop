@@ -6,8 +6,8 @@ interface ObsidianAPI {
 
 interface IpcRendererAPI {
   invoke: (channel: string, ...args: any[]) => Promise<any>
-  on: (channel: string, listener: (...args: any[]) => void) => void
-  once: (channel: string, listener: (...args: any[]) => void) => void
+  on: (channel: string, listener: (...args: any[]) => void) => () => void
+  once: (channel: string, listener: (...args: any[]) => void) => () => void
   removeListener: (channel: string, listener: (...args: any[]) => void) => void
   removeAllListeners: (channel: string) => void
   send: (channel: string, ...args: any[]) => void
@@ -16,6 +16,9 @@ interface IpcRendererAPI {
 
 interface ElectronAPI {
   ipcRenderer: IpcRendererAPI
+  process: {
+    platform: string
+  }
 }
 
 interface Window {

@@ -103,13 +103,13 @@
       "default.description": "こんにちは、私はデフォルトのアシスタントです。すぐにチャットを始められます。",
       "default.name": "デフォルトアシスタント",
       "default.topic.name": "デフォルトトピック",
-  "tts": {
-    "play": "音声を再生",
-    "stop": "再生を停止",
-    "speak": "音声を再生",
-    "stop_global": "すべての音声再生を停止",
-    "stopped": "音声再生を停止しました"
-  },
+      "tts": {
+        "play": "音声を再生",
+        "stop": "再生を停止",
+        "speak": "音声を再生",
+        "stop_global": "すべての音声再生を停止",
+        "stopped": "音声再生を停止しました"
+      },
       "history": {
         "assistant_node": "アシスタント",
         "click_to_navigate": "メッセージに移動",
@@ -1352,12 +1352,40 @@
         "service_type.edge": "ブラウザ TTS",
         "test": "テスト",
         "error": {
-          "failed": "音声合成に失敗しました",
           "not_enabled": "音声合成が有効になっていません",
-          "no_edge_voice": "ブラウザ TTSの音声が選択されていません"
+          "no_edge_voice": "ブラウザ TTSの音声が選択されていません",
+          "no_api_key": "[to be translated]:未设置API密钥",
+          "browser_not_support": "[to be translated]:浏览器不支持语音合成"
         },
         "help": "OpenAIのTTS APIを使用するには、APIキーが必要です。ブラウザ TTSはブラウザの機能を使用するため、APIキーは不要です。",
-        "learn_more": "詳細はこちら"
+        "learn_more": "詳細はこちら",
+        "tab_title": "[to be translated]:语音合成",
+        "service_type.refresh": "[to be translated]:刷新TTS服务类型设置",
+        "service_type.refreshed": "[to be translated]:已刷新TTS服务类型设置",
+        "api_key": "[to be translated]:API密钥",
+        "api_key.placeholder": "[to be translated]:请输入OpenAI API密钥",
+        "api_url": "[to be translated]:API地址",
+        "api_url.placeholder": "[to be translated]:例如：https://api.openai.com/v1/audio/speech",
+        "edge_voice": "[to be translated]:浏览器 TTS音色",
+        "edge_voice.loading": "[to be translated]:加载中...",
+        "edge_voice.refresh": "[to be translated]:刷新可用音色列表",
+        "edge_voice.not_found": "[to be translated]:未找到匹配的音色",
+        "voice": "[to be translated]:音色",
+        "voice.placeholder": "[to be translated]:请选择音色",
+        "voice_input_placeholder": "[to be translated]:输入音色",
+        "voice_add": "[to be translated]:添加",
+        "voice_empty": "[to be translated]:暂无自定义音色，请在下方添加",
+        "model": "[to be translated]:模型",
+        "model.placeholder": "[to be translated]:请选择模型",
+        "model_input_placeholder": "[to be translated]:输入模型",
+        "model_add": "[to be translated]:添加",
+        "model_empty": "[to be translated]:暂无自定义模型，请在下方添加",
+        "filter_options": "[to be translated]:过滤选项",
+        "filter.thinking_process": "[to be translated]:过滤思考过程",
+        "filter.markdown": "[to be translated]:过滤Markdown标记",
+        "filter.code_blocks": "[to be translated]:过滤代码块",
+        "filter.html_tags": "[to be translated]:过滤HTML标签",
+        "max_text_length": "[to be translated]:最大文本长度"
       },
       "asr": {
         "title": "音声認識",
@@ -1402,8 +1430,15 @@
         "error": {
           "not_enabled": "音声認識が有効になっていません",
           "start_failed": "録音の開始に失敗しました",
-          "transcribe_failed": "音声の文字起こしに失敗しました"
+          "transcribe_failed": "音声の文字起こしに失敗しました",
+          "no_api_key": "[to be translated]:未设置API密钥",
+          "browser_not_support": "[to be translated]:浏览器不支持语音识别"
         }
+      },
+      "voice": {
+        "title": "[to be translated]:语音功能",
+        "help": "[to be translated]:语音功能包括文本转语音(TTS)和语音识别(ASR)。",
+        "learn_more": "[to be translated]:了解更多"
       }
     },
     "translate": {
