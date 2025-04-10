@@ -23,7 +23,7 @@ class ASRServerService {
       window.message.loading({ content: i18n.t('settings.asr.server.starting'), key: 'asr-server' })
 
       // 使用IPC调用主进程启动服务器
-      const result = await window.electron.ipcRenderer.invoke('start-asr-server')
+      const result = await window.api.asrServer.startServer()
 
       if (result.success) {
         this.isServerRunning = true
@@ -65,7 +65,7 @@ class ASRServerService {
       window.message.loading({ content: i18n.t('settings.asr.server.stopping'), key: 'asr-server' })
 
       // 使用IPC调用主进程停止服务器
-      const result = await window.electron.ipcRenderer.invoke('stop-asr-server', this.serverProcess)
+      const result = await window.api.asrServer.stopServer(this.serverProcess)
 
       if (result.success) {
         this.isServerRunning = false

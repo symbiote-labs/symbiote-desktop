@@ -1,24 +1,16 @@
-import { InfoCircleOutlined, GlobalOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons'
-import { useTheme } from '@renderer/context/ThemeProvider'
-import ASRService from '@renderer/services/ASRService'
+import { GlobalOutlined, InfoCircleOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons'
 import ASRServerService from '@renderer/services/ASRServerService'
+import ASRService from '@renderer/services/ASRService'
 import { useAppDispatch } from '@renderer/store'
-import {
-  setAsrApiKey,
-  setAsrApiUrl,
-  setAsrEnabled,
-  setAsrModel,
-  setAsrServiceType
-} from '@renderer/store/settings'
+import { setAsrApiKey, setAsrApiUrl, setAsrEnabled, setAsrModel, setAsrServiceType } from '@renderer/store/settings'
 import { Button, Form, Input, Select, Space, Switch } from 'antd'
-import { FC, useState, useEffect } from 'react'
+import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 const ASRSettings: FC = () => {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
   const dispatch = useAppDispatch()
 
   // 服务器状态
@@ -47,9 +39,7 @@ const ASRSettings: FC = () => {
   ]
 
   // 模型选项
-  const modelOptions = [
-    { label: 'whisper-1', value: 'whisper-1' }
-  ]
+  const modelOptions = [{ label: 'whisper-1', value: 'whisper-1' }]
 
   return (
     <Container>
@@ -137,8 +127,7 @@ const ASRSettings: FC = () => {
                         setIsServerRunning(true)
                       }
                     }}
-                    disabled={!asrEnabled || isServerRunning}
-                  >
+                    disabled={!asrEnabled || isServerRunning}>
                     {t('settings.asr.server.start')}
                   </Button>
                   <Button
@@ -150,8 +139,7 @@ const ASRSettings: FC = () => {
                         setIsServerRunning(false)
                       }
                     }}
-                    disabled={!asrEnabled || !isServerRunning}
-                  >
+                    disabled={!asrEnabled || !isServerRunning}>
                     {t('settings.asr.server.stop')}
                   </Button>
                 </Space>
@@ -160,27 +148,33 @@ const ASRSettings: FC = () => {
                   type="primary"
                   icon={<GlobalOutlined />}
                   onClick={() => ASRServerService.openServerPage()}
-                  disabled={!asrEnabled || !isServerRunning}
-                >
+                  disabled={!asrEnabled || !isServerRunning}>
                   {t('settings.asr.open_browser')}
                 </Button>
 
                 <Button
                   onClick={() => {
                     // 尝试连接到WebSocket服务器
-                    ASRService.connectToWebSocketServer?.().then(connected => {
-                      if (connected) {
-                        window.message.success({ content: t('settings.asr.local.connection_success'), key: 'ws-connect' })
-                      } else {
+                    ASRService.connectToWebSocketServer?.()
+                      .then((connected) => {
+                        if (connected) {
+                          window.message.success({
+                            content: t('settings.asr.local.connection_success'),
+                            key: 'ws-connect'
+                          })
+                        } else {
+                          window.message.error({
+                            content: t('settings.asr.local.connection_failed'),
+                            key: 'ws-connect'
+                          })
+                        }
+                      })
+                      .catch((error) => {
+                        console.error('Failed to connect to WebSocket server:', error)
                         window.message.error({ content: t('settings.asr.local.connection_failed'), key: 'ws-connect' })
-                      }
-                    }).catch(error => {
-                      console.error('Failed to connect to WebSocket server:', error)
-                      window.message.error({ content: t('settings.asr.local.connection_failed'), key: 'ws-connect' })
-                    })
+                      })
                   }}
-                  disabled={!asrEnabled || !isServerRunning}
-                >
+                  disabled={!asrEnabled || !isServerRunning}>
                   {t('settings.asr.local.test_connection')}
                 </Button>
 
@@ -239,27 +233,27 @@ const Alert = styled.div<{ type: 'info' | 'warning' | 'error' | 'success' }>`
     props.type === 'info'
       ? 'var(--color-info-bg)'
       : props.type === 'warning'
-      ? 'var(--color-warning-bg)'
-      : props.type === 'error'
-      ? 'var(--color-error-bg)'
-      : 'var(--color-success-bg)'};
+        ? 'var(--color-warning-bg)'
+        : props.type === 'error'
+          ? 'var(--color-error-bg)'
+          : 'var(--color-success-bg)'};
   border: 1px solid
     ${(props) =>
       props.type === 'info'
         ? 'var(--color-info-border)'
         : props.type === 'warning'
-        ? 'var(--color-warning-border)'
-        : props.type === 'error'
-        ? 'var(--color-error-border)'
-        : 'var(--color-success-border)'};
+          ? 'var(--color-warning-border)'
+          : props.type === 'error'
+            ? 'var(--color-error-border)'
+            : 'var(--color-success-border)'};
   color: ${(props) =>
     props.type === 'info'
       ? 'var(--color-info-text)'
       : props.type === 'warning'
-      ? 'var(--color-warning-text)'
-      : props.type === 'error'
-      ? 'var(--color-error-text)'
-      : 'var(--color-success-text)'};
+        ? 'var(--color-warning-text)'
+        : props.type === 'error'
+          ? 'var(--color-error-text)'
+          : 'var(--color-success-text)'};
 `
 
 const BrowserTip = styled.div`

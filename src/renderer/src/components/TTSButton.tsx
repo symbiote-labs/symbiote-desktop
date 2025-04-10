@@ -1,9 +1,9 @@
 import { SoundOutlined } from '@ant-design/icons'
+import TTSService from '@renderer/services/TTSService'
+import { Message } from '@renderer/types'
 import { Button, Tooltip } from 'antd'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import TTSService from '@renderer/services/TTSService'
-import { Message } from '@renderer/types'
 
 interface TTSButtonProps {
   message: Message
@@ -24,7 +24,7 @@ const TTSButton: React.FC<TTSButtonProps> = ({ message, className }) => {
     setIsSpeaking(true)
     try {
       await TTSService.speakFromMessage(message)
-      
+
       // 监听播放结束
       const checkPlayingStatus = () => {
         if (!TTSService.isCurrentlyPlaying()) {
@@ -32,9 +32,9 @@ const TTSButton: React.FC<TTSButtonProps> = ({ message, className }) => {
           clearInterval(checkInterval)
         }
       }
-      
+
       const checkInterval = setInterval(checkPlayingStatus, 500)
-      
+
       // 安全机制，确保即使出错也会重置状态
       setTimeout(() => {
         if (isSpeaking) {

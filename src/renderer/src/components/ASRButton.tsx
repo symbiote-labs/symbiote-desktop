@@ -105,7 +105,14 @@ const ASRButton: FC<Props> = ({ onTranscribed, disabled = false, style }) => {
   }
 
   return (
-    <Tooltip title={isRecording ? t('settings.asr.stop') : isCountingDown ? `${t('settings.asr.preparing')} (${countdown})` : t('settings.asr.start')}>
+    <Tooltip
+      title={
+        isRecording
+          ? t('settings.asr.stop')
+          : isCountingDown
+            ? `${t('settings.asr.preparing')} (${countdown})`
+            : t('settings.asr.start')
+      }>
       <ButtonWrapper>
         <StyledButton
           type={isRecording || isCountingDown ? 'primary' : 'default'}
@@ -114,11 +121,8 @@ const ASRButton: FC<Props> = ({ onTranscribed, disabled = false, style }) => {
           onDoubleClick={handleCancel}
           disabled={disabled || isProcessing || (isCountingDown && countdown > 0)}
           style={style}
-          className={isCountingDown ? 'counting-down' : ''}
-        >
-          {isCountingDown && (
-            <CountdownNumber>{countdown}</CountdownNumber>
-          )}
+          className={isCountingDown ? 'counting-down' : ''}>
+          {isCountingDown && <CountdownNumber>{countdown}</CountdownNumber>}
         </StyledButton>
         {isCountingDown && (
           <CountdownIndicator>
@@ -151,9 +155,15 @@ const CountdownIndicator = styled.div`
   z-index: 10;
 
   @keyframes pulse {
-    0% { opacity: 0.7; }
-    50% { opacity: 1; }
-    100% { opacity: 0.7; }
+    0% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+    }
   }
 
   &:after {
@@ -176,9 +186,15 @@ const CountdownNumber = styled.span`
   animation: zoom 1s infinite;
 
   @keyframes zoom {
-    0% { transform: scale(0.8); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(0.8); }
+    0% {
+      transform: scale(0.8);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(0.8);
+    }
   }
 `
 

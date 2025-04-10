@@ -17,7 +17,7 @@ import {
   setTtsServiceType,
   setTtsVoice
 } from '@renderer/store/settings'
-import { Button, Form, Input, message, Select, Space, Switch, Tag, Tabs } from 'antd'
+import { Button, Form, Input, message, Select, Space, Switch, Tabs, Tag } from 'antd'
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
@@ -32,7 +32,6 @@ import {
   SettingRowTitle,
   SettingTitle
 } from '..'
-
 import ASRSettings from './ASRSettings'
 
 const CustomVoiceInput = styled.div`
@@ -462,7 +461,9 @@ const TTSSettings: FC = () => {
                             console.log('强制刷新TTS服务类型:', currentType)
                             dispatch(setTtsServiceType(currentType))
                             window.message.success({
-                              content: t('settings.tts.service_type.refreshed', { defaultValue: '已刷新TTS服务类型设置' }),
+                              content: t('settings.tts.service_type.refreshed', {
+                                defaultValue: '已刷新TTS服务类型设置'
+                              }),
                               key: 'tts-refresh'
                             })
                           }}
@@ -528,7 +529,9 @@ const TTSSettings: FC = () => {
                             title={t('settings.tts.edge_voice.refresh')}
                           />
                         </VoiceSelectContainer>
-                        {availableVoices.length === 0 && <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>}
+                        {availableVoices.length === 0 && (
+                          <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>
+                        )}
                       </Form.Item>
                     )}
 

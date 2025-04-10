@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next'
 import { SoundOutlined } from '@ant-design/icons'
-import { Tooltip } from 'antd'
-import styled from 'styled-components'
-import { useCallback, useEffect, useState } from 'react'
 import TTSService from '@renderer/services/TTSService'
+import { Tooltip } from 'antd'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
 
 const TTSStopButton: React.FC = () => {
   const { t } = useTranslation()
@@ -27,7 +27,7 @@ const TTSStopButton: React.FC = () => {
     TTSService.stop()
 
     // 等待一下，确保播放已经完全停止
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     // 再次检查并停止，确保强制停止
     if (TTSService.isCurrentlyPlaying()) {
