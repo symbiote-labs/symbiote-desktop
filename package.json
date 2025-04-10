@@ -87,6 +87,7 @@
     "got-scraping": "^4.1.1",
     "jsdom": "^26.0.0",
     "markdown-it": "^14.1.0",
+    "node-edge-tts": "^1.2.8",
     "officeparser": "^4.1.1",
     "proxy-agent": "^6.5.0",
     "tar": "^7.4.3",

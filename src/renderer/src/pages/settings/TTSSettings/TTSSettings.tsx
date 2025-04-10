@@ -15,10 +15,18 @@ import {
   setTtsFilterOptions,
   setTtsModel,
   setTtsServiceType,
-  setTtsVoice
+  setTtsVoice,
+  setTtsSiliconflowApiKey,
+  setTtsSiliconflowApiUrl,
+  setTtsSiliconflowVoice,
+  setTtsSiliconflowModel,
+  setTtsSiliconflowResponseFormat,
+  setTtsSiliconflowSpeed,
+  setTtsMsVoice,
+  setTtsMsOutputFormat
 } from '@renderer/store/settings'
-import { Button, Form, Input, message, Select, Space, Switch, Tabs, Tag } from 'antd'
-import { FC, useEffect, useState } from 'react'
+import { Button, Form, Input, InputNumber, message, Select, Space, Switch, Tabs, Tag } from 'antd'
+import { FC, useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -33,6 +41,36 @@ import {
   SettingTitle
 } from '..'
 import ASRSettings from './ASRSettings'
+
+// 预定义的浏览器 TTS音色列表
+const PREDEFINED_VOICES = [
+  { label: '小晓 (女声, 中文)', value: 'zh-CN-XiaoxiaoNeural' },
+  { label: '云扬 (男声, 中文)', value: 'zh-CN-YunyangNeural' },
+  { label: '晓晓 (女声, 中文)', value: 'zh-CN-XiaoxiaoNeural' },
+  { label: '晓涵 (女声, 中文)', value: 'zh-CN-XiaohanNeural' },
+  { label: '晓诗 (女声, 中文)', value: 'zh-CN-XiaoshuangNeural' },
+  { label: '晓瑞 (女声, 中文)', value: 'zh-CN-XiaoruiNeural' },
+  { label: '晓墨 (女声, 中文)', value: 'zh-CN-XiaomoNeural' },
+  { label: '晓然 (男声, 中文)', value: 'zh-CN-XiaoranNeural' },
+  { label: '晓坤 (男声, 中文)', value: 'zh-CN-XiaokunNeural' },
+  { label: 'Aria (Female, English)', value: 'en-US-AriaNeural' },
+  { label: 'Guy (Male, English)', value: 'en-US-GuyNeural' },
+  { label: 'Jenny (Female, English)', value: 'en-US-JennyNeural' },
+  { label: 'Ana (Female, Spanish)', value: 'es-ES-ElviraNeural' },
+  { label: 'Ichiro (Male, Japanese)', value: 'ja-JP-KeitaNeural' },
+  { label: 'Nanami (Female, Japanese)', value: 'ja-JP-NanamiNeural' },
+  // 添加更多常用的语音
+  { label: 'Microsoft David (en-US)', value: 'Microsoft David Desktop - English (United States)' },
+  { label: 'Microsoft Zira (en-US)', value: 'Microsoft Zira Desktop - English (United States)' },
+  { label: 'Microsoft Mark (en-US)', value: 'Microsoft Mark Online (Natural) - English (United States)' },
+  { label: 'Microsoft Aria (en-US)', value: 'Microsoft Aria Online (Natural) - English (United States)' },
+  { label: 'Google US English', value: 'Google US English' },
+  { label: 'Google UK English Female', value: 'Google UK English Female' },
+  { label: 'Google UK English Male', value: 'Google UK English Male' },
+  { label: 'Google 日本語', value: 'Google 日本語' },
+  { label: 'Google 普通话（中国大陆）', value: 'Google 普通话（中国大陆）' },
+  { label: 'Google 粤語（香港）', value: 'Google 粤語（香港）' }
+]
 
 const CustomVoiceInput = styled.div`
   display: flex;
@@ -81,6 +119,12 @@ const LoadingText = styled.div`
   color: #999;
 `
 
+const InfoText = styled.div`
+  margin-top: 8px;
+  font-size: 12px;
+  color: #888;
+`
+
 const VoiceSelectContainer = styled.div`
   display: flex;
   gap: 8px;
@@ -93,25 +137,34 @@ const TTSSettings: FC = () => {
   const dispatch = useAppDispatch()
 
   // 从Redux获取TTS设置
-  const ttsEnabled = useSelector((state: any) => state.settings.ttsEnabled)
-  const ttsServiceType = useSelector((state: any) => state.settings.ttsServiceType || 'openai')
-  const ttsApiKey = useSelector((state: any) => state.settings.ttsApiKey)
-  const ttsApiUrl = useSelector((state: any) => state.settings.ttsApiUrl)
-  const ttsVoice = useSelector((state: any) => state.settings.ttsVoice)
-  const ttsModel = useSelector((state: any) => state.settings.ttsModel)
-  const ttsEdgeVoice = useSelector((state: any) => state.settings.ttsEdgeVoice || 'zh-CN-XiaoxiaoNeural')
-  const ttsCustomVoices = useSelector((state: any) => state.settings.ttsCustomVoices || [])
-  const ttsCustomModels = useSelector((state: any) => state.settings.ttsCustomModels || [])
-  const ttsFilterOptions = useSelector(
-    (state: any) =>
-      state.settings.ttsFilterOptions || {
-        filterThinkingProcess: true,
-        filterMarkdown: true,
-        filterCodeBlocks: true,
-        filterHtmlTags: true,
-        maxTextLength: 4000
-      }
-  )
+  const settings = useSelector((state: any) => state.settings)
+  const ttsEnabled = settings.ttsEnabled
+  const ttsServiceType = settings.ttsServiceType || 'openai'
+  const ttsApiKey = settings.ttsApiKey
+  const ttsApiUrl = settings.ttsApiUrl
+  const ttsVoice = settings.ttsVoice
+  const ttsModel = settings.ttsModel
+  const ttsEdgeVoice = settings.ttsEdgeVoice || 'zh-CN-XiaoxiaoNeural'
+  const ttsCustomVoices = settings.ttsCustomVoices || []
+  const ttsCustomModels = settings.ttsCustomModels || []
+  // 免费在线TTS设置
+  const ttsMsVoice = settings.ttsMsVoice || 'zh-CN-XiaoxiaoNeural'
+  const ttsMsOutputFormat = settings.ttsMsOutputFormat || 'audio-24khz-48kbitrate-mono-mp3'
+  const ttsFilterOptions = settings.ttsFilterOptions || {
+    filterThinkingProcess: true,
+    filterMarkdown: true,
+    filterCodeBlocks: true,
+    filterHtmlTags: true,
+    maxTextLength: 4000
+  }
+
+  // 硅基流动TTS设置
+  const ttsSiliconflowApiKey = settings.ttsSiliconflowApiKey
+  const ttsSiliconflowApiUrl = settings.ttsSiliconflowApiUrl
+  const ttsSiliconflowVoice = settings.ttsSiliconflowVoice
+  const ttsSiliconflowModel = settings.ttsSiliconflowModel
+  const ttsSiliconflowResponseFormat = settings.ttsSiliconflowResponseFormat
+  const ttsSiliconflowSpeed = settings.ttsSiliconflowSpeed
 
   // 新增自定义音色和模型的状态
   const [newVoice, setNewVoice] = useState('')
@@ -120,38 +173,51 @@ const TTSSettings: FC = () => {
   // 浏览器可用的语音列表
   const [availableVoices, setAvailableVoices] = useState<{ label: string; value: string }[]>([])
 
-  // 预定义的浏览器 TTS音色列表
-  const predefinedVoices = [
-    { label: '小晓 (女声, 中文)', value: 'zh-CN-XiaoxiaoNeural' },
-    { label: '云扬 (男声, 中文)', value: 'zh-CN-YunyangNeural' },
-    { label: '晓晓 (女声, 中文)', value: 'zh-CN-XiaoxiaoNeural' },
-    { label: '晓涵 (女声, 中文)', value: 'zh-CN-XiaohanNeural' },
-    { label: '晓诗 (女声, 中文)', value: 'zh-CN-XiaoshuangNeural' },
-    { label: '晓瑞 (女声, 中文)', value: 'zh-CN-XiaoruiNeural' },
-    { label: '晓墨 (女声, 中文)', value: 'zh-CN-XiaomoNeural' },
-    { label: '晓然 (男声, 中文)', value: 'zh-CN-XiaoranNeural' },
-    { label: '晓坤 (男声, 中文)', value: 'zh-CN-XiaokunNeural' },
-    { label: 'Aria (Female, English)', value: 'en-US-AriaNeural' },
-    { label: 'Guy (Male, English)', value: 'en-US-GuyNeural' },
-    { label: 'Jenny (Female, English)', value: 'en-US-JennyNeural' },
-    { label: 'Ana (Female, Spanish)', value: 'es-ES-ElviraNeural' },
-    { label: 'Ichiro (Male, Japanese)', value: 'ja-JP-KeitaNeural' },
-    { label: 'Nanami (Female, Japanese)', value: 'ja-JP-NanamiNeural' },
-    // 添加更多常用的语音
-    { label: 'Microsoft David (en-US)', value: 'Microsoft David Desktop - English (United States)' },
-    { label: 'Microsoft Zira (en-US)', value: 'Microsoft Zira Desktop - English (United States)' },
-    { label: 'Microsoft Mark (en-US)', value: 'Microsoft Mark Online (Natural) - English (United States)' },
-    { label: 'Microsoft Aria (en-US)', value: 'Microsoft Aria Online (Natural) - English (United States)' },
-    { label: 'Google US English', value: 'Google US English' },
-    { label: 'Google UK English Female', value: 'Google UK English Female' },
-    { label: 'Google UK English Male', value: 'Google UK English Male' },
-    { label: 'Google 日本語', value: 'Google 日本語' },
-    { label: 'Google 普通话（中国大陆）', value: 'Google 普通话（中国大陆）' },
-    { label: 'Google 粤語（香港）', value: 'Google 粤語（香港）' }
-  ]
+  // 免费在线TTS可用的语音列表
+  const [msTtsVoices, setMsTtsVoices] = useState<{ label: string; value: string }[]>([])
+
+
+
+  // 获取免费在线TTS可用的语音列表
+  const getMsTtsVoices = useCallback(async () => {
+    try {
+      // 调用API获取免费在线TTS语音列表
+      const response = await window.api.msTTS.getVoices();
+      console.log('获取到的免费在线TTS语音列表:', response);
+
+      // 转换为选项格式
+      const voices = response.map((voice: any) => ({
+        label: `${voice.ShortName} (${voice.Gender === 'Female' ? '女声' : '男声'})`,
+        value: voice.ShortName
+      }));
+
+      // 按语言和性别排序
+      voices.sort((a: any, b: any) => {
+        const localeA = a.value.split('-')[0] + a.value.split('-')[1];
+        const localeB = b.value.split('-')[0] + b.value.split('-')[1];
+        if (localeA !== localeB) return localeA.localeCompare(localeB);
+        return a.label.localeCompare(b.label);
+      });
+
+      setMsTtsVoices(voices);
+    } catch (error) {
+      console.error('获取免费在线TTS语音列表失败:', error);
+      // 如果获取失败，设置一些默认的中文语音
+      setMsTtsVoices([
+        { label: 'zh-CN-XiaoxiaoNeural (女声)', value: 'zh-CN-XiaoxiaoNeural' },
+        { label: 'zh-CN-YunxiNeural (男声)', value: 'zh-CN-YunxiNeural' },
+        { label: 'zh-CN-YunyangNeural (男声)', value: 'zh-CN-YunyangNeural' },
+        { label: 'zh-CN-XiaohanNeural (女声)', value: 'zh-CN-XiaohanNeural' },
+        { label: 'zh-CN-XiaomoNeural (女声)', value: 'zh-CN-XiaomoNeural' },
+        { label: 'zh-CN-XiaoxuanNeural (女声)', value: 'zh-CN-XiaoxuanNeural' },
+        { label: 'zh-CN-XiaoruiNeural (女声)', value: 'zh-CN-XiaoruiNeural' },
+        { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' },
+      ]);
+    }
+  }, []);
 
   // 获取浏览器可用的语音列表
-  const getVoices = () => {
+  const getVoices = useCallback(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       // 先触发一下语音合成引擎，确保它已经初始化
       window.speechSynthesis.cancel()
@@ -170,18 +236,22 @@ const TTSSettings: FC = () => {
       }))
 
       // 添加语言信息到预定义语音
-      const enhancedPredefinedVoices = predefinedVoices.map((voice) => ({
+      const enhancedPredefinedVoices = PREDEFINED_VOICES.map((voice) => ({
         ...voice,
         lang: voice.value.split('-').slice(0, 2).join('-'),
         isNative: false // 标记为非浏览器原生语音
       }))
 
       // 合并所有语音列表
+      // 只使用浏览器原生语音，因为预定义语音实际不可用
       let allVoices = [...browserVoices]
 
-      // 如果浏览器语音少于5个，添加预定义语音
-      if (browserVoices.length < 5) {
-        allVoices = [...browserVoices, ...enhancedPredefinedVoices]
+      // 如果浏览器没有可用语音，才使用预定义语音
+      if (browserVoices.length === 0) {
+        allVoices = [...enhancedPredefinedVoices]
+        console.log('浏览器没有可用语音，使用预定义语音')
+      } else {
+        console.log('使用浏览器原生语音，共' + browserVoices.length + '个')
       }
 
       // 去除重复项，优先保留浏览器原生语音
@@ -210,12 +280,12 @@ const TTSSettings: FC = () => {
     } else {
       // 如果浏览器不支持Web Speech API，使用预定义的语音列表
       console.log('浏览器不支持Web Speech API，使用预定义的语音列表')
-      setAvailableVoices(predefinedVoices)
+      setAvailableVoices(PREDEFINED_VOICES)
     }
-  }
+  }, [])
 
   // 刷新语音列表
-  const refreshVoices = () => {
+  const refreshVoices = useCallback(() => {
     console.log('手动刷新语音列表')
     message.loading({
       content: t('settings.tts.edge_voice.refreshing', { defaultValue: '正在刷新语音列表...' }),
@@ -242,13 +312,19 @@ const TTSSettings: FC = () => {
       }, 500)
     } else {
       // 如果浏览器不支持Web Speech API，使用预定义的语音列表
-      setAvailableVoices(predefinedVoices)
+      setAvailableVoices(PREDEFINED_VOICES)
       message.success({
         content: t('settings.tts.edge_voice.refreshed', { defaultValue: '语音列表已刷新' }),
         key: 'refresh-voices'
       })
     }
-  }
+  }, [getVoices, t])
+
+  // 获取免费在线TTS语音列表
+  useEffect(() => {
+    // 获取免费在线TTS语音列表
+    getMsTtsVoices();
+  }, [getMsTtsVoices]);
 
   useEffect(() => {
     // 初始化语音合成引擎
@@ -283,10 +359,10 @@ const TTSSettings: FC = () => {
       }
     } else {
       // 如果浏览器不支持Web Speech API，使用预定义的语音列表
-      setAvailableVoices(predefinedVoices)
+      setAvailableVoices(PREDEFINED_VOICES)
       return () => {}
     }
-  }, [getVoices, predefinedVoices])
+  }, [getVoices])
 
   // 测试TTS功能
   const testTTS = async () => {
@@ -294,6 +370,11 @@ const TTSSettings: FC = () => {
       window.message.error({ content: t('settings.tts.error.not_enabled'), key: 'tts-test' })
       return
     }
+
+    // 强制刷新状态，确保使用最新的设置
+    // 先获取当前的服务类型
+    const currentType = store.getState().settings.ttsServiceType || 'openai'
+    console.log('测试前当前的TTS服务类型:', currentType)
 
     // 获取最新的服务类型设置
     const latestSettings = store.getState().settings
@@ -305,7 +386,12 @@ const TTSSettings: FC = () => {
       ttsApiKey: latestSettings.ttsApiKey ? '已设置' : '未设置',
       ttsVoice: latestSettings.ttsVoice,
       ttsModel: latestSettings.ttsModel,
-      ttsEdgeVoice: latestSettings.ttsEdgeVoice
+      ttsEdgeVoice: latestSettings.ttsEdgeVoice,
+      ttsSiliconflowApiKey: latestSettings.ttsSiliconflowApiKey ? '已设置' : '未设置',
+      ttsSiliconflowVoice: latestSettings.ttsSiliconflowVoice,
+      ttsSiliconflowModel: latestSettings.ttsSiliconflowModel,
+      ttsSiliconflowResponseFormat: latestSettings.ttsSiliconflowResponseFormat,
+      ttsSiliconflowSpeed: latestSettings.ttsSiliconflowSpeed
     })
 
     // 根据服务类型检查必要的参数
@@ -327,6 +413,25 @@ const TTSSettings: FC = () => {
     } else if (currentServiceType === 'edge') {
       if (!ttsEdgeVoice) {
         window.message.error({ content: t('settings.tts.error.no_edge_voice'), key: 'tts-test' })
+        return
+      }
+    } else if (currentServiceType === 'siliconflow') {
+      const ttsSiliconflowApiKey = latestSettings.ttsSiliconflowApiKey
+      const ttsSiliconflowVoice = latestSettings.ttsSiliconflowVoice
+      const ttsSiliconflowModel = latestSettings.ttsSiliconflowModel
+
+      if (!ttsSiliconflowApiKey) {
+        window.message.error({ content: t('settings.tts.error.no_api_key'), key: 'tts-test' })
+        return
+      }
+
+      if (!ttsSiliconflowVoice) {
+        window.message.error({ content: t('settings.tts.error.no_voice'), key: 'tts-test' })
+        return
+      }
+
+      if (!ttsSiliconflowModel) {
+        window.message.error({ content: t('settings.tts.error.no_model'), key: 'tts-test' })
         return
       }
     }
@@ -430,25 +535,14 @@ const TTSSettings: FC = () => {
                           value={ttsServiceType}
                           onChange={(value: string) => {
                             console.log('切换TTS服务类型为:', value)
-                            // 先将新的服务类型写入Redux状态
+                            // 直接将新的服务类型写入Redux状态
                             dispatch(setTtsServiceType(value))
-
-                            // 等待一下，确保状态已更新
-                            setTimeout(() => {
-                              // 验证状态是否正确更新
-                              const currentType = store.getState().settings.ttsServiceType
-                              console.log('更新后的TTS服务类型:', currentType)
-
-                              // 如果状态没有正确更新，再次尝试
-                              if (currentType !== value) {
-                                console.log('状态未正确更新，再次尝试')
-                                dispatch(setTtsServiceType(value))
-                              }
-                            }, 100)
                           }}
                           options={[
                             { label: t('settings.tts.service_type.openai'), value: 'openai' },
-                            { label: t('settings.tts.service_type.edge'), value: 'edge' }
+                            { label: t('settings.tts.service_type.edge'), value: 'edge' },
+                            { label: t('settings.tts.service_type.siliconflow'), value: 'siliconflow' },
+                            { label: t('settings.tts.service_type.mstts'), value: 'mstts' }
                           ]}
                           disabled={!ttsEnabled}
                           style={{ flex: 1 }}
@@ -495,6 +589,92 @@ const TTSSettings: FC = () => {
                       </>
                     )}
 
+                    {/* 硅基流动 TTS设置 */}
+                    {ttsServiceType === 'siliconflow' && (
+                      <>
+                        <Form.Item label={t('settings.tts.siliconflow_api_key')} style={{ marginBottom: 16 }}>
+                          <Input.Password
+                            value={ttsSiliconflowApiKey}
+                            onChange={(e) => dispatch(setTtsSiliconflowApiKey(e.target.value))}
+                            placeholder={t('settings.tts.siliconflow_api_key.placeholder')}
+                            disabled={!ttsEnabled}
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.siliconflow_api_url')} style={{ marginBottom: 16 }}>
+                          <Input
+                            value={ttsSiliconflowApiUrl}
+                            onChange={(e) => dispatch(setTtsSiliconflowApiUrl(e.target.value))}
+                            placeholder={t('settings.tts.siliconflow_api_url.placeholder')}
+                            disabled={!ttsEnabled}
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.siliconflow_voice')} style={{ marginBottom: 16 }}>
+                          <Select
+                            value={ttsSiliconflowVoice}
+                            onChange={(value) => dispatch(setTtsSiliconflowVoice(value))}
+                            options={[
+                              { label: 'alex (沉稳男声)', value: 'FunAudioLLM/CosyVoice2-0.5B:alex' },
+                              { label: 'benjamin (低沉男声)', value: 'FunAudioLLM/CosyVoice2-0.5B:benjamin' },
+                              { label: 'charles (磁性男声)', value: 'FunAudioLLM/CosyVoice2-0.5B:charles' },
+                              { label: 'david (欢快男声)', value: 'FunAudioLLM/CosyVoice2-0.5B:david' },
+                              { label: 'anna (沉稳女声)', value: 'FunAudioLLM/CosyVoice2-0.5B:anna' },
+                              { label: 'bella (激情女声)', value: 'FunAudioLLM/CosyVoice2-0.5B:bella' },
+                              { label: 'claire (温柔女声)', value: 'FunAudioLLM/CosyVoice2-0.5B:claire' },
+                              { label: 'diana (欢快女声)', value: 'FunAudioLLM/CosyVoice2-0.5B:diana' }
+                            ]}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.siliconflow_voice.placeholder')}
+                            showSearch
+                            optionFilterProp="label"
+                            allowClear
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.siliconflow_model')} style={{ marginBottom: 16 }}>
+                          <Select
+                            value={ttsSiliconflowModel}
+                            onChange={(value) => dispatch(setTtsSiliconflowModel(value))}
+                            options={[
+                              { label: 'FunAudioLLM/CosyVoice2-0.5B', value: 'FunAudioLLM/CosyVoice2-0.5B' }
+                            ]}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.siliconflow_model.placeholder')}
+                            showSearch
+                            optionFilterProp="label"
+                            allowClear
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.siliconflow_response_format')} style={{ marginBottom: 16 }}>
+                          <Select
+                            value={ttsSiliconflowResponseFormat}
+                            onChange={(value) => dispatch(setTtsSiliconflowResponseFormat(value))}
+                            options={[
+                              { label: 'MP3', value: 'mp3' },
+                              { label: 'OPUS', value: 'opus' },
+                              { label: 'WAV', value: 'wav' },
+                              { label: 'PCM', value: 'pcm' }
+                            ]}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.siliconflow_response_format.placeholder')}
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.siliconflow_speed')} style={{ marginBottom: 16 }}>
+                          <InputNumber
+                            value={ttsSiliconflowSpeed}
+                            onChange={(value) => dispatch(setTtsSiliconflowSpeed(value as number))}
+                            min={0.5}
+                            max={2.0}
+                            step={0.1}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.siliconflow_speed.placeholder')}
+                          />
+                        </Form.Item>
+                      </>
+                    )}
+
                     {/* 浏览器 TTS设置 */}
                     {ttsServiceType === 'edge' && (
                       <Form.Item label={t('settings.tts.edge_voice')} style={{ marginBottom: 16 }}>
@@ -532,7 +712,67 @@ const TTSSettings: FC = () => {
                         {availableVoices.length === 0 && (
                           <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>
                         )}
+                        {availableVoices.length > 0 && (
+                          <InfoText>
+                            {t('settings.tts.edge_voice.available_count', { count: availableVoices.length })}
+                          </InfoText>
+                        )}
                       </Form.Item>
+                    )}
+
+                    {/* 免费在线 TTS设置 */}
+                    {ttsServiceType === 'mstts' && (
+                      <>
+                        <Form.Item label={t('settings.tts.mstts.voice')} style={{ marginBottom: 16 }}>
+                          <VoiceSelectContainer>
+                            <Select
+                            value={ttsMsVoice}
+                            onChange={(value) => dispatch(setTtsMsVoice(value))}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            options={msTtsVoices.length > 0 ? msTtsVoices : [
+                              { label: 'zh-CN-XiaoxiaoNeural (女声)', value: 'zh-CN-XiaoxiaoNeural' },
+                              { label: 'zh-CN-YunxiNeural (男声)', value: 'zh-CN-YunxiNeural' },
+                              { label: 'zh-CN-YunyangNeural (男声)', value: 'zh-CN-YunyangNeural' },
+                              { label: 'zh-CN-XiaohanNeural (女声)', value: 'zh-CN-XiaohanNeural' },
+                              { label: 'zh-CN-XiaomoNeural (女声)', value: 'zh-CN-XiaomoNeural' },
+                              { label: 'zh-CN-XiaoxuanNeural (女声)', value: 'zh-CN-XiaoxuanNeural' },
+                              { label: 'zh-CN-XiaoruiNeural (女声)', value: 'zh-CN-XiaoruiNeural' },
+                              { label: 'zh-CN-YunfengNeural (男声)', value: 'zh-CN-YunfengNeural' },
+                            ]}
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder={t('settings.tts.voice.placeholder', { defaultValue: '请选择音色' })}
+                            notFoundContent={t('settings.tts.voice.not_found', { defaultValue: '未找到音色' })}
+                            />
+                            <Button
+                              icon={<ReloadOutlined />}
+                              onClick={() => getMsTtsVoices()}
+                              disabled={!ttsEnabled}
+                              title={t('settings.tts.mstts.refresh', { defaultValue: '刷新语音列表' })}
+                            />
+                          </VoiceSelectContainer>
+                          {msTtsVoices.length > 0 && (
+                            <InfoText>
+                              {t('settings.tts.mstts.available_count', { count: msTtsVoices.length, defaultValue: '可用语音: {{count}}个' })}
+                            </InfoText>
+                          )}
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.mstts.output_format')} style={{ marginBottom: 16 }}>
+                          <Select
+                            value={ttsMsOutputFormat}
+                            onChange={(value) => dispatch(setTtsMsOutputFormat(value))}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            options={[
+                              { label: 'MP3 (24kHz, 48kbps)', value: 'audio-24khz-48kbitrate-mono-mp3' },
+                              { label: 'MP3 (24kHz, 96kbps)', value: 'audio-24khz-96kbitrate-mono-mp3' },
+                              { label: 'Webm (24kHz)', value: 'webm-24khz-16bit-mono-opus' },
+                            ]}
+                          />
+                        </Form.Item>
+                        <InfoText>{t('settings.tts.mstts.info', { defaultValue: '免费在线TTS服务不需要API密钥，完全免费使用。' })}</InfoText>
+                      </>
                     )}
 
                     {/* OpenAI TTS的音色和模型设置 */}
@@ -719,7 +959,12 @@ const TTSSettings: FC = () => {
                         disabled={
                           !ttsEnabled ||
                           (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
-                          (ttsServiceType === 'edge' && !ttsEdgeVoice)
+                          (ttsServiceType === 'edge' && !ttsEdgeVoice) ||
+                          (ttsServiceType === 'siliconflow' && (
+                            !ttsSiliconflowApiKey ||
+                            !ttsSiliconflowVoice ||
+                            !ttsSiliconflowModel
+                          ))
                         }>
                         {t('settings.tts.test')}
                       </Button>

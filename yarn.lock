@@ -3981,6 +3981,7 @@ __metadata:
     lru-cache: "npm:^11.1.0"
     markdown-it: "npm:^14.1.0"
     mime: "npm:^4.0.4"
+    node-edge-tts: "npm:^1.2.8"
     npx-scope-finder: "npm:^1.2.0"
     officeparser: "npm:^4.1.1"
     openai: "patch:openai@npm%3A4.87.3#~/.yarn/patches/openai-npm-4.87.3-2b30a7685f.patch"
@@ -11754,6 +11755,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-edge-tts@npm:^1.2.8":
+  version: 1.2.8
+  resolution: "node-edge-tts@npm:1.2.8"
+  dependencies:
+    https-proxy-agent: "npm:^7.0.1"
+    ws: "npm:^8.13.0"
+    yargs: "npm:^17.7.2"
+  bin:
+    node-edge-tts: bin.js
+  checksum: 10c0/6d70ab660a0a82cf7b87dfa61c0680a9bce3b38a9b58ca1075d4a0a8f7ccbdb17355c995e6ca92cf5ec0260c967bbf9961e7762f6db182087aa3b3e26d7b2077
+  languageName: node
+  linkType: hard
+
 "node-ensure@npm:^0.0.0":
   version: 0.0.0
   resolution: "node-ensure@npm:0.0.0"
@@ -16863,7 +16877,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yargs@npm:^17.5.1, yargs@npm:^17.6.2":
+"yargs@npm:^17.5.1, yargs@npm:^17.6.2, yargs@npm:^17.7.2":
   version: 17.7.2
   resolution: "yargs@npm:17.7.2"
   dependencies:

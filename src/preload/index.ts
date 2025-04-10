@@ -64,7 +64,7 @@ const api = {
     binaryFile: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_BinaryFile, fileId)
   },
   fs: {
-    read: (path: string) => ipcRenderer.invoke(IpcChannel.Fs_Read, path)
+    read: (path: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, path, encoding)
   },
   export: {
     toWord: (markdown: string, fileName: string) => ipcRenderer.invoke(IpcChannel.Export_Word, markdown, fileName)
@@ -118,6 +118,11 @@ const api = {
     close: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Close),
     toggle: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Toggle),
     setPin: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.MiniWindow_SetPin, isPinned)
+  },
+  msTTS: {
+    getVoices: () => ipcRenderer.invoke(IpcChannel.MsTTS_GetVoices),
+    synthesize: (text: string, voice: string, outputFormat: string) =>
+      ipcRenderer.invoke(IpcChannel.MsTTS_Synthesize, text, voice, outputFormat)
   },
   aes: {
     encrypt: (text: string, secretKey: string, iv: string) =>

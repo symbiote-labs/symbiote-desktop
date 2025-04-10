@@ -407,7 +407,10 @@ const MessageMenubar: FC<Props> = (props) => {
       )}
       {isAssistantMessage && ttsEnabled && (
         <Tooltip title={t('chat.tts.play')} mouseEnterDelay={0.8}>
-          <ActionButton className="message-action-button" onClick={() => TTSService.speakFromMessage(message)}>
+          <ActionButton className="message-action-button" onClick={() => {
+            console.log('点击MessageMenubar中的TTS按钮，开始播放消息')
+            TTSService.speakFromMessage(message)
+          }}>
             <SoundOutlined />
           </ActionButton>
         </Tooltip>
