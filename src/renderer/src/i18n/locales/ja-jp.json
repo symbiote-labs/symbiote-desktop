@@ -1347,14 +1347,14 @@
         "api_settings": "API設定",
         "service_type": "サービスタイプ",
         "service_type.openai": "OpenAI",
-        "service_type.edge": "Edge TTS",
+        "service_type.edge": "ブラウザ TTS",
         "test": "テスト",
         "error": {
           "failed": "音声合成に失敗しました",
           "not_enabled": "音声合成が有効になっていません",
-          "no_edge_voice": "Edge TTSの音声が選択されていません"
+          "no_edge_voice": "ブラウザ TTSの音声が選択されていません"
         },
-        "help": "OpenAIのTTS APIを使用するには、APIキーが必要です。Edge TTSはブラウザの機能を使用するため、APIキーは不要です。",
+        "help": "OpenAIのTTS APIを使用するには、APIキーが必要です。ブラウザ TTSはブラウザの機能を使用するため、APIキーは不要です。",
         "learn_more": "詳細はこちら"
       },
       "asr": {
@@ -1372,7 +1372,7 @@
         "model": "モデル",
         "browser.info": "ブラウザの内蔵音声認識機能を使用します。追加設定は不要です",
         "local.info": "ローカルサーバーとブラウザを使用して音声認識を行います。サーバーを起動してブラウザページを開く必要があります",
-        "local.browser_tip": "このページをEdgeブラウザで開き、ブラウザウィンドウを開いたままにしてください",
+        "local.browser_tip": "このページをブラウザで開き、ブラウザウィンドウを開いたままにしてください",
         "local.test_connection": "接続テスト",
         "local.connection_success": "接続成功",
         "local.connection_failed": "接続失敗。サーバーが起動していることを確認してください",

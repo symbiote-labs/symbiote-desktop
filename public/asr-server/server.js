@@ -6,7 +6,7 @@ const path = require('path') // Need path module
 const app = express()
 const port = 8080 // Define the port
 
-// 提供网页给 Edge 浏览器
+// 提供网页给浏览器
 app.get('/', (req, res) => {
   // Use path.join for cross-platform compatibility
   res.sendFile(path.join(__dirname, 'index.html'))

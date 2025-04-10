@@ -64,6 +64,11 @@ export enum IpcChannel {
   Aes_Encrypt = 'aes:encrypt',
   Aes_Decrypt = 'aes:decrypt',
 
+  // search window
+  SearchWindow_Open = 'search-window:open',
+  SearchWindow_Close = 'search-window:close',
+  SearchWindow_OpenUrl = 'search-window:open-url',
+
   Gemini_UploadFile = 'gemini:upload-file',
   Gemini_Base64File = 'gemini:base64-file',
   Gemini_RetrieveFile = 'gemini:retrieve-file',

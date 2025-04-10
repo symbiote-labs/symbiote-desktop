@@ -121,7 +121,7 @@ const TTSSettings: FC = () => {
   // 浏览器可用的语音列表
   const [availableVoices, setAvailableVoices] = useState<{ label: string; value: string }[]>([])
 
-  // 预定义的Edge TTS音色列表
+  // 预定义的浏览器 TTS音色列表
   const predefinedVoices = [
     { label: '小晓 (女声, 中文)', value: 'zh-CN-XiaoxiaoNeural' },
     { label: '云扬 (男声, 中文)', value: 'zh-CN-YunyangNeural' },
@@ -494,7 +494,7 @@ const TTSSettings: FC = () => {
                       </>
                     )}
 
-                    {/* Edge TTS设置 */}
+                    {/* 浏览器 TTS设置 */}
                     {ttsServiceType === 'edge' && (
                       <Form.Item label={t('settings.tts.edge_voice')} style={{ marginBottom: 16 }}>
                         <VoiceSelectContainer>

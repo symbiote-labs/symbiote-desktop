@@ -31,7 +31,7 @@ function getIndexHtmlPath() {
   return path.join(process.cwd(), 'index.html');
 }
 
-// 提供网页给 Edge 浏览器
+// 提供网页给浏览器
 app.get('/', (req, res) => {
   const indexPath = getIndexHtmlPath();
   console.log(`Serving index.html from: ${indexPath}`);
