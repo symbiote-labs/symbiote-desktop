@@ -10,6 +10,7 @@ import copilot from './copilot'
 import knowledge from './knowledge'
 import llm from './llm'
 import mcp from './mcp'
+import messageBlocksReducer from './messageBlock'
 import messagesReducer from './messages'
 import migrate from './migrate'
 import minapps from './minapps'
@@ -19,7 +20,6 @@ import runtime from './runtime'
 import settings from './settings'
 import shortcuts from './shortcuts'
 import websearch from './websearch'
-
 const rootReducer = combineReducers({
   assistants,
   agents,
@@ -35,7 +35,8 @@ const rootReducer = combineReducers({
   websearch,
   mcp,
   copilot,
-  messages: messagesReducer
+  messages: messagesReducer,
+  messageBlocks: messageBlocksReducer
 })
 
 const persistedReducer = persistReducer(

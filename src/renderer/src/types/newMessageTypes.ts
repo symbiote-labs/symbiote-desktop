@@ -10,7 +10,6 @@ import type {
   Topic,
   WebSearchResult
 } from '.'
-
 // MessageBlock 类型枚举 - 根据实际API返回特性优化
 export enum MessageBlockType {
   MAIN_TEXT = 'main_text', // 主要文本内容
@@ -164,20 +163,6 @@ export type MessageBlock =
   | FileMessageBlock
   | ErrorMessageBlock
 
-// 流式块更新数据结构 - 用于处理API流式更新
-export interface BlockUpdateData {
-  blockId?: string // 要更新的块ID (如果为空则创建新块)
-  messageId: string // 所属消息ID
-  type: MessageBlockType // 块类型
-  content?: string | object // 内容更新
-  status?: MessageBlockStatus // 状态更新
-  append?: boolean // 是否追加内容
-  language?: string // 代码语言 (用于代码块)
-  metadata?: Record<string, any> // 元数据更新
-  usage?: OpenAI.Completions.CompletionUsage // 使用统计
-  metrics?: Metrics // 性能指标
-}
-
 // Message 核心类型 - 包含元数据和块集合
 export type Message = {
   id: string
@@ -185,11 +170,8 @@ export type Message = {
   assistantId: string
   topicId: string
   createdAt: string
-  updatedAt?: string
+  // updatedAt?: string
   status: 'sending' | 'processing' | 'success' | 'paused' | 'error'
-
-  // 兼容性和快速访问字段
-  content?: string // 主文本内容快捷引用 (映射到MAIN_TEXT块)
 
   // 消息元数据
   modelId?: string
@@ -206,16 +188,11 @@ export type Message = {
   foldSelected?: boolean
 
   // 块集合
-  blocks: {
-    id: MessageBlock['id']
-    timestamp: number
-  }[]
+  blocks: MessageBlock['id'][]
 }
 
-// Redux状态类型
-export type MessagesState = {
+export interface MessagesState {
   messagesByTopic: Record<string, Message[]>
-  streamBlocksByMessage: Record<string, Record<string, MessageBlock>> // 流式更新的块缓存
   currentTopic: Topic | null
   loadingByTopic: Record<string, boolean>
   displayCount: number
