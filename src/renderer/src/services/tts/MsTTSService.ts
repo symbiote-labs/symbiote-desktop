@@ -44,15 +44,15 @@ export class MsTTSService implements TTSServiceInterface {
 
       // 通过IPC调用主进程的MsTTSService
       const outputPath = await window.api.msTTS.synthesize(text, this.voice, this.outputFormat);
-      
+
       // 读取生成的音频文件
       const audioData = await window.api.fs.read(outputPath);
-      
+
       // 将Buffer转换为Blob
       return new Blob([audioData], { type: 'audio/mp3' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('免费在线TTS语音合成失败:', error);
-      throw new Error(`免费在线TTS语音合成失败: ${error.message}`);
+      throw new Error(`免费在线TTS语音合成失败: ${error?.message || '未知错误'}`);
     }
   }
 }
