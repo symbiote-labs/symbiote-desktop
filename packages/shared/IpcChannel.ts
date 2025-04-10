@@ -146,9 +146,5 @@ export enum IpcChannel {
   MiniWindowReload = 'miniwindow-reload',
 
   ReduxStateChange = 'redux-state-change',
-  ReduxStoreReady = 'redux-store-ready',
-
-  // ASR Server
-  ASR_StartServer = 'start-asr-server',
-  ASR_StopServer = 'stop-asr-server'
+  ReduxStoreReady = 'redux-store-ready'
 }
