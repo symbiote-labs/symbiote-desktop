@@ -14,6 +14,8 @@ export interface WebSearchState {
   excludeDomains: string[]
   // 是否启用搜索增强模式
   enhanceMode: boolean
+  // 是否覆盖服务商搜索
+  overwrite: boolean
 }
 
 const initialState: WebSearchState = {
@@ -33,13 +35,31 @@ const initialState: WebSearchState = {
       id: 'exa',
       name: 'Exa',
       apiKey: ''
+    },
+    {
+      id: 'local-google',
+      name: 'Google',
+      url: 'https://www.google.com/search?q=%s'
+    },
+    {
+      id: 'local-bing',
+      name: 'Bing',
+      url: 'https://cn.bing.com/search?q=%s&ensearch=1'
+    },
+    {
+      id: 'local-baidu',
+      name: 'Baidu',
+      url: 'https://www.baidu.com/s?wd=%s'
     }
   ],
   searchWithTime: true,
   maxResults: 5,
   excludeDomains: [],
-  enhanceMode: false
+  enhanceMode: false,
+  overwrite: false
 }
+
+export const defaultWebSearchProviders = initialState.providers
 
 const websearchSlice = createSlice({
   name: 'websearch',
@@ -71,6 +91,18 @@ const websearchSlice = createSlice({
     },
     setEnhanceMode: (state, action: PayloadAction<boolean>) => {
       state.enhanceMode = action.payload
+    },
+    setOverwrite: (state, action: PayloadAction<boolean>) => {
+      state.overwrite = action.payload
+    },
+    addWebSearchProvider: (state, action: PayloadAction<WebSearchProvider>) => {
+      // Check if provider with same ID already exists
+      const exists = state.providers.some((provider) => provider.id === action.payload.id)
+
+      if (!exists) {
+        // Add the new provider to the array
+        state.providers.push(action.payload)
+      }
     }
   }
 })
@@ -83,7 +115,9 @@ export const {
   setSearchWithTime,
   setExcludeDomains,
   setMaxResult,
-  setEnhanceMode
+  setEnhanceMode,
+  setOverwrite,
+  addWebSearchProvider
 } = websearchSlice.actions
 
 export default websearchSlice.reducer

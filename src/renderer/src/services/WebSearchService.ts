@@ -31,6 +31,10 @@ class WebSearchService {
       return false
     }
 
+    if (provider.id.startsWith('local-')) {
+      return true
+    }
+
     if (hasObjectKey(provider, 'apiKey')) {
       return provider.apiKey !== ''
     }
@@ -50,6 +54,16 @@ class WebSearchService {
   public isEnhanceModeEnabled(): boolean {
     const { enhanceMode } = this.getWebSearchState()
     return enhanceMode
+  }
+
+  /**
+   * 检查是否启用覆盖搜索
+   * @public
+   * @returns 如果启用覆盖搜索则返回true，否则返回false
+   */
+  public isOverwriteEnabled(): boolean {
+    const { overwrite } = this.getWebSearchState()
+    return overwrite
   }
 
   /**

@@ -86,7 +86,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     const searchResults =
       message?.metadata?.webSearch?.results ||
       message?.metadata?.webSearchInfo ||
-      message?.metadata?.groundingMetadata?.groundingChunks.map((chunk) => chunk.web) ||
+      message?.metadata?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
       message?.metadata?.annotations?.map((annotation) => annotation.url_citation) ||
       []
     const citationsUrls = formattedCitations || []
@@ -197,7 +197,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     const content = `[@${model.name}](#)  ${getBriefInfo(message.content)}`
     return <Markdown message={{ ...message, content }} />
   }
-
+  const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
   return (
     <Fragment>
       <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
@@ -205,7 +205,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       </Flex>
       <MessageThought message={message} />
       <MessageTools message={message} />
-      <Markdown message={{ ...message, content: processedContent }} />
+      <Markdown message={{ ...message, content: processedContent.replace(toolUseRegex, '') }} />
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
         <Fragment>
@@ -222,18 +222,22 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       {message?.metadata?.groundingMetadata && message.status == 'success' && (
         <>
           <CitationsList
-            citations={message.metadata.groundingMetadata.groundingChunks.map((chunk, index) => ({
-              number: index + 1,
-              url: chunk.web?.uri,
-              title: chunk.web?.title,
-              showFavicon: false
-            }))}
+            citations={
+              message.metadata.groundingMetadata?.groundingChunks?.map((chunk, index) => ({
+                number: index + 1,
+                url: chunk?.web?.uri || '',
+                title: chunk?.web?.title,
+                showFavicon: false
+              })) || []
+            }
           />
           <SearchEntryPoint
             dangerouslySetInnerHTML={{
-              __html: message.metadata.groundingMetadata.searchEntryPoint?.renderedContent
-                ?.replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
-                .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
+              __html: message.metadata.groundingMetadata?.searchEntryPoint?.renderedContent
+                ? message.metadata.groundingMetadata.searchEntryPoint.renderedContent
+                    .replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
+                    .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
+                : ''
             }}
           />
         </>

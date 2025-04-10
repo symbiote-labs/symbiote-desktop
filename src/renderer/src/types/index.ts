@@ -1,3 +1,4 @@
+import { GroundingMetadata } from '@google/generative-ai'
 import OpenAI from 'openai'
 import React from 'react'
 import { BuiltinTheme } from 'shiki'
@@ -72,7 +73,7 @@ export type Message = {
   enabledMCPs?: MCPServer[]
   metadata?: {
     // Gemini
-    groundingMetadata?: any
+    groundingMetadata?: GroundingMetadata
     // Perplexity Or Openrouter
     citations?: string[]
     // OpenAI
@@ -135,7 +136,7 @@ export type Provider = {
 
 export type ProviderType = 'openai' | 'anthropic' | 'gemini' | 'qwenlm' | 'azure-openai'
 
-export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'function_calling'
+export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'function_calling' | 'web_search'
 
 export type Model = {
   id: string
@@ -335,6 +336,9 @@ export type WebSearchProvider = {
   apiKey?: string
   apiHost?: string
   engines?: string[]
+  url?: string
+  contentLimit?: number
+  usingBrowser?: boolean
 }
 
 export type WebSearchResponse = {
@@ -370,7 +374,7 @@ export interface MCPServerParameter {
 export interface MCPServer {
   id: string
   name: string
-  type?: 'stdio' | 'sse' | 'inMemory'
+  type?: 'stdio' | 'sse' | 'inMemory' | 'streamableHttp'
   description?: string
   baseUrl?: string
   command?: string
