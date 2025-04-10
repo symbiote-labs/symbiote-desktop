@@ -4,7 +4,7 @@ import { getModelLogo, isEmbeddingModel, isRerankModel } from '@renderer/config/
 import db from '@renderer/databases'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { getModelUniqId } from '@renderer/services/ModelService'
-import { Model } from '@renderer/types'
+import { Model, Provider } from '@renderer/types'
 import { Avatar, Divider, Empty, Input, InputRef, Menu, MenuProps, Modal } from 'antd'
 import { first, sortBy } from 'lodash'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -35,6 +35,7 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model, resolve }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string>('')
   const menuItemRefs = useRef<Record<string, HTMLElement | null>>({})
+  const [selectedProvider, setSelectedProvider] = useState<string>('all')
 
   const setMenuItemRef = useCallback(
     (key: string) => (el: HTMLElement | null) => {
@@ -360,13 +361,48 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model, resolve }) => {
 
   const selectedKeys = keyboardSelectedId ? [keyboardSelectedId] : model ? [getModelUniqId(model)] : []
 
+  // 创建左侧提供商列表
+  const providerItems = [
+    { key: 'all', label: t('models.all') || '全部' },
+    ...(pinnedModels.length > 0 ? [{ key: 'pinned', label: t('models.pinned') || '已固定' }] : []),
+    ...providers.map(p => ({
+      key: p.id,
+      label: p.isSystem ? t(`provider.${p.id}`) || p.name : p.name,
+      icon: <Avatar src={getModelLogo(p.id)} size={20}>{first(p.name)}</Avatar>
+    }))
+  ];
+
+  // 根据选中的提供商筛选模型
+  const getFilteredModelsByProvider = useCallback(() => {
+    if (searchText.trim()) {
+      // 搜索模式下显示所有匹配的模型
+      return processedItems;
+    }
+
+    if (selectedProvider === 'all') {
+      // 显示所有模型
+      return processedItems;
+    } else if (selectedProvider === 'pinned') {
+      // 只显示固定的模型
+      const pinnedGroup = processedItems.find(item => item && 'key' in item && item.key === 'pinned');
+      return pinnedGroup ? [pinnedGroup] : [];
+    } else {
+      // 显示选中提供商的模型
+      const providerGroup = processedItems.find(item => item && 'key' in item && item.key === selectedProvider);
+      return providerGroup ? [providerGroup] : [];
+    }
+  }, [selectedProvider, processedItems, searchText]);
+
+  // 获取要显示的模型列表
+  const displayedItems = getFilteredModelsByProvider();
+
   return (
     <Modal
       centered
       open={open}
       onCancel={onCancel}
       afterClose={onClose}
-      width={600}
+      width={800}
       transitionName="ant-move-down"
       styles={{
         content: {
@@ -404,25 +440,38 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model, resolve }) => {
         />
       </HStack>
       <Divider style={{ margin: 0, borderBlockStartWidth: 0.5 }} />
-      <Scrollbar style={{ height: '50vh' }} ref={scrollContainerRef}>
-        <Container>
-          {processedItems.length > 0 ? (
-            <StyledMenu
-              items={processedItems}
-              selectedKeys={selectedKeys}
-              mode="inline"
-              inlineIndent={6}
-              onSelect={({ key }) => {
-                setKeyboardSelectedId(key as string)
-              }}
+      <SplitContainer>
+        <LeftPanel>
+          <Scrollbar style={{ height: '50vh' }}>
+            <ProviderMenu
+              items={providerItems}
+              selectedKeys={[selectedProvider]}
+              onClick={({ key }) => setSelectedProvider(key as string)}
             />
-          ) : (
-            <EmptyState>
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            </EmptyState>
-          )}
-        </Container>
-      </Scrollbar>
+          </Scrollbar>
+        </LeftPanel>
+        <RightPanel>
+          <Scrollbar style={{ height: '50vh' }} ref={scrollContainerRef}>
+            <Container>
+              {displayedItems.length > 0 ? (
+                <StyledMenu
+                  items={displayedItems}
+                  selectedKeys={selectedKeys}
+                  mode="inline"
+                  inlineIndent={6}
+                  onSelect={({ key }) => {
+                    setKeyboardSelectedId(key as string)
+                  }}
+                />
+              ) : (
+                <EmptyState>
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </EmptyState>
+              )}
+            </Container>
+          </Scrollbar>
+        </RightPanel>
+      </SplitContainer>
     </Modal>
   )
 }
@@ -431,11 +480,44 @@ const Container = styled.div`
   margin-top: 10px;
 `
 
+const SplitContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  height: 50vh;
+`
+
+const LeftPanel = styled.div`
+  width: 200px;
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+`
+
+const RightPanel = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`
+
+const ProviderMenu = styled(Menu)`
+  background-color: transparent;
+  border-inline-end: none !important;
+
+  .ant-menu-item {
+    height: 40px;
+    line-height: 40px;
+    margin: 0;
+    border-radius: 0;
+
+    &.ant-menu-item-selected {
+      background-color: var(--color-background-mute) !important;
+      color: var(--color-text-primary) !important;
+    }
+  }
+`
+
 const StyledMenu = styled(Menu)`
   background-color: transparent;
   padding: 5px;
   margin-top: -10px;
-  max-height: calc(60vh - 50px);
 
   .ant-menu-item-group-title {
     position: sticky;
