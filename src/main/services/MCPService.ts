@@ -322,30 +322,6 @@ class McpService {
     // 转换回字符串
     return Array.from(existingPaths).join(pathSeparator)
   }
-
-  /**
-   * 清理所有MCP客户端连接
-   */
-  public async cleanup(): Promise<void> {
-    Logger.info('[MCP] Cleaning up all MCP clients...')
-    const closePromises: Promise<void>[] = []
-
-    // 关闭所有客户端连接
-    for (const [serverKey, client] of this.clients.entries()) {
-      try {
-        Logger.info(`[MCP] Closing client for server: ${serverKey}`)
-        closePromises.push(client.close())
-      } catch (error) {
-        Logger.error(`[MCP] Error closing client for server: ${serverKey}`, error)
-      } finally {
-        this.clients.delete(serverKey)
-      }
-    }
-
-    // 等待所有关闭操作完成
-    await Promise.allSettled(closePromises)
-    Logger.info('[MCP] All MCP clients cleaned up')
-  }
 }
 
 export default new McpService()

@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from 'react';
+import { Modal, Button, Space, Tooltip } from 'antd';
 import {
   AudioMutedOutlined,
   AudioOutlined,
@@ -5,128 +7,125 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
   SoundOutlined
-} from '@ant-design/icons'
-import { Button, Modal, Space, Tooltip } from 'antd'
-import React, { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import styled from 'styled-components'
-
-import { VoiceCallService } from '../services/VoiceCallService'
-import VoiceVisualizer from './VoiceVisualizer'
+} from '@ant-design/icons';
+import styled from 'styled-components';
+import { useTranslation } from 'react-i18next';
+import VoiceVisualizer from './VoiceVisualizer';
+import { VoiceCallService } from '../services/VoiceCallService';
 
 interface Props {
-  visible: boolean
-  onClose: () => void
+  visible: boolean;
+  onClose: () => void;
 }
 
 const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
-  const { t } = useTranslation()
-  const [isMuted, setIsMuted] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [transcript, setTranscript] = useState('')
-  const [response, setResponse] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-
-  const handleClose = useCallback(() => {
-    VoiceCallService.endCall()
-    onClose()
-  }, [onClose])
+  const { t } = useTranslation();
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [response, setResponse] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const startVoiceCall = async () => {
       try {
         await VoiceCallService.startCall({
-          onTranscript: (text: string) => setTranscript(text),
-          onResponse: (text: string) => setResponse(text),
+          onTranscript: (text) => setTranscript(text),
+          onResponse: (text) => setResponse(text),
           onListeningStateChange: setIsListening,
-          onSpeakingStateChange: setIsSpeaking
-        })
+          onSpeakingStateChange: setIsSpeaking,
+        });
       } catch (error) {
-        console.error('Voice call error:', error)
-        window.message.error(t('voice_call.error'))
-        handleClose()
+        console.error('Voice call error:', error);
+        window.message.error(t('voice_call.error'));
+        handleClose();
       }
-    }
+    };
 
     if (visible) {
-      startVoiceCall()
+      startVoiceCall();
     }
 
     return () => {
-      VoiceCallService.endCall()
-    }
-  }, [visible, t, handleClose])
+      VoiceCallService.endCall();
+    };
+  }, [visible, t]);
+
+  const handleClose = () => {
+    VoiceCallService.endCall();
+    onClose();
+  };
 
   const toggleMute = () => {
-    const newMuteState = !isMuted
-    setIsMuted(newMuteState)
-    VoiceCallService.setMuted(newMuteState)
-  }
+    const newMuteState = !isMuted;
+    setIsMuted(newMuteState);
+    VoiceCallService.setMuted(newMuteState);
+  };
 
   const togglePause = () => {
-    const newPauseState = !isPaused
-    setIsPaused(newPauseState)
-    VoiceCallService.setPaused(newPauseState)
-  }
+    const newPauseState = !isPaused;
+    setIsPaused(newPauseState);
+    VoiceCallService.setPaused(newPauseState);
+  };
 
   // 长按说话相关处理
   const handleRecordStart = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault() // 防止触摸事件的默认行为
+    e.preventDefault(); // 防止触摸事件的默认行为
 
-    if (isProcessing || isPaused) return
+    if (isProcessing || isPaused) return;
 
-    setIsRecording(true)
-    await VoiceCallService.startRecording()
-  }
+    setIsRecording(true);
+    await VoiceCallService.startRecording();
+  };
 
   const handleRecordEnd = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault() // 防止触摸事件的默认行为
+    e.preventDefault(); // 防止触摸事件的默认行为
 
-    if (!isRecording) return
+    if (!isRecording) return;
 
     // 立即更新UI状态
-    setIsRecording(false)
-    setIsProcessing(true)
+    setIsRecording(false);
+    setIsProcessing(true);
 
     // 确保录音完全停止
     try {
-      await VoiceCallService.stopRecording()
-      console.log('录音已停止')
+      await VoiceCallService.stopRecording();
+      console.log('录音已停止');
     } catch (error) {
-      console.error('停止录音出错:', error)
+      console.error('停止录音出错:', error);
     }
 
     // 处理结果会通过回调函数返回，不需要在这里处理
     setTimeout(() => {
-      setIsProcessing(false)
-    }, 500) // 添加短暂延迟，防止用户立即再次点击
-  }
+      setIsProcessing(false);
+    }, 500); // 添加短暂延迟，防止用户立即再次点击
+  };
 
   // 处理鼠标/触摸离开按钮的情况
   const handleRecordCancel = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (isRecording) {
       // 立即更新UI状态
-      setIsRecording(false)
-      setIsProcessing(true)
+      setIsRecording(false);
+      setIsProcessing(true);
 
       // 取消录音，不发送给AI
       try {
-        await VoiceCallService.cancelRecording()
-        console.log('录音已取消')
+        await VoiceCallService.cancelRecording();
+        console.log('录音已取消');
       } catch (error) {
-        console.error('取消录音出错:', error)
+        console.error('取消录音出错:', error);
       }
 
       setTimeout(() => {
-        setIsProcessing(false)
-      }, 500)
+        setIsProcessing(false);
+      }, 500);
     }
-  }
+  };
 
   return (
     <Modal
@@ -136,7 +135,8 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
       footer={null}
       width={500}
       centered
-      maskClosable={false}>
+      maskClosable={false}
+    >
       <Container>
         <VisualizerContainer>
           <VoiceVisualizer isActive={isListening || isRecording} type="input" />
@@ -174,7 +174,7 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
             />
             <Tooltip title={t('voice_call.press_to_talk')}>
               <RecordButton
-                type={isRecording ? 'primary' : 'default'}
+                type={isRecording ? "primary" : "default"}
                 icon={<SoundOutlined />}
                 onMouseDown={handleRecordStart}
                 onMouseUp={handleRecordEnd}
@@ -183,7 +183,8 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
                 onTouchEnd={handleRecordEnd}
                 onTouchCancel={handleRecordCancel}
                 size="large"
-                disabled={isProcessing || isPaused}>
+                disabled={isProcessing || isPaused}
+              >
                 {isRecording ? t('voice_call.release_to_send') : t('voice_call.press_to_talk')}
               </RecordButton>
             </Tooltip>
@@ -199,21 +200,21 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
         </ControlsContainer>
       </Container>
     </Modal>
-  )
-}
+  );
+};
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
   height: 400px;
-`
+`;
 
 const VisualizerContainer = styled.div`
   display: flex;
   justify-content: space-between;
   height: 100px;
-`
+`;
 
 const TranscriptContainer = styled.div`
   flex: 1;
@@ -222,33 +223,33 @@ const TranscriptContainer = styled.div`
   border-radius: 8px;
   padding: 16px;
   background-color: var(--color-background-2);
-`
+`;
 
 const TranscriptText = styled.p`
   margin-bottom: 8px;
   color: var(--color-text-1);
-`
+`;
 
 const ResponseText = styled.p`
   margin-bottom: 8px;
   color: var(--color-primary);
-`
+`;
 
 const UserLabel = styled.span`
   font-weight: bold;
   color: var(--color-text-1);
-`
+`;
 
 const AILabel = styled.span`
   font-weight: bold;
   color: var(--color-primary);
-`
+`;
 
 const ControlsContainer = styled.div`
   display: flex;
   justify-content: center;
   padding: 10px 0;
-`
+`;
 
 const RecordButton = styled(Button)`
   min-width: 150px;
@@ -257,6 +258,6 @@ const RecordButton = styled(Button)`
   &:active {
     transform: scale(0.95);
   }
-`
+`;
 
-export default VoiceCallModal
+export default VoiceCallModal;
