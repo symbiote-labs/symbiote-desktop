@@ -23,6 +23,7 @@ import mcpService from './services/MCPService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
+import { searchService } from './services/SearchService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'
@@ -297,8 +298,19 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     NutstoreService.getDirectoryContents(token, path)
   )
 
+  // search window
+  ipcMain.handle(IpcChannel.SearchWindow_Open, async (_, uid: string) => {
+    await searchService.openSearchWindow(uid)
+  })
+  ipcMain.handle(IpcChannel.SearchWindow_Close, async (_, uid: string) => {
+    await searchService.closeSearchWindow(uid)
+  })
+  ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, async (_, uid: string, url: string) => {
+    return await searchService.openUrlInSearchWindow(uid, url)
+  })
+
   // 启动ASR服务器
-  ipcMain.handle('start-asr-server', async () => {
+  ipcMain.handle(IpcChannel.Asr_StartServer, async () => {
     try {
       if (asrServerProcess) {
         return { success: true, pid: asrServerProcess.pid }
@@ -371,7 +383,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   })
 
   // 停止ASR服务器
-  ipcMain.handle('stop-asr-server', async (_event, pid) => {
+  ipcMain.handle(IpcChannel.Asr_StopServer, async (_event, pid) => {
     try {
       if (!asrServerProcess) {
         return { success: true }

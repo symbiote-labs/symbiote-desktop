@@ -1308,7 +1308,9 @@
         },
         "title": "Web Search",
         "overwrite": "Override search service",
-        "overwrite_tooltip": "Force use search service instead of LLM"
+        "overwrite_tooltip": "Force use search service instead of LLM",
+        "apikey": "API key",
+        "free": "Free"
       },
       "quickPhrase": {
         "title": "Quick Phrases",
