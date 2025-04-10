@@ -6,8 +6,8 @@ import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electro
 
 import { registerIpc } from './ipc'
 import { configManager } from './services/ConfigManager'
-import { CHERRY_STUDIO_PROTOCOL, handleProtocolUrl, registerProtocolClient } from './services/ProtocolClient'
 import { registerMsTTSIpcHandlers } from './services/MsTTSIpcHandler'
+import { CHERRY_STUDIO_PROTOCOL, handleProtocolUrl, registerProtocolClient } from './services/ProtocolClient'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'

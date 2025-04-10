@@ -138,9 +138,9 @@ class ASRService {
           // 如果有回调函数，调用一次空字符串，触发按钮状态重置
           if (this.resultCallback && typeof this.resultCallback === 'function') {
             // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
-            const callback = this.resultCallback as (text: string, isFinal?: boolean) => void; // 明确指定类型
+            const callback = this.resultCallback as (text: string, isFinal?: boolean) => void // 明确指定类型
             setTimeout(() => {
-              callback('', false);
+              callback('', false)
             }, 100)
           }
         }
@@ -334,7 +334,7 @@ class ASRService {
             // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
             // 传递false表示这不是最终结果，只是状态更新
             setTimeout(() => {
-              onTranscribed('', false);
+              onTranscribed('', false)
             }, 100)
           }
         } else {

@@ -27,7 +27,7 @@ class ASRServerService {
    * 启动ASR服务器
    * @returns Promise<{success: boolean, pid?: number, error?: string}>
    */
-  private async startServer(): Promise<{success: boolean, pid?: number, error?: string}> {
+  private async startServer(): Promise<{ success: boolean; pid?: number; error?: string }> {
     try {
       if (this.asrServerProcess) {
         return { success: true, pid: this.asrServerProcess.pid }
@@ -90,7 +90,7 @@ class ASRServerService {
       })
 
       // 等待一段时间确保服务器启动
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       return { success: true, pid: this.asrServerProcess.pid }
     } catch (error) {
@@ -105,7 +105,10 @@ class ASRServerService {
    * @param pid 进程ID
    * @returns Promise<{success: boolean, error?: string}>
    */
-  private async stopServer(_event: Electron.IpcMainInvokeEvent, pid?: number): Promise<{success: boolean, error?: string}> {
+  private async stopServer(
+    _event: Electron.IpcMainInvokeEvent,
+    pid?: number
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       if (!this.asrServerProcess) {
         return { success: true }
@@ -120,7 +123,7 @@ class ASRServerService {
       this.asrServerProcess.kill()
 
       // 等待一段时间确保进程已经退出
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       this.asrServerProcess = null
       return { success: true }

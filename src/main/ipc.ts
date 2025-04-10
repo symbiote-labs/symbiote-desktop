@@ -19,11 +19,11 @@ import FileStorage from './services/FileStorage'
 import { GeminiService } from './services/GeminiService'
 import KnowledgeService from './services/KnowledgeService'
 import mcpService from './services/MCPService'
+import * as MsTTSService from './services/MsTTSService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
 import { searchService } from './services/SearchService'
-import * as MsTTSService from './services/MsTTSService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'
@@ -307,9 +307,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
 
   // 注册MsTTS IPC处理程序
   ipcMain.handle(IpcChannel.MsTTS_GetVoices, MsTTSService.getVoices)
-  ipcMain.handle(
-    IpcChannel.MsTTS_Synthesize,
-    (_, text: string, voice: string, outputFormat: string) =>
-      MsTTSService.synthesize(text, voice, outputFormat)
+  ipcMain.handle(IpcChannel.MsTTS_Synthesize, (_, text: string, voice: string, outputFormat: string) =>
+    MsTTSService.synthesize(text, voice, outputFormat)
   )
 }
