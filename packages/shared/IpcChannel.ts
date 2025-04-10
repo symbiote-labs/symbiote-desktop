@@ -22,6 +22,10 @@ export enum IpcChannel {
   Asr_StartServer = 'start-asr-server',
   Asr_StopServer = 'stop-asr-server',
 
+  // MsTTS
+  MsTTS_GetVoices = 'mstts:get-voices',
+  MsTTS_Synthesize = 'mstts:synthesize',
+
   // Open
   Open_Path = 'open:path',
   Open_Website = 'open:website',

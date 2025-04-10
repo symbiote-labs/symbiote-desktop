@@ -34,7 +34,6 @@ const ASRSettings: FC = () => {
   // 服务类型选项
   const serviceTypeOptions = [
     { label: 'OpenAI', value: 'openai' },
-    { label: t('settings.asr.service_type.browser'), value: 'browser' },
     { label: t('settings.asr.service_type.local'), value: 'local' }
   ]
 

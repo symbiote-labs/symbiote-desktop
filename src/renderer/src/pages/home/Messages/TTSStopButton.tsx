@@ -57,7 +57,7 @@ const TTSStopButton: React.FC = () => {
 
 const StopButtonContainer = styled.div`
   position: fixed;
-  bottom: 100px;
+  bottom: 150px; /* 从100px改为150px，向上移动50px */
   right: 20px;
   z-index: 1000;
 `

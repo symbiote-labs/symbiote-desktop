@@ -7,6 +7,7 @@ import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electro
 import { registerIpc } from './ipc'
 import { configManager } from './services/ConfigManager'
 import { CHERRY_STUDIO_PROTOCOL, handleProtocolUrl, registerProtocolClient } from './services/ProtocolClient'
+import { registerMsTTSIpcHandlers } from './services/MsTTSIpcHandler'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'
@@ -45,6 +46,9 @@ if (!app.requestSingleInstanceLock()) {
     registerShortcuts(mainWindow)
 
     registerIpc(mainWindow, app)
+
+    // 注册MsTTS IPC处理程序
+    registerMsTTSIpcHandlers()
 
     replaceDevtoolsFont(mainWindow)
 

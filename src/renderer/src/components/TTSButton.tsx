@@ -23,6 +23,7 @@ const TTSButton: React.FC<TTSButtonProps> = ({ message, className }) => {
 
     setIsSpeaking(true)
     try {
+      console.log('点击TTS按钮，开始播放消息')
       await TTSService.speakFromMessage(message)
 
       // 监听播放结束

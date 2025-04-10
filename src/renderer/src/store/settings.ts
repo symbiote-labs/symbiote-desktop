@@ -112,7 +112,7 @@ export interface SettingsState {
   enableDataCollection: boolean
   // TTS配置
   ttsEnabled: boolean
-  ttsServiceType: string // TTS服务类型：openai或浏览器
+  ttsServiceType: string // TTS服务类型：openai、edge、siliconflow或mstts
   ttsApiKey: string
   ttsApiUrl: string
   ttsVoice: string
@@ -121,6 +121,16 @@ export interface SettingsState {
   ttsCustomModels: string[]
   // 浏览器 TTS配置
   ttsEdgeVoice: string
+  // 硅基流动 TTS配置
+  ttsSiliconflowApiKey: string
+  ttsSiliconflowApiUrl: string
+  ttsSiliconflowVoice: string
+  ttsSiliconflowModel: string
+  ttsSiliconflowResponseFormat: string
+  ttsSiliconflowSpeed: number
+  // 免费在线 TTS配置
+  ttsMsVoice: string
+  ttsMsOutputFormat: string
   // TTS过滤选项
   ttsFilterOptions: {
     filterThinkingProcess: boolean // 过滤思考过程
@@ -247,6 +257,16 @@ export const initialState: SettingsState = {
   ttsCustomModels: [],
   // Edge TTS配置
   ttsEdgeVoice: 'zh-CN-XiaoxiaoNeural', // 默认使用小小的声音
+  // 硅基流动 TTS配置
+  ttsSiliconflowApiKey: '',
+  ttsSiliconflowApiUrl: 'https://api.siliconflow.cn/v1/audio/speech',
+  ttsSiliconflowVoice: 'FunAudioLLM/CosyVoice2-0.5B:alex',
+  ttsSiliconflowModel: 'FunAudioLLM/CosyVoice2-0.5B',
+  ttsSiliconflowResponseFormat: 'mp3',
+  ttsSiliconflowSpeed: 1.0,
+  // 免费在线 TTS配置
+  ttsMsVoice: 'zh-CN-XiaoxiaoNeural',
+  ttsMsOutputFormat: 'audio-24khz-48kbitrate-mono-mp3',
   ttsFilterOptions: {
     filterThinkingProcess: true, // 默认过滤思考过程
     filterMarkdown: true, // 默认过滤Markdown标记
@@ -545,6 +565,32 @@ const settingsSlice = createSlice({
     setTtsEdgeVoice: (state, action: PayloadAction<string>) => {
       state.ttsEdgeVoice = action.payload
     },
+    // 硅基流动TTS相关的action
+    setTtsSiliconflowApiKey: (state, action: PayloadAction<string>) => {
+      state.ttsSiliconflowApiKey = action.payload
+    },
+    setTtsSiliconflowApiUrl: (state, action: PayloadAction<string>) => {
+      state.ttsSiliconflowApiUrl = action.payload
+    },
+    setTtsSiliconflowVoice: (state, action: PayloadAction<string>) => {
+      state.ttsSiliconflowVoice = action.payload
+    },
+    setTtsSiliconflowModel: (state, action: PayloadAction<string>) => {
+      state.ttsSiliconflowModel = action.payload
+    },
+    setTtsSiliconflowResponseFormat: (state, action: PayloadAction<string>) => {
+      state.ttsSiliconflowResponseFormat = action.payload
+    },
+    setTtsSiliconflowSpeed: (state, action: PayloadAction<number>) => {
+      state.ttsSiliconflowSpeed = action.payload
+    },
+    // 免费在线TTS相关的action
+    setTtsMsVoice: (state, action: PayloadAction<string>) => {
+      state.ttsMsVoice = action.payload
+    },
+    setTtsMsOutputFormat: (state, action: PayloadAction<string>) => {
+      state.ttsMsOutputFormat = action.payload
+    },
     setTtsVoice: (state, action: PayloadAction<string>) => {
       state.ttsVoice = action.payload
     },
@@ -755,6 +801,14 @@ export const {
   setTtsApiKey,
   setTtsApiUrl,
   setTtsEdgeVoice,
+  setTtsSiliconflowApiKey,
+  setTtsSiliconflowApiUrl,
+  setTtsSiliconflowVoice,
+  setTtsSiliconflowModel,
+  setTtsSiliconflowResponseFormat,
+  setTtsSiliconflowSpeed,
+  setTtsMsVoice,
+  setTtsMsOutputFormat,
   setTtsVoice,
   setTtsModel,
   setTtsCustomVoices,
