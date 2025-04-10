@@ -9,6 +9,7 @@ import log from 'electron-log'
 
 import { titleBarOverlayDark, titleBarOverlayLight } from './config'
 import AppUpdater from './services/AppUpdater'
+import { asrServerService } from './services/ASRServerService'
 import BackupManager from './services/BackupManager'
 import { configManager } from './services/ConfigManager'
 import CopilotService from './services/CopilotService'
@@ -21,7 +22,6 @@ import mcpService from './services/MCPService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
-import { asrServerService } from './services/ASRServerService'
 import { searchService } from './services/SearchService'
 import * as MsTTSService from './services/MsTTSService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
@@ -31,8 +31,6 @@ import { getResourcePath } from './utils'
 import { decrypt, encrypt } from './utils/aes'
 import { getConfigDir, getFilesDir } from './utils/file'
 import { compress, decompress } from './utils/zip'
-
-
 
 const fileManager = new FileStorage()
 const backupManager = new BackupManager()
@@ -298,15 +296,11 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   )
 
   // search window
-  ipcMain.handle(IpcChannel.SearchWindow_Open, async (_, uid: string) => {
-    await searchService.openSearchWindow(uid)
-  })
-  ipcMain.handle(IpcChannel.SearchWindow_Close, async (_, uid: string) => {
-    await searchService.closeSearchWindow(uid)
-  })
-  ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, async (_, uid: string, url: string) => {
-    return await searchService.openUrlInSearchWindow(uid, url)
-  })
+  ipcMain.handle(IpcChannel.SearchWindow_Open, (_, uid: string) => searchService.openSearchWindow(uid))
+  ipcMain.handle(IpcChannel.SearchWindow_Close, (_, uid: string) => searchService.closeSearchWindow(uid))
+  ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, (_, uid: string, url: string) =>
+    searchService.openUrlInSearchWindow(uid, url)
+  )
 
   // 注册ASR服务器IPC处理程序
   asrServerService.registerIpcHandlers()
