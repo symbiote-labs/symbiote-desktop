@@ -16,7 +16,7 @@ import { UploadOutlined } from '@ant-design/icons'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import TextEditPopup from '@renderer/components/Popups/TextEditPopup'
-import TTSButton from '@renderer/components/TTSButton'
+// import TTSButton from '@renderer/components/TTSButton' // 暂时不使用
 import { isReasoningModel } from '@renderer/config/models'
 import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
@@ -154,14 +154,14 @@ const MessageMenubar: FC<Props> = (props) => {
       const imageUrls: string[] = []
       let match
       let content = editedText
-      
+
       while ((match = imageRegex.exec(editedText)) !== null) {
         imageUrls.push(match[1])
         content = content.replace(match[0], '')
       }
-      
+
       // 更新消息内容，保留图片信息
-      await editMessage(message.id, { 
+      await editMessage(message.id, {
         content: content.trim(),
         metadata: {
           ...message.metadata,
@@ -171,9 +171,9 @@ const MessageMenubar: FC<Props> = (props) => {
           } : undefined
         }
       })
-      
-      resendMessage && handleResendUserMessage({ 
-        ...message, 
+
+      resendMessage && handleResendUserMessage({
+        ...message,
         content: content.trim(),
         metadata: {
           ...message.metadata,

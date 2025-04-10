@@ -14,6 +14,7 @@ import {
   TranslationOutlined
 } from '@ant-design/icons'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
+import ASRButton from '@renderer/components/ASRButton'
 import TranslateButton from '@renderer/components/TranslateButton'
 import { isGenerateImageModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
 import db from '@renderer/databases'
@@ -1008,6 +1009,19 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
             </ToolbarMenu>
             <ToolbarMenu>
               <TranslateButton text={text} onTranslated={onTranslated} isLoading={isTranslating} />
+              <ASRButton onTranscribed={(transcribedText) => {
+                // 如果是空字符串，不做任何处理
+                if (!transcribedText) return
+
+                // 将识别的文本添加到当前输入框
+                setText((prevText) => {
+                  // 如果当前有文本，添加空格后再添加识别的文本
+                  if (prevText.trim()) {
+                    return prevText + ' ' + transcribedText
+                  }
+                  return transcribedText
+                })
+              }} />
               {loading && (
                 <Tooltip placement="top" title={t('chat.input.pause')} arrow>
                   <ToolbarButton type="text" onClick={onPause} style={{ marginRight: -2, marginTop: 1 }}>

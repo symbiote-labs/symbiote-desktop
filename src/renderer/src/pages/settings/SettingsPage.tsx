@@ -127,7 +127,7 @@ const SettingsPage: FC = () => {
           <MenuItemLink to="/settings/tts">
             <MenuItem className={isRoute('/settings/tts')}>
               <SoundOutlined />
-              {t('settings.tts.title')}
+              {t('settings.voice.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/about">
