@@ -129,6 +129,12 @@ export interface SettingsState {
     filterHtmlTags: boolean // 过滤HTML标签
     maxTextLength: number // 最大文本长度
   }
+  // ASR配置（语音识别）
+  asrEnabled: boolean
+  asrServiceType: string // ASR服务类型：openai或browser
+  asrApiKey: string
+  asrApiUrl: string
+  asrModel: string
   // Quick Panel Triggers
   enableQuickPanelTriggers: boolean
   // Export Menu Options
@@ -248,6 +254,12 @@ export const initialState: SettingsState = {
     filterHtmlTags: true, // 默认过滤HTML标签
     maxTextLength: 4000 // 默认最大文本长度
   },
+  // ASR配置（语音识别）
+  asrEnabled: false,
+  asrServiceType: 'openai', // 默认使用 OpenAI ASR
+  asrApiKey: '',
+  asrApiUrl: 'https://api.openai.com/v1/audio/transcriptions',
+  asrModel: 'whisper-1',
   // Quick Panel Triggers
   enableQuickPanelTriggers: false,
   // Export Menu Options
@@ -628,6 +640,22 @@ const settingsSlice = createSlice({
         ...action.payload
       }
     },
+    // ASR相关的action
+    setAsrEnabled: (state, action: PayloadAction<boolean>) => {
+      state.asrEnabled = action.payload
+    },
+    setAsrServiceType: (state, action: PayloadAction<string>) => {
+      state.asrServiceType = action.payload
+    },
+    setAsrApiKey: (state, action: PayloadAction<string>) => {
+      state.asrApiKey = action.payload
+    },
+    setAsrApiUrl: (state, action: PayloadAction<string>) => {
+      state.asrApiUrl = action.payload
+    },
+    setAsrModel: (state, action: PayloadAction<string>) => {
+      state.asrModel = action.payload
+    },
     // Quick Panel Triggers action
     setEnableQuickPanelTriggers: (state, action: PayloadAction<boolean>) => {
       state.enableQuickPanelTriggers = action.payload
@@ -736,7 +764,12 @@ export const {
   addTtsCustomModel,
   removeTtsCustomVoice,
   removeTtsCustomModel,
-  setTtsFilterOptions
+  setTtsFilterOptions,
+  setAsrEnabled,
+  setAsrServiceType,
+  setAsrApiKey,
+  setAsrApiUrl,
+  setAsrModel
 } = settingsSlice.actions
 
 export default settingsSlice.reducer

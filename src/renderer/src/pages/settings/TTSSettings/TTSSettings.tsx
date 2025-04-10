@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, SoundOutlined } from '@ant-design/icons'
+import { AudioOutlined, PlusOutlined, ReloadOutlined, SoundOutlined } from '@ant-design/icons'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import TTSService from '@renderer/services/TTSService'
 import store, { useAppDispatch } from '@renderer/store'
@@ -17,7 +17,7 @@ import {
   setTtsServiceType,
   setTtsVoice
 } from '@renderer/store/settings'
-import { Button, Form, Input, message, Select, Space, Switch, Tag } from 'antd'
+import { Button, Form, Input, message, Select, Space, Switch, Tag, Tabs } from 'antd'
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
@@ -32,6 +32,8 @@ import {
   SettingRowTitle,
   SettingTitle
 } from '..'
+
+import ASRSettings from './ASRSettings'
 
 const CustomVoiceInput = styled.div`
   display: flex;
@@ -378,341 +380,367 @@ const TTSSettings: FC = () => {
       <SettingTitle>
         <Space>
           <SoundOutlined />
-          {t('settings.tts.title')}
+          {t('settings.voice.title')}
         </Space>
       </SettingTitle>
       <SettingDivider />
-      <SettingGroup>
-        <SettingRow>
-          <SettingRowTitle>{t('settings.tts.enable')}</SettingRowTitle>
-          <Switch checked={ttsEnabled} onChange={(checked) => dispatch(setTtsEnabled(checked))} />
-        </SettingRow>
-        <SettingHelpText>{t('settings.tts.enable.help')}</SettingHelpText>
-      </SettingGroup>
+      <Tabs
+        defaultActiveKey="tts"
+        items={[
+          {
+            key: 'tts',
+            label: (
+              <span>
+                <SoundOutlined /> {t('settings.tts.tab_title')}
+              </span>
+            ),
+            children: (
+              <div>
+                <SettingGroup>
+                  <SettingRow>
+                    <SettingRowTitle>{t('settings.tts.enable')}</SettingRowTitle>
+                    <Switch checked={ttsEnabled} onChange={(checked) => dispatch(setTtsEnabled(checked))} />
+                  </SettingRow>
+                  <SettingHelpText>{t('settings.tts.enable.help')}</SettingHelpText>
+                </SettingGroup>
 
-      {/* 重置按钮 */}
-      <SettingGroup>
-        <SettingRow>
-          <SettingRowTitle>{t('settings.tts.reset_title')}</SettingRowTitle>
-          <Button
-            danger
-            onClick={() => {
-              if (window.confirm(t('settings.tts.reset_confirm'))) {
-                dispatch(resetTtsCustomValues())
-                window.message.success({ content: t('settings.tts.reset_success'), key: 'reset-tts' })
-              }
-            }}>
-            {t('settings.tts.reset')}
-          </Button>
-        </SettingRow>
-        <SettingHelpText>{t('settings.tts.reset_help')}</SettingHelpText>
-      </SettingGroup>
-      <SettingGroup>
-        <SettingRowTitle>{t('settings.tts.api_settings')}</SettingRowTitle>
-        <Form layout="vertical" style={{ width: '100%', marginTop: 16 }}>
-          {/* TTS服务类型选择 */}
-          <Form.Item label={t('settings.tts.service_type')} style={{ marginBottom: 16 }}>
-            <FlexContainer>
-              <Select
-                value={ttsServiceType}
-                onChange={(value: string) => {
-                  console.log('切换TTS服务类型为:', value)
-                  // 先将新的服务类型写入Redux状态
-                  dispatch(setTtsServiceType(value))
+                {/* 重置按钮 */}
+                <SettingGroup>
+                  <SettingRow>
+                    <SettingRowTitle>{t('settings.tts.reset_title')}</SettingRowTitle>
+                    <Button
+                      danger
+                      onClick={() => {
+                        if (window.confirm(t('settings.tts.reset_confirm'))) {
+                          dispatch(resetTtsCustomValues())
+                          window.message.success({ content: t('settings.tts.reset_success'), key: 'reset-tts' })
+                        }
+                      }}>
+                      {t('settings.tts.reset')}
+                    </Button>
+                  </SettingRow>
+                  <SettingHelpText>{t('settings.tts.reset_help')}</SettingHelpText>
+                </SettingGroup>
+                <SettingGroup>
+                  <SettingRowTitle>{t('settings.tts.api_settings')}</SettingRowTitle>
+                  <Form layout="vertical" style={{ width: '100%', marginTop: 16 }}>
+                    {/* TTS服务类型选择 */}
+                    <Form.Item label={t('settings.tts.service_type')} style={{ marginBottom: 16 }}>
+                      <FlexContainer>
+                        <Select
+                          value={ttsServiceType}
+                          onChange={(value: string) => {
+                            console.log('切换TTS服务类型为:', value)
+                            // 先将新的服务类型写入Redux状态
+                            dispatch(setTtsServiceType(value))
 
-                  // 等待一下，确保状态已更新
-                  setTimeout(() => {
-                    // 验证状态是否正确更新
-                    const currentType = store.getState().settings.ttsServiceType
-                    console.log('更新后的TTS服务类型:', currentType)
+                            // 等待一下，确保状态已更新
+                            setTimeout(() => {
+                              // 验证状态是否正确更新
+                              const currentType = store.getState().settings.ttsServiceType
+                              console.log('更新后的TTS服务类型:', currentType)
 
-                    // 如果状态没有正确更新，再次尝试
-                    if (currentType !== value) {
-                      console.log('状态未正确更新，再次尝试')
-                      dispatch(setTtsServiceType(value))
-                    }
-                  }, 100)
-                }}
-                options={[
-                  { label: t('settings.tts.service_type.openai'), value: 'openai' },
-                  { label: t('settings.tts.service_type.edge'), value: 'edge' }
-                ]}
-                disabled={!ttsEnabled}
-                style={{ flex: 1 }}
-              />
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  // 强制刷新当前服务类型设置
-                  const currentType = store.getState().settings.ttsServiceType
-                  console.log('强制刷新TTS服务类型:', currentType)
-                  dispatch(setTtsServiceType(currentType))
-                  window.message.success({
-                    content: t('settings.tts.service_type.refreshed', { defaultValue: '已刷新TTS服务类型设置' }),
-                    key: 'tts-refresh'
-                  })
-                }}
-                disabled={!ttsEnabled}
-                title={t('settings.tts.service_type.refresh', { defaultValue: '刷新TTS服务类型设置' })}
-              />
-            </FlexContainer>
-          </Form.Item>
+                              // 如果状态没有正确更新，再次尝试
+                              if (currentType !== value) {
+                                console.log('状态未正确更新，再次尝试')
+                                dispatch(setTtsServiceType(value))
+                              }
+                            }, 100)
+                          }}
+                          options={[
+                            { label: t('settings.tts.service_type.openai'), value: 'openai' },
+                            { label: t('settings.tts.service_type.edge'), value: 'edge' }
+                          ]}
+                          disabled={!ttsEnabled}
+                          style={{ flex: 1 }}
+                        />
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={() => {
+                            // 强制刷新当前服务类型设置
+                            const currentType = store.getState().settings.ttsServiceType
+                            console.log('强制刷新TTS服务类型:', currentType)
+                            dispatch(setTtsServiceType(currentType))
+                            window.message.success({
+                              content: t('settings.tts.service_type.refreshed', { defaultValue: '已刷新TTS服务类型设置' }),
+                              key: 'tts-refresh'
+                            })
+                          }}
+                          disabled={!ttsEnabled}
+                          title={t('settings.tts.service_type.refresh', { defaultValue: '刷新TTS服务类型设置' })}
+                        />
+                      </FlexContainer>
+                    </Form.Item>
 
-          {/* OpenAI TTS设置 */}
-          {ttsServiceType === 'openai' && (
-            <>
-              <Form.Item label={t('settings.tts.api_key')} style={{ marginBottom: 16 }}>
-                <Input.Password
-                  value={ttsApiKey}
-                  onChange={(e) => dispatch(setTtsApiKey(e.target.value))}
-                  placeholder={t('settings.tts.api_key.placeholder')}
-                  disabled={!ttsEnabled}
-                />
-              </Form.Item>
-              <Form.Item label={t('settings.tts.api_url')} style={{ marginBottom: 16 }}>
-                <Input
-                  value={ttsApiUrl}
-                  onChange={(e) => dispatch(setTtsApiUrl(e.target.value))}
-                  placeholder={t('settings.tts.api_url.placeholder')}
-                  disabled={!ttsEnabled}
-                />
-              </Form.Item>
-            </>
-          )}
+                    {/* OpenAI TTS设置 */}
+                    {ttsServiceType === 'openai' && (
+                      <>
+                        <Form.Item label={t('settings.tts.api_key')} style={{ marginBottom: 16 }}>
+                          <Input.Password
+                            value={ttsApiKey}
+                            onChange={(e) => dispatch(setTtsApiKey(e.target.value))}
+                            placeholder={t('settings.tts.api_key.placeholder')}
+                            disabled={!ttsEnabled}
+                          />
+                        </Form.Item>
+                        <Form.Item label={t('settings.tts.api_url')} style={{ marginBottom: 16 }}>
+                          <Input
+                            value={ttsApiUrl}
+                            onChange={(e) => dispatch(setTtsApiUrl(e.target.value))}
+                            placeholder={t('settings.tts.api_url.placeholder')}
+                            disabled={!ttsEnabled}
+                          />
+                        </Form.Item>
+                      </>
+                    )}
 
-          {/* Edge TTS设置 */}
-          {ttsServiceType === 'edge' && (
-            <Form.Item label={t('settings.tts.edge_voice')} style={{ marginBottom: 16 }}>
-              <VoiceSelectContainer>
-                <Select
-                  value={ttsEdgeVoice}
-                  onChange={(value) => dispatch(setTtsEdgeVoice(value))}
-                  options={
-                    availableVoices.length > 0
-                      ? availableVoices
-                      : [{ label: t('settings.tts.edge_voice.loading'), value: '' }]
-                  }
-                  disabled={!ttsEnabled}
-                  style={{ flex: 1 }}
-                  showSearch
-                  optionFilterProp="label"
-                  placeholder={
-                    availableVoices.length === 0
-                      ? t('settings.tts.edge_voice.loading')
-                      : t('settings.tts.voice.placeholder')
-                  }
-                  notFoundContent={
-                    availableVoices.length === 0
-                      ? t('settings.tts.edge_voice.loading')
-                      : t('settings.tts.edge_voice.not_found')
-                  }
-                />
-                <Button
-                  icon={<ReloadOutlined />}
-                  onClick={refreshVoices}
-                  disabled={!ttsEnabled}
-                  title={t('settings.tts.edge_voice.refresh')}
-                />
-              </VoiceSelectContainer>
-              {availableVoices.length === 0 && <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>}
-            </Form.Item>
-          )}
+                    {/* Edge TTS设置 */}
+                    {ttsServiceType === 'edge' && (
+                      <Form.Item label={t('settings.tts.edge_voice')} style={{ marginBottom: 16 }}>
+                        <VoiceSelectContainer>
+                          <Select
+                            value={ttsEdgeVoice}
+                            onChange={(value) => dispatch(setTtsEdgeVoice(value))}
+                            options={
+                              availableVoices.length > 0
+                                ? availableVoices
+                                : [{ label: t('settings.tts.edge_voice.loading'), value: '' }]
+                            }
+                            disabled={!ttsEnabled}
+                            style={{ flex: 1 }}
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder={
+                              availableVoices.length === 0
+                                ? t('settings.tts.edge_voice.loading')
+                                : t('settings.tts.voice.placeholder')
+                            }
+                            notFoundContent={
+                              availableVoices.length === 0
+                                ? t('settings.tts.edge_voice.loading')
+                                : t('settings.tts.edge_voice.not_found')
+                            }
+                          />
+                          <Button
+                            icon={<ReloadOutlined />}
+                            onClick={refreshVoices}
+                            disabled={!ttsEnabled}
+                            title={t('settings.tts.edge_voice.refresh')}
+                          />
+                        </VoiceSelectContainer>
+                        {availableVoices.length === 0 && <LoadingText>{t('settings.tts.edge_voice.loading')}</LoadingText>}
+                      </Form.Item>
+                    )}
 
-          {/* OpenAI TTS的音色和模型设置 */}
-          {ttsServiceType === 'openai' && (
-            <>
-              {/* 音色选择 */}
-              <Form.Item label={t('settings.tts.voice')} style={{ marginBottom: 8 }}>
-                <Select
-                  value={ttsVoice}
-                  onChange={(value) => dispatch(setTtsVoice(value))}
-                  options={ttsCustomVoices.map((voice: any) => {
-                    // 确保voice是字符串
-                    const voiceStr = typeof voice === 'string' ? voice : String(voice)
-                    return { label: voiceStr, value: voiceStr }
-                  })}
-                  disabled={!ttsEnabled}
-                  style={{ width: '100%' }}
-                  placeholder={t('settings.tts.voice.placeholder')}
-                  showSearch
-                  optionFilterProp="label"
-                  allowClear
-                />
-              </Form.Item>
+                    {/* OpenAI TTS的音色和模型设置 */}
+                    {ttsServiceType === 'openai' && (
+                      <>
+                        {/* 音色选择 */}
+                        <Form.Item label={t('settings.tts.voice')} style={{ marginBottom: 8 }}>
+                          <Select
+                            value={ttsVoice}
+                            onChange={(value) => dispatch(setTtsVoice(value))}
+                            options={ttsCustomVoices.map((voice: any) => {
+                              // 确保voice是字符串
+                              const voiceStr = typeof voice === 'string' ? voice : String(voice)
+                              return { label: voiceStr, value: voiceStr }
+                            })}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.voice.placeholder')}
+                            showSearch
+                            optionFilterProp="label"
+                            allowClear
+                          />
+                        </Form.Item>
 
-              {/* 自定义音色列表 */}
-              <TagsContainer>
-                {ttsCustomVoices && ttsCustomVoices.length > 0 ? (
-                  ttsCustomVoices.map((voice: any, index: number) => {
-                    // 确保voice是字符串
-                    const voiceStr = typeof voice === 'string' ? voice : String(voice)
-                    return (
-                      <Tag
-                        key={`${voiceStr}-${index}`}
-                        closable
-                        onClose={() => handleRemoveVoice(voiceStr)}
-                        style={{ padding: '4px 8px' }}>
-                        {voiceStr}
-                      </Tag>
-                    )
-                  })
-                ) : (
-                  <EmptyText>{t('settings.tts.voice_empty')}</EmptyText>
-                )}
-              </TagsContainer>
+                        {/* 自定义音色列表 */}
+                        <TagsContainer>
+                          {ttsCustomVoices && ttsCustomVoices.length > 0 ? (
+                            ttsCustomVoices.map((voice: any, index: number) => {
+                              // 确保voice是字符串
+                              const voiceStr = typeof voice === 'string' ? voice : String(voice)
+                              return (
+                                <Tag
+                                  key={`${voiceStr}-${index}`}
+                                  closable
+                                  onClose={() => handleRemoveVoice(voiceStr)}
+                                  style={{ padding: '4px 8px' }}>
+                                  {voiceStr}
+                                </Tag>
+                              )
+                            })
+                          ) : (
+                            <EmptyText>{t('settings.tts.voice_empty')}</EmptyText>
+                          )}
+                        </TagsContainer>
 
-              {/* 添加自定义音色 */}
-              <CustomVoiceInput>
-                <InputGroup>
-                  <Input
-                    placeholder={t('settings.tts.voice_input_placeholder')}
-                    value={newVoice}
-                    onChange={(e) => setNewVoice(e.target.value)}
-                    disabled={!ttsEnabled}
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddVoice}
-                    disabled={!ttsEnabled || !newVoice}>
-                    {t('settings.tts.voice_add')}
-                  </Button>
-                </InputGroup>
-              </CustomVoiceInput>
+                        {/* 添加自定义音色 */}
+                        <CustomVoiceInput>
+                          <InputGroup>
+                            <Input
+                              placeholder={t('settings.tts.voice_input_placeholder')}
+                              value={newVoice}
+                              onChange={(e) => setNewVoice(e.target.value)}
+                              disabled={!ttsEnabled}
+                              style={{ flex: 1 }}
+                            />
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              onClick={handleAddVoice}
+                              disabled={!ttsEnabled || !newVoice}>
+                              {t('settings.tts.voice_add')}
+                            </Button>
+                          </InputGroup>
+                        </CustomVoiceInput>
 
-              {/* 模型选择 */}
-              <Form.Item label={t('settings.tts.model')} style={{ marginBottom: 8, marginTop: 16 }}>
-                <Select
-                  value={ttsModel}
-                  onChange={(value) => dispatch(setTtsModel(value))}
-                  options={ttsCustomModels.map((model: any) => {
-                    // 确保model是字符串
-                    const modelStr = typeof model === 'string' ? model : String(model)
-                    return { label: modelStr, value: modelStr }
-                  })}
-                  disabled={!ttsEnabled}
-                  style={{ width: '100%' }}
-                  placeholder={t('settings.tts.model.placeholder')}
-                  showSearch
-                  optionFilterProp="label"
-                  allowClear
-                />
-              </Form.Item>
+                        {/* 模型选择 */}
+                        <Form.Item label={t('settings.tts.model')} style={{ marginBottom: 8, marginTop: 16 }}>
+                          <Select
+                            value={ttsModel}
+                            onChange={(value) => dispatch(setTtsModel(value))}
+                            options={ttsCustomModels.map((model: any) => {
+                              // 确保model是字符串
+                              const modelStr = typeof model === 'string' ? model : String(model)
+                              return { label: modelStr, value: modelStr }
+                            })}
+                            disabled={!ttsEnabled}
+                            style={{ width: '100%' }}
+                            placeholder={t('settings.tts.model.placeholder')}
+                            showSearch
+                            optionFilterProp="label"
+                            allowClear
+                          />
+                        </Form.Item>
 
-              {/* 自定义模型列表 */}
-              <TagsContainer>
-                {ttsCustomModels && ttsCustomModels.length > 0 ? (
-                  ttsCustomModels.map((model: any, index: number) => {
-                    // 确保model是字符串
-                    const modelStr = typeof model === 'string' ? model : String(model)
-                    return (
-                      <Tag
-                        key={`${modelStr}-${index}`}
-                        closable
-                        onClose={() => handleRemoveModel(modelStr)}
-                        style={{ padding: '4px 8px' }}>
-                        {modelStr}
-                      </Tag>
-                    )
-                  })
-                ) : (
-                  <EmptyText>{t('settings.tts.model_empty')}</EmptyText>
-                )}
-              </TagsContainer>
+                        {/* 自定义模型列表 */}
+                        <TagsContainer>
+                          {ttsCustomModels && ttsCustomModels.length > 0 ? (
+                            ttsCustomModels.map((model: any, index: number) => {
+                              // 确保model是字符串
+                              const modelStr = typeof model === 'string' ? model : String(model)
+                              return (
+                                <Tag
+                                  key={`${modelStr}-${index}`}
+                                  closable
+                                  onClose={() => handleRemoveModel(modelStr)}
+                                  style={{ padding: '4px 8px' }}>
+                                  {modelStr}
+                                </Tag>
+                              )
+                            })
+                          ) : (
+                            <EmptyText>{t('settings.tts.model_empty')}</EmptyText>
+                          )}
+                        </TagsContainer>
 
-              {/* 添加自定义模型 */}
-              <CustomVoiceInput>
-                <InputGroup>
-                  <Input
-                    placeholder={t('settings.tts.model_input_placeholder')}
-                    value={newModel}
-                    onChange={(e) => setNewModel(e.target.value)}
-                    disabled={!ttsEnabled}
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={handleAddModel}
-                    disabled={!ttsEnabled || !newModel}>
-                    {t('settings.tts.model_add')}
-                  </Button>
-                </InputGroup>
-              </CustomVoiceInput>
-            </>
-          )}
+                        {/* 添加自定义模型 */}
+                        <CustomVoiceInput>
+                          <InputGroup>
+                            <Input
+                              placeholder={t('settings.tts.model_input_placeholder')}
+                              value={newModel}
+                              onChange={(e) => setNewModel(e.target.value)}
+                              disabled={!ttsEnabled}
+                              style={{ flex: 1 }}
+                            />
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              onClick={handleAddModel}
+                              disabled={!ttsEnabled || !newModel}>
+                              {t('settings.tts.model_add')}
+                            </Button>
+                          </InputGroup>
+                        </CustomVoiceInput>
+                      </>
+                    )}
 
-          {/* TTS过滤选项 */}
-          <Form.Item label={t('settings.tts.filter_options')} style={{ marginTop: 24, marginBottom: 8 }}>
-            <FilterOptionItem>
-              <Switch
-                checked={ttsFilterOptions.filterThinkingProcess}
-                onChange={(checked) => dispatch(setTtsFilterOptions({ filterThinkingProcess: checked }))}
-                disabled={!ttsEnabled}
-              />{' '}
-              {t('settings.tts.filter.thinking_process')}
-            </FilterOptionItem>
-            <FilterOptionItem>
-              <Switch
-                checked={ttsFilterOptions.filterMarkdown}
-                onChange={(checked) => dispatch(setTtsFilterOptions({ filterMarkdown: checked }))}
-                disabled={!ttsEnabled}
-              />{' '}
-              {t('settings.tts.filter.markdown')}
-            </FilterOptionItem>
-            <FilterOptionItem>
-              <Switch
-                checked={ttsFilterOptions.filterCodeBlocks}
-                onChange={(checked) => dispatch(setTtsFilterOptions({ filterCodeBlocks: checked }))}
-                disabled={!ttsEnabled}
-              />{' '}
-              {t('settings.tts.filter.code_blocks')}
-            </FilterOptionItem>
-            <FilterOptionItem>
-              <Switch
-                checked={ttsFilterOptions.filterHtmlTags}
-                onChange={(checked) => dispatch(setTtsFilterOptions({ filterHtmlTags: checked }))}
-                disabled={!ttsEnabled}
-              />{' '}
-              {t('settings.tts.filter.html_tags')}
-            </FilterOptionItem>
-            <FilterOptionItem>
-              <LengthLabel>{t('settings.tts.max_text_length')}:</LengthLabel>
-              <Select
-                value={ttsFilterOptions.maxTextLength}
-                onChange={(value) => dispatch(setTtsFilterOptions({ maxTextLength: value }))}
-                disabled={!ttsEnabled}
-                style={{ width: 120 }}
-                options={[
-                  { label: '1000', value: 1000 },
-                  { label: '2000', value: 2000 },
-                  { label: '4000', value: 4000 },
-                  { label: '8000', value: 8000 },
-                  { label: '16000', value: 16000 }
-                ]}
-              />
-            </FilterOptionItem>
-          </Form.Item>
+                    {/* TTS过滤选项 */}
+                    <Form.Item label={t('settings.tts.filter_options')} style={{ marginTop: 24, marginBottom: 8 }}>
+                      <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterThinkingProcess}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterThinkingProcess: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.thinking_process')}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterMarkdown}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterMarkdown: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.markdown')}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterCodeBlocks}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterCodeBlocks: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.code_blocks')}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterHtmlTags}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterHtmlTags: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.html_tags')}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
+                        <LengthLabel>{t('settings.tts.max_text_length')}:</LengthLabel>
+                        <Select
+                          value={ttsFilterOptions.maxTextLength}
+                          onChange={(value) => dispatch(setTtsFilterOptions({ maxTextLength: value }))}
+                          disabled={!ttsEnabled}
+                          style={{ width: 120 }}
+                          options={[
+                            { label: '1000', value: 1000 },
+                            { label: '2000', value: 2000 },
+                            { label: '4000', value: 4000 },
+                            { label: '8000', value: 8000 },
+                            { label: '16000', value: 16000 }
+                          ]}
+                        />
+                      </FilterOptionItem>
+                    </Form.Item>
 
-          <Form.Item style={{ marginTop: 16 }}>
-            <Button
-              type="primary"
-              onClick={testTTS}
-              disabled={
-                !ttsEnabled ||
-                (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
-                (ttsServiceType === 'edge' && !ttsEdgeVoice)
-              }>
-              {t('settings.tts.test')}
-            </Button>
-          </Form.Item>
-        </Form>
-      </SettingGroup>
+                    <Form.Item style={{ marginTop: 16 }}>
+                      <Button
+                        type="primary"
+                        onClick={testTTS}
+                        disabled={
+                          !ttsEnabled ||
+                          (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
+                          (ttsServiceType === 'edge' && !ttsEdgeVoice)
+                        }>
+                        {t('settings.tts.test')}
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </SettingGroup>
+              </div>
+            )
+          },
+          {
+            key: 'asr',
+            label: (
+              <span>
+                <AudioOutlined /> {t('settings.asr.tab_title')}
+              </span>
+            ),
+            children: <ASRSettings />
+          }
+        ]}
+      />
       <SettingHelpText style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
-        <span>{t('settings.tts.help')}</span>
-        <a href="https://platform.openai.com/docs/guides/text-to-speech" target="_blank" rel="noopener noreferrer">
-          {t('settings.tts.learn_more')}
+        <span>{t('settings.voice.help')}</span>
+        <a href="https://platform.openai.com/docs/guides/speech-to-text" target="_blank" rel="noopener noreferrer">
+          {t('settings.voice.learn_more')}
         </a>
       </SettingHelpText>
     </SettingContainer>
