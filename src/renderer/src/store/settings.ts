@@ -112,14 +112,14 @@ export interface SettingsState {
   enableDataCollection: boolean
   // TTS配置
   ttsEnabled: boolean
-  ttsServiceType: string // TTS服务类型：openai或edge
+  ttsServiceType: string // TTS服务类型：openai或浏览器
   ttsApiKey: string
   ttsApiUrl: string
   ttsVoice: string
   ttsModel: string
   ttsCustomVoices: string[]
   ttsCustomModels: string[]
-  // Edge TTS配置
+  // 浏览器 TTS配置
   ttsEdgeVoice: string
   // TTS过滤选项
   ttsFilterOptions: {
