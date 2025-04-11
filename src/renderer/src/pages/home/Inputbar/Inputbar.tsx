@@ -712,10 +712,52 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
           return newText
         })
         textareaRef.current?.focus()
+      }),
+      // 监听语音通话消息
+      EventEmitter.on(EVENT_NAMES.VOICE_CALL_MESSAGE, (data: { text: string, model: string }) => {
+        console.log('收到语音通话消息:', data);
+
+        // 先设置输入框文本
+        setText(data.text);
+
+        // 如果有指定模型，切换到该模型
+        if (data.model && data.model !== model) {
+          setModel(data.model);
+        }
+
+        // 使用延时确保文本已经设置到输入框
+        setTimeout(() => {
+          // 直接调用发送消息函数，而不检查inputEmpty
+          console.log('准备自动发送语音识别消息:', data.text);
+
+          // 直接使用正确的方式发送消息
+          // 创建用户消息
+          const userMessage = getUserMessage({
+            assistant,
+            topic,
+            type: 'text',
+            content: data.text
+          });
+
+          // 如果有指定模型，设置模型
+          if (data.model && data.model !== model) {
+            userMessage.model = { id: data.model };
+          }
+
+          // 分发发送消息的action
+          dispatch(
+            _sendMessage(userMessage, assistant, topic, {})
+          );
+
+          // 清空输入框
+          setText('');
+
+          console.log('已触发发送消息事件');
+        }, 300);
       })
     ]
     return () => unsubscribes.forEach((unsub) => unsub())
-  }, [addNewTopic, resizeTextArea])
+  }, [addNewTopic, resizeTextArea, sendMessage, model, inputEmpty, loading, dispatch, assistant, topic, setText, getUserMessage, _sendMessage])
 
   useEffect(() => {
     textareaRef.current?.focus()

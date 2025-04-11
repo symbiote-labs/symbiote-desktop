@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Button, Tooltip } from 'antd';
 import { PhoneOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import VoiceCallModal from './VoiceCallModal';
 import { VoiceCallService } from '../services/VoiceCallService';
+import DraggableVoiceCallWindow from './DraggableVoiceCallWindow';
 
 interface Props {
   disabled?: boolean;
@@ -12,17 +12,18 @@ interface Props {
 
 const VoiceCallButton: React.FC<Props> = ({ disabled = false, style }) => {
   const { t } = useTranslation();
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isWindowVisible, setIsWindowVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [windowPosition, setWindowPosition] = useState({ x: 20, y: 20 });
 
   const handleClick = async () => {
     if (disabled || isLoading) return;
-    
+
     setIsLoading(true);
     try {
       // 初始化语音服务
       await VoiceCallService.initialize();
-      setIsModalVisible(true);
+      setIsWindowVisible(true);
     } catch (error) {
       console.error('Failed to initialize voice call:', error);
       window.message.error(t('voice_call.initialization_failed'));
@@ -42,12 +43,12 @@ const VoiceCallButton: React.FC<Props> = ({ disabled = false, style }) => {
           style={style}
         />
       </Tooltip>
-      {isModalVisible && (
-        <VoiceCallModal
-          visible={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
-        />
-      )}
+      <DraggableVoiceCallWindow
+        visible={isWindowVisible}
+        onClose={() => setIsWindowVisible(false)}
+        position={windowPosition}
+        onPositionChange={setWindowPosition}
+      />
     </>
   );
 };

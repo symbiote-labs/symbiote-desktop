@@ -2,6 +2,7 @@ import { fetchChatCompletion } from '@renderer/services/ApiService'
 import ASRService from '@renderer/services/ASRService'
 import { getDefaultAssistant } from '@renderer/services/AssistantService'
 import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import TTSService from '@renderer/services/TTSService'
 import store from '@renderer/store'
 // 导入类型
@@ -445,7 +446,12 @@ class VoiceCallServiceClass {
     }
   }
 
-  async handleUserSpeech(text: string) {
+  /**
+   * 处理用户语音输入
+   * @param text 语音识别结果文本
+   * @param sendToChat 是否将结果发送到聊天界面
+   */
+  async handleUserSpeech(text: string, sendToChat: boolean = false) {
     if (!this.isCallActive || this.isProcessingResponse || this.isPaused) return
 
     // 暂停语音识别，避免在AI回复时继续识别
@@ -469,6 +475,33 @@ class VoiceCallServiceClass {
         assistant.model = voiceCallModel
       }
 
+      // 如果需要发送到聊天界面，触发事件
+      if (sendToChat) {
+        console.log('将语音识别结果发送到聊天界面:', text)
+
+        try {
+          // 直接触发事件，将语音识别结果发送到聊天界面
+          EventEmitter.emit(EVENT_NAMES.VOICE_CALL_MESSAGE, {
+            text,
+            model: assistant.model
+          })
+
+          // 打印日志确认事件已触发
+          console.log('事件已触发，消息内容:', text, '模型:', assistant.model)
+
+          // 使用消息通知用户
+          window.message.success({ content: '语音识别已完成，正在发送消息...', key: 'voice-call-send' })
+        } catch (error) {
+          console.error('发送语音识别结果到聊天界面时出错:', error)
+          window.message.error({ content: '发送语音识别结果失败', key: 'voice-call-error' })
+        }
+
+        // 不在这里处理响应，因为聊天界面会处理
+        this.isProcessingResponse = false
+        return
+      }
+
+      // 以下是原有的处理逻辑，用于独立的语音通话窗口
       // 创建一个简单的Topic对象
       const topic = {
         id: 'voice-call',
@@ -607,6 +640,167 @@ class VoiceCallServiceClass {
 
       // 不自动恢复语音识别，等待用户长按按钮
       // 长按说话模式下，我们不需要自动恢复语音识别
+    }
+  }
+
+  /**
+   * 停止录音并将结果发送到聊天界面
+   * @returns Promise<boolean> 是否成功停止录音
+   */
+  async stopRecordingAndSendToChat(): Promise<boolean> {
+    if (!this.isCallActive || !this.isRecording) {
+      return false
+    }
+
+    // 清除录音超时定时器
+    if (this.recordingTimeout) {
+      clearTimeout(this.recordingTimeout)
+      this.recordingTimeout = null
+    }
+
+    // 获取当前ASR服务类型
+    const { asrServiceType } = store.getState().settings
+
+    try {
+      // 立即设置录音状态为false，防止重复处理
+      this.isRecording = false
+      this.callbacks?.onListeningStateChange(false)
+
+      // 存储当前的语音识别结果，用于松开按钮后发送给AI
+      const currentTranscript = this._currentTranscript
+      // 存储累积的语音识别结果
+      const accumulatedTranscript = this._accumulatedTranscript
+
+      if (asrServiceType === 'browser') {
+        // 浏览器ASR
+        if (!this.recognition) {
+          throw new Error('Browser speech recognition not initialized')
+        }
+
+        this.recognition.stop()
+
+        // 优先使用累积的文本，如果有的话
+        if (accumulatedTranscript && accumulatedTranscript.trim()) {
+          console.log('发送累积的语音识别结果给聊天界面:', accumulatedTranscript)
+          this.handleUserSpeech(accumulatedTranscript, true)
+        } else if (currentTranscript && currentTranscript.trim()) {
+          // 如果没有累积结果，使用当前结果
+          console.log('没有累积结果，使用当前结果发送给聊天界面:', currentTranscript)
+          this.handleUserSpeech(currentTranscript, true)
+        } else {
+          console.log('没有有效的语音识别结果，不发送消息')
+          window.message.info({ content: '没有收到语音输入', key: 'voice-call-empty' })
+        }
+
+        // 清除状态
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
+      } else if (asrServiceType === 'local') {
+        // 本地服务器ASR
+        // 创建一个承诺，等待最终结果
+        const finalResultPromise = new Promise<string>((resolve) => {
+          // 设置一个超时器，确保不会无限等待
+          const timeoutId = setTimeout(() => {
+            console.log('等待最终结果超时，使用当前结果')
+            resolve(this._currentTranscript)
+          }, 1500) // 1.5秒超时
+
+          // 设置回调函数来接收最终结果
+          const resultCallback = (text: string, isFinal?: boolean) => {
+            // 如果是空字符串，表示只是重置状态，不处理
+            if (text === '') return
+
+            if (text) {
+              // 只处理最终结果，忽略中间结果
+              if (isFinal) {
+                clearTimeout(timeoutId)
+                console.log('收到最终语音识别结果:', text)
+                this._currentTranscript = text
+                this.callbacks?.onTranscript(text)
+                resolve(text)
+              } else {
+                // 对于中间结果，只更新显示，不解析Promise
+                console.log('收到中间语音识别结果:', text)
+                this.callbacks?.onTranscript(text)
+              }
+            }
+          }
+
+          // 停止录音，但不取消，以获取最终结果
+          ASRService.stopRecording(resultCallback)
+
+          // 添加额外的安全措施，在停止后立即发送重置命令
+          setTimeout(() => {
+            // 发送重置命令，确保浏览器不会继续发送结果
+            ASRService.cancelRecording()
+
+            // 清除ASRService中的回调函数，防止后续结果被处理
+            ASRService.resultCallback = null
+          }, 2000) // 2秒后强制取消，作为安全措施
+        })
+
+        // 等待最终结果，但最多等待3秒
+        const finalText = await finalResultPromise
+
+        // 优先使用累积的文本，如果有的话
+        if (accumulatedTranscript && accumulatedTranscript.trim()) {
+          console.log('发送累积的语音识别结果给聊天界面:', accumulatedTranscript)
+          this.handleUserSpeech(accumulatedTranscript, true)
+        } else if (finalText && finalText.trim()) {
+          // 如果没有累积结果，使用最终结果
+          console.log('发送最终语音识别结果给聊天界面:', finalText)
+          this.handleUserSpeech(finalText, true)
+        } else if (currentTranscript && currentTranscript.trim()) {
+          // 如果没有最终结果，使用当前结果
+          console.log('没有最终结果，使用当前结果发送给聊天界面:', currentTranscript)
+          this.handleUserSpeech(currentTranscript, true)
+        } else {
+          console.log('没有有效的语音识别结果，不发送消息')
+          window.message.info({ content: '没有收到语音输入', key: 'voice-call-empty' })
+        }
+
+        // 再次确保所有状态被重置
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
+      } else if (asrServiceType === 'openai') {
+        // OpenAI ASR
+        await ASRService.stopRecording((text) => {
+          // 更新最终的语音识别结果
+          if (text) {
+            this._currentTranscript = text
+            this.callbacks?.onTranscript(text)
+          }
+        })
+
+        // 使用最新的语音识别结果
+        const finalTranscript = this._currentTranscript
+        if (finalTranscript && finalTranscript.trim()) {
+          console.log('发送OpenAI语音识别结果给聊天界面:', finalTranscript)
+          this.handleUserSpeech(finalTranscript, true)
+        } else {
+          console.log('没有有效的OpenAI语音识别结果，不发送消息')
+          window.message.info({ content: '没有收到语音输入', key: 'voice-call-empty' })
+        }
+
+        // 清除状态
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
+      }
+
+      return true
+    } catch (error) {
+      console.error('Failed to stop recording:', error)
+      this.isRecording = false
+      this.callbacks?.onListeningStateChange(false)
+
+      // 确保在出错时也清除状态
+      this._currentTranscript = ''
+      this._accumulatedTranscript = ''
+
+      // 强制取消录音
+      ASRService.cancelRecording()
+
+      return false
     }
   }
 
