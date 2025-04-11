@@ -2,11 +2,15 @@ import { FONT_FAMILY } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useModel } from '@renderer/hooks/useModel'
 import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
+import { useRuntime } from '@renderer/hooks/useRuntime'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
+import TTSService from '@renderer/services/TTSService'
+import { RootState } from '@renderer/store'
 import { Assistant, Message, Topic } from '@renderer/types'
 import { classNames } from '@renderer/utils'
+import { useSelector } from 'react-redux'
 import { Divider, Dropdown } from 'antd'
 import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -46,10 +50,14 @@ const MessageItem: FC<Props> = ({
   const model = useModel(getMessageModelId(message), message.model?.provider) || message.model
   const { isBubbleStyle } = useMessageStyle()
   const { showMessageDivider, messageFont, fontSize } = useSettings()
+  const { generating } = useRuntime()
   const messageContainerRef = useRef<HTMLDivElement>(null)
   // const topic = useTopic(assistant, _topic?.id)
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
   const [selectedQuoteText, setSelectedQuoteText] = useState<string>('')
+
+  // 获取TTS设置
+  const ttsEnabled = useSelector((state: RootState) => state.settings.ttsEnabled)
   const [selectedText, setSelectedText] = useState<string>('')
 
   const isLastMessage = index === 0
@@ -87,6 +95,21 @@ const MessageItem: FC<Props> = ({
       document.removeEventListener('click', handleClick)
     }
   }, [])
+
+  // 自动播放TTS的逻辑
+  useEffect(() => {
+    // 如果是最后一条助手消息，且消息状态为成功，且不是正在生成中，且TTS已启用
+    if (isLastMessage && isAssistantMessage && message.status === 'success' && !generating && ttsEnabled) {
+      // 检查消息是否有内容
+      if (message.content && message.content.trim()) {
+        console.log('自动播放最新助手消息的TTS:', message.id)
+        // 使用延时确保消息已完全加载
+        setTimeout(() => {
+          TTSService.speakFromMessage(message)
+        }, 500)
+      }
+    }
+  }, [isLastMessage, isAssistantMessage, message, generating, ttsEnabled])
 
   const messageHighlightHandler = useCallback((highlight: boolean = true) => {
     if (messageContainerRef.current) {
