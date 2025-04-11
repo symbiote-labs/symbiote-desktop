@@ -8,28 +8,14 @@ import {
   SoundOutlined
 } from '@ant-design/icons'
 import { Button, Space, Tooltip } from 'antd'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
-import { Action } from 'redux'
 import styled from 'styled-components'
 
 import { VoiceCallService } from '../services/VoiceCallService'
 import { setIsVoiceCallActive, setLastPlayedMessageId, setSkipNextAutoTTS } from '../store/settings'
 import VoiceVisualizer from './VoiceVisualizer'
-
-// 节流函数，限制函数调用频率
-
-function throttle<T extends (...args: any[]) => any>(func: T, delay: number): (...args: Parameters<T>) => void {
-  let lastCall = 0
-  return (...args: Parameters<T>) => {
-    const now = Date.now()
-    if (now - lastCall >= delay) {
-      lastCall = now
-      func(...args)
-    }
-  }
-}
 
 interface Props {
   visible: boolean
@@ -60,17 +46,56 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const memoizedOnClose = useCallback(() => {
-    onClose();
-  }, []);
+  // 使用useRef跟踪窗口是否已经初始化，避免重复初始化
+  const isInitializedRef = useRef(false)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const memoizedDispatch = useCallback((action: Action) => {
-    dispatch(action);
-  }, []);
+  // 使用useRef跟踪是否已经设置了状态，避免重复设置
+  const stateSetRef = useRef(false)
 
+  // 单独处理状态设置，只在visible变化时执行一次
   useEffect(() => {
+    if (visible) {
+      // 只有在状态没有设置过的情况下，才设置其他状态
+      if (!stateSetRef.current) {
+        // 设置状态标记为已完成
+        stateSetRef.current = true
+
+        // 更新语音通话窗口状态
+        dispatch(setIsVoiceCallActive(true))
+        // 重置最后播放的消息ID
+        dispatch(setLastPlayedMessageId(null))
+      }
+    } else if (!visible) {
+      // 当窗口关闭时重置状态标记
+      stateSetRef.current = false
+      isInitializedRef.current = false
+
+      // 更新语音通话窗口状态
+      dispatch(setIsVoiceCallActive(false))
+    }
+  }, [visible, dispatch])
+
+  // 单独的 useEffect 来设置 skipNextAutoTTS，确保每次窗口可见时都设置
+  useEffect(() => {
+    if (visible) {
+      // 每次窗口可见时，都设置跳过下一次自动TTS
+      console.log('设置 skipNextAutoTTS 为 true，确保打开窗口时不会自动播放最后一条消息')
+      // 使用 setTimeout 确保在所有消息组件渲染后设置
+      setTimeout(() => {
+        dispatch(setSkipNextAutoTTS(true))
+      }, 100)
+    }
+  }, [visible, dispatch])
+
+  // 处理语音通话初始化和清理
+  useEffect(() => {
+    // 添加TTS状态变化事件监听器
+    const handleTTSStateChange = (event: CustomEvent) => {
+      const { isPlaying } = event.detail
+      console.log('TTS状态变化事件:', isPlaying)
+      setIsSpeaking(isPlaying)
+    }
+
     const startVoiceCall = async () => {
       try {
         // 显示加载中提示
@@ -99,140 +124,55 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
       } catch (error) {
         console.error('Voice call error:', error)
         window.message.error({ content: t('voice_call.error'), key: 'voice-call-init' })
-        memoizedOnClose()
+        onClose()
       }
     }
 
-    // 添加TTS状态变化事件监听器
-    const handleTTSStateChange = (event: CustomEvent) => {
-      const { isPlaying } = event.detail
-      console.log('TTS状态变化事件:', isPlaying)
-      setIsSpeaking(isPlaying)
-    }
+    if (visible && !isInitializedRef.current) {
+      // 设置初始化标记为已完成
+      isInitializedRef.current = true
 
-    if (visible) {
-      // 更新语音通话窗口状态
-      memoizedDispatch(setIsVoiceCallActive(true))
-      // 重置最后播放的消息ID，确保不会自动播放已有消息
-      memoizedDispatch(setLastPlayedMessageId(null))
-      // 设置跳过下一次自动TTS，确保打开窗口时不会自动播放最后一条消息
-      memoizedDispatch(setSkipNextAutoTTS(true))
+      // 启动语音通话
       startVoiceCall()
       // 添加事件监听器
       window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
     }
 
     return () => {
-      // 更新语音通话窗口状态
-      memoizedDispatch(setIsVoiceCallActive(false))
-      VoiceCallService.endCall()
+      if (!visible) {
+        VoiceCallService.endCall()
+      }
       // 移除事件监听器
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
     }
-  // 使用 memoizedOnClose 和 memoizedDispatch 代替原始的 onClose 和 dispatch
-  }, [visible, t, memoizedDispatch, memoizedOnClose])
+  }, [visible, t, onClose])
 
   // 拖拽相关处理
   const handleDragStart = (e: React.MouseEvent) => {
     if (containerRef.current) {
-      e.preventDefault() // 防止默认行为
-      e.stopPropagation() // 阻止事件冒泡
-
-      // 直接使用鼠标相对于屏幕的位置和窗口相对于屏幕的位置计算偏移
       setIsDragging(true)
-
-      // 记录鼠标相对于窗口左上角的偏移量
+      const rect = containerRef.current.getBoundingClientRect()
       setDragOffset({
-        x: e.clientX - currentPosition.x,
-        y: e.clientY - currentPosition.y
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
       })
-
-      // 在开发环境下只输出一次关键日志
-      if (process.env.NODE_ENV === 'development') {
-        console.log('开始拖拽 - 偏移量:', { x: e.clientX - currentPosition.x, y: e.clientY - currentPosition.y })
-      }
     }
   }
 
-  // 使用useCallback包装并优化handleDrag函数
-  const handleDragBase = useCallback(
-    (e: MouseEvent) => {
-      if (isDragging && containerRef.current) {
-        // 限制拖拽范围，防止窗口被拖出屏幕
-        const windowWidth = window.innerWidth
-        const windowHeight = window.innerHeight
-        const containerWidth = containerRef.current.offsetWidth
-        const containerHeight = containerRef.current.offsetHeight
-
-        // 计算新位置，确保窗口不会被拖出屏幕
-        // 使用鼠标当前位置减去偏移量，得到窗口应该在的位置
-        const newX = Math.min(Math.max(0, e.clientX - dragOffset.x), windowWidth - containerWidth)
-        const newY = Math.min(Math.max(0, e.clientY - dragOffset.y), windowHeight - containerHeight)
-
-        const newPosition = { x: newX, y: newY }
-
-        // 完全关闭拖拽中的日志输出
-        // 如果需要调试，可以在这里添加日志代码
-
-        // 立即更新窗口位置，提高响应速度
-        containerRef.current.style.left = `${newX}px`
-        containerRef.current.style.top = `${newY}px`
-
-        // 更新状态
-        setCurrentPosition(newPosition)
-        onPositionChange?.(newPosition)
+  const handleDrag = (e: MouseEvent) => {
+    if (isDragging) {
+      const newPosition = {
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y
       }
-    },
-    [isDragging, dragOffset, onPositionChange]
-  )
+      setCurrentPosition(newPosition)
+      onPositionChange?.(newPosition)
+    }
+  }
 
-  // 使用useMemo包装节流函数，避免重复创建
-  const handleDrag = useMemo(() => throttle(handleDragBase, 16), [handleDragBase]) // 16ms 大约相当于 60fps
-
-  const handleDragEnd = useCallback(() => {
+  const handleDragEnd = () => {
     setIsDragging(false)
-    // 完全关闭拖拽结束的日志输出
-  }, [])
-
-  // 添加键盘快捷键支持
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        // 防止箭头键滚动页面
-        e.preventDefault()
-
-        // 移动步长
-        const step = e.shiftKey ? 10 : 5
-
-        // 根据按键移动窗口
-        let newX = currentPosition.x
-        let newY = currentPosition.y
-
-        if (e.key === 'ArrowUp') newY -= step
-        if (e.key === 'ArrowDown') newY += step
-        if (e.key === 'ArrowLeft') newX -= step
-        if (e.key === 'ArrowRight') newX += step
-
-        // 限制范围
-        if (containerRef.current) {
-          const windowWidth = window.innerWidth
-          const windowHeight = window.innerHeight
-          const containerWidth = containerRef.current.offsetWidth
-          const containerHeight = containerRef.current.offsetHeight
-
-          newX = Math.min(Math.max(0, newX), windowWidth - containerWidth)
-          newY = Math.min(Math.max(0, newY), windowHeight - containerHeight)
-        }
-
-        const newPosition = { x: newX, y: newY }
-        setCurrentPosition(newPosition)
-        onPositionChange?.(newPosition)
-      }
-    },
-    [currentPosition, onClose, onPositionChange]
-  )
+  }
 
   useEffect(() => {
     if (isDragging) {
@@ -243,17 +183,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
       document.removeEventListener('mousemove', handleDrag)
       document.removeEventListener('mouseup', handleDragEnd)
     }
-  }, [isDragging, handleDrag, handleDragEnd])
-
-  // 添加键盘事件监听
-  useEffect(() => {
-    if (visible) {
-      document.addEventListener('keydown', handleKeyDown)
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [visible, handleKeyDown])
+  }, [isDragging, handleDrag])
 
   // 语音通话相关处理
   const toggleMute = () => {
@@ -374,9 +304,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
         left: `${currentPosition.x}px`,
         top: `${currentPosition.y}px`,
         position: 'fixed',
-        zIndex: 1000,
-        transform: 'translate3d(0,0,0)', // 启用GPU加速，提高拖拽流畅度
-        willChange: 'left, top' // 提示浏览器这些属性将会变化，优化渲染
+        zIndex: 1000
       }}>
       <Header onMouseDown={handleDragStart}>
         <DragOutlined style={{ cursor: 'move', marginRight: 8 }} />

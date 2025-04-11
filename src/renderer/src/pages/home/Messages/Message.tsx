@@ -1,8 +1,8 @@
 import { FONT_FAMILY } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useModel } from '@renderer/hooks/useModel'
-import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
 import { useRuntime } from '@renderer/hooks/useRuntime'
+import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
@@ -11,10 +11,10 @@ import { RootState, useAppDispatch } from '@renderer/store'
 import { setLastPlayedMessageId, setSkipNextAutoTTS } from '@renderer/store/settings'
 import { Assistant, Message, Topic } from '@renderer/types'
 import { classNames } from '@renderer/utils'
-import { useSelector } from 'react-redux'
 import { Divider, Dropdown } from 'antd'
 import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import MessageContent from './MessageContent'
@@ -58,7 +58,9 @@ const MessageItem: FC<Props> = ({
   const [selectedQuoteText, setSelectedQuoteText] = useState<string>('')
 
   // 获取TTS设置
-  const { ttsEnabled, isVoiceCallActive, lastPlayedMessageId, skipNextAutoTTS } = useSelector((state: RootState) => state.settings)
+  const { ttsEnabled, isVoiceCallActive, lastPlayedMessageId, skipNextAutoTTS } = useSelector(
+    (state: RootState) => state.settings
+  )
   const dispatch = useAppDispatch()
   const [selectedText, setSelectedText] = useState<string>('')
 
@@ -98,17 +100,63 @@ const MessageItem: FC<Props> = ({
     }
   }, [])
 
+  // 使用 ref 跟踪消息状态变化
+  const prevGeneratingRef = useRef(generating)
+
+  // 更新 prevGeneratingRef 的值
+  useEffect(() => {
+    // 在每次渲染后更新 ref 值
+    prevGeneratingRef.current = generating
+  }, [generating])
+
+  // 监听新消息生成，并在新消息生成时重置 skipNextAutoTTS
+  useEffect(() => {
+    // 如果从生成中变为非生成中，说明新消息刚刚生成完成
+    if (
+      prevGeneratingRef.current &&
+      !generating &&
+      isLastMessage &&
+      isAssistantMessage &&
+      message.status === 'success'
+    ) {
+      console.log('新消息生成完成，消息ID:', message.id)
+
+      // 如果 skipNextAutoTTS 为 true，重置为 false，以便下一条消息可以自动播放
+      if (skipNextAutoTTS) {
+        console.log('重置 skipNextAutoTTS 为 false，以便下一条消息可以自动播放')
+        dispatch(setSkipNextAutoTTS(false))
+      }
+    }
+  }, [
+    isLastMessage,
+    isAssistantMessage,
+    message.status,
+    message.id,
+    generating,
+    skipNextAutoTTS,
+    dispatch,
+    prevGeneratingRef
+  ])
+
   // 自动播放TTS的逻辑
   useEffect(() => {
     // 如果是最后一条助手消息，且消息状态为成功，且不是正在生成中，且TTS已启用，且语音通话窗口已打开
-    if (isLastMessage && isAssistantMessage && message.status === 'success' && !generating && ttsEnabled && isVoiceCallActive) {
+    if (
+      isLastMessage &&
+      isAssistantMessage &&
+      message.status === 'success' &&
+      !generating &&
+      ttsEnabled &&
+      isVoiceCallActive
+    ) {
       // 检查是否需要跳过自动TTS
       if (skipNextAutoTTS) {
-        console.log('跳过自动TTS，因为 skipNextAutoTTS 为 true')
-        // 重置 skipNextAutoTTS 状态，只跳过一次
-        dispatch(setSkipNextAutoTTS(false))
+        console.log('跳过自动TTS，因为 skipNextAutoTTS 为 true，消息ID:', message.id)
+        // 注意：不在这里重置 skipNextAutoTTS，而是在新消息生成时重置
         return
       }
+
+      console.log('准备自动播放TTS，因为 skipNextAutoTTS 为 false，消息ID:', message.id)
 
       // 检查消息是否有内容，且消息是新的（不是上次播放过的消息）
       if (message.content && message.content.trim() && message.id !== lastPlayedMessageId) {
@@ -124,11 +172,28 @@ const MessageItem: FC<Props> = ({
       } else if (message.id === lastPlayedMessageId) {
         console.log('不自动播放TTS，因为该消息已经播放过:', message.id)
       }
-    } else if (isLastMessage && isAssistantMessage && message.status === 'success' && !generating && ttsEnabled && !isVoiceCallActive) {
+    } else if (
+      isLastMessage &&
+      isAssistantMessage &&
+      message.status === 'success' &&
+      !generating &&
+      ttsEnabled &&
+      !isVoiceCallActive
+    ) {
       // 如果语音通话窗口没有打开，则不自动播放TTS
       console.log('不自动播放TTS，因为语音通话窗口没有打开')
     }
-  }, [isLastMessage, isAssistantMessage, message, generating, ttsEnabled, isVoiceCallActive, lastPlayedMessageId, skipNextAutoTTS, dispatch])
+  }, [
+    isLastMessage,
+    isAssistantMessage,
+    message,
+    generating,
+    ttsEnabled,
+    isVoiceCallActive,
+    lastPlayedMessageId,
+    skipNextAutoTTS,
+    dispatch
+  ])
 
   const messageHighlightHandler = useCallback((highlight: boolean = true) => {
     if (messageContainerRef.current) {
