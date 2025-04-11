@@ -525,10 +525,16 @@ class VoiceCallServiceClass {
           )
 
           // 使用消息通知用户
-          window.message.success({ content: '语音识别已完成，正在发送消息...', key: 'voice-call-send' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.success({ content: '语音识别已完成，正在发送消息...', key: 'voice-call-send' })
+          }, 0)
         } catch (error) {
           console.error('发送语音识别结果到聊天界面时出错:', error)
-          window.message.error({ content: '发送语音识别结果失败', key: 'voice-call-error' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.error({ content: '发送语音识别结果失败', key: 'voice-call-error' })
+          }, 0)
         }
 
         // 不在这里处理响应，因为聊天界面会处理

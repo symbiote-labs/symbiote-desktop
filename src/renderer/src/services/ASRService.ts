@@ -64,7 +64,10 @@ class ASRService {
       // 创建新连接
       try {
         console.log('[ASRService] 正在连接WebSocket服务器...')
-        window.message.loading({ content: '正在连接语音识别服务...', key: 'ws-connect' })
+        // 使用 setTimeout 避免在渲染过程中调用 message API
+        setTimeout(() => {
+          window.message.loading({ content: '正在连接语音识别服务...', key: 'ws-connect' })
+        }, 0)
 
         this.ws = new WebSocket('ws://localhost:8080')
         this.wsConnected = false
@@ -72,7 +75,10 @@ class ASRService {
 
         this.ws.onopen = () => {
           console.log('[ASRService] WebSocket连接成功')
-          window.message.success({ content: '语音识别服务连接成功', key: 'ws-connect' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.success({ content: '语音识别服务连接成功', key: 'ws-connect' })
+          }, 0)
           this.wsConnected = true
           this.reconnectAttempt = 0
           this.ws?.send(JSON.stringify({ type: 'identify', role: 'electron' }))
@@ -89,7 +95,10 @@ class ASRService {
         this.ws.onerror = (error) => {
           console.error('[ASRService] WebSocket连接错误:', error)
           this.wsConnected = false
-          window.message.error({ content: '语音识别服务连接失败', key: 'ws-connect' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.error({ content: '语音识别服务连接失败', key: 'ws-connect' })
+          }, 0)
           resolve(false)
         }
 
@@ -114,18 +123,27 @@ class ASRService {
         if (data.message === 'browser_ready' || data.message === 'Browser connected') {
           console.log('[ASRService] 浏览器已准备好')
           this.browserReady = true
-          window.message.success({ content: '语音识别浏览器已准备好', key: 'browser-status' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.success({ content: '语音识别浏览器已准备好', key: 'browser-status' })
+          }, 0)
         } else if (data.message === 'Browser disconnected' || data.message === 'Browser connection error') {
           console.log('[ASRService] 浏览器断开连接')
           this.browserReady = false
-          window.message.error({ content: '语音识别浏览器断开连接', key: 'browser-status' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.error({ content: '语音识别浏览器断开连接', key: 'browser-status' })
+          }, 0)
         } else if (data.message === 'stopped') {
           // 语音识别已停止
           console.log('[ASRService] 语音识别已停止')
           this.isRecording = false
 
           // 如果没有收到最终结果，显示处理完成消息
-          window.message.success({ content: i18n.t('settings.asr.completed'), key: 'asr-processing' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.success({ content: i18n.t('settings.asr.completed'), key: 'asr-processing' })
+          }, 0)
         } else if (data.message === 'reset_complete') {
           // 语音识别已重置
           console.log('[ASRService] 语音识别已强制重置')
@@ -136,7 +154,10 @@ class ASRService {
           this.resultCallback = null
 
           // 显示重置完成消息
-          window.message.info({ content: '语音识别已重置', key: 'asr-reset' })
+          // 使用 setTimeout 避免在渲染过程中调用 message API
+          setTimeout(() => {
+            window.message.info({ content: '语音识别已重置', key: 'asr-reset' })
+          }, 0)
 
           // 如果有回调函数，调用一次空字符串，触发按钮状态重置
           if (tempCallback && typeof tempCallback === 'function') {
@@ -169,7 +190,10 @@ class ASRService {
 
               // 调用回调函数
               tempCallback(data.data.text, true)
-              window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
+              // 使用 setTimeout 避免在渲染过程中调用 message API
+              setTimeout(() => {
+                window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
+              }, 0)
             } else if (this.isRecording) { // 只在录音中才处理中间结果
               // 非最终结果，也调用回调，但标记为非最终
               console.log('[ASRService] 收到中间结果，调用回调函数，文本:', data.data.text)
@@ -183,10 +207,13 @@ class ASRService {
         }
       } else if (data.type === 'error') {
         console.error('[ASRService] 收到错误消息:', data.message || data.data)
-        window.message.error({
-          content: `语音识别错误: ${data.message || data.data?.error || '未知错误'}`,
-          key: 'asr-error'
-        })
+        // 使用 setTimeout 避免在渲染过程中调用 message API
+        setTimeout(() => {
+          window.message.error({
+            content: `语音识别错误: ${data.message || data.data?.error || '未知错误'}`,
+            key: 'asr-error'
+          })
+        }, 0)
       }
     } catch (error) {
       console.error('[ASRService] 解析WebSocket消息失败:', error, event.data)

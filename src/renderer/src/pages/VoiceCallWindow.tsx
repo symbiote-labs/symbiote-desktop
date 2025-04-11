@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
+import { Action } from 'redux';
 import styled from 'styled-components';
 import { Button, Space, Tooltip } from 'antd';
 import {
@@ -22,6 +23,17 @@ import { setIsVoiceCallActive, setLastPlayedMessageId, setSkipNextAutoTTS } from
 const VoiceCallWindow: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+
+  // 使用 useCallback 包装 dispatch 和 handleClose 函数，避免无限循环
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const memoizedDispatch = useCallback((action: Action) => {
+    dispatch(action);
+  }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const memoizedHandleClose = useCallback(() => {
+    window.close();
+  }, []);
 
   // 语音通话状态
   const [transcript, setTranscript] = useState('');
@@ -61,7 +73,7 @@ const VoiceCallWindow: React.FC = () => {
       } catch (error) {
         console.error('Voice call error:', error);
         window.message.error({ content: t('voice_call.error'), key: 'voice-call-init' });
-        handleClose();
+        memoizedHandleClose();
       }
     };
 
@@ -73,11 +85,11 @@ const VoiceCallWindow: React.FC = () => {
     };
 
     // 更新语音通话窗口状态
-    dispatch(setIsVoiceCallActive(true));
+    memoizedDispatch(setIsVoiceCallActive(true));
     // 重置最后播放的消息ID，确保不会自动播放已有消息
-    dispatch(setLastPlayedMessageId(null));
+    memoizedDispatch(setLastPlayedMessageId(null));
     // 设置跳过下一次自动TTS，确保打开窗口时不会自动播放最后一条消息
-    dispatch(setSkipNextAutoTTS(true));
+    memoizedDispatch(setSkipNextAutoTTS(true));
 
     startVoiceCall();
     // 添加事件监听器
@@ -85,12 +97,12 @@ const VoiceCallWindow: React.FC = () => {
 
     return () => {
       // 更新语音通话窗口状态
-      dispatch(setIsVoiceCallActive(false));
+      memoizedDispatch(setIsVoiceCallActive(false));
       VoiceCallService.endCall();
       // 移除事件监听器
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener);
     };
-  }, [t, dispatch]);
+  }, [t, memoizedDispatch, memoizedHandleClose]);
 
   // 语音通话相关处理
   const toggleMute = () => {
@@ -106,7 +118,7 @@ const VoiceCallWindow: React.FC = () => {
 
   // 关闭窗口
   const handleClose = () => {
-    window.close();
+    memoizedHandleClose();
   };
 
   // 长按说话相关处理

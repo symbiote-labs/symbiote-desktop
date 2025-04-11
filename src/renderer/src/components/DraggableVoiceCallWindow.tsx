@@ -11,6 +11,7 @@ import { Button, Space, Tooltip } from 'antd'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
+import { Action } from 'redux'
 import styled from 'styled-components'
 
 import { VoiceCallService } from '../services/VoiceCallService'
@@ -59,6 +60,16 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
   const [isPaused, setIsPaused] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const memoizedOnClose = useCallback(() => {
+    onClose();
+  }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const memoizedDispatch = useCallback((action: Action) => {
+    dispatch(action);
+  }, []);
+
   useEffect(() => {
     const startVoiceCall = async () => {
       try {
@@ -88,7 +99,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
       } catch (error) {
         console.error('Voice call error:', error)
         window.message.error({ content: t('voice_call.error'), key: 'voice-call-init' })
-        onClose()
+        memoizedOnClose()
       }
     }
 
@@ -101,11 +112,11 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
 
     if (visible) {
       // 更新语音通话窗口状态
-      dispatch(setIsVoiceCallActive(true))
+      memoizedDispatch(setIsVoiceCallActive(true))
       // 重置最后播放的消息ID，确保不会自动播放已有消息
-      dispatch(setLastPlayedMessageId(null))
+      memoizedDispatch(setLastPlayedMessageId(null))
       // 设置跳过下一次自动TTS，确保打开窗口时不会自动播放最后一条消息
-      dispatch(setSkipNextAutoTTS(true))
+      memoizedDispatch(setSkipNextAutoTTS(true))
       startVoiceCall()
       // 添加事件监听器
       window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
@@ -113,12 +124,13 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
 
     return () => {
       // 更新语音通话窗口状态
-      dispatch(setIsVoiceCallActive(false))
+      memoizedDispatch(setIsVoiceCallActive(false))
       VoiceCallService.endCall()
       // 移除事件监听器
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
     }
-  }, [visible, t, dispatch, onClose])
+  // 使用 memoizedOnClose 和 memoizedDispatch 代替原始的 onClose 和 dispatch
+  }, [visible, t, memoizedDispatch, memoizedOnClose])
 
   // 拖拽相关处理
   const handleDragStart = (e: React.MouseEvent) => {
