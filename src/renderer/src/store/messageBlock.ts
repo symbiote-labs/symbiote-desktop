@@ -63,12 +63,17 @@ export const {
   setMessageBlocksError
 } = messageBlocksSlice.actions
 
+export const messageBlocksSelectors = messageBlocksAdapter.getSelectors<RootState>(
+  (state) => state.messageBlocks // Ensure this matches the key in the root reducer
+)
+
+// Export the actions for use in thunks, etc.
+export const messageBlocksActions = messageBlocksSlice.actions
+
 export default messageBlocksSlice.reducer
 
 // 5. 使用适配器的 getSelectors 创建并导出 Selectors
 // 我们传递一个选择器函数，该函数返回 `messageBlocks` slice 的状态。
-export const messageBlockSelectors = messageBlocksAdapter.getSelectors((state: RootState) => state.messageBlocks)
-
 // 导出选择器的示例用法：
 // const selectBlockById = (state: RootState, blockId: EntityId) =>
 //   messageBlockSelectors.selectById(state, blockId);

@@ -14,12 +14,14 @@ import messageBlocksReducer from './messageBlock'
 import messagesReducer from './messages'
 import migrate from './migrate'
 import minapps from './minapps'
+import newMessagesReducer from './newMessage'
 import nutstore from './nutstore'
 import paintings from './paintings'
 import runtime from './runtime'
 import settings from './settings'
 import shortcuts from './shortcuts'
 import websearch from './websearch'
+
 const rootReducer = combineReducers({
   assistants,
   agents,
@@ -36,6 +38,7 @@ const rootReducer = combineReducers({
   mcp,
   copilot,
   messages: messagesReducer,
+  newMessages: newMessagesReducer,
   messageBlocks: messageBlocksReducer
 })
 
@@ -44,7 +47,7 @@ const persistedReducer = persistReducer(
     key: 'cherry-studio',
     storage,
     version: 95,
-    blacklist: ['runtime', 'messages'],
+    blacklist: ['runtime', 'newMessages', 'messageBlocks'],
     migrate
   },
   rootReducer

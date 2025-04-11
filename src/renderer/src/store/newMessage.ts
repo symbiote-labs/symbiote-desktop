@@ -1,65 +1,85 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import type { Topic } from '@renderer/types'
 // Separate type-only imports from value imports
-import type {
-  Message, // Assuming this is the updated Message type
-  MessagesState as NewMessagesState
-} from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessageTypes'
 import {
   MessageBlockStatus // Import as value
 } from '@renderer/types/newMessageTypes'
 
-interface MessagesState extends Omit<NewMessagesState, 'streamBlocksByMessage'> {
-  // Ensure Message type used here reflects the LATEST definition (blocks: string[])
+// Define loading states
+// type LoadingState = 'idle' | 'loading' | 'error' // REMOVED as loadingByTopic is now boolean
+
+// Modify state to track loading state and error per topic
+export interface MessagesState {
   messagesByTopic: Record<string, Message[]>
+  currentTopicId: string | null // Store only the ID
+  loadingByTopic: Record<string, boolean> // Changed back to boolean
+  displayCount: number
 }
 
 const initialState: MessagesState = {
   messagesByTopic: {},
-  currentTopic: null,
-  loadingByTopic: {},
-  displayCount: 20,
-  error: null
+  currentTopicId: null,
+  loadingByTopic: {}, // Initialize as empty object
+  displayCount: 20
 }
 
-// Payload now only needs info relevant to adding the ID and updating status
+// Payload for receiving messages (used by loadTopicMessagesThunk)
+interface MessagesReceivedPayload {
+  topicId: string
+  messages: Message[]
+}
+
+// Payload for setting topic loading state
+interface SetTopicLoadingPayload {
+  topicId: string
+  loading: boolean // Changed back to boolean
+}
+
+// Payload for upserting a block reference
 interface UpsertBlockReferencePayload {
   messageId: string
-  blockId: string // The ID to potentially add
-  status?: MessageBlockStatus // Status of the block to update message status
+  blockId: string
+  status?: MessageBlockStatus
 }
 
 const messagesSlice = createSlice({
-  name: 'newMessage',
+  name: 'newMessages', // Renamed slice
   initialState,
   reducers: {
-    setCurrentTopic(state, action: PayloadAction<Topic | null>) {
-      state.currentTopic = action.payload
-      if (action.payload && !(action.payload.id in state.messagesByTopic)) {
-        state.messagesByTopic[action.payload.id] = []
-        state.loadingByTopic[action.payload.id] = false
+    setCurrentTopicId(state, action: PayloadAction<string | null>) {
+      state.currentTopicId = action.payload
+      if (action.payload && !(action.payload in state.messagesByTopic)) {
+        // Initialize topic state if not present
+        state.messagesByTopic[action.payload] = []
+        state.loadingByTopic[action.payload] = false // Initialize loading to false
       }
-      state.error = null
     },
-    setLoading(state, action: PayloadAction<{ topicId: string; isLoading: boolean }>) {
-      state.loadingByTopic[action.payload.topicId] = action.payload.isLoading
-    },
-    setError(state, action: PayloadAction<string | null>) {
-      state.error = action.payload
+    setTopicLoading(state, action: PayloadAction<SetTopicLoadingPayload>) {
+      const { topicId, loading } = action.payload
+      state.loadingByTopic[topicId] = loading
     },
     setDisplayCount(state, action: PayloadAction<number>) {
       state.displayCount = action.payload
+    },
+    // Action to handle messages received from DB/Thunk
+    messagesReceived(state, action: PayloadAction<MessagesReceivedPayload>) {
+      const { topicId, messages } = action.payload
+      // Replace existing messages for the topic
+      state.messagesByTopic[topicId] = messages.map((m) => ({ ...m, blocks: m.blocks?.map(String) || [] }))
+      state.loadingByTopic[topicId] = false // Set loading to false after receiving
     },
     addMessage(state, action: PayloadAction<{ topicId: string; message: Message }>) {
       const { topicId, message } = action.payload
       if (!state.messagesByTopic[topicId]) {
         state.messagesByTopic[topicId] = []
       }
-      // Ensure blocks array exists if missing
-      if (!message.blocks) {
-        message.blocks = []
+      // Ensure blocks is an array of strings
+      const messageToAdd = { ...message, blocks: message.blocks?.map(String) || [] }
+      state.messagesByTopic[topicId].push(messageToAdd)
+      // Initialize loading state if topic is new
+      if (!(topicId in state.loadingByTopic)) {
+        state.loadingByTopic[topicId] = false
       }
-      state.messagesByTopic[topicId].push(message)
     },
     updateMessage(state, action: PayloadAction<{ topicId: string; messageId: string; updates: Partial<Message> }>) {
       const { topicId, messageId, updates } = action.payload
@@ -73,7 +93,6 @@ const messagesSlice = createSlice({
             updates.blocks = updates.blocks.map(String)
           }
           Object.assign(messageToUpdate, updates)
-          // Removed updatedAt assignment
         }
       }
     },
@@ -82,8 +101,7 @@ const messagesSlice = createSlice({
       if (state.messagesByTopic[topicId]) {
         state.messagesByTopic[topicId] = []
       }
-      state.loadingByTopic[topicId] = false
-      state.error = null
+      state.loadingByTopic[topicId] = false // Reset loading state
     },
     upsertBlockReference(state, action: PayloadAction<UpsertBlockReferencePayload>) {
       const { messageId, blockId, status } = action.payload
@@ -109,44 +127,38 @@ const messagesSlice = createSlice({
 
       const message = state.messagesByTopic[targetTopicId][messageIndex]
 
-      // --- Update Message Status ---
-      // Removed updatedAt assignment
+      // Update Message Status based on block status
       if (status) {
-        if (status === MessageBlockStatus.PROCESSING && message.status === 'sending') {
+        if (
+          status === MessageBlockStatus.PROCESSING &&
+          message.status !== 'processing' &&
+          message.status !== 'success' &&
+          message.status !== 'error'
+        ) {
           message.status = 'processing'
         } else if (status === MessageBlockStatus.ERROR) {
           message.status = 'error'
+        } else if (status === MessageBlockStatus.SUCCESS && message.status === 'processing') {
+          // TODO: Check if ALL blocks are success before setting message to success? Might need selector.
+          // For now, tentatively set to success if a block succeeds while processing.
+          // This might need refinement based on desired UX.
+          // message.status = 'success';
         }
       }
 
-      // --- Remove Content Update Logic ---
-      // REMOVED: Check for isMainText and update message.content
-
-      // --- Add Block ID if it doesn't exist ---
-      // Handling blocks as string[]
+      // Add Block ID if it doesn't exist
       if (!message.blocks) {
         message.blocks = []
       }
-
-      // Ensure it's treated as string[] before includes check
       const blockIds = message.blocks.map(String)
       if (!blockIds.includes(blockId)) {
-        // Direct mutation (push) - Push the string ID
-        message.blocks.push(blockId) // Push string ID
+        message.blocks.push(blockId)
       }
     }
   }
 })
 
-export const {
-  setCurrentTopic,
-  setLoading,
-  setError,
-  setDisplayCount,
-  addMessage,
-  updateMessage,
-  clearTopicMessages,
-  upsertBlockReference
-} = messagesSlice.actions
+// Export the actions for use in thunks, etc.
+export const newMessagesActions = messagesSlice.actions
 
 export default messagesSlice.reducer

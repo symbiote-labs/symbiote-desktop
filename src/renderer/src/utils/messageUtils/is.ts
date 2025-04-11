@@ -103,5 +103,3 @@ export function isTextLikeBlock(
     block.type === MessageBlockType.ERROR
   )
 }
-
-// Add more type guards for other block types (ToolCall, ToolResult, etc.) as needed.
