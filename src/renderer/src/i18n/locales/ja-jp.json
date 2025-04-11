@@ -1475,6 +1475,18 @@
         "title": "[to be translated]:语音功能",
         "help": "[to be translated]:语音功能包括文本转语音(TTS)和语音识别(ASR)。",
         "learn_more": "[to be translated]:了解更多"
+      },
+      "voice_call": {
+        "tab_title": "[to be translated]:通话功能",
+        "enable": "[to be translated]:启用语音通话",
+        "enable.help": "[to be translated]:启用后可以使用语音通话功能与AI进行对话",
+        "model": "[to be translated]:通话模型",
+        "model.select": "[to be translated]:选择模型",
+        "model.current": "[to be translated]:当前模型: {{model}}",
+        "model.info": "[to be translated]:选择用于语音通话的AI模型，不同模型可能有不同的语音交互体验",
+        "asr_tts_info": "[to be translated]:语音通话使用上面的语音识别(ASR)和语音合成(TTS)设置",
+        "test": "[to be translated]:测试通话",
+        "test_info": "[to be translated]:请使用输入框右侧的语音通话按钮进行测试"
       }
     },
     "translate": {
@@ -1529,7 +1541,9 @@
       "press_to_talk": "[to be translated]:长按说话",
       "release_to_send": "[to be translated]:松开发送",
       "initialization_failed": "[to be translated]:初始化语音通话失败",
-      "error": "[to be translated]:语音通话出错"
+      "error": "[to be translated]:语音通话出错",
+      "initializing": "[to be translated]:正在初始化语音通话...",
+      "ready": "[to be translated]:语音通话已就绪"
     }
   }
 }

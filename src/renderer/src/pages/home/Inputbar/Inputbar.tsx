@@ -721,8 +721,12 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
         setText(data.text);
 
         // 如果有指定模型，切换到该模型
-        if (data.model && data.model !== model) {
-          setModel(data.model);
+        if (data.model) {
+          // 查找对应的模型对象
+          const modelObj = assistant.model?.id === data.model ? assistant.model : undefined;
+          if (modelObj) {
+            setModel(modelObj);
+          }
         }
 
         // 使用延时确保文本已经设置到输入框
@@ -740,8 +744,12 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
           });
 
           // 如果有指定模型，设置模型
-          if (data.model && data.model !== model) {
-            userMessage.model = { id: data.model };
+          if (data.model) {
+            // 查找对应的模型对象
+            const modelObj = assistant.model?.id === data.model ? assistant.model : undefined;
+            if (modelObj) {
+              userMessage.model = modelObj;
+            }
           }
 
           // 分发发送消息的action

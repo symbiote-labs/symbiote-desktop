@@ -59,7 +59,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
         // 启动语音通话
         await VoiceCallService.startCall({
           onTranscript: (text) => setTranscript(text),
-          onResponse: (text) => {
+          onResponse: (_) => {
             // 这里不设置response，因为响应会显示在聊天界面中
           },
           onListeningStateChange: setIsListening,
