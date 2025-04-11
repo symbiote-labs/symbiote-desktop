@@ -943,6 +943,14 @@ const TTSSettings: FC = () => {
                         {t('settings.tts.filter.html_tags')}
                       </FilterOptionItem>
                       <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterEmojis}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterEmojis: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.emojis')}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
                         <LengthLabel>{t('settings.tts.max_text_length')}:</LengthLabel>
                         <Select
                           value={ttsFilterOptions.maxTextLength}

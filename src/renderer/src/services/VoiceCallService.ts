@@ -1,8 +1,8 @@
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import ASRService from '@renderer/services/ASRService'
 import { getDefaultAssistant } from '@renderer/services/AssistantService'
-import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
 import TTSService from '@renderer/services/TTSService'
 import store from '@renderer/store'
 // 导入类型
@@ -234,7 +234,7 @@ class VoiceCallServiceClass {
             }
 
             // 等待一下，确保连接已建立
-            await new Promise(resolve => setTimeout(resolve, 500))
+            await new Promise((resolve) => setTimeout(resolve, 500))
           }
 
           // 开始录音
@@ -473,6 +473,9 @@ class VoiceCallServiceClass {
       if (voiceCallModel) {
         // 如果有自定义模型，覆盖默认助手的模型
         assistant.model = voiceCallModel
+        console.log('设置语音通话专用模型:', JSON.stringify(voiceCallModel))
+      } else {
+        console.log('没有设置语音通话专用模型，使用默认助手模型:', JSON.stringify(assistant.model))
       }
 
       // 如果需要发送到聊天界面，触发事件
@@ -480,14 +483,46 @@ class VoiceCallServiceClass {
         console.log('将语音识别结果发送到聊天界面:', text)
 
         try {
+          // 获取语音通话专用模型
+          const { voiceCallModel } = store.getState().settings
+
+          // 打印日志查看模型信息
+          console.log('语音通话专用模型:', voiceCallModel ? JSON.stringify(voiceCallModel) : 'null')
+          console.log('助手模型:', assistant.model ? JSON.stringify(assistant.model) : 'null')
+
+          // 准备要发送的模型
+          const modelToUse = voiceCallModel || assistant.model
+
+          // 确保模型对象完整
+          if (modelToUse && typeof modelToUse === 'object') {
+            console.log('使用完整模型对象:', modelToUse.name || modelToUse.id)
+          } else {
+            console.error('模型对象不完整或不存在')
+          }
+
           // 直接触发事件，将语音识别结果发送到聊天界面
-          EventEmitter.emit(EVENT_NAMES.VOICE_CALL_MESSAGE, {
+          // 优先使用语音通话专用模型，而不是助手模型
+          const eventData = {
             text,
-            model: assistant.model
-          })
+            model: modelToUse,
+            isVoiceCall: true, // 标记这是语音通话消息
+            useVoiceCallModel: true, // 明确标记使用语音通话模型
+            voiceCallModelId: voiceCallModel?.id // 传递语音通话模型ID
+          }
+
+          // 打印完整的事件数据
+          console.log('发送语音通话消息事件数据:', JSON.stringify(eventData))
+
+          // 发送事件
+          EventEmitter.emit(EVENT_NAMES.VOICE_CALL_MESSAGE, eventData)
 
           // 打印日志确认事件已触发
-          console.log('事件已触发，消息内容:', text, '模型:', assistant.model)
+          console.log(
+            '事件已触发，消息内容:',
+            text,
+            '模型:',
+            voiceCallModel ? voiceCallModel.name : assistant.model?.name
+          )
 
           // 使用消息通知用户
           window.message.success({ content: '语音识别已完成，正在发送消息...', key: 'voice-call-send' })

@@ -1413,6 +1413,7 @@
         "filter.markdown": "Filter Markdown",
         "filter.code_blocks": "Filter code blocks",
         "filter.html_tags": "Filter HTML tags",
+        "filter.emojis": "Filter emojis",
         "max_text_length": "Maximum text length",
         "test": "Test Speech",
         "help": "Text-to-speech functionality supports converting text to natural-sounding speech.",
