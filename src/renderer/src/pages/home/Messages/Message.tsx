@@ -121,22 +121,35 @@ const MessageItem: FC<Props> = ({
     ) {
       console.log('新消息生成完成，消息ID:', message.id)
 
-      // 如果 skipNextAutoTTS 为 true，重置为 false，以便下一条消息可以自动播放
-      if (skipNextAutoTTS) {
-        console.log('重置 skipNextAutoTTS 为 false，以便下一条消息可以自动播放')
+      // 当新消息生成完成时，始终重置 skipNextAutoTTS 为 false
+      // 这样确保新生成的消息可以自动播放
+      console.log('新消息生成完成，重置 skipNextAutoTTS 为 false')
+      dispatch(setSkipNextAutoTTS(false))
+    }
+  }, [isLastMessage, isAssistantMessage, message.status, message.id, generating, dispatch, prevGeneratingRef])
+
+  // 当消息内容变化时，重置 skipNextAutoTTS
+  useEffect(() => {
+    // 如果是最后一条助手消息，且消息状态为成功，且消息内容不为空
+    if (
+      isLastMessage &&
+      isAssistantMessage &&
+      message.status === 'success' &&
+      message.content &&
+      message.content.trim()
+    ) {
+      // 如果是新生成的消息，重置 skipNextAutoTTS 为 false
+      if (message.id !== lastPlayedMessageId) {
+        console.log(
+          '检测到新消息，重置 skipNextAutoTTS 为 false，消息ID:',
+          message.id,
+          '消息内容前20个字符:',
+          message.content?.substring(0, 20)
+        )
         dispatch(setSkipNextAutoTTS(false))
       }
     }
-  }, [
-    isLastMessage,
-    isAssistantMessage,
-    message.status,
-    message.id,
-    generating,
-    skipNextAutoTTS,
-    dispatch,
-    prevGeneratingRef
-  ])
+  }, [isLastMessage, isAssistantMessage, message.status, message.content, message.id, lastPlayedMessageId, dispatch])
 
   // 自动播放TTS的逻辑
   useEffect(() => {
@@ -151,12 +164,32 @@ const MessageItem: FC<Props> = ({
     ) {
       // 检查是否需要跳过自动TTS
       if (skipNextAutoTTS) {
-        console.log('跳过自动TTS，因为 skipNextAutoTTS 为 true，消息ID:', message.id)
+        console.log(
+          '跳过自动TTS，因为 skipNextAutoTTS 为 true，消息ID:',
+          message.id,
+          '消息内容前20个字符:',
+          message.content?.substring(0, 20),
+          '消息状态:',
+          message.status,
+          '是否最后一条消息:',
+          isLastMessage,
+          '是否助手消息:',
+          isAssistantMessage,
+          '是否正在生成中:',
+          generating,
+          '语音通话窗口状态:',
+          isVoiceCallActive
+        )
         // 注意：不在这里重置 skipNextAutoTTS，而是在新消息生成时重置
         return
       }
 
-      console.log('准备自动播放TTS，因为 skipNextAutoTTS 为 false，消息ID:', message.id)
+      console.log(
+        '准备自动播放TTS，因为 skipNextAutoTTS 为 false，消息ID:',
+        message.id,
+        '消息内容前20个字符:',
+        message.content?.substring(0, 20)
+      )
 
       // 检查消息是否有内容，且消息是新的（不是上次播放过的消息）
       if (message.content && message.content.trim() && message.id !== lastPlayedMessageId) {
