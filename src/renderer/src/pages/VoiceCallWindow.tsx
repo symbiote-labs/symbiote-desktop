@@ -22,7 +22,7 @@ import { setIsVoiceCallActive, setLastPlayedMessageId, setSkipNextAutoTTS } from
 const VoiceCallWindow: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  
+
   // 语音通话状态
   const [transcript, setTranscript] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -49,7 +49,7 @@ const VoiceCallWindow: React.FC = () => {
         // 启动语音通话
         await VoiceCallService.startCall({
           onTranscript: (text) => setTranscript(text),
-          onResponse: (_) => {
+          onResponse: () => {
             // 这里不设置response，因为响应会显示在聊天界面中
           },
           onListeningStateChange: setIsListening,
@@ -78,7 +78,7 @@ const VoiceCallWindow: React.FC = () => {
     dispatch(setLastPlayedMessageId(null));
     // 设置跳过下一次自动TTS，确保打开窗口时不会自动播放最后一条消息
     dispatch(setSkipNextAutoTTS(true));
-    
+
     startVoiceCall();
     // 添加事件监听器
     window.addEventListener('tts-state-change', handleTTSStateChange as EventListener);
