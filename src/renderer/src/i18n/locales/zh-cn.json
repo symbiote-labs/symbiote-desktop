@@ -15,7 +15,12 @@
       "initialization_failed": "初始化语音通话失败",
       "error": "语音通话出错",
       "initializing": "正在初始化语音通话...",
-      "ready": "语音通话已就绪"
+      "ready": "语音通话已就绪",
+      "shortcut_key_setting": "语音识别快捷键设置",
+      "press_any_key": "请按任意键...",
+      "save": "保存",
+      "cancel": "取消",
+      "shortcut_key_tip": "按下此快捷键开始录音，松开快捷键结束录音并发送"
     },
     "agents": {
       "add.button": "添加到助手",
