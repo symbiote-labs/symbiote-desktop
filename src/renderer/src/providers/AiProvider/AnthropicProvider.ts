@@ -1,5 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { MessageCreateParamsNonStreaming, MessageParam } from '@anthropic-ai/sdk/resources'
+import {
+  MessageCreateParamsNonStreaming,
+  MessageParam,
+  ToolResultBlockParam,
+  ToolUseBlock
+} from '@anthropic-ai/sdk/resources'
 import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
 import { isReasoningModel } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
@@ -12,9 +17,13 @@ import {
 } from '@renderer/services/MessagesService'
 import { Assistant, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
-import { parseAndCallTools } from '@renderer/utils/mcp-tools'
-import { buildSystemPrompt } from '@renderer/utils/prompt'
-import { first, flatten, sum, takeRight } from 'lodash'
+import {
+  anthropicToolUseToMcpTool,
+  callMCPTool,
+  mcpToolsToAnthropicTools,
+  upsertMCPToolResponse
+} from '@renderer/utils/mcp-tools'
+import { first, flatten, isEmpty, sum, takeRight } from 'lodash'
 import OpenAI from 'openai'
 
 import { CompletionsParams } from '.'
@@ -173,21 +182,16 @@ export default class AnthropicProvider extends BaseProvider {
 
     const userMessages = flatten(userMessagesParams)
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
-    // const tools = mcpTools ? mcpToolsToAnthropicTools(mcpTools) : undefined
-
-    let systemPrompt = assistant.prompt
-    if (mcpTools && mcpTools.length > 0) {
-      systemPrompt = buildSystemPrompt(systemPrompt, mcpTools)
-    }
+    const tools = mcpTools ? mcpToolsToAnthropicTools(mcpTools) : undefined
 
     const body: MessageCreateParamsNonStreaming = {
       model: model.id,
       messages: userMessages,
-      // tools: isEmpty(tools) ? undefined : tools,
+      tools: isEmpty(tools) ? undefined : tools,
       max_tokens: maxTokens || DEFAULT_MAX_TOKENS,
       temperature: this.getTemperature(assistant, model),
       top_p: this.getTopP(assistant, model),
-      system: systemPrompt,
+      system: assistant.prompt,
       // @ts-ignore thinking
       thinking: this.getReasoningEffort(assistant, model),
       ...this.getCustomParameters(assistant)
@@ -235,6 +239,7 @@ export default class AnthropicProvider extends BaseProvider {
 
     const processStream = (body: MessageCreateParamsNonStreaming, idx: number) => {
       return new Promise<void>((resolve, reject) => {
+        const toolCalls: ToolUseBlock[] = []
         let hasThinkingContent = false
         this.sdk.messages
           .stream({ ...body, stream: true }, { signal })
@@ -287,11 +292,30 @@ export default class AnthropicProvider extends BaseProvider {
               }
             })
           })
+          .on('contentBlock', (content) => {
+            if (content.type == 'tool_use') {
+              toolCalls.push(content)
+            }
+          })
           .on('finalMessage', async (message) => {
-            const content = message.content[0]
-            if (content && content.type === 'text') {
-              const toolResults = await parseAndCallTools(content.text, toolResponses, onChunk, idx, mcpTools)
-              if (toolResults.length > 0) {
+            if (toolCalls.length > 0) {
+              const toolCallResults: ToolResultBlockParam[] = []
+
+              for (const toolCall of toolCalls) {
+                const mcpTool = anthropicToolUseToMcpTool(mcpTools, toolCall)
+                if (mcpTool) {
+                  upsertMCPToolResponse(toolResponses, { tool: mcpTool, status: 'invoking', id: toolCall.id }, onChunk)
+                  const resp = await callMCPTool(mcpTool)
+                  toolCallResults.push({ type: 'tool_result', tool_use_id: toolCall.id, content: resp.content })
+                  upsertMCPToolResponse(
+                    toolResponses,
+                    { tool: mcpTool, status: 'done', response: resp, id: toolCall.id },
+                    onChunk
+                  )
+                }
+              }
+
+              if (toolCallResults.length > 0) {
                 userMessages.push({
                   role: message.role,
                   content: message.content
@@ -299,10 +323,12 @@ export default class AnthropicProvider extends BaseProvider {
 
                 userMessages.push({
                   role: 'user',
-                  content: toolResults.join('\n')
+                  content: toolCallResults
                 })
+
                 const newBody = body
-                newBody.messages = userMessages
+                body.messages = userMessages
+
                 await processStream(newBody, idx + 1)
               }
             }

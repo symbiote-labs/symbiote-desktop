@@ -8,6 +8,8 @@ import {
 import {
   Content,
   FileDataPart,
+  FunctionCallPart,
+  FunctionResponsePart,
   GenerateContentStreamResult,
   GoogleGenerativeAI,
   HarmBlockThreshold,
@@ -16,8 +18,7 @@ import {
   Part,
   RequestOptions,
   SafetySetting,
-  TextPart,
-  Tool
+  TextPart
 } from '@google/generative-ai'
 import { isGemmaModel, isWebSearchModel } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
@@ -32,8 +33,12 @@ import {
 import WebSearchService from '@renderer/services/WebSearchService'
 import { Assistant, FileType, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
-import { parseAndCallTools } from '@renderer/utils/mcp-tools'
-import { buildSystemPrompt } from '@renderer/utils/prompt'
+import {
+  callMCPTool,
+  geminiFunctionCallToMcpTool,
+  mcpToolsToGeminiTools,
+  upsertMCPToolResponse
+} from '@renderer/utils/mcp-tools'
 import { MB } from '@shared/config/constant'
 import axios from 'axios'
 import { isEmpty, takeRight } from 'lodash'
@@ -225,14 +230,7 @@ export default class GeminiProvider extends BaseProvider {
         history.push(await this.getMessageContents(message))
       }
 
-      let systemInstruction = assistant.prompt
-
-      if (mcpTools && mcpTools.length > 0) {
-        systemInstruction = buildSystemPrompt(assistant.prompt || '', mcpTools)
-      }
-
-      // const tools = mcpToolsToGeminiTools(mcpTools)
-      const tools: Tool[] = []
+      const tools = mcpToolsToGeminiTools(mcpTools)
       const toolResponses: MCPToolResponse[] = []
 
       if (!WebSearchService.isOverwriteEnabled() && assistant.enableWebSearch && isWebSearchModel(model)) {
@@ -245,7 +243,7 @@ export default class GeminiProvider extends BaseProvider {
       const geminiModel = this.sdk.getGenerativeModel(
         {
           model: model.id,
-          ...(isGemmaModel(model) ? {} : { systemInstruction: systemInstruction }),
+          ...(isGemmaModel(model) ? {} : { systemInstruction: assistant.prompt }),
           safetySettings: this.getSafetySettings(model.id),
           tools: tools,
           generationConfig: {
@@ -270,7 +268,7 @@ export default class GeminiProvider extends BaseProvider {
               {
                 text:
                   '<start_of_turn>user\n' +
-                  systemInstruction +
+                  assistant.prompt +
                   '<end_of_turn>\n' +
                   '<start_of_turn>user\n' +
                   messageContents.parts[0].text +
@@ -309,25 +307,7 @@ export default class GeminiProvider extends BaseProvider {
       const userMessagesStream = await chat.sendMessageStream(messageContents.parts, { signal })
       let time_first_token_millsec = 0
 
-      const processToolUses = async (content: string, idx: number) => {
-        const toolResults = await parseAndCallTools(content, toolResponses, onChunk, idx, mcpTools)
-        if (toolResults && toolResults.length > 0) {
-          history.push(messageContents)
-          const newChat = geminiModel.startChat({ history })
-          const newStream = await newChat.sendMessageStream(
-            [
-              {
-                text: toolResults.join('\n')
-              }
-            ],
-            { signal }
-          )
-          await processStream(newStream, idx + 1)
-        }
-      }
-
       const processStream = async (stream: GenerateContentStreamResult, idx: number) => {
-        let content = ''
         for await (const chunk of stream.stream) {
           if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
@@ -337,8 +317,56 @@ export default class GeminiProvider extends BaseProvider {
 
           const time_completion_millsec = new Date().getTime() - start_time_millsec
 
-          content += chunk.text()
-          processToolUses(content, idx)
+          const functionCalls = chunk.functionCalls()
+
+          if (functionCalls) {
+            const fcallParts: FunctionCallPart[] = []
+            const fcRespParts: FunctionResponsePart[] = []
+            for (const call of functionCalls) {
+              console.log('Function call:', call)
+              fcallParts.push({ functionCall: call } as FunctionCallPart)
+              const mcpTool = geminiFunctionCallToMcpTool(mcpTools, call)
+              if (mcpTool) {
+                upsertMCPToolResponse(
+                  toolResponses,
+                  {
+                    tool: mcpTool,
+                    status: 'invoking',
+                    id: `${call.name}-${idx}`
+                  },
+                  onChunk
+                )
+                const toolCallResponse = await callMCPTool(mcpTool)
+                fcRespParts.push({
+                  functionResponse: {
+                    name: mcpTool.id,
+                    response: toolCallResponse
+                  }
+                })
+                upsertMCPToolResponse(
+                  toolResponses,
+                  {
+                    tool: mcpTool,
+                    status: 'done',
+                    response: toolCallResponse,
+                    id: `${call.name}-${idx}`
+                  },
+                  onChunk
+                )
+              }
+            }
+
+            if (fcRespParts) {
+              history.push(messageContents)
+              history.push({
+                role: 'model',
+                parts: fcallParts
+              })
+              const newChat = geminiModel.startChat({ history })
+              const newStream = await newChat.sendMessageStream(fcRespParts, { signal })
+              await processStream(newStream, idx + 1)
+            }
+          }
 
           onChunk({
             text: chunk.text(),
