@@ -16,7 +16,6 @@ export class TTSTextFilter {
       filterMarkdown: boolean
       filterCodeBlocks: boolean
       filterHtmlTags: boolean
-      filterEmojis: boolean
       maxTextLength: number
     }
   ): string {
@@ -42,11 +41,6 @@ export class TTSTextFilter {
     // 过滤HTML标签
     if (options.filterHtmlTags) {
       filteredText = this.filterHtmlTags(filteredText)
-    }
-
-    // 过滤表情符号
-    if (options.filterEmojis) {
-      filteredText = this.filterEmojis(filteredText)
     }
 
     // 限制文本长度
@@ -148,25 +142,6 @@ export class TTSTextFilter {
 
     // 过滤HTML实体
     text = text.replace(/&[a-zA-Z0-9#]+;/g, ' ')
-
-    return text
-  }
-
-  /**
-   * 过滤表情符号
-   * @param text 原始文本
-   * @returns 过滤后的文本
-   */
-  private static filterEmojis(text: string): string {
-    // 过滤Unicode表情符号
-    // 这个正则表达式匹配大多数Unicode表情符号
-    text = text.replace(/[\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-
-    // 过滤符号表情，如 :) :( :D 等
-    text = text.replace(/[:;][-']?[)(DOPdop|\/{\}\[\]\*]+/g, '')
-
-    // 过滤文本表情，如 (smile) (sad) 等
-    text = text.replace(/\([a-zA-Z]+\)/g, '')
 
     return text
   }

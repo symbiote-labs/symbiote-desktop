@@ -137,7 +137,6 @@ export interface SettingsState {
     filterMarkdown: boolean // 过滤Markdown标记
     filterCodeBlocks: boolean // 过滤代码块
     filterHtmlTags: boolean // 过滤HTML标签
-    filterEmojis: boolean // 过滤表情符号
     maxTextLength: number // 最大文本长度
   }
   // ASR配置（语音识别）
@@ -279,7 +278,6 @@ export const initialState: SettingsState = {
     filterMarkdown: true, // 默认过滤Markdown标记
     filterCodeBlocks: true, // 默认过滤代码块
     filterHtmlTags: true, // 默认过滤HTML标签
-    filterEmojis: true, // 默认过滤表情符号
     maxTextLength: 4000 // 默认最大文本长度
   },
   // ASR配置（语音识别）
@@ -692,7 +690,6 @@ const settingsSlice = createSlice({
         filterMarkdown?: boolean
         filterCodeBlocks?: boolean
         filterHtmlTags?: boolean
-        filterEmojis?: boolean
         maxTextLength?: number
       }>
     ) => {

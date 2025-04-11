@@ -1427,7 +1427,6 @@
         "filter.markdown": "过滤Markdown标记",
         "filter.code_blocks": "过滤代码块",
         "filter.html_tags": "过滤HTML标签",
-        "filter.emojis": "过滤表情符号",
         "max_text_length": "最大文本长度",
         "test": "测试语音",
         "help": "语音合成功能支持将文本转换为自然语音。",
