@@ -137,6 +137,7 @@ export interface SettingsState {
     filterMarkdown: boolean // 过滤Markdown标记
     filterCodeBlocks: boolean // 过滤代码块
     filterHtmlTags: boolean // 过滤HTML标签
+    filterEmojis: boolean // 过滤表情符号
     maxTextLength: number // 最大文本长度
   }
   // ASR配置（语音识别）
@@ -148,6 +149,9 @@ export interface SettingsState {
   // 语音通话配置
   voiceCallEnabled: boolean
   voiceCallModel: Model | null
+  isVoiceCallActive: boolean // 语音通话窗口是否激活
+  lastPlayedMessageId: string | null // 最后一次播放的消息ID
+  skipNextAutoTTS: boolean // 是否跳过下一次自动TTS
   // Quick Panel Triggers
   enableQuickPanelTriggers: boolean
   // Export Menu Options
@@ -275,6 +279,7 @@ export const initialState: SettingsState = {
     filterMarkdown: true, // 默认过滤Markdown标记
     filterCodeBlocks: true, // 默认过滤代码块
     filterHtmlTags: true, // 默认过滤HTML标签
+    filterEmojis: true, // 默认过滤表情符号
     maxTextLength: 4000 // 默认最大文本长度
   },
   // ASR配置（语音识别）
@@ -286,6 +291,9 @@ export const initialState: SettingsState = {
   // 语音通话配置
   voiceCallEnabled: true,
   voiceCallModel: null,
+  isVoiceCallActive: false, // 语音通话窗口是否激活
+  lastPlayedMessageId: null, // 最后一次播放的消息ID
+  skipNextAutoTTS: false, // 是否跳过下一次自动TTS
   // Quick Panel Triggers
   enableQuickPanelTriggers: false,
   // Export Menu Options
@@ -684,6 +692,7 @@ const settingsSlice = createSlice({
         filterMarkdown?: boolean
         filterCodeBlocks?: boolean
         filterHtmlTags?: boolean
+        filterEmojis?: boolean
         maxTextLength?: number
       }>
     ) => {
@@ -713,6 +722,15 @@ const settingsSlice = createSlice({
     },
     setVoiceCallModel: (state, action: PayloadAction<Model | null>) => {
       state.voiceCallModel = action.payload
+    },
+    setIsVoiceCallActive: (state, action: PayloadAction<boolean>) => {
+      state.isVoiceCallActive = action.payload
+    },
+    setLastPlayedMessageId: (state, action: PayloadAction<string | null>) => {
+      state.lastPlayedMessageId = action.payload
+    },
+    setSkipNextAutoTTS: (state, action: PayloadAction<boolean>) => {
+      state.skipNextAutoTTS = action.payload
     },
     // Quick Panel Triggers action
     setEnableQuickPanelTriggers: (state, action: PayloadAction<boolean>) => {
@@ -837,7 +855,10 @@ export const {
   setAsrApiUrl,
   setAsrModel,
   setVoiceCallEnabled,
-  setVoiceCallModel
+  setVoiceCallModel,
+  setIsVoiceCallActive,
+  setLastPlayedMessageId,
+  setSkipNextAutoTTS
 } = settingsSlice.actions
 
 export default settingsSlice.reducer

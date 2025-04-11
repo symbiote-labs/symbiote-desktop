@@ -1,5 +1,6 @@
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
+import { setLastPlayedMessageId } from '@renderer/store/settings'
 import { Message } from '@renderer/types'
 
 import { TTSServiceFactory } from './TTSServiceFactory'
@@ -67,6 +68,11 @@ export class TTSService {
       filterHtmlTags: true,
       maxTextLength: 4000
     }
+
+    // 更新最后播放的消息ID
+    const dispatch = store.dispatch
+    dispatch(setLastPlayedMessageId(message.id))
+    console.log('更新最后播放的消息ID:', message.id)
 
     // 应用过滤
     const filteredText = TTSTextFilter.filterText(message.content, ttsFilterOptions)
