@@ -65,13 +65,17 @@ class VoiceCallServiceClass {
       // 如果使用本地服务器ASR，检查连接
       try {
         // 尝试连接本地ASR服务器
+        console.log('初始化时尝试连接语音识别服务器')
         const connected = await ASRService.connectToWebSocketServer()
         if (!connected) {
-          throw new Error('无法连接到语音识别服务')
+          console.warn('无法连接到语音识别服务，将在需要时重试')
+          // 不抛出异常，允许程序继续运行，在需要时重试
+        } else {
+          console.log('语音识别服务器连接成功')
         }
       } catch (error) {
-        console.error('Failed to connect to ASR server:', error)
-        throw new Error('Failed to connect to ASR server')
+        console.error('连接语音识别服务器失败:', error)
+        // 不抛出异常，允许程序继续运行，在需要时重试
       }
     }
 
@@ -85,6 +89,22 @@ class VoiceCallServiceClass {
 
     // 获取当前ASR服务类型
     const { asrServiceType } = store.getState().settings
+
+    // 如果是本地服务器ASR，预先连接服务器
+    if (asrServiceType === 'local') {
+      try {
+        // 尝试连接WebSocket服务器
+        console.log('通话开始，预先连接语音识别服务器')
+        const connected = await ASRService.connectToWebSocketServer()
+        if (!connected) {
+          console.warn('无法连接到语音识别服务器，将在需要时重试')
+        } else {
+          console.log('语音识别服务器连接成功')
+        }
+      } catch (error) {
+        console.error('连接语音识别服务器失败:', error)
+      }
+    }
 
     // 根据不同的ASR服务类型进行初始化
     if (asrServiceType === 'browser') {
@@ -203,36 +223,54 @@ class VoiceCallServiceClass {
         this.isRecording = true
       } else if (asrServiceType === 'local') {
         // 本地服务器ASR
-        await ASRService.startRecording((text, isFinal) => {
-          if (text) {
-            if (isFinal) {
-              // 如果是最终结果，累积到总结果中
-              if (this._accumulatedTranscript) {
-                // 如果已经有累积的文本，添加空格再追加
-                this._accumulatedTranscript += ' ' + text
-              } else {
-                // 如果是第一段文本，直接设置
-                this._accumulatedTranscript = text
-              }
-
-              // 更新当前的识别结果
-              this._currentTranscript = ''
-              // 显示累积的完整结果
-              this.callbacks?.onTranscript(this._accumulatedTranscript)
-            } else {
-              // 如果是临时结果，更新当前的识别结果
-              this._currentTranscript = text
-              // 显示累积结果 + 当前临时结果
-              this.callbacks?.onTranscript(this._accumulatedTranscript + ' ' + text)
+        try {
+          // 先检查连接状态，如果未连接则尝试重新连接
+          if (!ASRService.isWebSocketConnected()) {
+            console.log('语音识别服务器未连接，尝试重新连接')
+            const connected = await ASRService.connectToWebSocketServer()
+            if (!connected) {
+              throw new Error('无法连接到语音识别服务器')
             }
 
-            // 在录音过程中只更新transcript，不触发handleUserSpeech
-            // 松开按钮后才会处理完整的录音内容
+            // 等待一下，确保连接已建立
+            await new Promise(resolve => setTimeout(resolve, 500))
           }
-        })
 
-        this.isRecording = true
-        this.callbacks?.onListeningStateChange(true)
+          // 开始录音
+          await ASRService.startRecording((text, isFinal) => {
+            if (text) {
+              if (isFinal) {
+                // 如果是最终结果，累积到总结果中
+                if (this._accumulatedTranscript) {
+                  // 如果已经有累积的文本，添加空格再追加
+                  this._accumulatedTranscript += ' ' + text
+                } else {
+                  // 如果是第一段文本，直接设置
+                  this._accumulatedTranscript = text
+                }
+
+                // 更新当前的识别结果
+                this._currentTranscript = ''
+                // 显示累积的完整结果
+                this.callbacks?.onTranscript(this._accumulatedTranscript)
+              } else {
+                // 如果是临时结果，更新当前的识别结果
+                this._currentTranscript = text
+                // 显示累积结果 + 当前临时结果
+                this.callbacks?.onTranscript(this._accumulatedTranscript + ' ' + text)
+              }
+
+              // 在录音过程中只更新transcript，不触发handleUserSpeech
+              // 松开按钮后才会处理完整的录音内容
+            }
+          })
+
+          this.isRecording = true
+          this.callbacks?.onListeningStateChange(true)
+        } catch (error) {
+          console.error('启动语音识别失败:', error)
+          throw error
+        }
       } else if (asrServiceType === 'openai') {
         // OpenAI ASR
         await ASRService.startRecording()
@@ -275,6 +313,10 @@ class VoiceCallServiceClass {
     const { asrServiceType } = store.getState().settings
 
     try {
+      // 立即设置录音状态为false，防止重复处理
+      this.isRecording = false
+      this.callbacks?.onListeningStateChange(false)
+
       // 存储当前的语音识别结果，用于松开按钮后发送给AI
       const currentTranscript = this._currentTranscript
       // 存储累积的语音识别结果
@@ -287,9 +329,6 @@ class VoiceCallServiceClass {
         }
 
         this.recognition.stop()
-        // onend事件将设置isRecording = false
-        this.isRecording = false
-        this.callbacks?.onListeningStateChange(false)
 
         // 优先使用累积的文本，如果有的话
         if (accumulatedTranscript) {
@@ -300,6 +339,10 @@ class VoiceCallServiceClass {
           console.log('没有累积结果，使用当前结果:', currentTranscript)
           this.handleUserSpeech(currentTranscript)
         }
+
+        // 清除状态
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
       } else if (asrServiceType === 'local') {
         // 本地服务器ASR
         // 创建一个承诺，等待最终结果
@@ -311,32 +354,40 @@ class VoiceCallServiceClass {
           }, 1500) // 1.5秒超时
 
           // 设置回调函数来接收最终结果
-          const resultCallback = (text: string) => {
+          const resultCallback = (text: string, isFinal?: boolean) => {
             // 如果是空字符串，表示只是重置状态，不处理
             if (text === '') return
 
             if (text) {
-              clearTimeout(timeoutId)
-              console.log('收到最终语音识别结果:', text)
-              this._currentTranscript = text
-              this.callbacks?.onTranscript(text)
-              resolve(text)
+              // 只处理最终结果，忽略中间结果
+              if (isFinal) {
+                clearTimeout(timeoutId)
+                console.log('收到最终语音识别结果:', text)
+                this._currentTranscript = text
+                this.callbacks?.onTranscript(text)
+                resolve(text)
+              } else {
+                // 对于中间结果，只更新显示，不解析Promise
+                console.log('收到中间语音识别结果:', text)
+                this.callbacks?.onTranscript(text)
+              }
             }
           }
 
           // 停止录音，但不取消，以获取最终结果
           ASRService.stopRecording(resultCallback)
-          this.isRecording = false
-          this.callbacks?.onListeningStateChange(false)
 
           // 添加额外的安全措施，在停止后立即发送重置命令
           setTimeout(() => {
             // 发送重置命令，确保浏览器不会继续发送结果
             ASRService.cancelRecording()
+
+            // 清除ASRService中的回调函数，防止后续结果被处理
+            ASRService.resultCallback = null
           }, 2000) // 2秒后强制取消，作为安全措施
         })
 
-        // 等待最终结果
+        // 等待最终结果，但最多等待3秒
         const finalText = await finalResultPromise
 
         // 优先使用累积的文本，如果有的话
@@ -352,6 +403,10 @@ class VoiceCallServiceClass {
           console.log('没有最终结果，使用当前结果:', currentTranscript)
           this.handleUserSpeech(currentTranscript)
         }
+
+        // 再次确保所有状态被重置
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
       } else if (asrServiceType === 'openai') {
         // OpenAI ASR
         await ASRService.stopRecording((text) => {
@@ -362,14 +417,15 @@ class VoiceCallServiceClass {
           }
         })
 
-        this.isRecording = false
-        this.callbacks?.onListeningStateChange(false)
-
         // 使用最新的语音识别结果
         const finalTranscript = this._currentTranscript
         if (finalTranscript) {
           this.handleUserSpeech(finalTranscript)
         }
+
+        // 清除状态
+        this._currentTranscript = ''
+        this._accumulatedTranscript = ''
       }
 
       return true
@@ -377,6 +433,14 @@ class VoiceCallServiceClass {
       console.error('Failed to stop recording:', error)
       this.isRecording = false
       this.callbacks?.onListeningStateChange(false)
+
+      // 确保在出错时也清除状态
+      this._currentTranscript = ''
+      this._accumulatedTranscript = ''
+
+      // 强制取消录音
+      ASRService.cancelRecording()
+
       return false
     }
   }
@@ -397,6 +461,13 @@ class VoiceCallServiceClass {
     try {
       // 获取当前助手
       const assistant = getDefaultAssistant()
+
+      // 检查是否有自定义模型
+      const { voiceCallModel } = store.getState().settings
+      if (voiceCallModel) {
+        // 如果有自定义模型，覆盖默认助手的模型
+        assistant.model = voiceCallModel
+      }
 
       // 创建一个简单的Topic对象
       const topic = {
@@ -599,6 +670,20 @@ class VoiceCallServiceClass {
     if (muted && this.ttsService.isCurrentlyPlaying()) {
       this.ttsService.stop()
     }
+  }
+
+  /**
+   * 停止TTS播放
+   * @returns void
+   */
+  stopTTS(): void {
+    // 无论是否正在播放，都强制停止TTS
+    this.ttsService.stop()
+    console.log('强制停止TTS播放')
+
+    // 手动触发TTS状态变化事件，确保 UI 状态更新
+    const event = new CustomEvent('tts-state-change', { detail: { isPlaying: false } })
+    window.dispatchEvent(event)
   }
 
   setPaused(paused: boolean) {

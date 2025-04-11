@@ -130,15 +130,18 @@ class ASRService {
           // 语音识别已重置
           console.log('[ASRService] 语音识别已强制重置')
           this.isRecording = false
+
+          // 保存当前回调函数并立即清除
+          const tempCallback = this.resultCallback
           this.resultCallback = null
 
           // 显示重置完成消息
           window.message.info({ content: '语音识别已重置', key: 'asr-reset' })
 
           // 如果有回调函数，调用一次空字符串，触发按钮状态重置
-          if (this.resultCallback && typeof this.resultCallback === 'function') {
+          if (tempCallback && typeof tempCallback === 'function') {
             // 使用空字符串调用回调，不会影响输入框，但可以触发按钮状态重置
-            const callback = this.resultCallback as (text: string, isFinal?: boolean) => void // 明确指定类型
+            const callback = tempCallback as (text: string, isFinal?: boolean) => void // 明确指定类型
             setTimeout(() => {
               callback('', false)
             }, 100)
@@ -147,14 +150,27 @@ class ASRService {
       } else if (data.type === 'result' && data.data) {
         // 处理识别结果
         console.log('[ASRService] 收到识别结果:', data.data)
+
+        // 如果已经停止录音但仍然收到结果，检查是否是最终结果
+        if (!this.isRecording && !data.data.isFinal) {
+          console.log('[ASRService] 已停止录音但收到非最终结果，忽略')
+          return
+        }
+
         if (this.resultCallback && typeof this.resultCallback === 'function') {
           // 将所有结果都传递给回调函数，并包含isFinal状态
           if (data.data.text && data.data.text.trim()) {
             if (data.data.isFinal) {
               console.log('[ASRService] 收到最终结果，调用回调函数，文本:', data.data.text)
-              this.resultCallback(data.data.text, true)
+
+              // 保存当前回调函数并立即清除，防止重复处理
+              const tempCallback = this.resultCallback
+              this.resultCallback = null
+
+              // 调用回调函数
+              tempCallback(data.data.text, true)
               window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
-            } else {
+            } else if (this.isRecording) { // 只在录音中才处理中间结果
               // 非最终结果，也调用回调，但标记为非最终
               console.log('[ASRService] 收到中间结果，调用回调函数，文本:', data.data.text)
               this.resultCallback(data.data.text, false)
@@ -233,6 +249,27 @@ class ASRService {
           // 尝试等待浏览器准备好
           let waitAttempts = 0
           const maxWaitAttempts = 5
+
+          // 尝试打开浏览器页面
+          try {
+            // 发送消息提示用户
+            window.message.info({
+              content: '正在准备语音识别服务...',
+              key: 'browser-status'
+            })
+
+            // 尝试自动打开浏览器页面
+            try {
+              // 使用ASRServerService获取服务器URL
+              const serverUrl = 'http://localhost:8080'
+              console.log('尝试打开语音识别服务器页面:', serverUrl)
+              window.open(serverUrl, '_blank')
+            } catch (error) {
+              console.error('获取服务器URL失败:', error)
+            }
+          } catch (error) {
+            console.error('打开语音识别浏览器页面失败:', error)
+          }
 
           while (!this.browserReady && waitAttempts < maxWaitAttempts) {
             window.message.loading({
@@ -337,6 +374,12 @@ class ASRService {
               onTranscribed('', false)
             }, 100)
           }
+
+          // 添加额外的安全措施，确保在停止后也清除回调
+          setTimeout(() => {
+            // 在停止后的一段时间内清除回调，防止后续结果被处理
+            this.resultCallback = null
+          }, 3000) // 3秒后清除回调
         } else {
           throw new Error('WebSocket连接未就绪')
         }
@@ -502,6 +545,14 @@ class ASRService {
   }
 
   /**
+   * 检查WebSocket是否已连接
+   * @returns boolean
+   */
+  isWebSocketConnected = (): boolean => {
+    return this.wsConnected && this.browserReady
+  }
+
+  /**
    * 取消录音
    */
   cancelRecording = (): void => {
@@ -509,7 +560,8 @@ class ASRService {
 
     // 如果是使用本地服务器
     if (asrServiceType === 'local') {
-      if (this.isRecording) {
+      // 修改条件，即使不在录音中也进行重置
+      if (this.isRecording || this.resultCallback) {
         // 先重置状态和回调，确保不会处理后续结果
         this.isRecording = false
         this.resultCallback = null
@@ -517,11 +569,13 @@ class ASRService {
         // 发送停止命令
         if (this.ws && this.wsConnected) {
           this.ws.send(JSON.stringify({ type: 'stop' }))
+          console.log('发送停止命令到WebSocket服务器')
 
           // 发送一个额外的命令，要求浏览器强制重置语音识别
           setTimeout(() => {
             if (this.ws && this.wsConnected) {
               this.ws.send(JSON.stringify({ type: 'reset' }))
+              console.log('发送重置命令到WebSocket服务器')
             }
           }, 100)
         }

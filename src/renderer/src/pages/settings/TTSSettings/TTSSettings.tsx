@@ -1,4 +1,4 @@
-import { AudioOutlined, PlusOutlined, ReloadOutlined, SoundOutlined } from '@ant-design/icons'
+import { AudioOutlined, PhoneOutlined, PlusOutlined, ReloadOutlined, SoundOutlined } from '@ant-design/icons'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import TTSService from '@renderer/services/TTSService'
 import store, { useAppDispatch } from '@renderer/store'
@@ -41,6 +41,7 @@ import {
   SettingTitle
 } from '..'
 import ASRSettings from './ASRSettings'
+import VoiceCallSettings from './VoiceCallSettings'
 
 // 预定义的浏览器 TTS音色列表
 const PREDEFINED_VOICES = [
@@ -986,6 +987,15 @@ const TTSSettings: FC = () => {
               </span>
             ),
             children: <ASRSettings />
+          },
+          {
+            key: 'voice_call',
+            label: (
+              <span>
+                <PhoneOutlined /> {t('settings.voice_call.tab_title')}
+              </span>
+            ),
+            children: <VoiceCallSettings />
           }
         ]}
       />

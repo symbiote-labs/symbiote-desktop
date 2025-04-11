@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
-import { CodeStyleVarious, LanguageVarious, ThemeMode, TranslateLanguageVarious } from '@renderer/types'
+import { CodeStyleVarious, LanguageVarious, Model, ThemeMode, TranslateLanguageVarious } from '@renderer/types'
 import { IpcChannel } from '@shared/IpcChannel'
 
 import { WebDAVSyncState } from './backup'
@@ -145,6 +145,9 @@ export interface SettingsState {
   asrApiKey: string
   asrApiUrl: string
   asrModel: string
+  // 语音通话配置
+  voiceCallEnabled: boolean
+  voiceCallModel: Model | null
   // Quick Panel Triggers
   enableQuickPanelTriggers: boolean
   // Export Menu Options
@@ -280,6 +283,9 @@ export const initialState: SettingsState = {
   asrApiKey: '',
   asrApiUrl: 'https://api.openai.com/v1/audio/transcriptions',
   asrModel: 'whisper-1',
+  // 语音通话配置
+  voiceCallEnabled: true,
+  voiceCallModel: null,
   // Quick Panel Triggers
   enableQuickPanelTriggers: false,
   // Export Menu Options
@@ -702,6 +708,12 @@ const settingsSlice = createSlice({
     setAsrModel: (state, action: PayloadAction<string>) => {
       state.asrModel = action.payload
     },
+    setVoiceCallEnabled: (state, action: PayloadAction<boolean>) => {
+      state.voiceCallEnabled = action.payload
+    },
+    setVoiceCallModel: (state, action: PayloadAction<Model | null>) => {
+      state.voiceCallModel = action.payload
+    },
     // Quick Panel Triggers action
     setEnableQuickPanelTriggers: (state, action: PayloadAction<boolean>) => {
       state.enableQuickPanelTriggers = action.payload
@@ -823,7 +835,9 @@ export const {
   setAsrServiceType,
   setAsrApiKey,
   setAsrApiUrl,
-  setAsrModel
+  setAsrModel,
+  setVoiceCallEnabled,
+  setVoiceCallModel
 } = settingsSlice.actions
 
 export default settingsSlice.reducer
