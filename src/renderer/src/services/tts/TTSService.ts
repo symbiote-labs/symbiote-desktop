@@ -206,11 +206,16 @@ export class TTSService {
    * 停止播放
    */
   public stop(): void {
-    if (this.audioElement && this.isPlaying) {
+    // 无论是否正在播放，都强制停止
+    if (this.audioElement) {
       this.audioElement.pause()
       this.audioElement.currentTime = 0
       this.isPlaying = false
-      console.log('停止TTS播放')
+      console.log('强制停止TTS播放')
+
+      // 触发自定义事件，通知其他组件TTS已停止
+      const event = new CustomEvent('tts-state-change', { detail: { isPlaying: false } })
+      window.dispatchEvent(event)
     }
   }
 

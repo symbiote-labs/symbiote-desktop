@@ -13,7 +13,9 @@
       "press_to_talk": "Press to Talk",
       "release_to_send": "Release to Send",
       "initialization_failed": "Failed to initialize voice call",
-      "error": "Voice call error"
+      "error": "Voice call error",
+      "initializing": "Initializing voice call...",
+      "ready": "Voice call ready"
     },
     "agents": {
       "add.button": "Add to Assistant",
@@ -1479,9 +1481,21 @@
         }
       },
       "voice": {
-        "title": "[to be translated]:语音功能",
-        "help": "[to be translated]:语音功能包括文本转语音(TTS)和语音识别(ASR)。",
-        "learn_more": "[to be translated]:了解更多"
+        "title": "Voice Features",
+        "help": "Voice features include Text-to-Speech (TTS), Automatic Speech Recognition (ASR), and Voice Call.",
+        "learn_more": "Learn More"
+      },
+      "voice_call": {
+        "tab_title": "Voice Call",
+        "enable": "Enable Voice Call",
+        "enable.help": "Enable to use voice call feature to talk with AI",
+        "model": "Call Model",
+        "model.select": "Select Model",
+        "model.current": "Current Model: {{model}}",
+        "model.info": "Select the AI model for voice calls. Different models may provide different voice interaction experiences",
+        "asr_tts_info": "Voice call uses the Speech Recognition (ASR) and Text-to-Speech (TTS) settings above",
+        "test": "Test Voice Call",
+        "test_info": "Please use the voice call button on the right side of the input box to test"
       }
     },
     "translate": {

@@ -13,7 +13,9 @@
       "press_to_talk": "长按说话",
       "release_to_send": "松开发送",
       "initialization_failed": "初始化语音通话失败",
-      "error": "语音通话出错"
+      "error": "语音通话出错",
+      "initializing": "正在初始化语音通话...",
+      "ready": "语音通话已就绪"
     },
     "agents": {
       "add.button": "添加到助手",
@@ -1354,7 +1356,7 @@
       },
       "voice": {
         "title": "语音功能",
-        "help": "语音功能包括文本转语音(TTS)和语音识别(ASR)。",
+        "help": "语音功能包括文本转语音(TTS)、语音识别(ASR)和语音通话。",
         "learn_more": "了解更多"
       },
       "tts": {
@@ -1482,6 +1484,18 @@
           "start_failed": "开始录音失败",
           "transcribe_failed": "语音识别失败"
         }
+      },
+      "voice_call": {
+        "tab_title": "通话功能",
+        "enable": "启用语音通话",
+        "enable.help": "启用后可以使用语音通话功能与AI进行对话",
+        "model": "通话模型",
+        "model.select": "选择模型",
+        "model.current": "当前模型: {{model}}",
+        "model.info": "选择用于语音通话的AI模型，不同模型可能有不同的语音交互体验",
+        "asr_tts_info": "语音通话使用上面的语音识别(ASR)和语音合成(TTS)设置",
+        "test": "测试通话",
+        "test_info": "请使用输入框右侧的语音通话按钮进行测试"
       }
     },
     "translate": {
