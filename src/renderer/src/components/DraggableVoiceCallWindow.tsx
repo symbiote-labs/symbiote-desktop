@@ -76,7 +76,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
         // 启动语音通话
         await VoiceCallService.startCall({
           onTranscript: (text) => setTranscript(text),
-          onResponse: (_) => {
+          onResponse: () => {
             // 这里不设置response，因为响应会显示在聊天界面中
           },
           onListeningStateChange: setIsListening,
@@ -118,7 +118,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
       // 移除事件监听器
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
     }
-  }, [visible, t])
+  }, [visible, t, dispatch, onClose])
 
   // 拖拽相关处理
   const handleDragStart = (e: React.MouseEvent) => {

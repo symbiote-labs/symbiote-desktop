@@ -29,6 +29,11 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const handleClose = () => {
+    VoiceCallService.endCall();
+    onClose();
+  };
+
   useEffect(() => {
     const startVoiceCall = async () => {
       try {
@@ -78,12 +83,7 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
       // 移除事件监听器
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener);
     };
-  }, [visible, t]);
-
-  const handleClose = () => {
-    VoiceCallService.endCall();
-    onClose();
-  };
+  }, [visible, t, handleClose]);
 
   const toggleMute = () => {
     const newMuteState = !isMuted;
