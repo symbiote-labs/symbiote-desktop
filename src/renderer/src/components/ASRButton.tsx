@@ -33,7 +33,7 @@ const ASRButton: FC<Props> = ({ onTranscribed, disabled = false, style }) => {
       try {
         // 添加事件监听器，监听服务器发送的stopped消息
         const originalCallback = ASRService.resultCallback
-        const stopCallback = (text: string, isFinal?: boolean) => {
+        const stopCallback = (text: string) => {
           // 如果是空字符串，只重置状态，不调用原始回调
           if (text === '') {
             setIsProcessing(false)

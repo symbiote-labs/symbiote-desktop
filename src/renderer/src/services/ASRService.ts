@@ -170,7 +170,8 @@ class ASRService {
               // 直接调用回调函数
               this.resultCallback(data.data.text, true)
               window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
-            } else if (this.isRecording) { // 只在录音中才处理中间结果
+            } else if (this.isRecording) {
+              // 只在录音中才处理中间结果
               // 非最终结果，也调用回调，但标记为非最终
               console.log('[ASRService] 收到中间结果，调用回调函数，文本:', data.data.text)
               this.resultCallback(data.data.text, false)

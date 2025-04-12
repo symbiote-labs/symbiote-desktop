@@ -155,13 +155,7 @@ const MessageItem: FC<Props> = ({
   useEffect(() => {
     // 如果是最后一条助手消息，且消息状态为成功，且不是正在生成中，且TTS已启用
     // 注意：只有在语音通话窗口打开时才自动播放TTS
-    if (
-      isLastMessage &&
-      isAssistantMessage &&
-      message.status === 'success' &&
-      !generating &&
-      ttsEnabled
-    ) {
+    if (isLastMessage && isAssistantMessage && message.status === 'success' && !generating && ttsEnabled) {
       // 如果语音通话窗口没有打开，则不自动播放TTS
       if (!isVoiceCallActive) {
         console.log('不自动播放TTS，因为语音通话窗口没有打开:', isVoiceCallActive)

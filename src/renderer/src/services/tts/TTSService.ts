@@ -63,13 +63,13 @@ export class TTSService {
         // 只有在使用EdgeTTS且标记为正在播放时才检查
         if (this.isPlaying && this.playingServiceType === 'edge') {
           // 检查是否还在播放
-          const isSpeaking = window.speechSynthesis.speaking;
+          const isSpeaking = window.speechSynthesis.speaking
           if (!isSpeaking) {
             console.log('检测到speechSynthesis不再播放，更新状态')
-            this.updatePlayingState(false);
+            this.updatePlayingState(false)
           }
         }
-      }, 500); // 每500毫秒检查一次
+      }, 500) // 每500毫秒检查一次
     }
   }
 
@@ -109,7 +109,7 @@ export class TTSService {
   private updatePlayingState(isPlaying: boolean): void {
     // 只有状态变化时才更新和触发事件
     if (this.isPlaying !== isPlaying) {
-      this.isPlaying = isPlaying;
+      this.isPlaying = isPlaying
       console.log(`TTS播放状态更新: ${isPlaying ? '开始播放' : '停止播放'}`)
 
       // 触发自定义事件，通知其他组件TTS状态变化
@@ -118,11 +118,11 @@ export class TTSService {
 
       // 如果停止播放，清除服务类型
       if (!isPlaying) {
-        this.playingServiceType = null;
+        this.playingServiceType = null
 
         // 确保Web Speech API也停止
         if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
+          window.speechSynthesis.cancel()
         }
       }
     }
@@ -148,7 +148,7 @@ export class TTSService {
       if (this.isPlaying) {
         this.stop()
         // 添加短暂延迟，确保上一个播放完全停止
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
       }
 
       // 确保文本不为空

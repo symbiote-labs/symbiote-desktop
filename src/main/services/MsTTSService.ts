@@ -1,10 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'edge-tts-node' // 新版支持流式的TTS库
 import { app } from 'electron'
 import log from 'electron-log'
 import { EdgeTTS } from 'node-edge-tts' // 旧版TTS库
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'edge-tts-node' // 新版支持流式的TTS库
 
 // --- START OF HARDCODED VOICE LIST ---
 // WARNING: This list is static and may become outdated.

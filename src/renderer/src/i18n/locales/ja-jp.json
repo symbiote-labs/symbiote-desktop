@@ -1421,8 +1421,7 @@
         "mstts.voice": "[to be translated]:免费在线 TTS音色",
         "mstts.output_format": "[to be translated]:输出格式",
         "mstts.info": "[to be translated]:免费在线TTS服务不需要API密钥，完全免费使用。",
-        "error.no_mstts_voice": "[to be translated]:未设置免费在线 TTS音色",
-        "filter.emojis": "[to be translated]:过滤表情符号"
+        "error.no_mstts_voice": "[to be translated]:未设置免费在线 TTS音色"
       },
       "asr": {
         "title": "音声認識",
@@ -1544,7 +1543,12 @@
       "initialization_failed": "[to be translated]:初始化语音通话失败",
       "error": "[to be translated]:语音通话出错",
       "initializing": "[to be translated]:正在初始化语音通话...",
-      "ready": "[to be translated]:语音通话已就绪"
+      "ready": "[to be translated]:语音通话已就绪",
+      "shortcut_key_setting": "[to be translated]:语音识别快捷键设置",
+      "press_any_key": "[to be translated]:请按任意键...",
+      "save": "[to be translated]:保存",
+      "cancel": "[to be translated]:取消",
+      "shortcut_key_tip": "[to be translated]:按下此快捷键开始录音，松开快捷键结束录音并发送"
     }
   }
 }

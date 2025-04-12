@@ -77,7 +77,8 @@ let _files: FileType[] = []
 
 const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
   const [text, setText] = useState(_text)
-  const [asrCurrentText, setAsrCurrentText] = useState('')
+  // 用于存储语音识别的中间结果，不直接显示在输入框中
+  const [, setAsrCurrentText] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
   const { assistant, addTopic, model, setModel, updateAssistant } = useAssistant(_assistant.id)
   const {

@@ -289,7 +289,9 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
         }
         await VoiceCallService.startCall({
           onTranscript: setTranscript,
-          onResponse: () => { /* 响应在聊天界面处理 */ },
+          onResponse: () => {
+            /* 响应在聊天界面处理 */
+          },
           onListeningStateChange: setIsListening,
           onSpeakingStateChange: setIsSpeaking
         })
@@ -402,7 +404,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
           await VoiceCallService.cancelRecording()
           setTranscript('')
         } catch (error) {
-          console.error('取消录音出错:', error);
+          console.error('取消录音出错:', error)
         } finally {
           setTimeout(() => setIsProcessing(false), 500)
         }
@@ -412,23 +414,31 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
   )
   // --- 语音通话控制函数结束 ---
 
-
   // --- 快捷键相关函数 ---
   const getKeyDisplayName = (keyCode: string) => {
     const keyMap: Record<string, string> = {
-      Space: '空格键', Enter: '回车键', ShiftLeft: '左Shift键', ShiftRight: '右Shift键',
-      ControlLeft: '左Ctrl键', ControlRight: '右Ctrl键', AltLeft: '左Alt键', AltRight: '右Alt键'
+      Space: '空格键',
+      Enter: '回车键',
+      ShiftLeft: '左Shift键',
+      ShiftRight: '右Shift键',
+      ControlLeft: '左Ctrl键',
+      ControlRight: '右Ctrl键',
+      AltLeft: '左Alt键',
+      AltRight: '右Alt键'
     }
     return keyMap[keyCode] || keyCode
   }
 
-  const handleShortcutKeyChange = useCallback((e: KeyboardEvent) => {
-    e.preventDefault()
-    if (isRecordingShortcut) {
-      setTempShortcutKey(e.code)
-      setIsRecordingShortcut(false)
-    }
-  }, [isRecordingShortcut])
+  const handleShortcutKeyChange = useCallback(
+    (e: KeyboardEvent) => {
+      e.preventDefault()
+      if (isRecordingShortcut) {
+        setTempShortcutKey(e.code)
+        setIsRecordingShortcut(false)
+      }
+    },
+    [isRecordingShortcut]
+  )
 
   const saveShortcutKey = useCallback(() => {
     setShortcutKey(tempShortcutKey)
@@ -437,31 +447,42 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
   }, [tempShortcutKey])
 
   // 现在可以安全地使用 handleRecordStart/End
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (isRecordingShortcut) {
-      handleShortcutKeyChange(e)
-      return
-    }
-    if (e.code === shortcutKey && !isProcessing && !isPaused && visible && !isShortcutPressed) {
-      e.preventDefault()
-      setIsShortcutPressed(true)
-      const mockEvent = new MouseEvent('mousedown') as unknown as React.MouseEvent // 类型断言
-      handleRecordStart(mockEvent) // 现在 handleRecordStart 已经定义
-    }
-  }, [
-    shortcutKey, isProcessing, isPaused, visible, isShortcutPressed,
-    handleRecordStart, // 依赖项
-    isRecordingShortcut, handleShortcutKeyChange
-  ])
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (isRecordingShortcut) {
+        handleShortcutKeyChange(e)
+        return
+      }
+      if (e.code === shortcutKey && !isProcessing && !isPaused && visible && !isShortcutPressed) {
+        e.preventDefault()
+        setIsShortcutPressed(true)
+        const mockEvent = new MouseEvent('mousedown') as unknown as React.MouseEvent // 类型断言
+        handleRecordStart(mockEvent) // 现在 handleRecordStart 已经定义
+      }
+    },
+    [
+      shortcutKey,
+      isProcessing,
+      isPaused,
+      visible,
+      isShortcutPressed,
+      handleRecordStart, // 依赖项
+      isRecordingShortcut,
+      handleShortcutKeyChange
+    ]
+  )
 
-  const handleKeyUp = useCallback((e: KeyboardEvent) => {
-    if (e.code === shortcutKey && isShortcutPressed && visible) {
-      e.preventDefault()
-      setIsShortcutPressed(false)
-      const mockEvent = new MouseEvent('mouseup') as unknown as React.MouseEvent // 类型断言
-      handleRecordEnd(mockEvent) // 现在 handleRecordEnd 已经定义
-    }
-  }, [shortcutKey, isShortcutPressed, visible, handleRecordEnd]) // 依赖项
+  const handleKeyUp = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.code === shortcutKey && isShortcutPressed && visible) {
+        e.preventDefault()
+        setIsShortcutPressed(false)
+        const mockEvent = new MouseEvent('mouseup') as unknown as React.MouseEvent // 类型断言
+        handleRecordEnd(mockEvent) // 现在 handleRecordEnd 已经定义
+      }
+    },
+    [shortcutKey, isShortcutPressed, visible, handleRecordEnd]
+  ) // 依赖项
 
   useEffect(() => {
     const savedShortcut = localStorage.getItem('voiceCallShortcutKey')
@@ -482,7 +503,6 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
     }
   }, [visible, handleKeyDown, handleKeyUp])
   // --- 快捷键相关函数结束 ---
-
 
   // 如果不可见，直接返回 null
   if (!visible) return null
@@ -511,10 +531,14 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
 
       <Content>
         {isSettingsVisible && (
-          <SettingsPanel> {/* 使用 styled-component */}
+          <SettingsPanel>
+            {' '}
+            {/* 使用 styled-component */}
             <SettingsTitle>{t('voice_call.shortcut_key_setting')}</SettingsTitle> {/* 使用 styled-component */}
             <Space>
-              <ShortcutKeyButton onClick={() => setIsRecordingShortcut(true)}> {/* 使用 styled-component */}
+              <ShortcutKeyButton onClick={() => setIsRecordingShortcut(true)}>
+                {' '}
+                {/* 使用 styled-component */}
                 {isRecordingShortcut ? t('voice_call.press_any_key') : getKeyDisplayName(tempShortcutKey)}
               </ShortcutKeyButton>
               <Button type="primary" onClick={saveShortcutKey}>
@@ -522,7 +546,9 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
               </Button>
               <Button onClick={() => setIsSettingsVisible(false)}>{t('voice_call.cancel')}</Button>
             </Space>
-            <SettingsTip> {/* 使用 styled-component */}
+            <SettingsTip>
+              {' '}
+              {/* 使用 styled-component */}
               {t('voice_call.shortcut_key_tip')}
             </SettingsTip>
           </SettingsPanel>

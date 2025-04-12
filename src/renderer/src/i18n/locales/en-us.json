@@ -15,7 +15,12 @@
       "initialization_failed": "Failed to initialize voice call",
       "error": "Voice call error",
       "initializing": "Initializing voice call...",
-      "ready": "Voice call ready"
+      "ready": "Voice call ready",
+      "shortcut_key_setting": "[to be translated]:语音识别快捷键设置",
+      "press_any_key": "[to be translated]:请按任意键...",
+      "save": "[to be translated]:保存",
+      "cancel": "[to be translated]:取消",
+      "shortcut_key_tip": "[to be translated]:按下此快捷键开始录音，松开快捷键结束录音并发送"
     },
     "agents": {
       "add.button": "Add to Assistant",
