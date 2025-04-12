@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 interface Props {
-  onTranscribed: (text: string) => void
+  onTranscribed: (text: string, isFinal?: boolean) => void
   disabled?: boolean
   style?: React.CSSProperties
 }
@@ -33,7 +33,7 @@ const ASRButton: FC<Props> = ({ onTranscribed, disabled = false, style }) => {
       try {
         // 添加事件监听器，监听服务器发送的stopped消息
         const originalCallback = ASRService.resultCallback
-        const stopCallback = (text: string) => {
+        const stopCallback = (text: string, isFinal?: boolean) => {
           // 如果是空字符串，只重置状态，不调用原始回调
           if (text === '') {
             setIsProcessing(false)

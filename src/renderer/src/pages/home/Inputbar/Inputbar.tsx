@@ -77,6 +77,7 @@ let _files: FileType[] = []
 
 const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
   const [text, setText] = useState(_text)
+  const [asrCurrentText, setAsrCurrentText] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
   const { assistant, addTopic, model, setModel, updateAssistant } = useAssistant(_assistant.id)
   const {
@@ -787,18 +788,40 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
               }
             }
 
-            // 如果是语音通话消息，创建一个新的助手对象，并设置模型
+            // 如果是语音通话消息，创建一个新的助手对象，并设置模型和提示词
             let assistantToUse = assistant
-            if ((data.isVoiceCall || data.useVoiceCallModel) && userMessage.model) {
+            if (data.isVoiceCall || data.useVoiceCallModel) {
               // 创建一个新的助手对象，以避免修改原始助手
               assistantToUse = { ...assistant }
 
-              // 设置助手的模型为语音通话专用模型
-              assistantToUse.model = userMessage.model
-              console.log(
-                '为语音通话消息创建了新的助手对象，并设置了模型:',
-                userMessage.model.name || userMessage.model.id
-              )
+              // 如果有语音通话专用模型，设置助手的模型
+              if (userMessage.model) {
+                assistantToUse.model = userMessage.model
+                console.log(
+                  '为语音通话消息创建了新的助手对象，并设置了模型:',
+                  userMessage.model.name || userMessage.model.id
+                )
+              }
+
+              // 添加语音通话专属提示词
+              const voiceCallPrompt = `当前是语音通话模式。请注意：
+1. 简洁直接地回答问题，避免冗长的引导和总结。
+2. 避免使用复杂的格式化内容，如表格、代码块、Markdown等。
+3. 使用自然、口语化的表达方式，就像与人对话一样。
+4. 如果需要列出要点，使用简单的数字或文字标记，而不是复杂的格式。
+5. 回答应该简短有力，便于用户通过语音理解。
+6. 避免使用特殊符号、表情符号、标点符号等，因为这些在语音播放时会影响理解。
+7. 使用完整的句子而非简单的关键词列表。
+8. 尽量使用常见词汇，避免生僻或专业术语，除非用户特别询问。`
+
+              // 如果助手已经有提示词，则在其后添加语音通话专属提示词
+              if (assistantToUse.prompt) {
+                assistantToUse.prompt += '\n\n' + voiceCallPrompt
+              } else {
+                assistantToUse.prompt = voiceCallPrompt
+              }
+
+              console.log('为语音通话消息添加了专属提示词')
             }
 
             // 分发发送消息的action
@@ -806,6 +829,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
             // 清空输入框
             setText('')
+            // 重置语音识别状态
+            setAsrCurrentText('')
 
             console.log('已触发发送消息事件')
           }, 300)
@@ -1121,18 +1146,28 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
             <ToolbarMenu>
               <TranslateButton text={text} onTranslated={onTranslated} isLoading={isTranslating} />
               <ASRButton
-                onTranscribed={(transcribedText) => {
+                onTranscribed={(transcribedText, isFinal) => {
                   // 如果是空字符串，不做任何处理
                   if (!transcribedText) return
 
-                  // 将识别的文本添加到当前输入框
-                  setText((prevText) => {
-                    // 如果当前有文本，添加空格后再添加识别的文本
-                    if (prevText.trim()) {
+                  if (isFinal) {
+                    // 最终结果，添加到输入框中
+                    setText((prevText) => {
+                      // 如果当前输入框为空，直接设置为识别的文本
+                      if (!prevText.trim()) {
+                        return transcribedText
+                      }
+
+                      // 否则，添加识别的文本到输入框中，用空格分隔
                       return prevText + ' ' + transcribedText
-                    }
-                    return transcribedText
-                  })
+                    })
+
+                    // 清除当前识别的文本
+                    setAsrCurrentText('')
+                  } else {
+                    // 中间结果，保存到状态变量中，但不更新输入框
+                    setAsrCurrentText(transcribedText)
+                  }
                 }}
               />
               <VoiceCallButton disabled={loading} />

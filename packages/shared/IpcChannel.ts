@@ -25,6 +25,9 @@ export enum IpcChannel {
   // MsTTS
   MsTTS_GetVoices = 'mstts:get-voices',
   MsTTS_Synthesize = 'mstts:synthesize',
+  MsTTS_SynthesizeStream = 'mstts:synthesize-stream',
+  MsTTS_StreamData = 'mstts:stream-data',
+  MsTTS_StreamEnd = 'mstts:stream-end',
 
   // Open
   Open_Path = 'open:path',
