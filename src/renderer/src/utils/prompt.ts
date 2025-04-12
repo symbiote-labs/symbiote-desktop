@@ -147,28 +147,55 @@ ${availableTools}
 </tools>`
 }
 
+import { applyMemoriesToPrompt } from '@renderer/services/MemoryService'
 import { MCPServer } from '@renderer/types'
+
 import { getRememberedMemories } from './remember-utils'
-
-export const buildSystemPrompt = async (userSystemPrompt: string, tools: MCPTool[], mcpServers: MCPServer[] = []): Promise<string> => {
-  // 获取记忆
-  let memoriesPrompt = '';
+export const buildSystemPrompt = async (
+  userSystemPrompt: string,
+  tools: MCPTool[],
+  mcpServers: MCPServer[] = []
+): Promise<string> => {
+  // 获取MCP记忆
+  let mcpMemoriesPrompt = ''
   try {
-    memoriesPrompt = await getRememberedMemories(mcpServers);
+    mcpMemoriesPrompt = await getRememberedMemories(mcpServers)
   } catch (error) {
-    console.error('Error getting memories:', error);
-  }
-  
-  // 添加记忆工具的使用说明
-  const rememberInstructions = '\n\n您可以使用remember工具记住用户的长期偏好和重要信息。当用户说"请记住..."或"记住..."时，使用remember工具存储这些信息。记忆会自动应用到所有对话中，无需显式调用。';
-  
-  const enhancedPrompt = userSystemPrompt + rememberInstructions + memoriesPrompt;
-  
-  if (tools && tools.length > 0) {
-    return SYSTEM_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', enhancedPrompt)
-      .replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples)
-      .replace('{{ AVAILABLE_TOOLS }}', AvailableTools(tools))
+    console.error('Error getting MCP memories:', error)
   }
 
-  return enhancedPrompt
-}
+  // 获取内置记忆
+  let appMemoriesPrompt = ''
+  try {
+    // 应用内置记忆功能
+    console.log('[Prompt] Applying app memories to prompt')
+    // 直接将用户系统提示词传递给 applyMemoriesToPrompt，让它添加记忆
+    appMemoriesPrompt = applyMemoriesToPrompt(userSystemPrompt)
+    console.log('[Prompt] App memories prompt length:', appMemoriesPrompt.length - userSystemPrompt.length)
+  } catch (error) {
+    console.error('Error applying app memories:', error)
+    // 如果应用 Redux 记忆失败，至少保留原始用户提示
+    appMemoriesPrompt = userSystemPrompt
+  }
+
+  // 添加记忆工具的使用说明
+  // 合并所有提示词
+  // 注意：appMemoriesPrompt 已经包含 userSystemPrompt，所以不需要再次添加
+  // 合并 app 记忆（已包含 user prompt）和 mcp 记忆
+  const enhancedPrompt = appMemoriesPrompt + (mcpMemoriesPrompt ? `\n\n${mcpMemoriesPrompt}` : '')
+
+  let finalPrompt: string
+  if (tools && tools.length > 0) {
+    console.log('[Prompt] Final prompt with tools:', { promptLength: enhancedPrompt.length })
+    // Break down the chained replace calls to potentially help the parser
+    const availableToolsString = AvailableTools(tools)
+    let tempPrompt = SYSTEM_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', enhancedPrompt)
+    tempPrompt = tempPrompt.replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples)
+    finalPrompt = tempPrompt.replace('{{ AVAILABLE_TOOLS }}', availableToolsString)
+  } else {
+    console.log('[Prompt] Final prompt without tools:', { promptLength: enhancedPrompt.length })
+    finalPrompt = enhancedPrompt // Assign enhancedPrompt when no tools are present
+  }
+  // Single return point for the function
+  return finalPrompt
+} // Closing brace for the buildSystemPrompt function moved here

@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   CloudOutlined,
   CodeOutlined,
+  ExperimentOutlined,
   GlobalOutlined,
   InfoCircleOutlined,
   LayoutOutlined,
@@ -26,6 +27,7 @@ import DisplaySettings from './DisplaySettings/DisplaySettings'
 import GeneralSettings from './GeneralSettings'
 import MCPSettings from './MCPSettings'
 import { McpSettingsNavbar } from './MCPSettings/McpSettingsNavbar'
+import MemorySettings from './MemorySettings'
 import MiniAppSettings from './MiniappSettings/MiniAppSettings'
 import ProvidersList from './ProviderSettings'
 import QuickAssistantSettings from './QuickAssistantSettings'
@@ -71,6 +73,12 @@ const SettingsPage: FC = () => {
             <MenuItem className={isRoute('/settings/mcp')}>
               <CodeOutlined />
               {t('settings.mcp.title')}
+            </MenuItem>
+          </MenuItemLink>
+          <MenuItemLink to="/settings/memory">
+            <MenuItem className={isRoute('/settings/memory')}>
+              <ExperimentOutlined />
+              {t('settings.memory.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/general">
@@ -130,6 +138,7 @@ const SettingsPage: FC = () => {
             <Route path="model" element={<ModelSettings />} />
             <Route path="web-search" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
+            <Route path="memory" element={<MemorySettings />} />
             <Route path="general" element={<GeneralSettings />} />
             <Route path="display" element={<DisplaySettings />} />
             {showMiniAppSettings && <Route path="miniapps" element={<MiniAppSettings />} />}
