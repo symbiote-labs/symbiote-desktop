@@ -1060,7 +1060,22 @@
         "noCurrentTopic": "Please select a conversation topic first",
         "confirmDelete": "Confirm Delete",
         "confirmDeleteContent": "Are you sure you want to delete this short-term memory?",
-        "delete": "Delete"
+        "delete": "Delete",
+        "memoryLists": "[to be translated]:记忆角色",
+        "listView": "[to be translated]:列表视图",
+        "mindmapView": "[to be translated]:思维导图",
+        "centerNodeLabel": "[to be translated]:用户记忆",
+        "addList": "[to be translated]:添加记忆列表",
+        "editList": "[to be translated]:编辑记忆列表",
+        "listName": "[to be translated]:列表名称",
+        "listNamePlaceholder": "[to be translated]:输入列表名称",
+        "listDescription": "[to be translated]:列表描述",
+        "listDescriptionPlaceholder": "[to be translated]:输入列表描述（可选）",
+        "noLists": "[to be translated]:暂无记忆列表",
+        "confirmDeleteList": "[to be translated]:确认删除列表",
+        "confirmDeleteListContent": "[to be translated]:确定要删除 {{name}} 列表吗？此操作将同时删除列表中的所有记忆，且不可恢复。",
+        "toggleActive": "[to be translated]:切换激活状态",
+        "clearConfirmContentList": "[to be translated]:确定要清空 {{name}} 中的所有记忆吗？此操作不可恢复。"
       },
       "mcp": {
         "actions": "Actions",
