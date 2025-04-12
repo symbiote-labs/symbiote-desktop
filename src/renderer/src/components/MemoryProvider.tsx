@@ -63,7 +63,7 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
     }
 
     // 更新上一次的话题ID
-    previousTopicRef.current = currentTopic
+    previousTopicRef.current = currentTopic || null
   }, [currentTopic, shortMemoryActive, dispatch])
 
   return <>{children}</>
