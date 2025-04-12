@@ -562,7 +562,8 @@
       "switch.disabled": "現在の応答が完了するまで切り替えを無効にします",
       "tools": {
         "completed": "完了",
-        "invoking": "呼び出し中"
+        "invoking": "呼び出し中",
+        "error": "エラーが発生しました"
       },
       "topic.added": "新しいトピックが追加されました",
       "upgrade.success.button": "再起動",
@@ -1069,7 +1070,6 @@
         "newServer": "MCP サーバー",
         "npx_list": {
           "actions": "アクション",
-          "desc": "npm パッケージを検索して MCP サーバーとして追加",
           "description": "説明",
           "no_packages": "パッケージが見つかりません",
           "npm": "NPM",
@@ -1078,7 +1078,6 @@
           "scope_required": "npm スコープを入力してください",
           "search": "検索",
           "search_error": "パッケージの検索に失敗しました",
-          "title": "NPX パッケージリスト",
           "usage": "使用法",
           "version": "バージョン"
         },
@@ -1095,10 +1094,25 @@
         },
         "editMcpJson": "MCP 設定を編集",
         "installHelp": "インストールヘルプを取得",
+        "tabs": {
+          "general": "一般",
+          "tools": "ツール",
+          "prompts": "プロンプト",
+          "resources": "リソース"
+        },
         "tools": {
           "inputSchema": "入力スキーマ",
           "availableTools": "利用可能なツール",
-          "noToolsAvailable": "利用可能なツールはありません"
+          "noToolsAvailable": "利用可能なツールなし",
+          "loadError": "ツール取得エラー"
+        },
+        "prompts": {
+          "availablePrompts": "利用可能なプロンプト",
+          "noPromptsAvailable": "利用可能なプロンプトはありません",
+          "arguments": "引数",
+          "requiredField": "必須フィールド",
+          "genericError": "プロンプト取得エラー",
+          "loadError": "プロンプト取得エラー"
         },
         "deleteServer": "サーバーを削除",
         "deleteServerConfirm": "このサーバーを削除してもよろしいですか？",
