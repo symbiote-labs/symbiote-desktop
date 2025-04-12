@@ -24,6 +24,8 @@ import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
+import store from '@renderer/store'
+import { getActiveServers } from '@renderer/store/mcp'
 import {
   filterContextMessages,
   filterEmptyMessages,
@@ -228,7 +230,7 @@ export default class GeminiProvider extends BaseProvider {
       let systemInstruction = assistant.prompt
 
       if (mcpTools && mcpTools.length > 0) {
-        systemInstruction = buildSystemPrompt(assistant.prompt || '', mcpTools)
+        systemInstruction = await buildSystemPrompt(assistant.prompt || '', mcpTools, getActiveServers(store.getState()))
       }
 
       // const tools = mcpToolsToGeminiTools(mcpTools)

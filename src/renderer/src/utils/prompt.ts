@@ -147,12 +147,28 @@ ${availableTools}
 </tools>`
 }
 
-export const buildSystemPrompt = (userSystemPrompt: string, tools: MCPTool[]): string => {
+import { MCPServer } from '@renderer/types'
+import { getRememberedMemories } from './remember-utils'
+
+export const buildSystemPrompt = async (userSystemPrompt: string, tools: MCPTool[], mcpServers: MCPServer[] = []): Promise<string> => {
+  // 获取记忆
+  let memoriesPrompt = '';
+  try {
+    memoriesPrompt = await getRememberedMemories(mcpServers);
+  } catch (error) {
+    console.error('Error getting memories:', error);
+  }
+  
+  // 添加记忆工具的使用说明
+  const rememberInstructions = '\n\n您可以使用remember工具记住用户的长期偏好和重要信息。当用户说"请记住..."或"记住..."时，使用remember工具存储这些信息。记忆会自动应用到所有对话中，无需显式调用。';
+  
+  const enhancedPrompt = userSystemPrompt + rememberInstructions + memoriesPrompt;
+  
   if (tools && tools.length > 0) {
-    return SYSTEM_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', userSystemPrompt)
+    return SYSTEM_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', enhancedPrompt)
       .replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples)
       .replace('{{ AVAILABLE_TOOLS }}', AvailableTools(tools))
   }
 
-  return userSystemPrompt
+  return enhancedPrompt
 }
