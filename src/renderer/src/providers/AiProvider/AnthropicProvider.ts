@@ -14,6 +14,8 @@ import { Assistant, FileTypes, MCPToolResponse, Message, Model, Provider, Sugges
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
+import store from '@renderer/store'
+import { getActiveServers } from '@renderer/store/mcp'
 import { first, flatten, sum, takeRight } from 'lodash'
 import OpenAI from 'openai'
 
@@ -177,7 +179,7 @@ export default class AnthropicProvider extends BaseProvider {
 
     let systemPrompt = assistant.prompt
     if (mcpTools && mcpTools.length > 0) {
-      systemPrompt = buildSystemPrompt(systemPrompt, mcpTools)
+      systemPrompt = await buildSystemPrompt(systemPrompt, mcpTools, getActiveServers(store.getState()))
     }
 
     const body: MessageCreateParamsNonStreaming = {

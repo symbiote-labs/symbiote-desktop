@@ -20,6 +20,7 @@ import {
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
 import store from '@renderer/store'
+import { getActiveServers } from '@renderer/store/mcp'
 import {
   Assistant,
   FileTypes,
@@ -318,7 +319,7 @@ export default class OpenAIProvider extends BaseProvider {
       }
     }
     if (mcpTools && mcpTools.length > 0) {
-      systemMessage.content = buildSystemPrompt(systemMessage.content || '', mcpTools)
+      systemMessage.content = await buildSystemPrompt(systemMessage.content || '', mcpTools, getActiveServers(store.getState()))
     }
 
     const userMessages: ChatCompletionMessageParam[] = []
