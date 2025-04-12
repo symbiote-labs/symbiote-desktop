@@ -8,6 +8,7 @@ import {
   removeTtsCustomModel,
   removeTtsCustomVoice,
   resetTtsCustomValues,
+  setShowTTSProgressBar,
   setTtsApiKey,
   setTtsApiUrl,
   setTtsEdgeVoice,
@@ -148,14 +149,28 @@ const TTSSettings: FC = () => {
   const ttsEdgeVoice = settings.ttsEdgeVoice || 'zh-CN-XiaoxiaoNeural'
   const ttsCustomVoices = settings.ttsCustomVoices || []
   const ttsCustomModels = settings.ttsCustomModels || []
+  const showTTSProgressBar = settings.showTTSProgressBar
   // 免费在线TTS设置
   const ttsMsVoice = settings.ttsMsVoice || 'zh-CN-XiaoxiaoNeural'
   const ttsMsOutputFormat = settings.ttsMsOutputFormat || 'audio-24khz-48kbitrate-mono-mp3'
+
+  // 确保免费在线TTS设置有默认值
+  useEffect(() => {
+    if (ttsServiceType === 'mstts') {
+      if (!settings.ttsMsVoice) {
+        dispatch(setTtsMsVoice('zh-CN-XiaoxiaoNeural'))
+      }
+      if (!settings.ttsMsOutputFormat) {
+        dispatch(setTtsMsOutputFormat('audio-24khz-48kbitrate-mono-mp3'))
+      }
+    }
+  }, [ttsServiceType, settings.ttsMsVoice, settings.ttsMsOutputFormat, dispatch])
   const ttsFilterOptions = settings.ttsFilterOptions || {
     filterThinkingProcess: true,
     filterMarkdown: true,
     filterCodeBlocks: true,
     filterHtmlTags: true,
+    filterEmojis: true,
     maxTextLength: 4000
   }
 
@@ -368,6 +383,16 @@ const TTSSettings: FC = () => {
     if (!ttsEnabled) {
       window.message.error({ content: t('settings.tts.error.not_enabled'), key: 'tts-test' })
       return
+    }
+
+    // 如果是免费在线TTS，确保音色已设置
+    if (ttsServiceType === 'mstts' && !ttsMsVoice) {
+      // 自动设置默认音色
+      dispatch(setTtsMsVoice('zh-CN-XiaoxiaoNeural'))
+      window.message.info({
+        content: t('settings.tts.mstts.auto_set_voice', { defaultValue: '已自动设置默认音色' }),
+        key: 'tts-test'
+      })
     }
 
     // 强制刷新状态，确保使用最新的设置
@@ -912,6 +937,14 @@ const TTSSettings: FC = () => {
                     <Form.Item label={t('settings.tts.filter_options')} style={{ marginTop: 24, marginBottom: 8 }}>
                       <FilterOptionItem>
                         <Switch
+                          checked={showTTSProgressBar}
+                          onChange={(checked) => dispatch(setShowTTSProgressBar(checked))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.show_progress_bar', { defaultValue: '显示TTS进度条' })}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
+                        <Switch
                           checked={ttsFilterOptions.filterThinkingProcess}
                           onChange={(checked) => dispatch(setTtsFilterOptions({ filterThinkingProcess: checked }))}
                           disabled={!ttsEnabled}
@@ -943,6 +976,14 @@ const TTSSettings: FC = () => {
                         {t('settings.tts.filter.html_tags')}
                       </FilterOptionItem>
                       <FilterOptionItem>
+                        <Switch
+                          checked={ttsFilterOptions.filterEmojis}
+                          onChange={(checked) => dispatch(setTtsFilterOptions({ filterEmojis: checked }))}
+                          disabled={!ttsEnabled}
+                        />{' '}
+                        {t('settings.tts.filter.emojis', { defaultValue: '过滤表情符号' })}
+                      </FilterOptionItem>
+                      <FilterOptionItem>
                         <LengthLabel>{t('settings.tts.max_text_length')}:</LengthLabel>
                         <Select
                           value={ttsFilterOptions.maxTextLength}
@@ -969,7 +1010,8 @@ const TTSSettings: FC = () => {
                           (ttsServiceType === 'openai' && (!ttsApiKey || !ttsVoice || !ttsModel)) ||
                           (ttsServiceType === 'edge' && !ttsEdgeVoice) ||
                           (ttsServiceType === 'siliconflow' &&
-                            (!ttsSiliconflowApiKey || !ttsSiliconflowVoice || !ttsSiliconflowModel))
+                            (!ttsSiliconflowApiKey || !ttsSiliconflowVoice || !ttsSiliconflowModel)) ||
+                          (ttsServiceType === 'mstts' && !ttsMsVoice)
                         }>
                         {t('settings.tts.test')}
                       </Button>

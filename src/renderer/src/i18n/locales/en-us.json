@@ -1418,7 +1418,9 @@
         "filter.markdown": "Filter Markdown",
         "filter.code_blocks": "Filter code blocks",
         "filter.html_tags": "Filter HTML tags",
+        "filter.emojis": "Filter emojis",
         "max_text_length": "Maximum text length",
+        "show_progress_bar": "Show TTS progress bar",
         "test": "Test Speech",
         "help": "Text-to-speech functionality supports converting text to natural-sounding speech.",
         "learn_more": "Learn more",
@@ -1499,7 +1501,9 @@
           "transcribe_failed": "Failed to transcribe speech",
           "no_api_key": "[to be translated]:未设置API密钥",
           "browser_not_support": "[to be translated]:浏览器不支持语音识别"
-        }
+        },
+        "auto_start_server": "[to be translated]:启动应用自动开启服务器",
+        "auto_start_server.help": "[to be translated]:启用后，应用启动时会自动开启语音识别服务器"
       },
       "voice": {
         "title": "Voice Features",
@@ -1514,6 +1518,16 @@
         "model.select": "Select Model",
         "model.current": "Current Model: {{model}}",
         "model.info": "Select the AI model for voice calls. Different models may provide different voice interaction experiences",
+        "welcome_message": "Hello, I'm your AI assistant. Please press and hold the talk button to start a conversation.",
+        "prompt": {
+          "label": "Voice Call Prompt",
+          "placeholder": "Enter voice call prompt",
+          "save": "Save",
+          "reset": "Reset",
+          "saved": "Prompt saved",
+          "reset_done": "Prompt reset",
+          "info": "This prompt will guide the AI's responses in voice call mode"
+        },
         "asr_tts_info": "Voice call uses the Speech Recognition (ASR) and Text-to-Speech (TTS) settings above",
         "test": "Test Voice Call",
         "test_info": "Please use the voice call button on the right side of the input box to test"

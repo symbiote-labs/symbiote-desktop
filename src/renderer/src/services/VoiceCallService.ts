@@ -1,3 +1,4 @@
+import { DEFAULT_VOICE_CALL_PROMPT } from '@renderer/config/prompts'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import ASRService from '@renderer/services/ASRService'
 import { getDefaultAssistant } from '@renderer/services/AssistantService'
@@ -5,8 +6,10 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getAssistantMessage, getUserMessage } from '@renderer/services/MessagesService'
 import TTSService from '@renderer/services/TTSService'
 import store from '@renderer/store'
+import { setSkipNextAutoTTS } from '@renderer/store/settings'
 // 导入类型
 import type { Message } from '@renderer/types'
+import i18n from 'i18next'
 
 interface VoiceCallCallbacks {
   onTranscript: (text: string) => void
@@ -170,9 +173,13 @@ class VoiceCallServiceClass {
       }
     }
 
-    // 播放欢迎语音
-    const welcomeMessage = '您好，我是您的AI助手，请长按说话按钮进行对话。'
-    this.callbacks?.onResponse(welcomeMessage)
+    // 设置skipNextAutoTTS为true，防止自动播放最后一条消息
+    store.dispatch(setSkipNextAutoTTS(true))
+
+    // 播放欢迎语音 - 根据当前语言获取本地化的欢迎消息
+    const welcomeMessage = i18n.t('settings.voice_call.welcome_message')
+    // 不调用onResponse，避免触发两次TTS播放
+    // this.callbacks?.onResponse(welcomeMessage)
 
     // 监听TTS状态
     const ttsStateHandler = (isPlaying: boolean) => {
@@ -583,21 +590,16 @@ class VoiceCallServiceClass {
         }
       })
 
-      // 修改用户消息，添加语音通话提示
-      const voiceCallPrompt = `当前是语音通话模式。请注意：
-1. 简洁直接地回答问题，避免冗长的引导和总结。
-2. 避免使用复杂的格式化内容，如表格、代码块、Markdown等。
-3. 使用自然、口语化的表达方式，就像与人对话一样。
-4. 如果需要列出要点，使用简单的数字或文字标记，而不是复杂的格式。
-5. 回答应该简短有力，便于用户通过语音理解。
-6. 避免使用特殊符号、表情符号、标点符号等，因为这些在语音播放时会影响理解。
-7. 使用完整的句子而非简单的关键词列表。
-8. 尽量使用常见词汇，避免生僻或专业术语，除非用户特别询问。`
+      // 获取用户自定义提示词
+      const { voiceCallPrompt } = store.getState().settings
+
+      // 使用自定义提示词或默认提示词
+      const promptToUse = voiceCallPrompt || DEFAULT_VOICE_CALL_PROMPT
 
       // 创建系统指令消息
       const systemMessage = {
         role: 'system',
-        content: voiceCallPrompt
+        content: promptToUse
       }
 
       // 修改用户消息的内容
@@ -646,8 +648,12 @@ class VoiceCallServiceClass {
           // 添加事件监听器
           window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
 
-          // 开始播放
-          this.ttsService.speak(fullResponse)
+          // 更新助手消息的内容
+          assistantMessage.content = fullResponse
+          assistantMessage.status = 'success'
+
+          // 使用speakFromMessage方法播放，会应用TTS过滤选项
+          this.ttsService.speakFromMessage(assistantMessage)
 
           // 设置超时安全机制，确保事件监听器被移除
           setTimeout(() => {
@@ -666,7 +672,17 @@ class VoiceCallServiceClass {
         if (!this.isMuted && this.isCallActive) {
           // 手动设置语音状态
           this.callbacks?.onSpeakingStateChange(true)
-          this.ttsService.speak(fullResponse)
+
+          // 创建一个简单的助手消息对象
+          const errorMessage = {
+            id: 'error-message',
+            role: 'assistant',
+            content: fullResponse,
+            status: 'success'
+          } as Message
+
+          // 使用speakFromMessage方法播放，会应用TTS过滤选项
+          this.ttsService.speakFromMessage(errorMessage)
 
           // 确保语音结束后状态正确
           setTimeout(() => {

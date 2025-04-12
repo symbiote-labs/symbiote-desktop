@@ -1,5 +1,3 @@
-import i18n from '@renderer/i18n'
-
 import { TTSServiceInterface } from './TTSServiceInterface'
 
 /**
@@ -27,7 +25,15 @@ export class MsTTSService implements TTSServiceInterface {
    */
   private validateParams(): void {
     if (!this.voice) {
-      throw new Error(i18n.t('settings.tts.error.no_mstts_voice'))
+      // 如果没有设置音色，使用默认的小晓音色
+      console.warn('未设置免费在线TTS音色，使用默认音色 zh-CN-XiaoxiaoNeural')
+      this.voice = 'zh-CN-XiaoxiaoNeural'
+    }
+
+    if (!this.outputFormat) {
+      // 如果没有设置输出格式，使用默认格式
+      console.warn('未设置免费在线TTS输出格式，使用默认格式 audio-24khz-48kbitrate-mono-mp3')
+      this.outputFormat = 'audio-24khz-48kbitrate-mono-mp3'
     }
   }
 

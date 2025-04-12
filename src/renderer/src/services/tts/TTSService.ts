@@ -104,6 +104,7 @@ export class TTSService {
       filterMarkdown: true,
       filterCodeBlocks: true,
       filterHtmlTags: true,
+      filterEmojis: true,
       maxTextLength: 4000
     }
 
@@ -592,7 +593,7 @@ export class TTSService {
         // 触发进度更新事件
         this.emitProgressUpdateEvent(currentTime, duration, progress)
       }
-    }, 100)
+    }, 250) // 将更新频率从100ms降低到250ms，减少日志输出
   }
 
   /**
@@ -611,6 +612,11 @@ export class TTSService {
    * @param duration 总时长（秒）
    * @param progress 进度百分比（0-100）
    */
+  // 记录上次输出日志的进度百分比 - 已禁用日志输出
+  // private lastLoggedProgress: number = -1;
+  // 记录上次日志输出时间，用于节流 - 已禁用日志输出
+  // private lastLogTime: number = 0;
+
   private emitProgressUpdateEvent(currentTime: number, duration: number, progress: number): void {
     // 创建事件数据
     const eventData = {
@@ -621,12 +627,21 @@ export class TTSService {
       progress
     }
 
-    console.log('发送TTS进度更新事件:', {
-      messageId: this.playingMessageId,
-      progress: Math.round(progress),
-      currentTime: Math.round(currentTime),
-      duration: Math.round(duration)
-    })
+    // 完全关闭进度更新日志输出
+    // const now = Date.now();
+    // const currentProgressTens = Math.floor(progress / 10);
+    // if ((now - this.lastLogTime >= 500) && // 时间节流
+    //     (currentProgressTens !== Math.floor(this.lastLoggedProgress / 10) ||
+    //     progress === 0 || progress >= 100)) {
+    //   console.log('发送TTS进度更新事件:', {
+    //     messageId: this.playingMessageId ? this.playingMessageId.substring(0, 8) : null,
+    //     progress: Math.round(progress),
+    //     currentTime: Math.round(currentTime),
+    //     duration: Math.round(duration)
+    //   });
+    //   this.lastLoggedProgress = progress;
+    //   this.lastLogTime = now;
+    // }
 
     // 触发事件
     window.dispatchEvent(new CustomEvent('tts-progress-update', { detail: eventData }))

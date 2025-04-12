@@ -4,7 +4,7 @@ const express = require('express')
 const path = require('path') // Need path module
 
 const app = express()
-const port = 8080 // Define the port
+const port = 34515 // Define the port
 
 // 获取index.html文件的路径
 function getIndexHtmlPath() {
