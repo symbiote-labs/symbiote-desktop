@@ -3,6 +3,8 @@ productName: Cherry Studio
 directories:
   buildResources: build
 files:
+  - out/**/*
+  - package.json
   - '!{.vscode,.yarn,.github}'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'

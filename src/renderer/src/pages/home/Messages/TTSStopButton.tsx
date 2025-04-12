@@ -9,14 +9,25 @@ const TTSStopButton: React.FC = () => {
   const { t } = useTranslation()
   const [isVisible, setIsVisible] = useState(false)
 
-  // 检查是否正在播放TTS
+  // 添加TTS状态变化事件监听器
   useEffect(() => {
-    const checkPlayingStatus = setInterval(() => {
-      const isPlaying = TTSService.isCurrentlyPlaying()
+    const handleTTSStateChange = (event: CustomEvent) => {
+      const { isPlaying } = event.detail
+      console.log('全局TTS停止按钮检测到TTS状态变化:', isPlaying)
       setIsVisible(isPlaying)
-    }, 500)
+    }
 
-    return () => clearInterval(checkPlayingStatus)
+    // 添加事件监听器
+    window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
+
+    // 初始检查当前状态
+    const isCurrentlyPlaying = TTSService.isCurrentlyPlaying()
+    setIsVisible(isCurrentlyPlaying)
+
+    // 组件卸载时移除事件监听器
+    return () => {
+      window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
+    }
   }, [])
 
   // 停止TTS播放
@@ -26,17 +37,7 @@ const TTSStopButton: React.FC = () => {
     // 强制停止所有TTS播放
     TTSService.stop()
 
-    // 等待一下，确保播放已经完全停止
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // 再次检查并停止，确保强制停止
-    if (TTSService.isCurrentlyPlaying()) {
-      console.log('第一次停止未成功，再次尝试')
-      TTSService.stop()
-    }
-
-    // 立即隐藏按钮
-    setIsVisible(false)
+    // 不需要手动设置状态，事件监听器会处理
 
     // 显示停止消息
     window.message.success({ content: t('chat.tts.stopped', { defaultValue: '已停止语音播放' }), key: 'tts-stopped' })

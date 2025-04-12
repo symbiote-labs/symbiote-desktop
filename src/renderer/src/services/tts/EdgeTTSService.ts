@@ -5,6 +5,9 @@ import { TTSServiceInterface } from './TTSServiceInterface'
 // 全局变量来跟踪当前正在播放的语音
 let currentUtterance: SpeechSynthesisUtterance | null = null
 
+// 全局变量来跟踪是否正在播放
+export let isEdgeTTSPlaying = false
+
 /**
  * Edge TTS服务实现类
  */
@@ -50,10 +53,12 @@ export class EdgeTTSService implements TTSServiceInterface {
       if (currentUtterance) {
         currentUtterance = null
       }
+      isEdgeTTSPlaying = false
 
       // 创建语音合成器实例
       const utterance = new SpeechSynthesisUtterance(text)
       currentUtterance = utterance
+      isEdgeTTSPlaying = true
 
       // 获取可用的语音合成声音
       const voices = window.speechSynthesis.getVoices()
@@ -93,6 +98,7 @@ export class EdgeTTSService implements TTSServiceInterface {
       utterance.onend = () => {
         console.log('语音合成已结束')
         currentUtterance = null
+        isEdgeTTSPlaying = false
 
         // 分发一个自定义事件，通知语音合成已结束
         // 这样TTSService可以监听这个事件并重置播放状态
@@ -100,9 +106,14 @@ export class EdgeTTSService implements TTSServiceInterface {
         document.dispatchEvent(event)
       }
 
-      utterance.onerror = (event) => {
-        console.error('语音合成错误:', event)
+      utterance.onerror = (errorEvent) => {
+        console.error('语音合成错误:', errorEvent)
         currentUtterance = null
+        isEdgeTTSPlaying = false
+
+        // 在错误时也触发结束事件，确保状态更新
+        const completeEvent = new CustomEvent('edgeTTSComplete', { detail: { text, error: true } })
+        document.dispatchEvent(completeEvent)
       }
 
       // 开始语音合成
@@ -147,6 +158,7 @@ export class EdgeTTSService implements TTSServiceInterface {
 
       // 停止当前正在播放的语音
       window.speechSynthesis.cancel()
+      isEdgeTTSPlaying = false
 
       // 创建语音合成器实例
       const utterance = new SpeechSynthesisUtterance(text)

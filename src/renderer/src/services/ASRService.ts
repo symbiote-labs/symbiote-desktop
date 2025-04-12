@@ -163,15 +163,14 @@ class ASRService {
             if (data.data.isFinal) {
               console.log('[ASRService] 收到最终结果，调用回调函数，文本:', data.data.text)
 
-              // 保存当前回调函数并立即清除，防止重复处理
-              const tempCallback = this.resultCallback
-              this.resultCallback = null
+              // 不再清除回调函数，允许继续处理后续语音
+              // const tempCallback = this.resultCallback
+              // this.resultCallback = null
 
-              // 调用回调函数
-              tempCallback(data.data.text, true)
+              // 直接调用回调函数
+              this.resultCallback(data.data.text, true)
               window.message.success({ content: i18n.t('settings.asr.success'), key: 'asr-processing' })
-            } else if (this.isRecording) {
-              // 只在录音中才处理中间结果
+            } else if (this.isRecording) { // 只在录音中才处理中间结果
               // 非最终结果，也调用回调，但标记为非最终
               console.log('[ASRService] 收到中间结果，调用回调函数，文本:', data.data.text)
               this.resultCallback(data.data.text, false)
@@ -237,6 +236,14 @@ class ASRService {
         return
       }
 
+      // 先设置回调函数，确保在任何情况下都能正确设置
+      if (onTranscribed && typeof onTranscribed === 'function') {
+        console.log('[ASRService] 设置结果回调函数')
+        this.resultCallback = onTranscribed
+      } else {
+        console.warn('[ASRService] 未提供有效的回调函数')
+      }
+
       // 如果是使用本地服务器
       if (asrServiceType === 'local') {
         // 连接WebSocket服务器
@@ -290,11 +297,6 @@ class ASRService {
             })
             throw new Error('浏览器尚未准备好')
           }
-        }
-
-        // 保存回调函数（如果提供了）
-        if (onTranscribed && typeof onTranscribed === 'function') {
-          this.resultCallback = onTranscribed
         }
 
         // 发送开始命令
@@ -376,11 +378,11 @@ class ASRService {
             }, 100)
           }
 
-          // 添加额外的安全措施，确保在停止后也清除回调
-          setTimeout(() => {
-            // 在停止后的一段时间内清除回调，防止后续结果被处理
-            this.resultCallback = null
-          }, 3000) // 3秒后清除回调
+          // 不再清除回调函数，允许连续说多句话
+          // setTimeout(() => {
+          //   // 在停止后的一段时间内清除回调，防止后续结果被处理
+          //   this.resultCallback = null
+          // }, 3000) // 3秒后清除回调
         } else {
           throw new Error('WebSocket连接未就绪')
         }

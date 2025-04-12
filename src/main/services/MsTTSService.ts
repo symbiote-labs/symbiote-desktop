@@ -3,7 +3,8 @@ import path from 'node:path'
 
 import { app } from 'electron'
 import log from 'electron-log'
-import { EdgeTTS } from 'node-edge-tts' // listVoices is no longer needed here
+import { EdgeTTS } from 'node-edge-tts' // 旧版TTS库
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'edge-tts-node' // 新版支持流式的TTS库
 
 // --- START OF HARDCODED VOICE LIST ---
 // WARNING: This list is static and may become outdated.
@@ -438,6 +439,77 @@ class MsTTSService {
   }
 
   /**
+   * 流式合成语音
+   * @param text 要合成的文本
+   * @param voice 语音的 ShortName (例如 'zh-CN-XiaoxiaoNeural')
+   * @param outputFormat 输出格式 (例如 'audio-24khz-48kbitrate-mono-mp3')
+   * @param onData 数据块回调
+   * @param onEnd 结束回调
+   */
+  public async synthesizeStream(
+    text: string,
+    voice: string,
+    outputFormat: string,
+    onData: (chunk: Uint8Array) => void,
+    onEnd: () => void
+  ): Promise<void> {
+    try {
+      // 记录详细的请求信息
+      log.info(`流式微软在线TTS合成语音: 文本="${text.substring(0, 30)}...", 语音=${voice}, 格式=${outputFormat}`)
+
+      // 验证输入参数
+      if (!text || text.trim() === '') {
+        throw new Error('要合成的文本不能为空')
+      }
+
+      if (!voice || voice.trim() === '') {
+        throw new Error('语音名称不能为空')
+      }
+
+      // 创建一个新的MsEdgeTTS实例
+      const tts = new MsEdgeTTS({
+        enableLogger: false // 禁用内部日志
+      })
+
+      // 设置元数据
+      let msOutputFormat: OUTPUT_FORMAT
+      if (outputFormat.includes('mp3')) {
+        msOutputFormat = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
+      } else if (outputFormat.includes('webm')) {
+        msOutputFormat = OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS
+      } else {
+        msOutputFormat = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
+      }
+
+      await tts.setMetadata(voice, msOutputFormat)
+
+      // 创建流
+      const audioStream = tts.toStream(text)
+
+      // 监听数据事件
+      audioStream.on('data', (data: Buffer) => {
+        onData(data)
+      })
+
+      // 监听结束事件
+      audioStream.on('end', () => {
+        log.info(`流式微软在线TTS合成成功`)
+        onEnd()
+      })
+
+      // 监听错误事件
+      audioStream.on('error', (error: Error) => {
+        log.error(`流式微软在线TTS语音合成失败:`, error)
+        throw error
+      })
+    } catch (error: any) {
+      // 记录详细的错误信息
+      log.error(`流式微软在线TTS语音合成失败 (语音=${voice}):`, error)
+      throw error
+    }
+  }
+
+  /**
    * 获取可用的语音列表 (返回硬编码列表)
    * @returns 语音列表
    */
@@ -554,6 +626,16 @@ export const getVoices = async () => {
 
 export const synthesize = async (text: string, voice: string, outputFormat: string) => {
   return await MsTTSService.getInstance().synthesize(text, voice, outputFormat)
+}
+
+export const synthesizeStream = async (
+  text: string,
+  voice: string,
+  outputFormat: string,
+  onData: (chunk: Uint8Array) => void,
+  onEnd: () => void
+) => {
+  return await MsTTSService.getInstance().synthesizeStream(text, voice, outputFormat, onData, onEnd)
 }
 
 export const cleanupTtsTempFiles = async () => {

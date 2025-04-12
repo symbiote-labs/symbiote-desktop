@@ -257,8 +257,8 @@ class VoiceCallServiceClass {
               } else {
                 // 如果是临时结果，更新当前的识别结果
                 this._currentTranscript = text
-                // 显示累积结果 + 当前临时结果
-                this.callbacks?.onTranscript(this._accumulatedTranscript + ' ' + text)
+                // 只显示当前临时结果，不与累积结果拼接
+                this.callbacks?.onTranscript(text)
               }
 
               // 在录音过程中只更新transcript，不触发handleUserSpeech
@@ -595,12 +595,10 @@ class VoiceCallServiceClass {
 8. 尽量使用常见词汇，避免生僻或专业术语，除非用户特别询问。`
 
       // 创建系统指令消息
-      const systemMessage = getUserMessage({
-        assistant,
-        topic,
-        type: 'text',
+      const systemMessage = {
+        role: 'system',
         content: voiceCallPrompt
-      })
+      }
 
       // 修改用户消息的内容
       userMessage.content = text
@@ -637,14 +635,24 @@ class VoiceCallServiceClass {
         if (!this.isMuted && this.isCallActive) {
           // 手动设置语音状态
           this.callbacks?.onSpeakingStateChange(true)
+
+          // 添加TTS状态变化事件监听器
+          const handleTTSStateChange = (event: CustomEvent) => {
+            const { isPlaying } = event.detail
+            console.log('语音通话中检测到TTS状态变化:', isPlaying)
+            this.callbacks?.onSpeakingStateChange(isPlaying)
+          }
+
+          // 添加事件监听器
+          window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
+
+          // 开始播放
           this.ttsService.speak(fullResponse)
 
-          // 确保语音结束后状态正确
+          // 设置超时安全机制，确保事件监听器被移除
           setTimeout(() => {
-            if (this.ttsService && !this.ttsService.isCurrentlyPlaying()) {
-              this.callbacks?.onSpeakingStateChange(false)
-            }
-          }, 1000) // 1秒后检查TTS状态
+            window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
+          }, 30000) // 30秒后移除事件监听器
         }
 
         // 更新对话历史
@@ -910,9 +918,7 @@ class VoiceCallServiceClass {
     this.ttsService.stop()
     console.log('强制停止TTS播放')
 
-    // 手动触发TTS状态变化事件，确保 UI 状态更新
-    const event = new CustomEvent('tts-state-change', { detail: { isPlaying: false } })
-    window.dispatchEvent(event)
+    // 注意：不需要手动触发事件，因为在TTSService.stop()中已经触发了
   }
 
   setPaused(paused: boolean) {
