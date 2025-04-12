@@ -1,3 +1,4 @@
+import TTSProgressBar from '@renderer/components/TTSProgressBar'
 import { FONT_FAMILY } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useModel } from '@renderer/hooks/useModel'
@@ -263,7 +264,7 @@ const MessageItem: FC<Props> = ({
       {contextMenuPosition && (
         <Dropdown
           overlayStyle={{ left: contextMenuPosition.x, top: contextMenuPosition.y, zIndex: 1000 }}
-          menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText) }}
+          menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText, message) }}
           open={true}
           trigger={['contextMenu']}>
           <div />
@@ -276,6 +277,11 @@ const MessageItem: FC<Props> = ({
         <MessageErrorBoundary>
           <MessageContent message={message} model={model} />
         </MessageErrorBoundary>
+        {isAssistantMessage && (
+          <ProgressBarWrapper>
+            <TTSProgressBar messageId={message.id} />
+          </ProgressBarWrapper>
+        )}
         {showMenubar && (
           <MessageFooter
             style={{
@@ -310,7 +316,12 @@ const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolea
     : undefined
 }
 
-const getContextMenuItems = (t: (key: string) => string, selectedQuoteText: string, selectedText: string) => [
+const getContextMenuItems = (
+  t: (key: string) => string,
+  selectedQuoteText: string,
+  selectedText: string,
+  currentMessage?: Message
+) => [
   {
     key: 'copy',
     label: t('common.copy'),
@@ -324,6 +335,29 @@ const getContextMenuItems = (t: (key: string) => string, selectedQuoteText: stri
     label: t('chat.message.quote'),
     onClick: () => {
       EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
+    }
+  },
+  {
+    key: 'speak',
+    label: '朗读',
+    onClick: () => {
+      // 从选中的文本开始朗读后面的内容
+      if (selectedText && currentMessage?.content) {
+        // 找到选中文本在消息中的位置
+        const startIndex = currentMessage.content.indexOf(selectedText)
+        if (startIndex !== -1) {
+          // 获取选中文本及其后面的所有内容
+          const textToSpeak = currentMessage.content.substring(startIndex)
+          import('@renderer/services/TTSService').then(({ default: TTSService }) => {
+            TTSService.speak(textToSpeak)
+          })
+        } else {
+          // 如果找不到精确位置，则只朗读选中的文本
+          import('@renderer/services/TTSService').then(({ default: TTSService }) => {
+            TTSService.speak(selectedText)
+          })
+        }
+      }
     }
   }
 ]
@@ -379,6 +413,11 @@ const MessageFooter = styled.div`
 
 const NewContextMessage = styled.div`
   cursor: pointer;
+`
+
+const ProgressBarWrapper = styled.div`
+  width: 100%;
+  padding: 0 10px;
 `
 
 export default memo(MessageItem)

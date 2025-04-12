@@ -2,7 +2,14 @@ import { GlobalOutlined, InfoCircleOutlined, PlayCircleOutlined, StopOutlined } 
 import ASRServerService from '@renderer/services/ASRServerService'
 import ASRService from '@renderer/services/ASRService'
 import { useAppDispatch } from '@renderer/store'
-import { setAsrApiKey, setAsrApiUrl, setAsrEnabled, setAsrModel, setAsrServiceType } from '@renderer/store/settings'
+import {
+  setAsrApiKey,
+  setAsrApiUrl,
+  setAsrAutoStartServer,
+  setAsrEnabled,
+  setAsrModel,
+  setAsrServiceType
+} from '@renderer/store/settings'
 import { Button, Form, Input, Select, Space, Switch } from 'antd'
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,6 +29,7 @@ const ASRSettings: FC = () => {
   const asrApiKey = useSelector((state: any) => state.settings.asrApiKey)
   const asrApiUrl = useSelector((state: any) => state.settings.asrApiUrl)
   const asrModel = useSelector((state: any) => state.settings.asrModel || 'whisper-1')
+  const asrAutoStartServer = useSelector((state: any) => state.settings.asrAutoStartServer)
 
   // 检查服务器状态
   useEffect(() => {
@@ -178,6 +186,21 @@ const ASRSettings: FC = () => {
                 </Button>
 
                 <BrowserTip>{t('settings.asr.local.browser_tip')}</BrowserTip>
+
+                {/* 启动应用自动开启服务器 */}
+                <Form.Item style={{ marginTop: 16 }}>
+                  <Space>
+                    <Switch
+                      checked={asrAutoStartServer}
+                      onChange={(checked) => dispatch(setAsrAutoStartServer(checked))}
+                      disabled={!asrEnabled}
+                    />
+                    <span>{t('settings.asr.auto_start_server')}</span>
+                    <Tooltip title={t('settings.asr.auto_start_server.help')}>
+                      <InfoCircleOutlined style={{ color: 'var(--color-text-3)' }} />
+                    </Tooltip>
+                  </Space>
+                </Form.Item>
               </Space>
             </Form.Item>
           </>

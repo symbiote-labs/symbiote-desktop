@@ -17,9 +17,10 @@ class TTSService {
   /**
    * 将文本转换为语音并播放
    * @param text 要转换的文本
+   * @param segmented 是否使用分段播放
    */
-  speak = async (text: string): Promise<void> => {
-    await this.service.speak(text)
+  speak = async (text: string, segmented: boolean = false): Promise<void> => {
+    await this.service.speak(text, segmented)
   }
 
   /**
@@ -32,9 +33,10 @@ class TTSService {
   /**
    * 从消息中提取文本并转换为语音
    * @param message 消息对象
+   * @param segmented 是否使用分段播放
    */
-  speakFromMessage = async (message: Message): Promise<void> => {
-    await this.service.speakFromMessage(message)
+  speakFromMessage = async (message: Message, segmented: boolean = false): Promise<void> => {
+    await this.service.speakFromMessage(message, segmented)
   }
 
   /**
@@ -42,6 +44,22 @@ class TTSService {
    */
   isCurrentlyPlaying = (): boolean => {
     return this.service.isCurrentlyPlaying()
+  }
+
+  /**
+   * 从指定段落开始播放
+   * @param segmentIndex 段落索引
+   */
+  playFromSegment = (segmentIndex: number): void => {
+    this.service.playFromSegment(segmentIndex)
+  }
+
+  /**
+   * 跳转到指定时间点
+   * @param time 时间（秒）
+   */
+  seek = (time: number): void => {
+    this.service.seek(time)
   }
 }
 

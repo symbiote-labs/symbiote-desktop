@@ -1436,6 +1436,14 @@
         "test": "测试语音",
         "help": "语音合成功能支持将文本转换为自然语音。",
         "learn_more": "了解更多",
+        "play": "播放语音",
+        "stop": "停止播放",
+        "speak": "播放语音",
+        "stop_global": "停止所有语音播放",
+        "stopped": "已停止语音播放",
+        "segmented": "分段",
+        "segmented_play": "分段播放",
+        "segmented_playback": "分段播放",
         "error": {
           "not_enabled": "语音合成功能未启用",
           "no_api_key": "未设置API密钥",
@@ -1490,6 +1498,8 @@
         "success": "语音识别成功",
         "completed": "语音识别完成",
         "canceled": "已取消录音",
+        "auto_start_server": "启动应用自动开启服务器",
+        "auto_start_server.help": "启用后，应用启动时会自动开启语音识别服务器",
         "error": {
           "not_enabled": "语音识别功能未启用",
           "no_api_key": "未设置API密钥",
