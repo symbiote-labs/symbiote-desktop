@@ -10,6 +10,7 @@ import copilot from './copilot'
 import knowledge from './knowledge'
 import llm from './llm'
 import mcp from './mcp'
+import memory from './memory'
 import messagesReducer from './messages'
 import migrate from './migrate'
 import minapps from './minapps'
@@ -35,6 +36,7 @@ const rootReducer = combineReducers({
   websearch,
   mcp,
   copilot,
+  memory,
   messages: messagesReducer
 })
 
