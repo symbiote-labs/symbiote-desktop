@@ -18,6 +18,7 @@ import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/com
 import TranslateButton from '@renderer/components/TranslateButton'
 import VoiceCallButton from '@renderer/components/VoiceCallButton'
 import { isGenerateImageModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
+import { getDefaultVoiceCallPrompt } from '@renderer/config/prompts'
 import db from '@renderer/databases'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useKnowledgeBases } from '@renderer/hooks/useKnowledge'
@@ -804,22 +805,17 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
                 )
               }
 
-              // 添加语音通话专属提示词
-              const voiceCallPrompt = `当前是语音通话模式。请注意：
-1. 简洁直接地回答问题，避免冗长的引导和总结。
-2. 避免使用复杂的格式化内容，如表格、代码块、Markdown等。
-3. 使用自然、口语化的表达方式，就像与人对话一样。
-4. 如果需要列出要点，使用简单的数字或文字标记，而不是复杂的格式。
-5. 回答应该简短有力，便于用户通过语音理解。
-6. 避免使用特殊符号、表情符号、标点符号等，因为这些在语音播放时会影响理解。
-7. 使用完整的句子而非简单的关键词列表。
-8. 尽量使用常见词汇，避免生僻或专业术语，除非用户特别询问。`
+              // 获取用户自定义提示词
+              const { voiceCallPrompt } = store.getState().settings
+
+              // 使用自定义提示词或当前语言的默认提示词
+              const promptToUse = voiceCallPrompt || getDefaultVoiceCallPrompt()
 
               // 如果助手已经有提示词，则在其后添加语音通话专属提示词
               if (assistantToUse.prompt) {
-                assistantToUse.prompt += '\n\n' + voiceCallPrompt
+                assistantToUse.prompt += '\n\n' + promptToUse
               } else {
-                assistantToUse.prompt = voiceCallPrompt
+                assistantToUse.prompt = promptToUse
               }
 
               console.log('为语音通话消息添加了专属提示词')

@@ -1,4 +1,6 @@
+import { RootState } from '@renderer/store'
 import React, { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 interface TTSProgressBarProps {
@@ -13,6 +15,9 @@ interface TTSProgressState {
 }
 
 const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
+  // 获取是否显示TTS进度条的设置
+  const showTTSProgressBar = useSelector((state: RootState) => state.settings.showTTSProgressBar)
+
   const [progressState, setProgressState] = useState<TTSProgressState>({
     isPlaying: false,
     progress: 0,
@@ -20,22 +25,40 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
     duration: 0
   })
 
+  // 添加拖动状态
+  const [isDragging, setIsDragging] = useState(false)
+
   // 监听TTS进度更新事件
   useEffect(() => {
     const handleProgressUpdate = (event: CustomEvent) => {
       const { messageId: playingMessageId, isPlaying, progress, currentTime, duration } = event.detail
 
-      console.log('TTS进度更新事件:', {
-        playingMessageId,
-        currentMessageId: messageId,
-        isPlaying,
-        progress,
-        currentTime,
-        duration
-      })
+      // 不需要每次都输出日志，避免控制台刷屏
+      // 只在进度变化较大时输出日志，或者开始/结束时
+      // 在拖动进度条时不输出日志
+      // 完全关闭进度更新日志输出
+      // if (!isDragging &&
+      //     playingMessageId === messageId &&
+      //     (
+      //       // 开始或结束播放
+      //       (isPlaying !== progressState.isPlaying) ||
+      //       // 每10%输出一次日志
+      //       (Math.floor(progress / 10) !== Math.floor(progressState.progress / 10))
+      //     )
+      // ) {
+      //   console.log('TTS进度更新:', {
+      //     messageId: messageId.substring(0, 8),
+      //     isPlaying,
+      //     progress: Math.round(progress),
+      //     currentTime: Math.round(currentTime),
+      //     duration: Math.round(duration)
+      //   })
+      // }
 
       // 只有当前消息正在播放时才更新进度
-      if (playingMessageId === messageId) {
+      // 增加对playingMessageId的检查，确保它存在且不为空
+      // 这样在语音通话模式下的开场白不会显示进度条
+      if (playingMessageId && playingMessageId === messageId) {
         // 如果收到的是重置信号（duration为0），则强制设置为非播放状态
         if (duration === 0 && currentTime === 0 && progress === 0) {
           setProgressState({
@@ -64,7 +87,7 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
 
       // 如果停止播放，重置进度条状态
       if (!isPlaying && progressState.isPlaying) {
-        console.log('收到TTS停止播放事件，重置进度条')
+        // console.log('收到TTS停止播放事件，重置进度条')
         setProgressState({
           isPlaying: false,
           progress: 0,
@@ -78,18 +101,18 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
     window.addEventListener('tts-progress-update', handleProgressUpdate as EventListener)
     window.addEventListener('tts-state-change', handleStateChange as EventListener)
 
-    console.log('添加TTS进度更新事件监听器，消息ID:', messageId)
+    // console.log('添加TTS进度更新事件监听器，消息ID:', messageId)
 
     // 组件卸载时移除事件监听器
     return () => {
       window.removeEventListener('tts-progress-update', handleProgressUpdate as EventListener)
       window.removeEventListener('tts-state-change', handleStateChange as EventListener)
-      console.log('移除TTS进度更新事件监听器，消息ID:', messageId)
+      // console.log('移除TTS进度更新事件监听器，消息ID:', messageId)
     }
-  }, [messageId, progressState.isPlaying])
+  }, [messageId, progressState.isPlaying, isDragging])
 
-  // 如果没有播放，不显示进度条
-  if (!progressState.isPlaying) {
+  // 如果没有播放或者设置为不显示进度条，则不显示
+  if (!progressState.isPlaying || !showTTSProgressBar) {
     return null
   }
 
@@ -106,7 +129,7 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
     const seekPercentage = (clickPosition / trackWidth) * 100
     const seekTime = (seekPercentage / 100) * progressState.duration
 
-    console.log(`进度条点击: ${seekPercentage.toFixed(2)}%, 时间: ${seekTime.toFixed(2)}秒`)
+    // console.log(`进度条点击: ${seekPercentage.toFixed(2)}%, 时间: ${seekTime.toFixed(2)}秒`)
 
     // 调用TTS服务的seek方法
     import('@renderer/services/TTSService').then(({ default: TTSService }) => {
@@ -120,8 +143,8 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
     e.preventDefault()
     e.stopPropagation() // 阻止事件冒泡
 
-    // 记录开始拖动状态
-    let isDragging = true
+    // 设置拖动状态为true
+    setIsDragging(true)
 
     const trackRect = e.currentTarget.getBoundingClientRect()
     const trackWidth = trackRect.width
@@ -145,7 +168,8 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
     const handleMouseUp = (upEvent: MouseEvent) => {
       if (!isDragging) return
 
-      isDragging = false
+      // 设置拖动状态为false
+      setIsDragging(false)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
 
@@ -153,7 +177,7 @@ const TTSProgressBar: React.FC<TTSProgressBarProps> = ({ messageId }) => {
       const seekPercentage = (dragPosition / trackWidth) * 100
       const seekTime = (seekPercentage / 100) * progressState.duration
 
-      console.log(`拖动结束: ${seekPercentage.toFixed(2)}%, 时间: ${seekTime.toFixed(2)}秒`)
+      // console.log(`拖动结束: ${seekPercentage.toFixed(2)}%, 时间: ${seekTime.toFixed(2)}秒`)
 
       // 调用TTS服务的seek方法
       import('@renderer/services/TTSService').then(({ default: TTSService }) => {

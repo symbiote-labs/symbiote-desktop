@@ -66,7 +66,7 @@ class ASRService {
         console.log('[ASRService] 正在连接WebSocket服务器...')
         window.message.loading({ content: '正在连接语音识别服务...', key: 'ws-connect' })
 
-        this.ws = new WebSocket('ws://localhost:8080')
+        this.ws = new WebSocket('ws://localhost:34515') // 使用正确的端口 34515
         this.wsConnected = false
         this.browserReady = false
 
@@ -253,6 +253,9 @@ class ASRService {
           throw new Error('无法连接到语音识别服务')
         }
 
+        // 获取语言设置
+        const { asrLanguage } = store.getState().settings
+
         // 检查浏览器是否准备好
         if (!this.browserReady) {
           // 尝试等待浏览器准备好
@@ -270,7 +273,7 @@ class ASRService {
             // 尝试自动打开浏览器页面
             try {
               // 使用ASRServerService获取服务器URL
-              const serverUrl = 'http://localhost:8080'
+              const serverUrl = 'http://localhost:34515' // 使用正确的端口 34515
               console.log('尝试打开语音识别服务器页面:', serverUrl)
               window.open(serverUrl, '_blank')
             } catch (error) {
@@ -302,9 +305,15 @@ class ASRService {
 
         // 发送开始命令
         if (this.ws && this.wsConnected) {
-          this.ws.send(JSON.stringify({ type: 'start' }))
+          // 将语言设置传递给服务器
+          this.ws.send(
+            JSON.stringify({
+              type: 'start',
+              language: asrLanguage || 'zh-CN' // 使用设置的语言或默认中文
+            })
+          )
           this.isRecording = true
-          console.log('开始语音识别')
+          console.log('开始语音识别，语言：', asrLanguage || 'zh-CN')
           window.message.info({ content: i18n.t('settings.asr.recording'), key: 'asr-recording' })
         } else {
           throw new Error('WebSocket连接未就绪')
@@ -638,7 +647,7 @@ class ASRService {
    */
   openBrowserPage = (): void => {
     // 使用window.open打开浏览器页面
-    window.open('http://localhost:8080', '_blank')
+    window.open('http://localhost:34515', '_blank') // 使用正确的端口 34515
   }
 }
 

@@ -48,14 +48,17 @@ export class TTSServiceFactory {
           settings.ttsSiliconflowSpeed
         )
 
-      case 'mstts':
+      case 'mstts': {
         console.log('创建免费在线TTS服务实例')
+        // 确保音色有默认值
+        const msVoice = settings.ttsMsVoice || 'zh-CN-XiaoxiaoNeural'
+        const msOutputFormat = settings.ttsMsOutputFormat || 'audio-24khz-48kbitrate-mono-mp3'
         console.log('免费在线TTS设置:', {
-          voice: settings.ttsMsVoice,
-          outputFormat: settings.ttsMsOutputFormat
+          voice: msVoice,
+          outputFormat: msOutputFormat
         })
-        return new MsTTSService(settings.ttsMsVoice, settings.ttsMsOutputFormat)
-
+        return new MsTTSService(msVoice, msOutputFormat)
+      } // Close block scope
       default:
         throw new Error(i18n.t('settings.tts.error.unsupported_service_type', { serviceType }))
     }

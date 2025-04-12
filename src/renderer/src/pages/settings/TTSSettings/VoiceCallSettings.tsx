@@ -1,9 +1,10 @@
-import { InfoCircleOutlined, PhoneOutlined } from '@ant-design/icons'
+import { InfoCircleOutlined, PhoneOutlined, ReloadOutlined } from '@ant-design/icons'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import { getModelLogo } from '@renderer/config/models'
+import { DEFAULT_VOICE_CALL_PROMPT } from '@renderer/config/prompts'
 import { useAppDispatch } from '@renderer/store'
-import { setVoiceCallEnabled, setVoiceCallModel } from '@renderer/store/settings'
-import { Button, Form, Space, Switch, Tooltip as AntTooltip } from 'antd'
+import { setVoiceCallEnabled, setVoiceCallModel, setVoiceCallPrompt } from '@renderer/store/settings'
+import { Button, Form, Input, Space, Switch, Tooltip as AntTooltip } from 'antd'
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
@@ -16,6 +17,10 @@ const VoiceCallSettings: FC = () => {
   // 从 Redux 获取通话功能设置
   const voiceCallEnabled = useSelector((state: any) => state.settings.voiceCallEnabled ?? true)
   const voiceCallModel = useSelector((state: any) => state.settings.voiceCallModel)
+  const voiceCallPrompt = useSelector((state: any) => state.settings.voiceCallPrompt)
+
+  // 提示词编辑状态
+  const [promptText, setPromptText] = useState<string>(voiceCallPrompt || DEFAULT_VOICE_CALL_PROMPT)
 
   // 模型选择状态
   const [, setIsSelectingModel] = useState(false)
@@ -33,6 +38,19 @@ const VoiceCallSettings: FC = () => {
     } finally {
       setIsSelectingModel(false)
     }
+  }
+
+  // 保存提示词
+  const handleSavePrompt = () => {
+    dispatch(setVoiceCallPrompt(promptText))
+    window.message.success({ content: t('settings.voice_call.prompt.saved'), key: 'voice-call-prompt' })
+  }
+
+  // 重置提示词
+  const handleResetPrompt = () => {
+    setPromptText(DEFAULT_VOICE_CALL_PROMPT)
+    dispatch(setVoiceCallPrompt(null))
+    window.message.success({ content: t('settings.voice_call.prompt.reset_done'), key: 'voice-call-prompt' })
   }
 
   return (
@@ -69,6 +87,26 @@ const VoiceCallSettings: FC = () => {
             )}
           </Space>
           <InfoText>{t('settings.voice_call.model.info')}</InfoText>
+        </Form.Item>
+
+        {/* 提示词设置 */}
+        <Form.Item label={t('settings.voice_call.prompt.label')} style={{ marginBottom: 16 }}>
+          <Input.TextArea
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            disabled={!voiceCallEnabled}
+            rows={8}
+            placeholder={t('settings.voice_call.prompt.placeholder')}
+          />
+          <Space style={{ marginTop: 8 }}>
+            <Button type="primary" onClick={handleSavePrompt} disabled={!voiceCallEnabled}>
+              {t('settings.voice_call.prompt.save')}
+            </Button>
+            <Button onClick={handleResetPrompt} disabled={!voiceCallEnabled} icon={<ReloadOutlined />}>
+              {t('settings.voice_call.prompt.reset')}
+            </Button>
+          </Space>
+          <InfoText>{t('settings.voice_call.prompt.info')}</InfoText>
         </Form.Item>
 
         {/* ASR 和 TTS 设置提示 */}

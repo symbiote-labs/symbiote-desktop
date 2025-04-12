@@ -119,6 +119,7 @@ export interface SettingsState {
   ttsModel: string
   ttsCustomVoices: string[]
   ttsCustomModels: string[]
+  showTTSProgressBar: boolean // 是否显示TTS进度条
   // 浏览器 TTS配置
   ttsEdgeVoice: string
   // 硅基流动 TTS配置
@@ -137,6 +138,7 @@ export interface SettingsState {
     filterMarkdown: boolean // 过滤Markdown标记
     filterCodeBlocks: boolean // 过滤代码块
     filterHtmlTags: boolean // 过滤HTML标签
+    filterEmojis: boolean // 过滤表情符号
     maxTextLength: number // 最大文本长度
   }
   // ASR配置（语音识别）
@@ -146,9 +148,11 @@ export interface SettingsState {
   asrApiUrl: string
   asrModel: string
   asrAutoStartServer: boolean // 启动应用时自动启动ASR服务器
+  asrLanguage: string // 语音识别语言
   // 语音通话配置
   voiceCallEnabled: boolean
   voiceCallModel: Model | null
+  voiceCallPrompt: string | null // 语音通话自定义提示词
   isVoiceCallActive: boolean // 语音通话窗口是否激活
   lastPlayedMessageId: string | null // 最后一次播放的消息ID
   skipNextAutoTTS: boolean // 是否跳过下一次自动TTS
@@ -262,6 +266,7 @@ export const initialState: SettingsState = {
   ttsModel: '',
   ttsCustomVoices: [],
   ttsCustomModels: [],
+  showTTSProgressBar: true, // 默认显示TTS进度条
   // Edge TTS配置
   ttsEdgeVoice: 'zh-CN-XiaoxiaoNeural', // 默认使用小小的声音
   // 硅基流动 TTS配置
@@ -279,6 +284,7 @@ export const initialState: SettingsState = {
     filterMarkdown: true, // 默认过滤Markdown标记
     filterCodeBlocks: true, // 默认过滤代码块
     filterHtmlTags: true, // 默认过滤HTML标签
+    filterEmojis: true, // 默认过滤表情符号
     maxTextLength: 4000 // 默认最大文本长度
   },
   // ASR配置（语音识别）
@@ -288,9 +294,11 @@ export const initialState: SettingsState = {
   asrApiUrl: 'https://api.openai.com/v1/audio/transcriptions',
   asrModel: 'whisper-1',
   asrAutoStartServer: false, // 默认不自动启动ASR服务器
+  asrLanguage: 'zh-CN', // 默认使用中文
   // 语音通话配置
   voiceCallEnabled: true,
   voiceCallModel: null,
+  voiceCallPrompt: null, // 默认为null，表示使用默认提示词
   isVoiceCallActive: false, // 语音通话窗口是否激活
   lastPlayedMessageId: null, // 最后一次播放的消息ID
   skipNextAutoTTS: false, // 是否跳过下一次自动TTS
@@ -692,6 +700,7 @@ const settingsSlice = createSlice({
         filterMarkdown?: boolean
         filterCodeBlocks?: boolean
         filterHtmlTags?: boolean
+        filterEmojis?: boolean
         maxTextLength?: number
       }>
     ) => {
@@ -699,6 +708,10 @@ const settingsSlice = createSlice({
         ...state.ttsFilterOptions,
         ...action.payload
       }
+    },
+    // 设置是否显示TTS进度条
+    setShowTTSProgressBar: (state, action: PayloadAction<boolean>) => {
+      state.showTTSProgressBar = action.payload
     },
     // ASR相关的action
     setAsrEnabled: (state, action: PayloadAction<boolean>) => {
@@ -719,11 +732,17 @@ const settingsSlice = createSlice({
     setAsrAutoStartServer: (state, action: PayloadAction<boolean>) => {
       state.asrAutoStartServer = action.payload
     },
+    setAsrLanguage: (state, action: PayloadAction<string>) => {
+      state.asrLanguage = action.payload
+    },
     setVoiceCallEnabled: (state, action: PayloadAction<boolean>) => {
       state.voiceCallEnabled = action.payload
     },
     setVoiceCallModel: (state, action: PayloadAction<Model | null>) => {
       state.voiceCallModel = action.payload
+    },
+    setVoiceCallPrompt: (state, action: PayloadAction<string | null>) => {
+      state.voiceCallPrompt = action.payload
     },
     setIsVoiceCallActive: (state, action: PayloadAction<boolean>) => {
       state.isVoiceCallActive = action.payload
@@ -851,14 +870,17 @@ export const {
   removeTtsCustomVoice,
   removeTtsCustomModel,
   setTtsFilterOptions,
+  setShowTTSProgressBar,
   setAsrEnabled,
   setAsrServiceType,
   setAsrApiKey,
   setAsrApiUrl,
   setAsrModel,
   setAsrAutoStartServer,
+  setAsrLanguage,
   setVoiceCallEnabled,
   setVoiceCallModel,
+  setVoiceCallPrompt,
   setIsVoiceCallActive,
   setLastPlayedMessageId,
   setSkipNextAutoTTS

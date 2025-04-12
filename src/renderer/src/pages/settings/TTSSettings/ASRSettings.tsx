@@ -7,6 +7,7 @@ import {
   setAsrApiUrl,
   setAsrAutoStartServer,
   setAsrEnabled,
+  setAsrLanguage,
   setAsrModel,
   setAsrServiceType
 } from '@renderer/store/settings'
@@ -30,6 +31,7 @@ const ASRSettings: FC = () => {
   const asrApiUrl = useSelector((state: any) => state.settings.asrApiUrl)
   const asrModel = useSelector((state: any) => state.settings.asrModel || 'whisper-1')
   const asrAutoStartServer = useSelector((state: any) => state.settings.asrAutoStartServer)
+  const asrLanguage = useSelector((state: any) => state.settings.asrLanguage || 'zh-CN')
 
   // 检查服务器状态
   useEffect(() => {
@@ -47,6 +49,20 @@ const ASRSettings: FC = () => {
 
   // 模型选项
   const modelOptions = [{ label: 'whisper-1', value: 'whisper-1' }]
+
+  // 语言选项
+  const languageOptions = [
+    { label: '中文 (Chinese)', value: 'zh-CN' },
+    { label: 'English', value: 'en-US' },
+    { label: '日本語 (Japanese)', value: 'ja-JP' },
+    { label: 'Русский (Russian)', value: 'ru-RU' },
+    { label: 'Français (French)', value: 'fr-FR' },
+    { label: 'Deutsch (German)', value: 'de-DE' },
+    { label: 'Español (Spanish)', value: 'es-ES' },
+    { label: 'Italiano (Italian)', value: 'it-IT' },
+    { label: 'Português (Portuguese)', value: 'pt-PT' },
+    { label: '한국어 (Korean)', value: 'ko-KR' }
+  ]
 
   return (
     <Container>
@@ -154,7 +170,7 @@ const ASRSettings: FC = () => {
                 <Button
                   type="primary"
                   icon={<GlobalOutlined />}
-                  onClick={() => ASRServerService.openServerPage()}
+                  onClick={() => window.open('http://localhost:34515', '_blank')}
                   disabled={!asrEnabled || !isServerRunning}>
                   {t('settings.asr.open_browser')}
                 </Button>
@@ -186,6 +202,19 @@ const ASRSettings: FC = () => {
                 </Button>
 
                 <BrowserTip>{t('settings.asr.local.browser_tip')}</BrowserTip>
+
+                {/* 语言选择 */}
+                <Form.Item label={t('settings.asr.language', { defaultValue: '语言' })} style={{ marginTop: 16 }}>
+                  <Select
+                    value={asrLanguage}
+                    onChange={(value) => dispatch(setAsrLanguage(value))}
+                    options={languageOptions}
+                    disabled={!asrEnabled}
+                    style={{ width: '100%' }}
+                    showSearch
+                    optionFilterProp="label"
+                  />
+                </Form.Item>
 
                 {/* 启动应用自动开启服务器 */}
                 <Form.Item style={{ marginTop: 16 }}>

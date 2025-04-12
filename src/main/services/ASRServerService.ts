@@ -37,21 +37,21 @@ class ASRServerService {
       log.info('App path:', app.getAppPath())
       // 在开发环境和生产环境中使用不同的路径
       let serverPath = ''
-      let isExeFile = false
+      const isPackaged = app.isPackaged
 
-      // 首先检查是否有打包后的exe文件
-      const exePath = path.join(app.getAppPath(), 'resources', 'cherry-asr-server.exe')
-      if (fs.existsSync(exePath)) {
-        serverPath = exePath
-        isExeFile = true
-        log.info('检测到打包后的exe文件:', serverPath)
-      } else if (process.env.NODE_ENV === 'development') {
-        // 开发环境
-        serverPath = path.join(app.getAppPath(), 'src', 'renderer', 'src', 'assets', 'asr-server', 'server.js')
+      if (isPackaged) {
+        // 生产环境 (打包后) - 使用 extraResources 复制的路径
+        // 注意: 'app' 是 extraResources 配置中 'to' 字段的一部分
+        serverPath = path.join(process.resourcesPath, 'app', 'asr-server', 'server.js')
+        log.info('生产环境，ASR 服务器路径:', serverPath)
       } else {
-        // 生产环境
-        serverPath = path.join(app.getAppPath(), 'public', 'asr-server', 'server.js')
+        // 开发环境 - 指向项目根目录的 asr-server
+        serverPath = path.join(app.getAppPath(), 'asr-server', 'server.js')
+        log.info('开发环境，ASR 服务器路径:', serverPath)
       }
+
+      // 注意：删除了 isExeFile 检查逻辑, 假设总是用 node 启动
+      // Removed unused variable 'isExeFile'
       log.info('ASR服务器路径:', serverPath)
 
       // 检查文件是否存在
@@ -60,19 +60,12 @@ class ASRServerService {
       }
 
       // 启动服务器进程
-      if (isExeFile) {
-        // 如果是exe文件，直接启动
-        this.asrServerProcess = spawn(serverPath, [], {
-          stdio: 'pipe',
-          detached: false
-        })
-      } else {
-        // 如果是js文件，使用node启动
-        this.asrServerProcess = spawn('node', [serverPath], {
-          stdio: 'pipe',
-          detached: false
-        })
-      }
+      // 始终使用 node 启动 server.js
+      log.info(`尝试使用 node 启动: ${serverPath}`)
+      this.asrServerProcess = spawn('node', [serverPath], {
+        stdio: 'pipe', // 'pipe' 用于捕获输出, 如果需要调试可以临时改为 'inherit'
+        detached: false // false 通常足够
+      })
 
       // 处理服务器输出
       this.asrServerProcess.stdout?.on('data', (data) => {
