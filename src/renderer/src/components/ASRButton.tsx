@@ -210,6 +210,7 @@ const StyledButton = styled(Button)`
   justify-content: center;
   align-items: center;
   padding: 0;
+  border: none; /* 移除边框 */
   &.anticon,
   &.iconfont {
     transition: all 0.3s ease;

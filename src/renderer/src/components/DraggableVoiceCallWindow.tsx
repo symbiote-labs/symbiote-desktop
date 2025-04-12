@@ -2,11 +2,13 @@ import {
   AudioMutedOutlined,
   AudioOutlined,
   CloseOutlined,
+  DownOutlined,
   DragOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   SettingOutlined,
-  SoundOutlined
+  SoundOutlined,
+  UpOutlined
 } from '@ant-design/icons'
 import { Button, Space, Tooltip } from 'antd'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -178,6 +180,7 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
   const [isSettingsVisible, setIsSettingsVisible] = useState(false)
   const [tempShortcutKey, setTempShortcutKey] = useState(shortcutKey)
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   // --- 快捷键相关状态结束 ---
 
   const isInitializedRef = useRef(false)
@@ -520,6 +523,12 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
         {t('voice_call.title')}
         <Button
           type="text"
+          icon={isCollapsed ? <DownOutlined /> : <UpOutlined />}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="settings-button"
+        />
+        <Button
+          type="text"
           icon={<SettingOutlined />}
           onClick={() => setIsSettingsVisible(!isSettingsVisible)}
           className="settings-button" // 应用样式类
@@ -530,42 +539,46 @@ const DraggableVoiceCallWindow: React.FC<Props> = ({
       </Header>
 
       <Content>
-        {isSettingsVisible && (
-          <SettingsPanel>
-            {' '}
-            {/* 使用 styled-component */}
-            <SettingsTitle>{t('voice_call.shortcut_key_setting')}</SettingsTitle> {/* 使用 styled-component */}
-            <Space>
-              <ShortcutKeyButton onClick={() => setIsRecordingShortcut(true)}>
+        {!isCollapsed && (
+          <>
+            {isSettingsVisible && (
+              <SettingsPanel>
                 {' '}
                 {/* 使用 styled-component */}
-                {isRecordingShortcut ? t('voice_call.press_any_key') : getKeyDisplayName(tempShortcutKey)}
-              </ShortcutKeyButton>
-              <Button type="primary" onClick={saveShortcutKey}>
-                {t('voice_call.save')}
-              </Button>
-              <Button onClick={() => setIsSettingsVisible(false)}>{t('voice_call.cancel')}</Button>
-            </Space>
-            <SettingsTip>
-              {' '}
-              {/* 使用 styled-component */}
-              {t('voice_call.shortcut_key_tip')}
-            </SettingsTip>
-          </SettingsPanel>
-        )}
-        <VisualizerContainer>
-          <VoiceVisualizer isActive={isListening || isRecording} type="input" />
-          <VoiceVisualizer isActive={isSpeaking} type="output" />
-        </VisualizerContainer>
+                <SettingsTitle>{t('voice_call.shortcut_key_setting')}</SettingsTitle> {/* 使用 styled-component */}
+                <Space>
+                  <ShortcutKeyButton onClick={() => setIsRecordingShortcut(true)}>
+                    {' '}
+                    {/* 使用 styled-component */}
+                    {isRecordingShortcut ? t('voice_call.press_any_key') : getKeyDisplayName(tempShortcutKey)}
+                  </ShortcutKeyButton>
+                  <Button type="primary" onClick={saveShortcutKey}>
+                    {t('voice_call.save')}
+                  </Button>
+                  <Button onClick={() => setIsSettingsVisible(false)}>{t('voice_call.cancel')}</Button>
+                </Space>
+                <SettingsTip>
+                  {' '}
+                  {/* 使用 styled-component */}
+                  {t('voice_call.shortcut_key_tip')}
+                </SettingsTip>
+              </SettingsPanel>
+            )}
+            <VisualizerContainer>
+              <VoiceVisualizer isActive={isListening || isRecording} type="input" />
+              <VoiceVisualizer isActive={isSpeaking} type="output" />
+            </VisualizerContainer>
 
-        <TranscriptContainer>
-          {transcript && (
-            <TranscriptText>
-              <UserLabel>{t('voice_call.you')}:</UserLabel> {transcript}
-            </TranscriptText>
-          )}
-          {/* 可以在这里添加 AI 回复的显示 */}
-        </TranscriptContainer>
+            <TranscriptContainer>
+              {transcript && (
+                <TranscriptText>
+                  <UserLabel>{t('voice_call.you')}:</UserLabel> {transcript}
+                </TranscriptText>
+              )}
+              {/* 可以在这里添加 AI 回复的显示 */}
+            </TranscriptContainer>
+          </>
+        )}
 
         <ControlsContainer>
           <Space>

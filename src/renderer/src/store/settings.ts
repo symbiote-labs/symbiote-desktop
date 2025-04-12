@@ -145,6 +145,7 @@ export interface SettingsState {
   asrApiKey: string
   asrApiUrl: string
   asrModel: string
+  asrAutoStartServer: boolean // 启动应用时自动启动ASR服务器
   // 语音通话配置
   voiceCallEnabled: boolean
   voiceCallModel: Model | null
@@ -286,6 +287,7 @@ export const initialState: SettingsState = {
   asrApiKey: '',
   asrApiUrl: 'https://api.openai.com/v1/audio/transcriptions',
   asrModel: 'whisper-1',
+  asrAutoStartServer: false, // 默认不自动启动ASR服务器
   // 语音通话配置
   voiceCallEnabled: true,
   voiceCallModel: null,
@@ -714,6 +716,9 @@ const settingsSlice = createSlice({
     setAsrModel: (state, action: PayloadAction<string>) => {
       state.asrModel = action.payload
     },
+    setAsrAutoStartServer: (state, action: PayloadAction<boolean>) => {
+      state.asrAutoStartServer = action.payload
+    },
     setVoiceCallEnabled: (state, action: PayloadAction<boolean>) => {
       state.voiceCallEnabled = action.payload
     },
@@ -851,6 +856,7 @@ export const {
   setAsrApiKey,
   setAsrApiUrl,
   setAsrModel,
+  setAsrAutoStartServer,
   setVoiceCallEnabled,
   setVoiceCallModel,
   setIsVoiceCallActive,

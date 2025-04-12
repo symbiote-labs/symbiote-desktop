@@ -8,7 +8,6 @@ import Logger from 'electron-log'
 import { registerIpc } from './ipc'
 import { configManager } from './services/ConfigManager'
 import mcpService from './services/MCPService'
-import { registerMsTTSIpcHandlers } from './services/MsTTSIpcHandler'
 import { CHERRY_STUDIO_PROTOCOL, handleProtocolUrl, registerProtocolClient } from './services/ProtocolClient'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
@@ -49,8 +48,8 @@ if (!app.requestSingleInstanceLock()) {
 
     registerIpc(mainWindow, app)
 
-    // 注册MsTTS IPC处理程序
-    registerMsTTSIpcHandlers()
+    // 注意: MsTTS IPC处理程序已在ipc.ts中注册
+    // 不需要再次调用registerMsTTSIpcHandlers()
 
     replaceDevtoolsFont(mainWindow)
 

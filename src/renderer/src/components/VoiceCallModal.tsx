@@ -30,10 +30,11 @@ const VoiceCallModal: React.FC<Props> = ({ visible, onClose }) => {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleClose = () => {
+  // 使用useCallback包裹handleClose函数，避免useEffect依赖项变化
+  const handleClose = React.useCallback(() => {
     VoiceCallService.endCall()
     onClose()
-  }
+  }, [onClose])
 
   useEffect(() => {
     const startVoiceCall = async () => {
