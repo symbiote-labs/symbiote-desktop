@@ -19,5 +19,11 @@ export interface TTSServiceInterface {
    * @param onError 错误回调
    * @returns 返回请求ID
    */
-  synthesizeStream?(text: string, onStart: () => void, onData: (audioChunk: AudioBuffer) => void, onEnd: () => void, onError: (error: Error) => void): Promise<string>
+  synthesizeStream?(
+    text: string,
+    onStart: () => void,
+    onData: (audioChunk: AudioBuffer) => void,
+    onEnd: () => void,
+    onError: (error: Error) => void
+  ): Promise<string>
 }
