@@ -48,7 +48,7 @@ const SettingsPage: FC = () => {
     <Container>
       <Navbar>
         <NavbarCenter style={{ borderRight: 'none' }}>{t('settings.title')}</NavbarCenter>
-        {pathname === '/settings/mcp' && <McpSettingsNavbar />}
+        {pathname.includes('/settings/mcp') && <McpSettingsNavbar />}
       </Navbar>
       <ContentContainer id="content-container">
         <SettingMenus>
@@ -142,7 +142,7 @@ const SettingsPage: FC = () => {
             <Route path="provider" element={<ProvidersList />} />
             <Route path="model" element={<ModelSettings />} />
             <Route path="web-search" element={<WebSearchSettings />} />
-            <Route path="mcp" element={<MCPSettings />} />
+            <Route path="mcp/*" element={<MCPSettings />} />
             <Route path="general/*" element={<GeneralSettings />} />
             <Route path="display" element={<DisplaySettings />} />
             {showMiniAppSettings && <Route path="miniapps" element={<MiniAppSettings />} />}
