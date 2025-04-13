@@ -9,7 +9,7 @@ import {
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { analyzeAndAddShortMemories, useMemoryService } from '@renderer/services/MemoryService'
-import { useAppDispatch, useAppSelector } from '@renderer/store'
+import store, { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
   addMemory,
   clearMemories,
@@ -41,6 +41,7 @@ import MemoryDeduplicationPanel from './MemoryDeduplicationPanel'
 import MemoryListManager from './MemoryListManager'
 import MemoryMindMap from './MemoryMindMap'
 import PriorityManagementSettings from './PriorityManagementSettings'
+import ContextualRecommendationSettings from './ContextualRecommendationSettings'
 
 const MemorySettings: FC = () => {
   const { t } = useTranslation()
@@ -255,13 +256,49 @@ const MemorySettings: FC = () => {
   }
 
   // 处理选择长期记忆分析模型
-  const handleSelectModel = (modelId: string) => {
+  const handleSelectModel = async (modelId: string) => {
     dispatch(setAnalyzeModel(modelId))
+    console.log('[Memory Settings] Analyze model set:', modelId)
+
+    // 手动保存到JSON文件
+    try {
+      const state = store.getState().memory
+      await window.api.memory.saveData({
+        analyzeModel: modelId,
+        shortMemoryAnalyzeModel: state.shortMemoryAnalyzeModel,
+        vectorizeModel: state.vectorizeModel,
+        // 确保其他必要的数据也被保存
+        memoryLists: state.memoryLists || [],
+        memories: state.memories || [],
+        shortMemories: state.shortMemories || []
+      })
+      console.log('[Memory Settings] Analyze model saved to file successfully:', modelId)
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save analyze model to file:', error)
+    }
   }
 
   // 处理选择短期记忆分析模型
-  const handleSelectShortMemoryModel = (modelId: string) => {
+  const handleSelectShortMemoryModel = async (modelId: string) => {
     dispatch(setShortMemoryAnalyzeModel(modelId))
+    console.log('[Memory Settings] Short memory analyze model set:', modelId)
+
+    // 手动保存到JSON文件
+    try {
+      const state = store.getState().memory
+      await window.api.memory.saveData({
+        analyzeModel: state.analyzeModel,
+        shortMemoryAnalyzeModel: modelId,
+        vectorizeModel: state.vectorizeModel,
+        // 确保其他必要的数据也被保存
+        memoryLists: state.memoryLists || [],
+        memories: state.memories || [],
+        shortMemories: state.shortMemories || []
+      })
+      console.log('[Memory Settings] Short memory analyze model saved to file successfully:', modelId)
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save short memory analyze model to file:', error)
+    }
   }
 
   // 手动触发分析
@@ -571,6 +608,8 @@ const MemorySettings: FC = () => {
               children: (
                 <TabPaneSettingGroup theme={theme}>
                   <PriorityManagementSettings />
+                  <SettingDivider />
+                  <ContextualRecommendationSettings />
                 </TabPaneSettingGroup>
               )
             },

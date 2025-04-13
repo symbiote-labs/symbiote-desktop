@@ -76,6 +76,14 @@ export interface UserInterest {
   lastUpdated: string // 上次更新时间
 }
 
+// 记忆推荐结果接口
+export interface MemoryRecommendation {
+  memoryId: string
+  relevanceScore: number
+  source: 'long-term' | 'short-term'
+  matchReason?: string
+}
+
 export interface MemoryState {
   memoryLists: MemoryList[] // 记忆列表
   memories: Memory[] // 所有记忆项
@@ -110,6 +118,14 @@ export interface MemoryState {
   freshnessEnabled: boolean // 是否启用记忆鲜度评估
   decayRate: number // 记忆衰减速率（0-1）
   lastPriorityUpdate: number // 上次优先级更新时间
+
+  // 上下文感知记忆推荐相关
+  contextualRecommendationEnabled: boolean // 是否启用上下文感知记忆推荐
+  autoRecommendMemories: boolean // 是否自动推荐记忆
+  recommendationThreshold: number // 推荐阈值（0-1）
+  currentRecommendations: MemoryRecommendation[] // 当前的记忆推荐
+  isRecommending: boolean // 是否正在推荐记忆
+  lastRecommendTime: number | null // 上次推荐时间
 }
 
 // 创建默认记忆列表
@@ -167,7 +183,15 @@ const initialState: MemoryState = {
   decayEnabled: true, // 默认启用记忆衰减功能
   freshnessEnabled: true, // 默认启用记忆鲜度评估
   decayRate: 0.05, // 默认衰减速率，每天减少5%
-  lastPriorityUpdate: Date.now() // 初始化为当前时间
+  lastPriorityUpdate: Date.now(), // 初始化为当前时间
+
+  // 上下文感知记忆推荐相关
+  contextualRecommendationEnabled: true, // 默认启用上下文感知记忆推荐
+  autoRecommendMemories: true, // 默认自动推荐记忆
+  recommendationThreshold: 0.7, // 默认推荐阈值
+  currentRecommendations: [], // 初始化空的推荐列表
+  isRecommending: false, // 初始化为非推荐状态
+  lastRecommendTime: null // 初始化为空
 }
 
 const memorySlice = createSlice({
@@ -685,6 +709,37 @@ const memorySlice = createSlice({
           memory.lastAccessedAt = now
         }
       }
+    },
+
+    // 设置上下文感知记忆推荐是否启用
+    setContextualRecommendationEnabled: (state, action: PayloadAction<boolean>) => {
+      state.contextualRecommendationEnabled = action.payload
+    },
+
+    // 设置是否自动推荐记忆
+    setAutoRecommendMemories: (state, action: PayloadAction<boolean>) => {
+      state.autoRecommendMemories = action.payload
+    },
+
+    // 设置推荐阈值
+    setRecommendationThreshold: (state, action: PayloadAction<number>) => {
+      state.recommendationThreshold = action.payload
+    },
+
+    // 更新当前的记忆推荐
+    updateCurrentRecommendations: (state, action: PayloadAction<MemoryRecommendation[]>) => {
+      state.currentRecommendations = action.payload
+      state.lastRecommendTime = Date.now()
+    },
+
+    // 设置是否正在推荐记忆
+    setRecommending: (state, action: PayloadAction<boolean>) => {
+      state.isRecommending = action.payload
+    },
+
+    // 清除当前的记忆推荐
+    clearCurrentRecommendations: (state) => {
+      state.currentRecommendations = []
     }
   },
   extraReducers: (builder) => {
@@ -695,6 +750,23 @@ const memorySlice = createSlice({
           state.memoryLists = action.payload.memoryLists || state.memoryLists
           state.memories = action.payload.memories || state.memories
           state.shortMemories = action.payload.shortMemories || state.shortMemories
+
+          // 更新模型选择
+          if (action.payload.analyzeModel) {
+            state.analyzeModel = action.payload.analyzeModel
+            console.log('[Memory Reducer] Loaded analyze model:', action.payload.analyzeModel)
+          }
+
+          if (action.payload.shortMemoryAnalyzeModel) {
+            state.shortMemoryAnalyzeModel = action.payload.shortMemoryAnalyzeModel
+            console.log('[Memory Reducer] Loaded short memory analyze model:', action.payload.shortMemoryAnalyzeModel)
+          }
+
+          if (action.payload.vectorizeModel) {
+            state.vectorizeModel = action.payload.vectorizeModel
+            console.log('[Memory Reducer] Loaded vectorize model:', action.payload.vectorizeModel)
+          }
+
           log.info('Memory data loaded into state')
         }
       })
@@ -747,7 +819,15 @@ export const {
   setDecayRate,
   updateMemoryPriorities,
   updateMemoryFreshness,
-  accessMemory
+  accessMemory,
+
+  // 上下文感知记忆推荐相关的action
+  setContextualRecommendationEnabled,
+  setAutoRecommendMemories,
+  setRecommendationThreshold,
+  updateCurrentRecommendations,
+  setRecommending,
+  clearCurrentRecommendations
 } = memorySlice.actions
 
 // 加载记忆数据的异步 thunk
