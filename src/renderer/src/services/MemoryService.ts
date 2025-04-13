@@ -5,8 +5,72 @@ import { fetchGenerate } from '@renderer/services/ApiService' // Import fetchGen
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 // Removed duplicate import: import store from '@renderer/store';
 import store from '@renderer/store' // Import store
-import { addMemory, addShortMemory, setAnalyzing } from '@renderer/store/memory'
+import {
+  addAnalysisLatency,
+  addMemory,
+  addShortMemory,
+  setAnalyzing,
+  updateAnalysisStats,
+  updatePerformanceMetrics,
+  updateUserInterest,
+  updateMemoryPriorities,
+  accessMemory,
+  Memory
+} from '@renderer/store/memory'
 import { useCallback, useEffect, useRef } from 'react' // Add useRef back
+
+// 计算对话复杂度，用于调整分析深度
+const calculateConversationComplexity = (conversation: string): 'low' | 'medium' | 'high' => {
+  const wordCount = conversation.split(/\s+/).length
+  const sentenceCount = conversation.split(/[.!?]+/).length
+  const avgSentenceLength = wordCount / (sentenceCount || 1)
+
+  // 简单的复杂度评估算法
+  if (wordCount < 100 || avgSentenceLength < 5) {
+    return 'low'
+  } else if (wordCount > 500 || avgSentenceLength > 15) {
+    return 'high'
+  } else {
+    return 'medium'
+  }
+}
+
+// 根据分析深度调整提示词
+const adjustPromptForDepth = (basePrompt: string, depth: 'low' | 'medium' | 'high'): string => {
+  switch (depth) {
+    case 'low':
+      // 简化提示词，减少分析要求
+      return basePrompt
+        .replace(/\u8be6\u7ec6\u5206\u6790/g, '\u7b80\u8981\u5206\u6790')
+        .replace(/\u63d0\u53d6\u51fa\u91cd\u8981\u7684/g, '\u63d0\u53d6\u51fa\u6700\u91cd\u8981\u7684')
+    case 'high':
+      // 增强提示词，要求更深入的分析
+      return (
+        basePrompt +
+        '\n\n\u8bf7\u8fdb\u884c\u66f4\u6df1\u5165\u7684\u5206\u6790\uff0c\u8003\u8651\u9690\u542b\u7684\u7528\u6237\u9700\u6c42\u548c\u504f\u597d\uff0c\u8bc6\u522b\u6f5c\u5728\u7684\u5173\u8054\u4fe1\u606f\u3002'
+      )
+    default:
+      return basePrompt
+  }
+}
+
+// 提取用户关注点
+const extractUserInterests = (conversation: string): string[] => {
+  // 简单实现：提取对话中的关键词或主题
+  const topics = new Set<string>()
+
+  // 简单的关键词提取，匹配4个或更多字符的单词
+  const keywords = conversation.match(/\b\w{4,}\b/g) || []
+  const commonWords = ['this', 'that', 'these', 'those', 'with', 'from', 'have', 'what', 'when', 'where', 'which']
+
+  keywords.forEach((word) => {
+    if (!commonWords.includes(word.toLowerCase())) {
+      topics.add(word.toLowerCase())
+    }
+  })
+
+  return Array.from(topics)
+}
 
 // 分析对话内容并提取重要信息
 const analyzeConversation = async (
@@ -204,13 +268,26 @@ export const useMemoryService = () => {
       }
 
       try {
+        // 性能监控：记录开始时间
+        const startTime = performance.now()
+
         dispatch(setAnalyzing(true))
         console.log('[Memory Analysis] Starting analysis...')
         console.log(`[Memory Analysis] Analyzing topic: ${targetTopicId}`)
         console.log('[Memory Analysis] Conversation length:', newConversation.length)
 
+        // 自适应分析：根据对话复杂度调整分析深度
+        const conversationComplexity = calculateConversationComplexity(newConversation)
+        let analysisDepth = memoryState.analysisDepth || 'medium'
+
+        // 如果启用了自适应分析，根据复杂度调整深度
+        if (memoryState.adaptiveAnalysisEnabled) {
+          analysisDepth = conversationComplexity
+          console.log(`[Memory Analysis] Adjusted analysis depth to ${analysisDepth} based on conversation complexity`)
+        }
+
         // 构建长期记忆分析提示词，包含已有记忆和新对话
-        const prompt = `
+        const basePrompt = `
 请分析以下对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
 
 将每条信息分类并按以下格式返回：
@@ -236,12 +313,75 @@ ${existingMemoriesContent}
 ${newConversation}
 `
 
+        // 根据分析深度调整提示词
+        const adjustedPrompt = adjustPromptForDepth(basePrompt, analysisDepth)
+
         // 调用分析函数，传递自定义提示词
-        const memories = await analyzeConversation(newConversation, memoryState.analyzeModel!, prompt)
+        const memories = await analyzeConversation(newConversation, memoryState.analyzeModel!, adjustedPrompt)
+
+        // 用户关注点学习
+        if (memoryState.interestTrackingEnabled) {
+          const newTopics = extractUserInterests(newConversation)
+          if (newTopics.length > 0) {
+            console.log(`[Memory Analysis] Extracted user interests: ${newTopics.join(', ')}`)
+
+            // 更新用户关注点
+            const now = new Date().toISOString()
+            const updatedInterests = [...(memoryState.userInterests || [])]
+
+            // 增加新发现的关注点权重
+            newTopics.forEach((topic) => {
+              const existingIndex = updatedInterests.findIndex((i) => i.topic === topic)
+              if (existingIndex >= 0) {
+                // 已存在的关注点，增加权重
+                const updatedInterest = {
+                  ...updatedInterests[existingIndex],
+                  weight: Math.min(1, updatedInterests[existingIndex].weight + 0.1),
+                  lastUpdated: now
+                }
+                store.dispatch(updateUserInterest(updatedInterest))
+              } else {
+                // 新的关注点
+                const newInterest = {
+                  topic,
+                  weight: 0.5, // 初始权重
+                  lastUpdated: now
+                }
+                store.dispatch(updateUserInterest(newInterest))
+              }
+            })
+          }
+        }
         console.log('[Memory Analysis] Analysis complete. Memories extracted:', memories)
 
         // 添加提取的记忆
         if (memories && memories.length > 0) {
+          // 性能监控：记录分析时间
+          const endTime = performance.now()
+          const analysisTime = endTime - startTime
+
+          // 更新分析统计数据
+          store.dispatch(
+            updateAnalysisStats({
+              totalAnalyses: (memoryState.analysisStats?.totalAnalyses || 0) + 1,
+              successfulAnalyses: (memoryState.analysisStats?.successfulAnalyses || 0) + 1,
+              newMemoriesGenerated: (memoryState.analysisStats?.newMemoriesGenerated || 0) + memories.length,
+              averageAnalysisTime: memoryState.analysisStats?.totalAnalyses
+                ? ((memoryState.analysisStats.averageAnalysisTime || 0) *
+                    (memoryState.analysisStats.totalAnalyses || 0) +
+                    analysisTime) /
+                  ((memoryState.analysisStats.totalAnalyses || 0) + 1)
+                : analysisTime,
+              lastAnalysisTime: Date.now()
+            })
+          )
+
+          // 性能监控：记录分析延迟
+          try {
+            store.dispatch(addAnalysisLatency(analysisTime))
+          } catch (error) {
+            console.warn('[Memory Analysis] Failed to add analysis latency:', error)
+          }
           // 智能去重：使用AI模型检查语义相似的记忆
           const existingMemories = store.getState().memory?.memories || []
 
@@ -280,8 +420,64 @@ ${newConversation}
           }
 
           console.log(`[Memory Analysis] Processed ${memories.length} potential memories, added ${newMemories.length}.`)
+
+          // 自适应分析：根据分析结果调整分析频率
+          if (memoryState.adaptiveAnalysisEnabled) {
+            // 如果分析成功率低，增加分析频率
+            const successRate =
+              (memoryState.analysisStats?.successfulAnalyses || 0) /
+              Math.max(1, memoryState.analysisStats?.totalAnalyses || 1)
+            let newFrequency = memoryState.analysisFrequency || 5
+
+            if (successRate < 0.3 && newFrequency > 3) {
+              // 成功率低，减少分析频率（增加消息数阈值）
+              newFrequency += 1
+              console.log(
+                `[Memory Analysis] Low success rate (${successRate.toFixed(2)}), increasing message threshold to ${newFrequency}`
+              )
+            } else if (successRate > 0.7 && newFrequency > 2) {
+              // 成功率高，增加分析频率（减少消息数阈值）
+              newFrequency -= 1
+              console.log(
+                `[Memory Analysis] High success rate (${successRate.toFixed(2)}), decreasing message threshold to ${newFrequency}`
+              )
+            }
+          }
         } else {
           console.log('[Memory Analysis] No new memories extracted.')
+
+          // 更新分析统计数据（分析失败）
+          const endTime = performance.now()
+          const analysisTime = endTime - startTime
+
+          store.dispatch(
+            updateAnalysisStats({
+              totalAnalyses: (memoryState.analysisStats?.totalAnalyses || 0) + 1,
+              lastAnalysisTime: Date.now()
+            })
+          )
+
+          // 性能监控：记录分析延迟
+          try {
+            store.dispatch(addAnalysisLatency(analysisTime))
+          } catch (error) {
+            console.warn('[Memory Analysis] Failed to add analysis latency:', error)
+          }
+        }
+
+        // 性能监控：更新性能指标
+        if (memoryState.monitoringEnabled) {
+          try {
+            store.dispatch(
+              updatePerformanceMetrics({
+                memoryCount: store.getState().memory?.memories.length || 0,
+                shortMemoryCount: store.getState().memory?.shortMemories.length || 0,
+                lastPerformanceCheck: Date.now()
+              })
+            )
+          } catch (error) {
+            console.warn('[Memory Analysis] Failed to update performance metrics:', error)
+          }
         }
       } catch (error) {
         console.error('Failed to analyze and add memories:', error)
@@ -302,7 +498,37 @@ ${newConversation}
     analyzeAndAddMemoriesRef.current = analyzeAndAddMemories
   }, [analyzeAndAddMemories])
 
+
+
+  // 记录记忆访问
+  const recordMemoryAccess = useCallback((memoryId: string, isShortMemory: boolean = false) => {
+    store.dispatch(accessMemory({ id: memoryId, isShortMemory }))
+  }, [])
+
   // Effect 来设置/清除定时器，只依赖于启动条件
+  useEffect(() => {
+    // 定期更新记忆优先级
+    const priorityUpdateInterval = setInterval(() => {
+      const memoryState = store.getState().memory
+      if (!memoryState?.priorityManagementEnabled) return
+
+      // 检查上次更新时间，避免频繁更新
+      const now = Date.now()
+      const lastUpdate = memoryState.lastPriorityUpdate || 0
+      const updateInterval = 30 * 60 * 1000 // 30分钟更新一次
+
+      if (now - lastUpdate < updateInterval) return
+
+      console.log('[Memory Priority] Updating memory priorities and freshness...')
+      store.dispatch(updateMemoryPriorities())
+    }, 10 * 60 * 1000) // 每10分钟检查一次
+
+    return () => {
+      clearInterval(priorityUpdateInterval)
+    }
+  }, [])
+
+  // Effect 来设置/清除分析定时器，只依赖于启动条件
   useEffect(() => {
     if (!isActive || !autoAnalyze || !analyzeModel) {
       console.log('[Memory Analysis Timer] Conditions not met for setting up timer:', {
@@ -332,8 +558,8 @@ ${newConversation}
     // 依赖项只包含决定是否启动定时器的设置
   }, [isActive, autoAnalyze, analyzeModel])
 
-  // 返回分析函数，以便在MemoryProvider中使用
-  return { analyzeAndAddMemories }
+  // 返回分析函数和记忆访问函数，以便在其他组件中使用
+  return { analyzeAndAddMemories, recordMemoryAccess }
 }
 
 // 手动添加短记忆
@@ -547,12 +773,13 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
 
   const state = store.getState() // Use imported store
   // 确保 state.memory 存在，如果不存在则提供默认值
-  const { isActive, memories, memoryLists, shortMemoryActive, shortMemories } = state.memory || {
+  const { isActive, memories, memoryLists, shortMemoryActive, shortMemories, priorityManagementEnabled } = state.memory || {
     isActive: false,
     memories: [],
     memoryLists: [],
     shortMemoryActive: false,
-    shortMemories: []
+    shortMemories: [],
+    priorityManagementEnabled: false
   }
 
   // 获取当前话题ID
@@ -564,7 +791,8 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
     listsCount: memoryLists?.length,
     shortMemoryActive,
     shortMemoriesCount: shortMemories?.length,
-    currentTopicId
+    currentTopicId,
+    priorityManagementEnabled
   })
 
   let result = systemPrompt
@@ -573,7 +801,34 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
   // 处理短记忆
   if (shortMemoryActive && shortMemories && shortMemories.length > 0 && currentTopicId) {
     // 获取当前话题的短记忆
-    const topicShortMemories = shortMemories.filter((memory) => memory.topicId === currentTopicId)
+    let topicShortMemories = shortMemories.filter((memory) => memory.topicId === currentTopicId)
+
+    // 如果启用了智能优先级管理，根据优先级排序
+    if (priorityManagementEnabled && topicShortMemories.length > 0) {
+      // 计算每个记忆的综合分数（重要性 * 衰减因子 * 鲜度）
+      const scoredMemories = topicShortMemories.map(memory => {
+        // 记录访问
+        store.dispatch(accessMemory({ id: memory.id, isShortMemory: true }))
+
+        // 计算综合分数
+        const importance = memory.importance || 0.5
+        const decayFactor = memory.decayFactor || 1
+        const freshness = memory.freshness || 0.5
+        const score = importance * decayFactor * (freshness * 2) // 短期记忆更注重鲜度
+        return { memory, score }
+      })
+
+      // 按综合分数降序排序
+      scoredMemories.sort((a, b) => b.score - a.score)
+
+      // 提取排序后的记忆
+      topicShortMemories = scoredMemories.map(item => item.memory)
+
+      // 限制数量，避免提示词过长
+      if (topicShortMemories.length > 10) {
+        topicShortMemories = topicShortMemories.slice(0, 10)
+      }
+    }
 
     if (topicShortMemories.length > 0) {
       const shortMemoryPrompt = topicShortMemories.map((memory) => `- ${memory.content}`).join('\n')
@@ -592,7 +847,45 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
 
     if (activeListIds.length > 0) {
       // 只获取激活列表中的记忆
-      const activeMemories = memories.filter((memory) => activeListIds.includes(memory.listId))
+      let activeMemories = memories.filter((memory) => activeListIds.includes(memory.listId))
+
+      // 如果启用了智能优先级管理，根据优先级排序
+      if (priorityManagementEnabled && activeMemories.length > 0) {
+        // 计算每个记忆的综合分数
+        const scoredMemories = activeMemories.map(memory => {
+          // 记录访问
+          store.dispatch(accessMemory({ id: memory.id }))
+
+          // 计算综合分数
+          const importance = memory.importance || 0.5
+          const decayFactor = memory.decayFactor || 1
+          const freshness = memory.freshness || 0.5
+          const score = importance * decayFactor * freshness
+          return { memory, score }
+        })
+
+        // 按综合分数降序排序
+        scoredMemories.sort((a, b) => b.score - a.score)
+
+        // 限制每个列表的记忆数量
+        const maxMemoriesPerList = 5
+        const memoriesByList: Record<string, Memory[]> = {}
+
+        // 提取排序后的记忆
+        const sortedMemories = scoredMemories.map(item => item.memory)
+
+        sortedMemories.forEach(memory => {
+          if (!memoriesByList[memory.listId]) {
+            memoriesByList[memory.listId] = []
+          }
+          if (memoriesByList[memory.listId].length < maxMemoriesPerList) {
+            memoriesByList[memory.listId].push(memory)
+          }
+        })
+
+        // 重新构建活跃记忆列表
+        activeMemories = Object.values(memoriesByList).flat() as Memory[]
+      }
 
       if (activeMemories.length > 0) {
         // 按列表分组构建记忆提示词

@@ -40,6 +40,7 @@ import CollapsibleShortMemoryManager from './CollapsibleShortMemoryManager'
 import MemoryDeduplicationPanel from './MemoryDeduplicationPanel'
 import MemoryListManager from './MemoryListManager'
 import MemoryMindMap from './MemoryMindMap'
+import PriorityManagementSettings from './PriorityManagementSettings'
 
 const MemorySettings: FC = () => {
   const { t } = useTranslation()
@@ -62,19 +63,67 @@ const MemorySettings: FC = () => {
 
   // 使用 useMemo 缓存模型数组，避免不必要的重新渲染
   const models = useMemo(() => {
-    // 获取所有模型，不过滤可用性
-    return providers.flatMap((provider) => provider.models || [])
+    // 只获取已启用的提供商的模型
+    return providers
+      .filter(provider => provider.enabled) // 只保留已启用的提供商
+      .flatMap((provider) => provider.models || [])
   }, [providers])
 
   // 使用 useMemo 缓存模型选项数组，避免不必要的重新渲染
   const modelOptions = useMemo(() => {
     if (models.length > 0) {
-      return models.map((model) => ({
-        label: model.name,
-        value: model.id
+      // 按提供商分组模型
+      const modelsByProvider = models.reduce(
+        (acc, model) => {
+          const provider = providers.find((p) => p.models.some((m) => m.id === model.id))
+          const providerName = provider ? (provider.isSystem ? t(`provider.${provider.id}`) : provider.name) : ''
+
+          if (!acc[providerName]) {
+            acc[providerName] = []
+          }
+
+          // 检查是否已经存在相同的模型，避免重复
+          const isDuplicate = acc[providerName].some((m) => m.value === model.id)
+          if (!isDuplicate) {
+            acc[providerName].push({
+              label: `${model.name}`,
+              value: model.id
+            })
+          }
+
+          return acc
+        },
+        {} as Record<string, { label: string; value: string }[]>
+      )
+
+      // 转换为Select组件的options格式
+      const groupedOptions = Object.entries(modelsByProvider).map(([provider, models]) => ({
+        label: provider,
+        options: models
       }))
+
+      // 将分组选项展平为单个选项数组，以兼容现有代码
+      const flatOptions = models.reduce(
+        (acc, model) => {
+          // 检查是否已经存在相同的模型，避免重复
+          const isDuplicate = acc.some((m) => m.value === model.id)
+          if (!isDuplicate) {
+            acc.push({
+              label: model.name,
+              value: model.id
+            })
+          }
+          return acc
+        },
+        [] as { label: string; value: string }[]
+      )
+
+      return {
+        groupedOptions,
+        flatOptions
+      }
     } else {
-      return [
+      const defaultOptions = [
         // 默认模型选项
         { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' },
         { label: 'GPT-4', value: 'gpt-4' },
@@ -82,8 +131,12 @@ const MemorySettings: FC = () => {
         { label: 'Claude 3 Sonnet', value: 'claude-3-sonnet-20240229' },
         { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' }
       ]
+      return {
+        groupedOptions: [],
+        flatOptions: defaultOptions
+      }
     }
-  }, [models])
+  }, [models, providers, t])
 
   // 如果没有模型，添加一个默认模型
   useEffect(() => {
@@ -435,8 +488,10 @@ const MemorySettings: FC = () => {
                         value={shortMemoryAnalyzeModel}
                         onChange={handleSelectShortMemoryModel}
                         placeholder={t('settings.memory.selectModel') || '选择模型'}
-                        options={modelOptions}
+                        options={modelOptions.groupedOptions}
                         disabled={!isActive || !autoAnalyze} // 确保在未激活或未开启自动分析时禁用
+                        optionFilterProp="label"
+                        listHeight={300}
                       />
                     </SettingRow>
                   )}
@@ -506,6 +561,20 @@ const MemorySettings: FC = () => {
               )
             },
             {
+              key: 'priorityManagement',
+              label: (
+                <TabLabelContainer>
+                  <TabDot color="#722ed1">●</TabDot>
+                  {t('settings.memory.priorityManagement.title') || '智能优先级管理'}
+                </TabLabelContainer>
+              ),
+              children: (
+                <TabPaneSettingGroup theme={theme}>
+                  <PriorityManagementSettings />
+                </TabPaneSettingGroup>
+              )
+            },
+            {
               key: 'longMemory',
               label: (
                 <TabLabelContainer>
@@ -543,8 +612,10 @@ const MemorySettings: FC = () => {
                         value={analyzeModel}
                         onChange={handleSelectModel}
                         placeholder={t('settings.memory.selectModel') || '选择模型'}
-                        options={modelOptions}
+                        options={modelOptions.groupedOptions}
                         disabled={!isActive || !autoAnalyze}
+                        optionFilterProp="label"
+                        listHeight={300}
                       />
                     </SettingRow>
                   )}
@@ -707,11 +778,7 @@ const MemorySettings: FC = () => {
                               <List.Item.Meta
                                 title={
                                   <div>
-                                    {memory.category && (
-                                      <TagWithCursor color="blue">
-                                        {memory.category}
-                                      </TagWithCursor>
-                                    )}
+                                    {memory.category && <TagWithCursor color="blue">{memory.category}</TagWithCursor>}
                                     {memory.content}
                                   </div>
                                 }
@@ -900,7 +967,7 @@ const TabLabelContainer = styled.span`
 
 const TabDot = styled.span<{ color: string }>`
   font-size: 18px;
-  color: ${props => props.color};
+  color: ${(props) => props.color};
 `
 
 const ButtonsContainer = styled.div`

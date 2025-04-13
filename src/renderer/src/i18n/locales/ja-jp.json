@@ -1404,7 +1404,11 @@
         "noCurrentTopic": "まず会話トピックを選択してください",
         "confirmDelete": "削除の確認",
         "confirmDeleteContent": "この短期メモリーを削除しますか？",
-        "delete": "削除"
+        "delete": "削除",
+        "performanceStats": "パフォーマンス統計",
+        "totalAnalyses": "分析回数合計",
+        "successRate": "成功率",
+        "avgAnalysisTime": "平均分析時間"
       }
     },
     "translate": {

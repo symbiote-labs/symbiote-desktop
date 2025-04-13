@@ -1,17 +1,17 @@
-import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { DeleteOutlined } from '@ant-design/icons'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { addShortMemoryItem } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
 import { deleteShortMemory, setShortMemoryActive, ShortMemory } from '@renderer/store/memory' // Import ShortMemory from here
 import { Topic } from '@renderer/types' // Remove ShortMemory import from here
-import { Button, Collapse, Empty, Input, List, Modal, Switch, Tooltip, Typography } from 'antd'
+import { Button, Collapse, Empty, Input, List, Switch, Tooltip, Typography } from 'antd'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 const { Title } = Typography
-const { confirm } = Modal
+// 不再需要确认对话框
 // const { Panel } = Collapse // Panel is no longer used
 
 const HeaderContainer = styled.div`
@@ -167,16 +167,10 @@ const CollapsibleShortMemoryManager = () => {
     }
   }
 
-  // 删除短记忆
+  // 删除短记忆 - 直接删除无需确认
   const handleDeleteMemory = (id: string) => {
-    confirm({
-      title: t('settings.memory.confirmDelete'),
-      icon: <ExclamationCircleOutlined />,
-      content: t('settings.memory.confirmDeleteContent'),
-      onOk() {
-        dispatch(deleteShortMemory(id))
-      }
-    })
+    // 直接删除记忆，无需确认对话框
+    dispatch(deleteShortMemory(id))
   }
 
   return (

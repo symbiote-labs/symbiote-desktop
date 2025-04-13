@@ -1,15 +1,16 @@
-import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { Box } from '@renderer/components/Layout'
 import { TopView } from '@renderer/components/TopView'
 import { addShortMemoryItem, analyzeAndAddShortMemories } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import store from '@renderer/store'
 import { deleteShortMemory } from '@renderer/store/memory'
-import { Button, Empty, Input, List, Modal, Tooltip } from 'antd'
+import { Button, Card, Col, Empty, Input, List, Modal, Row, Statistic, Tooltip } from 'antd'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-const { confirm } = Modal
+// 不再需要确认对话框
 
 const ButtonGroup = styled.div`
   display: flex;
@@ -85,16 +86,10 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
     }
   }
 
-  // 删除短记忆
+  // 删除短记忆 - 直接删除无需确认
   const handleDeleteMemory = (id: string) => {
-    confirm({
-      title: t('settings.memory.confirmDelete'),
-      icon: <ExclamationCircleOutlined />,
-      content: t('settings.memory.confirmDeleteContent'),
-      onOk() {
-        dispatch(deleteShortMemory(id))
-      }
-    })
+    // 直接删除记忆，无需确认对话框
+    dispatch(deleteShortMemory(id))
   }
 
   const onClose = () => {
@@ -135,6 +130,46 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
             {t('settings.memory.analyzeConversation') || '分析对话'}
           </Button>
         </ButtonGroup>
+      </Box>
+
+      {/* 性能监控统计信息 */}
+      <Box mb={16}>
+        <Card
+          size="small"
+          title={t('settings.memory.performanceStats') || '系统性能统计'}
+          extra={<InfoCircleOutlined />}>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Statistic
+                title={t('settings.memory.totalAnalyses') || '总分析次数'}
+                value={store.getState().memory?.analysisStats?.totalAnalyses || 0}
+                precision={0}
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title={t('settings.memory.successRate') || '成功率'}
+                value={
+                  store.getState().memory?.analysisStats?.totalAnalyses
+                    ? ((store.getState().memory?.analysisStats?.successfulAnalyses || 0) /
+                        (store.getState().memory?.analysisStats?.totalAnalyses || 1)) *
+                      100
+                    : 0
+                }
+                precision={1}
+                suffix="%"
+              />
+            </Col>
+            <Col span={8}>
+              <Statistic
+                title={t('settings.memory.avgAnalysisTime') || '平均分析时间'}
+                value={store.getState().memory?.analysisStats?.averageAnalysisTime || 0}
+                precision={0}
+                suffix="ms"
+              />
+            </Col>
+          </Row>
+        </Card>
       </Box>
 
       <MemoriesList>
