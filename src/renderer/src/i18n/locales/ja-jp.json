@@ -1459,8 +1459,8 @@
         "segmented": "分割",
         "segmented_play": "分割再生",
         "segmented_playback": "分割再生",
-        "filter.emojis": "[to be translated]:过滤表情符号",
-        "show_progress_bar": "[to be translated]:显示TTS进度条"
+        "filter.emojis": "絵文字をフィルター",
+        "show_progress_bar": "TTS進行バーを表示"
       },
       "asr": {
         "title": "音声認識",
