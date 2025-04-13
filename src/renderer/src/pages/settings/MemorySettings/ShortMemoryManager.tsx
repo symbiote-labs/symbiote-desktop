@@ -1,13 +1,13 @@
-import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { DeleteOutlined } from '@ant-design/icons'
 import { addShortMemoryItem } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { deleteShortMemory, setShortMemoryActive } from '@renderer/store/memory'
-import { Button, Empty, Input, List, Modal, Switch, Tooltip, Typography } from 'antd'
+import { Button, Empty, Input, List, Switch, Tooltip, Typography } from 'antd'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
-const { confirm } = Modal
+// 不再需要确认对话框
 
 const ShortMemoryManager = () => {
   const { t } = useTranslation()
@@ -40,16 +40,10 @@ const ShortMemoryManager = () => {
     }
   }
 
-  // 删除短记忆
+  // 删除短记忆 - 直接删除无需确认
   const handleDeleteMemory = (id: string) => {
-    confirm({
-      title: t('settings.memory.confirmDelete'),
-      icon: <ExclamationCircleOutlined />,
-      content: t('settings.memory.confirmDeleteContent'),
-      onOk() {
-        dispatch(deleteShortMemory(id))
-      }
-    })
+    // 直接删除记忆，无需确认对话框
+    dispatch(deleteShortMemory(id))
   }
 
   return (

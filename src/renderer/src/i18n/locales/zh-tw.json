@@ -1404,7 +1404,11 @@
         "noCurrentTopic": "請先選擇一個對話話題",
         "confirmDelete": "確認刪除",
         "confirmDeleteContent": "確定要刪除這條短期記憶嗎？",
-        "delete": "刪除"
+        "delete": "刪除",
+        "performanceStats": "性能統計",
+        "totalAnalyses": "總分析次數",
+        "successRate": "成功率",
+        "avgAnalysisTime": "平均分析時間"
       }
     },
     "translate": {

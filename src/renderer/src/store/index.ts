@@ -10,7 +10,7 @@ import copilot from './copilot'
 import knowledge from './knowledge'
 import llm from './llm'
 import mcp from './mcp'
-import memory from './memory'
+import memory, { memoryPersistenceMiddleware } from './memory'
 import messagesReducer from './messages'
 import migrate from './migrate'
 import minapps from './minapps'
@@ -45,7 +45,7 @@ const persistedReducer = persistReducer(
     key: 'cherry-studio',
     storage,
     version: 95,
-    blacklist: ['runtime', 'messages'],
+    blacklist: ['runtime', 'messages', 'memory'],
     migrate
   },
   rootReducer
@@ -59,7 +59,7 @@ const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER]
       }
-    })
+    }).concat(memoryPersistenceMiddleware)
   },
   devTools: true
 })

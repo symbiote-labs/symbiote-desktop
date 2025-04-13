@@ -1055,6 +1055,10 @@
         "shortMemoryAnalysisNoNewContent": "No new important information found or all information already exists",
         "shortMemoryAnalysisError": "Analysis Failed",
         "shortMemoryAnalysisErrorContent": "Error occurred while analyzing conversation content",
+        "performanceStats": "Performance Statistics",
+        "totalAnalyses": "Total Analyses",
+        "successRate": "Success Rate",
+        "avgAnalysisTime": "Average Analysis Time",
         "deduplication": {
           "title": "Memory Deduplication",
           "description": "Analyze similar memories in your memory library and provide intelligent merging suggestions.",

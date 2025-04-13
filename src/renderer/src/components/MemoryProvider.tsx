@@ -1,6 +1,7 @@
 import { useMemoryService } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { clearShortMemories } from '@renderer/store/memory'
+import store from '@renderer/store'
+import { clearShortMemories, loadMemoryData } from '@renderer/store/memory'
 import { FC, ReactNode, useEffect, useRef } from 'react'
 
 interface MemoryProviderProps {
@@ -37,18 +38,40 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
   // 添加一个 ref 来存储上次分析时的消息数量
   const lastAnalyzedCountRef = useRef(0)
 
+  // 在组件挂载时加载记忆数据
+  useEffect(() => {
+    console.log('[MemoryProvider] Loading memory data from file')
+    dispatch(loadMemoryData())
+  }, [])
+
   // 当对话更新时，触发记忆分析
   useEffect(() => {
     if (isActive && autoAnalyze && analyzeModel && messages.length > 0) {
+      // 获取当前的分析频率
+      const memoryState = store.getState().memory || {}
+      const analysisFrequency = memoryState.analysisFrequency || 5
+      const adaptiveAnalysisEnabled = memoryState.adaptiveAnalysisEnabled || false
+
       // 检查是否有新消息需要分析
       const newMessagesCount = messages.length - lastAnalyzedCountRef.current
 
-      // 当有 5 条或更多新消息，或者消息数量是 5 的倍数且从未分析过时触发分析
-      if (newMessagesCount >= 5 || (messages.length % 5 === 0 && lastAnalyzedCountRef.current === 0)) {
-        console.log(`[Memory Analysis] Triggering analysis with ${newMessagesCount} new messages`)
+      // 使用自适应分析频率
+      if (
+        newMessagesCount >= analysisFrequency ||
+        (messages.length % analysisFrequency === 0 && lastAnalyzedCountRef.current === 0)
+      ) {
+        console.log(
+          `[Memory Analysis] Triggering analysis with ${newMessagesCount} new messages (frequency: ${analysisFrequency})`
+        )
+
         // 将当前话题ID传递给分析函数
         analyzeAndAddMemories(currentTopic)
         lastAnalyzedCountRef.current = messages.length
+
+        // 性能监控：记录当前分析触发时的消息数量
+        if (adaptiveAnalysisEnabled) {
+          console.log(`[Memory Analysis] Adaptive analysis enabled, current frequency: ${analysisFrequency}`)
+        }
       }
     }
   }, [isActive, autoAnalyze, analyzeModel, messages.length, analyzeAndAddMemories, currentTopic])
