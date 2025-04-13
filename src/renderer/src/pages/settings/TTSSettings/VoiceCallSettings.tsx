@@ -66,7 +66,6 @@ const VoiceCallSettings: FC = () => {
             </AntTooltip>
           </Space>
         </Form.Item>
-
         {/* 模型选择 */}
         <Form.Item label={t('settings.voice_call.model')} style={{ marginBottom: 16 }}>
           <Space>
@@ -75,7 +74,11 @@ const VoiceCallSettings: FC = () => {
               disabled={!voiceCallEnabled}
               icon={
                 voiceCallModel ? (
-                  <ModelIcon src={getModelLogo(voiceCallModel.id)} alt="Model logo" />
+                  <ModelIcon
+                    src={getModelLogo(voiceCallModel.id)}
+                    alt="Model logo"
+                    style={{ width: 20, height: 20, borderRadius: 10 }}
+                  />
                 ) : (
                   <PhoneOutlined style={{ marginRight: 8 }} />
                 )
@@ -88,7 +91,6 @@ const VoiceCallSettings: FC = () => {
           </Space>
           <InfoText>{t('settings.voice_call.model.info')}</InfoText>
         </Form.Item>
-
         {/* 提示词设置 */}
         <Form.Item label={t('settings.voice_call.prompt.label')} style={{ marginBottom: 16 }}>
           <Input.TextArea
@@ -98,6 +100,7 @@ const VoiceCallSettings: FC = () => {
             rows={8}
             placeholder={t('settings.voice_call.prompt.placeholder')}
           />
+          <InfoText>{t('settings.voice_call.prompt.info')}</InfoText>
           <Space style={{ marginTop: 8 }}>
             <Button type="primary" onClick={handleSavePrompt} disabled={!voiceCallEnabled}>
               {t('settings.voice_call.prompt.save')}
@@ -106,25 +109,6 @@ const VoiceCallSettings: FC = () => {
               {t('settings.voice_call.prompt.reset')}
             </Button>
           </Space>
-          <InfoText>{t('settings.voice_call.prompt.info')}</InfoText>
-        </Form.Item>
-
-        {/* ASR 和 TTS 设置提示 */}
-        <Form.Item>
-          <Alert type="info">{t('settings.voice_call.asr_tts_info')}</Alert>
-        </Form.Item>
-
-        {/* 测试按钮 */}
-        <Form.Item>
-          <Button
-            type="primary"
-            icon={<PhoneOutlined />}
-            disabled={!voiceCallEnabled}
-            onClick={() =>
-              window.message.info({ content: t('settings.voice_call.test_info'), key: 'voice-call-test' })
-            }>
-            {t('settings.voice_call.test')}
-          </Button>
         </Form.Item>
       </Form>
     </Container>
@@ -142,39 +126,40 @@ const InfoText = styled.div`
 `
 
 const ModelIcon = styled.img`
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  margin-top: 4px;
 `
 
-const Alert = styled.div<{ type: 'info' | 'warning' | 'error' | 'success' }>`
-  padding: 8px 12px;
-  border-radius: 4px;
-  background-color: ${(props) =>
-    props.type === 'info'
-      ? 'var(--color-info-bg)'
-      : props.type === 'warning'
-        ? 'var(--color-warning-bg)'
-        : props.type === 'error'
-          ? 'var(--color-error-bg)'
-          : 'var(--color-success-bg)'};
-  border: 1px solid
-    ${(props) =>
-      props.type === 'info'
-        ? 'var(--color-info-border)'
-        : props.type === 'warning'
-          ? 'var(--color-warning-border)'
-          : props.type === 'error'
-            ? 'var(--color-error-border)'
-            : 'var(--color-success-border)'};
-  color: ${(props) =>
-    props.type === 'info'
-      ? 'var(--color-info-text)'
-      : props.type === 'warning'
-        ? 'var(--color-warning-text)'
-        : props.type === 'error'
-          ? 'var(--color-error-text)'
-          : 'var(--color-success-text)'};
-`
+// const Alert = styled.div<{ type: 'info' | 'warning' | 'error' | 'success' }>`
+//   padding: 8px 12px;
+//   border-radius: 4px;
+//   background-color: ${(props) =>
+//     props.type === 'info'
+//       ? 'var(--color-info-bg)'
+//       : props.type === 'warning'
+//         ? 'var(--color-warning-bg)'
+//         : props.type === 'error'
+//           ? 'var(--color-error-bg)'
+//           : 'var(--color-success-bg)'};
+//   border: 1px solid
+//     ${(props) =>
+//       props.type === 'info'
+//         ? 'var(--color-info-border)'
+//         : props.type === 'warning'
+//           ? 'var(--color-warning-border)'
+//           : props.type === 'error'
+//             ? 'var(--color-error-border)'
+//             : 'var(--color-success-border)'};
+//   color: ${(props) =>
+//     props.type === 'info'
+//       ? 'var(--color-info-text)'
+//       : props.type === 'warning'
+//         ? 'var(--color-warning-text)'
+//         : props.type === 'error'
+//           ? 'var(--color-error-text)'
+//           : 'var(--color-success-text)'};
+// `
 
 export default VoiceCallSettings

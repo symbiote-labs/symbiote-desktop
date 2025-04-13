@@ -1043,7 +1043,11 @@ const TTSSettings: FC = () => {
       />
       <SettingHelpText style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
         <span>{t('settings.voice.help')}</span>
-        <a href="https://platform.openai.com/docs/guides/speech-to-text" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://platform.openai.com/docs/guides/speech-to-text"
+          className="link"
+          target="_blank"
+          rel="noopener noreferrer">
           {t('settings.voice.learn_more')}
         </a>
       </SettingHelpText>

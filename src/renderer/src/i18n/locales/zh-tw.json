@@ -1458,7 +1458,9 @@
         "stopped": "[to be translated]:已停止语音播放",
         "segmented": "[to be translated]:分段",
         "segmented_play": "[to be translated]:分段播放",
-        "segmented_playback": "[to be translated]:分段播放"
+        "segmented_playback": "[to be translated]:分段播放",
+        "filter.emojis": "[to be translated]:过滤表情符号",
+        "show_progress_bar": "[to be translated]:显示TTS进度条"
       },
       "voice": {
         "title": "[to be translated]:语音功能",
@@ -1530,12 +1532,12 @@
           "reset": "重置",
           "saved": "提示詞已保存",
           "reset_done": "提示詞已重置",
-          "info": "此提示詞將指導AI在語音通話模式下的回覆方式",
-          "language_info": "點擊重置按鈕可獲取當前語言的預設提示詞"
+          "info": "此提示詞將指導AI在語音通話模式下的回覆方式"
         },
         "asr_tts_info": "語音通話使用上面的語音識別(ASR)和語音合成(TTS)設置",
         "test": "測試通話",
-        "test_info": "請使用輸入框右側的語音通話按鈕進行測試"
+        "test_info": "請使用輸入框右側的語音通話按鈕進行測試",
+        "welcome_message": "[to be translated]:您好，我是您的AI助手，请长按说话按钮进行对话。"
       }
     },
     "translate": {
