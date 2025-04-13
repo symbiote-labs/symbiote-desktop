@@ -41,8 +41,19 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
   // 在组件挂载时加载记忆数据
   useEffect(() => {
     console.log('[MemoryProvider] Loading memory data from file')
+    // 使用Redux Thunk加载记忆数据
     dispatch(loadMemoryData())
-  }, [])
+      .then((result) => {
+        if (result.payload) {
+          console.log('[MemoryProvider] Memory data loaded successfully via Redux Thunk')
+        } else {
+          console.log('[MemoryProvider] No memory data loaded or loading failed')
+        }
+      })
+      .catch(error => {
+        console.error('[MemoryProvider] Error loading memory data:', error)
+      })
+  }, [dispatch])
 
   // 当对话更新时，触发记忆分析
   useEffect(() => {

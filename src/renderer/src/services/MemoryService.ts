@@ -16,9 +16,15 @@ import {
   updateMemoryPriorities,
   accessMemory,
   Memory,
-  saveMemoryData // <-- 添加 saveMemoryData
+  saveMemoryData,
+  updateCurrentRecommendations,
+  setRecommending,
+  clearCurrentRecommendations,
+  MemoryRecommendation
 } from '@renderer/store/memory'
 import { useCallback, useEffect, useRef } from 'react' // Add useRef back
+import { contextualMemoryService } from './ContextualMemoryService' // Import contextual memory service
+import { Message } from '@renderer/types' // Import Message type
 
 // 计算对话复杂度，用于调整分析深度
 const calculateConversationComplexity = (conversation: string): 'low' | 'medium' | 'high' => {
@@ -167,6 +173,162 @@ ${conversation}
 
 // This function definition is a duplicate, removing it.
 
+/**
+ * 获取上下文感知的记忆推荐
+ * @param messages - 当前对话的消息列表
+ * @param topicId - 当前对话的话题ID
+ * @param limit - 返回的最大记忆数量
+ * @returns 推荐的记忆列表，按相关性排序
+ */
+export const getContextualMemoryRecommendations = async (
+  messages: Message[],
+  topicId: string,
+  limit: number = 5
+): Promise<MemoryRecommendation[]> => {
+  try {
+    // 获取当前状态
+    const state = store.getState().memory
+
+    // 检查上下文感知记忆推荐是否启用
+    if (!state?.contextualRecommendationEnabled) {
+      console.log('[ContextualMemory] Contextual recommendation is not enabled')
+      return []
+    }
+
+    // 设置推荐状态
+    store.dispatch(setRecommending(true))
+
+    // 调用上下文感知记忆服务获取推荐
+    const recommendations = await contextualMemoryService.getContextualMemoryRecommendations(
+      messages,
+      topicId,
+      limit
+    )
+
+    // 转换为Redux状态中的推荐格式
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+      memoryId: rec.memory.id,
+      relevanceScore: rec.relevanceScore,
+      source: rec.source,
+      matchReason: rec.matchReason
+    }))
+
+    // 更新Redux状态
+    store.dispatch(updateCurrentRecommendations(memoryRecommendations))
+
+    // 重置推荐状态
+    store.dispatch(setRecommending(false))
+
+    return memoryRecommendations
+  } catch (error) {
+    console.error('[ContextualMemory] Error getting contextual memory recommendations:', error)
+    store.dispatch(setRecommending(false))
+    return []
+  }
+}
+
+/**
+ * 基于当前对话主题自动提取相关记忆
+ * @param topicId - 当前对话的话题ID
+ * @param limit - 返回的最大记忆数量
+ * @returns 与当前主题相关的记忆列表
+ */
+export const getTopicRelatedMemories = async (
+  topicId: string,
+  limit: number = 10
+): Promise<MemoryRecommendation[]> => {
+  try {
+    // 获取当前状态
+    const state = store.getState().memory
+
+    // 检查上下文感知记忆推荐是否启用
+    if (!state?.contextualRecommendationEnabled) {
+      console.log('[ContextualMemory] Contextual recommendation is not enabled')
+      return []
+    }
+
+    // 设置推荐状态
+    store.dispatch(setRecommending(true))
+
+    // 调用上下文感知记忆服务获取推荐
+    const recommendations = await contextualMemoryService.getTopicRelatedMemories(
+      topicId,
+      limit
+    )
+
+    // 转换为Redux状态中的推荐格式
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+      memoryId: rec.memory.id,
+      relevanceScore: rec.relevanceScore,
+      source: rec.source,
+      matchReason: rec.matchReason
+    }))
+
+    // 更新Redux状态
+    store.dispatch(updateCurrentRecommendations(memoryRecommendations))
+
+    // 重置推荐状态
+    store.dispatch(setRecommending(false))
+
+    return memoryRecommendations
+  } catch (error) {
+    console.error('[ContextualMemory] Error getting topic-related memories:', error)
+    store.dispatch(setRecommending(false))
+    return []
+  }
+}
+
+/**
+ * 使用AI分析当前对话上下文，提取关键信息并推荐相关记忆
+ * @param messages - 当前对话的消息列表
+ * @param limit - 返回的最大记忆数量
+ * @returns 基于AI分析的相关记忆推荐
+ */
+export const getAIEnhancedMemoryRecommendations = async (
+  messages: Message[],
+  limit: number = 5
+): Promise<MemoryRecommendation[]> => {
+  try {
+    // 获取当前状态
+    const state = store.getState().memory
+
+    // 检查上下文感知记忆推荐是否启用
+    if (!state?.contextualRecommendationEnabled) {
+      console.log('[ContextualMemory] Contextual recommendation is not enabled')
+      return []
+    }
+
+    // 设置推荐状态
+    store.dispatch(setRecommending(true))
+
+    // 调用上下文感知记忆服务获取推荐
+    const recommendations = await contextualMemoryService.getAIEnhancedMemoryRecommendations(
+      messages,
+      limit
+    )
+
+    // 转换为Redux状态中的推荐格式
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+      memoryId: rec.memory.id,
+      relevanceScore: rec.relevanceScore,
+      source: rec.source,
+      matchReason: rec.matchReason
+    }))
+
+    // 更新Redux状态
+    store.dispatch(updateCurrentRecommendations(memoryRecommendations))
+
+    // 重置推荐状态
+    store.dispatch(setRecommending(false))
+
+    return memoryRecommendations
+  } catch (error) {
+    console.error('[ContextualMemory] Error getting AI-enhanced memory recommendations:', error)
+    store.dispatch(setRecommending(false))
+    return []
+  }
+}
+
 // 记忆服务钩子 - 重构版
 export const useMemoryService = () => {
   const dispatch = useAppDispatch()
@@ -174,6 +336,8 @@ export const useMemoryService = () => {
   const isActive = useAppSelector((state) => state.memory?.isActive || false)
   const autoAnalyze = useAppSelector((state) => state.memory?.autoAnalyze || false)
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
+  const contextualRecommendationEnabled = useAppSelector((state) => state.memory?.contextualRecommendationEnabled || false)
+  const autoRecommendMemories = useAppSelector((state) => state.memory?.autoRecommendMemories || false)
 
   // 使用 useCallback 定义分析函数，但减少依赖项
   // 增加可选的 topicId 参数，允许分析指定的话题
@@ -559,8 +723,85 @@ ${newConversation}
     // 依赖项只包含决定是否启动定时器的设置
   }, [isActive, autoAnalyze, analyzeModel])
 
-  // 返回分析函数和记忆访问函数，以便在其他组件中使用
-  return { analyzeAndAddMemories, recordMemoryAccess }
+  // 获取上下文感知记忆推荐
+  const getContextualRecommendations = useCallback(
+    async (messages: Message[], topicId: string, limit: number = 5) => {
+      if (!contextualRecommendationEnabled) {
+        console.log('[ContextualMemory] Contextual recommendation is not enabled')
+        return []
+      }
+
+      return await getContextualMemoryRecommendations(messages, topicId, limit)
+    },
+    [contextualRecommendationEnabled]
+  )
+
+  // 获取主题相关记忆
+  const getTopicRecommendations = useCallback(
+    async (topicId: string, limit: number = 10) => {
+      if (!contextualRecommendationEnabled) {
+        console.log('[ContextualMemory] Contextual recommendation is not enabled')
+        return []
+      }
+
+      return await getTopicRelatedMemories(topicId, limit)
+    },
+    [contextualRecommendationEnabled]
+  )
+
+  // 获取AI增强记忆推荐
+  const getAIRecommendations = useCallback(
+    async (messages: Message[], limit: number = 5) => {
+      if (!contextualRecommendationEnabled) {
+        console.log('[ContextualMemory] Contextual recommendation is not enabled')
+        return []
+      }
+
+      return await getAIEnhancedMemoryRecommendations(messages, limit)
+    },
+    [contextualRecommendationEnabled]
+  )
+
+  // 清除当前记忆推荐
+  const clearRecommendations = useCallback(() => {
+    dispatch(clearCurrentRecommendations())
+  }, [dispatch])
+
+  // 自动记忆推荐定时器
+  useEffect(() => {
+    if (!contextualRecommendationEnabled || !autoRecommendMemories) {
+      return
+    }
+
+    console.log('[ContextualMemory] Setting up auto recommendation timer...')
+
+    // 每5分钟自动推荐一次记忆
+    const intervalId = setInterval(() => {
+      const state = store.getState()
+      const currentTopicId = state.messages.currentTopic?.id
+      const messages = currentTopicId ? state.messages.messagesByTopic?.[currentTopicId] || [] : []
+
+      if (currentTopicId && messages.length > 0) {
+        console.log('[ContextualMemory] Auto recommendation triggered')
+        getContextualRecommendations(messages, currentTopicId)
+      }
+    }, 5 * 60 * 1000) // 5分钟
+
+    return () => {
+      console.log('[ContextualMemory] Clearing auto recommendation timer')
+      clearInterval(intervalId)
+    }
+  }, [contextualRecommendationEnabled, autoRecommendMemories, getContextualRecommendations])
+
+  // 返回分析函数、记忆访问函数和记忆推荐函数，以便在其他组件中使用
+  return {
+    analyzeAndAddMemories,
+    recordMemoryAccess,
+    getContextualRecommendations,
+    getTopicRecommendations,
+    getAIRecommendations,
+    clearRecommendations
+  }
 }
 
 // 手动添加短记忆
@@ -722,7 +963,7 @@ ${newConversation}
 
     // 首先尝试匹配带有数字或短横线的列表项
     const listItemRegex = /(?:^|\n)(?:\d+\.\s*|\-\s*)(.+?)(?=\n\d+\.\s*|\n\-\s*|\n\n|$)/gs
-    let match
+    let match: RegExpExecArray | null
     while ((match = listItemRegex.exec(result)) !== null) {
       if (match[1] && match[1].trim()) {
         extractedLines.push(match[1].trim())
@@ -832,13 +1073,24 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
 
   const state = store.getState() // Use imported store
   // 确保 state.memory 存在，如果不存在则提供默认值
-  const { isActive, memories, memoryLists, shortMemoryActive, shortMemories, priorityManagementEnabled } = state.memory || {
+  const {
+    isActive,
+    memories,
+    memoryLists,
+    shortMemoryActive,
+    shortMemories,
+    priorityManagementEnabled,
+    contextualRecommendationEnabled,
+    currentRecommendations
+  } = state.memory || {
     isActive: false,
     memories: [],
     memoryLists: [],
     shortMemoryActive: false,
     shortMemories: [],
-    priorityManagementEnabled: false
+    priorityManagementEnabled: false,
+    contextualRecommendationEnabled: false,
+    currentRecommendations: []
   }
 
   // 获取当前话题ID
@@ -856,6 +1108,50 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
 
   let result = systemPrompt
   let hasContent = false
+
+  // 处理上下文感知记忆推荐
+  if (contextualRecommendationEnabled && currentRecommendations && currentRecommendations.length > 0) {
+    // 获取推荐记忆的详细信息
+    const recommendedMemories: Array<{content: string, source: string, reason: string}> = []
+
+    // 处理每个推荐记忆
+    for (const recommendation of currentRecommendations) {
+      // 根据来源查找记忆
+      let memory: any = null
+      if (recommendation.source === 'long-term') {
+        memory = memories.find(m => m.id === recommendation.memoryId)
+      } else if (recommendation.source === 'short-term') {
+        memory = shortMemories.find(m => m.id === recommendation.memoryId)
+      }
+
+      if (memory) {
+        recommendedMemories.push({
+          content: memory.content,
+          source: recommendation.source === 'long-term' ? '长期记忆' : '短期记忆',
+          reason: recommendation.matchReason || '与当前对话相关'
+        })
+
+        // 记录访问
+        store.dispatch(accessMemory({
+          id: memory.id,
+          isShortMemory: recommendation.source === 'short-term'
+        }))
+      }
+    }
+
+    if (recommendedMemories.length > 0) {
+      // 构建推荐记忆提示词
+      const recommendedMemoryPrompt = recommendedMemories
+        .map((memory, index) => `${index + 1}. ${memory.content} (来源: ${memory.source}, 原因: ${memory.reason})`)
+        .join('\n')
+
+      console.log('[Memory] Contextual memory recommendations:', recommendedMemoryPrompt)
+
+      // 添加推荐记忆到提示词
+      result = `${result}\n\n当前对话的相关记忆(按相关性排序):\n${recommendedMemoryPrompt}`
+      hasContent = true
+    }
+  }
 
   // 处理短记忆
   if (shortMemoryActive && shortMemories && shortMemories.length > 0 && currentTopicId) {
