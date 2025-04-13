@@ -755,15 +755,15 @@ export const loadMemoryData = createAsyncThunk(
   'memory/loadData',
   async () => {
     try {
-      log.info('Loading memory data from file...')
+      // log.info('Loading memory data from file...') // Removed direct log call from renderer
       const data = await window.api.memory.loadData()
-      log.info('Memory data loaded successfully')
+      // log.info('Memory data loaded successfully') // Removed direct log call from renderer
       return data
     } catch (error) {
-      log.error('Failed to load memory data:', error)
-      return null
+      console.error('Failed to load memory data:', error) // Use console.error instead of log.error
+      return null // Ensure the thunk returns null on error
     }
-  }
+  } // <-- Add missing closing brace for the async function
 )
 
 // 保存记忆数据的异步 thunk
@@ -771,34 +771,17 @@ export const saveMemoryData = createAsyncThunk(
   'memory/saveData',
   async (data: Partial<MemoryState>) => {
     try {
-      log.info('Saving memory data to file...')
+      // log.info('Saving memory data to file...') // Removed direct log call from renderer
       const result = await window.api.memory.saveData(data)
-      log.info('Memory data saved successfully')
+      // log.info('Memory data saved successfully') // Removed direct log call from renderer
       return result
     } catch (error) {
-      log.error('Failed to save memory data:', error)
+      console.error('Failed to save memory data:', error) // Use console.error instead of log.error
       return false
     }
   }
 )
 
-// 创建一个中间件来自动保存记忆数据的变化
-export const memoryPersistenceMiddleware = (store) => (next) => (action) => {
-  const result = next(action)
-
-  // 如果是记忆相关的操作，保存数据到文件
-  if (action.type.startsWith('memory/') &&
-      !action.type.includes('loadData') &&
-      !action.type.includes('saveData')) {
-    const state = store.getState().memory
-    store.dispatch(saveMemoryData({
-      memoryLists: state.memoryLists,
-      memories: state.memories,
-      shortMemories: state.shortMemories
-    }))
-  }
-
-  return result
-}
-
+// Middleware removed to prevent duplicate saves triggered by batch additions.
+// Explicit saves should be handled where needed, e.g., at the end of analysis functions.
 export default memorySlice.reducer

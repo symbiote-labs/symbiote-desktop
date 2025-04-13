@@ -10,7 +10,7 @@ import copilot from './copilot'
 import knowledge from './knowledge'
 import llm from './llm'
 import mcp from './mcp'
-import memory, { memoryPersistenceMiddleware } from './memory'
+import memory from './memory' // Removed import of memoryPersistenceMiddleware
 import messagesReducer from './messages'
 import migrate from './migrate'
 import minapps from './minapps'
@@ -59,7 +59,7 @@ const store = configureStore({
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER]
       }
-    }).concat(memoryPersistenceMiddleware)
+    }) // Removed concat of memoryPersistenceMiddleware
   },
   devTools: true
 })
