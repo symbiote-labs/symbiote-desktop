@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { nanoid } from 'nanoid'
 import log from 'electron-log'
+import store from '@renderer/store'
 
 // 记忆列表接口
 export interface MemoryList {
@@ -851,12 +852,26 @@ export const saveMemoryData = createAsyncThunk(
   'memory/saveData',
   async (data: Partial<MemoryState>) => {
     try {
-      // log.info('Saving memory data to file...') // Removed direct log call from renderer
-      const result = await window.api.memory.saveData(data)
-      // log.info('Memory data saved successfully') // Removed direct log call from renderer
+      console.log('[Memory] Saving memory data to file...', Object.keys(data))
+
+      // 确保数据完整性
+      const state = store.getState().memory
+      const completeData = {
+        ...data,
+        // 如果没有提供这些字段，则使用当前状态中的值
+        memoryLists: data.memoryLists || state.memoryLists,
+        memories: data.memories || state.memories,
+        shortMemories: data.shortMemories || state.shortMemories,
+        analyzeModel: data.analyzeModel || state.analyzeModel,
+        shortMemoryAnalyzeModel: data.shortMemoryAnalyzeModel || state.shortMemoryAnalyzeModel,
+        vectorizeModel: data.vectorizeModel || state.vectorizeModel
+      }
+
+      const result = await window.api.memory.saveData(completeData)
+      console.log('[Memory] Memory data saved successfully')
       return result
     } catch (error) {
-      console.error('Failed to save memory data:', error) // Use console.error instead of log.error
+      console.error('[Memory] Failed to save memory data:', error)
       return false
     }
   }

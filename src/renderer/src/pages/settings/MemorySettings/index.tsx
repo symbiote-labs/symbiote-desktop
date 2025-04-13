@@ -9,7 +9,7 @@ import {
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { analyzeAndAddShortMemories, useMemoryService } from '@renderer/services/MemoryService'
-import store, { useAppDispatch, useAppSelector } from '@renderer/store'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
   addMemory,
   clearMemories,
@@ -19,7 +19,8 @@ import {
   setAnalyzing,
   setAutoAnalyze,
   setMemoryActive,
-  setShortMemoryAnalyzeModel
+  setShortMemoryAnalyzeModel,
+  saveMemoryData
 } from '@renderer/store/memory'
 import { Topic } from '@renderer/types'
 import { Button, Empty, Input, List, message, Modal, Radio, Select, Switch, Tabs, Tag, Tooltip } from 'antd'
@@ -260,18 +261,9 @@ const MemorySettings: FC = () => {
     dispatch(setAnalyzeModel(modelId))
     console.log('[Memory Settings] Analyze model set:', modelId)
 
-    // 手动保存到JSON文件
+    // 使用Redux Thunk保存到JSON文件
     try {
-      const state = store.getState().memory
-      await window.api.memory.saveData({
-        analyzeModel: modelId,
-        shortMemoryAnalyzeModel: state.shortMemoryAnalyzeModel,
-        vectorizeModel: state.vectorizeModel,
-        // 确保其他必要的数据也被保存
-        memoryLists: state.memoryLists || [],
-        memories: state.memories || [],
-        shortMemories: state.shortMemories || []
-      })
+      await dispatch(saveMemoryData({ analyzeModel: modelId })).unwrap()
       console.log('[Memory Settings] Analyze model saved to file successfully:', modelId)
     } catch (error) {
       console.error('[Memory Settings] Failed to save analyze model to file:', error)
@@ -283,18 +275,9 @@ const MemorySettings: FC = () => {
     dispatch(setShortMemoryAnalyzeModel(modelId))
     console.log('[Memory Settings] Short memory analyze model set:', modelId)
 
-    // 手动保存到JSON文件
+    // 使用Redux Thunk保存到JSON文件
     try {
-      const state = store.getState().memory
-      await window.api.memory.saveData({
-        analyzeModel: state.analyzeModel,
-        shortMemoryAnalyzeModel: modelId,
-        vectorizeModel: state.vectorizeModel,
-        // 确保其他必要的数据也被保存
-        memoryLists: state.memoryLists || [],
-        memories: state.memories || [],
-        shortMemories: state.shortMemories || []
-      })
+      await dispatch(saveMemoryData({ shortMemoryAnalyzeModel: modelId })).unwrap()
       console.log('[Memory Settings] Short memory analyze model saved to file successfully:', modelId)
     } catch (error) {
       console.error('[Memory Settings] Failed to save short memory analyze model to file:', error)
