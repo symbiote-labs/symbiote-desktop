@@ -1,4 +1,4 @@
-import { SearchOutlined, SyncOutlined, TranslationOutlined } from '@ant-design/icons'
+import { SyncOutlined, TranslationOutlined } from '@ant-design/icons'
 import TTSHighlightedText from '@renderer/components/TTSHighlightedText'
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
@@ -7,6 +7,7 @@ import { getBriefInfo } from '@renderer/utils'
 import { withMessageThought } from '@renderer/utils/formats'
 import { Divider, Flex } from 'antd'
 import { clone } from 'lodash'
+import { Search } from 'lucide-react'
 import React, { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BarLoader from 'react-spinners/BarLoader'
@@ -200,7 +201,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   if (message.status === 'searching') {
     return (
       <SearchingContainer>
-        <SearchOutlined size={24} />
+        <Search size={24} />
         <SearchingText>{t('message.searching')}</SearchingText>
         <BarLoader color="#1677ff" />
       </SearchingContainer>

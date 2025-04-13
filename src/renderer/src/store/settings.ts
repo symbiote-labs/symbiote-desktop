@@ -21,6 +21,8 @@ export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
 
 export interface NutstoreSyncRuntime extends WebDAVSyncState {}
 
+export type AssistantIconType = 'model' | 'emoji' | 'none'
+
 export interface SettingsState {
   showAssistants: boolean
   showTopics: boolean
@@ -42,7 +44,7 @@ export interface SettingsState {
   fontSize: number
   topicPosition: 'left' | 'right'
   showTopicTime: boolean
-  showAssistantIcon: boolean
+  assistantIconType: AssistantIconType
   pasteLongTextAsFile: boolean
   pasteLongTextThreshold: number
   clickAssistantToShowTopic: boolean
@@ -158,6 +160,7 @@ export interface SettingsState {
   skipNextAutoTTS: boolean // 是否跳过下一次自动TTS
   // Quick Panel Triggers
   enableQuickPanelTriggers: boolean
+  enableBackspaceDeleteModel: boolean
   // Export Menu Options
   exportMenuOptions: {
     image: boolean
@@ -195,7 +198,7 @@ export const initialState: SettingsState = {
   fontSize: 14,
   topicPosition: 'left',
   showTopicTime: false,
-  showAssistantIcon: false,
+  assistantIconType: 'emoji',
   pasteLongTextAsFile: false,
   pasteLongTextThreshold: 1500,
   clickAssistantToShowTopic: true,
@@ -302,8 +305,8 @@ export const initialState: SettingsState = {
   isVoiceCallActive: false, // 语音通话窗口是否激活
   lastPlayedMessageId: null, // 最后一次播放的消息ID
   skipNextAutoTTS: false, // 是否跳过下一次自动TTS
-  // Quick Panel Triggers
-  enableQuickPanelTriggers: false,
+  enableQuickPanelTriggers: false, // Quick Panel Triggers
+  enableBackspaceDeleteModel: true,
   // Export Menu Options
   exportMenuOptions: {
     image: true,
@@ -389,8 +392,8 @@ const settingsSlice = createSlice({
     setShowTopicTime: (state, action: PayloadAction<boolean>) => {
       state.showTopicTime = action.payload
     },
-    setShowAssistantIcon: (state, action: PayloadAction<boolean>) => {
-      state.showAssistantIcon = action.payload
+    setAssistantIconType: (state, action: PayloadAction<AssistantIconType>) => {
+      state.assistantIconType = action.payload
     },
     setPasteLongTextAsFile: (state, action: PayloadAction<boolean>) => {
       state.pasteLongTextAsFile = action.payload
@@ -759,6 +762,9 @@ const settingsSlice = createSlice({
     },
     setExportMenuOptions: (state, action: PayloadAction<typeof initialState.exportMenuOptions>) => {
       state.exportMenuOptions = action.payload
+    },
+    setEnableBackspaceDeleteModel: (state, action: PayloadAction<boolean>) => {
+      state.enableBackspaceDeleteModel = action.payload
     }
   }
 })
@@ -786,7 +792,7 @@ export const {
   setWindowStyle,
   setTopicPosition,
   setShowTopicTime,
-  setShowAssistantIcon,
+  setAssistantIconType,
   setPasteLongTextAsFile,
   setAutoCheckUpdate,
   setRenderInputMessageAsMarkdown,
@@ -883,7 +889,8 @@ export const {
   setVoiceCallPrompt,
   setIsVoiceCallActive,
   setLastPlayedMessageId,
-  setSkipNextAutoTTS
+  setSkipNextAutoTTS,
+  setEnableBackspaceDeleteModel
 } = settingsSlice.actions
 
 export default settingsSlice.reducer
