@@ -81,8 +81,34 @@ export class MemoryFileService {
           // 如果文件不存在或读取失败，使用空对象
         }
 
-        // 合并数据，优先使用新数据
-        const mergedData = { ...existingData, ...data }
+        // 合并数据，注意数组的处理
+        const mergedData = { ...existingData }
+
+        // 处理每个属性
+        Object.entries(data).forEach(([key, value]) => {
+          // 如果是数组属性，需要特殊处理
+          if (Array.isArray(value) && Array.isArray(mergedData[key])) {
+            // 对于 memories 和 shortMemories，需要合并而不是覆盖
+            if (key === 'memories' || key === 'shortMemories') {
+              // 创建一个集合来跟踪已存在的记忆ID
+              const existingIds = new Set(mergedData[key].map(item => item.id))
+
+              // 将新记忆添加到现有记忆中，避免重复
+              value.forEach(item => {
+                if (item.id && !existingIds.has(item.id)) {
+                  mergedData[key].push(item)
+                  existingIds.add(item.id)
+                }
+              })
+            } else {
+              // 其他数组属性，使用新值
+              mergedData[key] = value
+            }
+          } else {
+            // 非数组属性，直接使用新值
+            mergedData[key] = value
+          }
+        })
 
         // 保存合并后的数据
         await fs.writeFile(memoryDataPath, JSON.stringify(mergedData, null, 2))
