@@ -1458,7 +1458,9 @@
         "stopped": "[to be translated]:已停止语音播放",
         "segmented": "[to be translated]:分段",
         "segmented_play": "[to be translated]:分段播放",
-        "segmented_playback": "[to be translated]:分段播放"
+        "segmented_playback": "[to be translated]:分段播放",
+        "filter.emojis": "[to be translated]:过滤表情符号",
+        "show_progress_bar": "[to be translated]:显示TTS进度条"
       },
       "voice": {
         "title": "[to be translated]:语音功能",
@@ -1530,12 +1532,12 @@
           "reset": "Сбросить",
           "saved": "Подсказка сохранена",
           "reset_done": "Подсказка сброшена",
-          "info": "Эта подсказка будет направлять ответы ИИ в режиме голосового вызова",
-          "language_info": "Нажмите кнопку сброса, чтобы получить стандартную подсказку для текущего языка"
+          "info": "Эта подсказка будет направлять ответы ИИ в режиме голосового вызова"
         },
         "asr_tts_info": "Голосовой вызов использует настройки распознавания речи (ASR) и синтеза речи (TTS), указанные выше",
         "test": "Тестировать голосовой вызов",
-        "test_info": "Используйте кнопку голосового вызова справа от поля ввода для тестирования"
+        "test_info": "Используйте кнопку голосового вызова справа от поля ввода для тестирования",
+        "welcome_message": "[to be translated]:您好，我是您的AI助手，请长按说话按钮进行对话。"
       }
     },
     "translate": {
