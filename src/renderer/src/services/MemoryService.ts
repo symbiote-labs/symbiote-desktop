@@ -15,7 +15,8 @@ import {
   updateUserInterest,
   updateMemoryPriorities,
   accessMemory,
-  Memory
+  Memory,
+  saveMemoryData // <-- 添加 saveMemoryData
 } from '@renderer/store/memory'
 import { useCallback, useEffect, useRef } from 'react' // Add useRef back
 
@@ -581,10 +582,11 @@ export const addShortMemoryItem = (
 }
 
 // 分析对话内容并提取重要信息添加到短期记忆
+// 分析对话内容并提取重要信息添加到短期记忆
 export const analyzeAndAddShortMemories = async (topicId: string) => {
   if (!topicId) {
     console.log('[Short Memory Analysis] No topic ID provided')
-    return
+    return false
   }
 
   // 获取当前记忆状态
@@ -594,7 +596,7 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
 
   if (!shortMemoryAnalyzeModel) {
     console.log('[Short Memory Analysis] No short memory analyze model set')
-    return
+    return false
   }
 
   // 获取对话内容
@@ -612,13 +614,13 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
       }
     } catch (error) {
       console.error(`[Short Memory Analysis] Failed to get messages for topic ${topicId}:`, error)
-      return
+      return false
     }
   }
 
   if (!messages || messages.length === 0) {
     console.log('[Short Memory Analysis] No messages to analyze.')
-    return
+    return false
   }
 
   // 获取现有的短期记忆
@@ -638,7 +640,7 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
 
   if (newMessages.length === 0) {
     console.log('[Short Memory Analysis] No new messages to analyze.')
-    return
+    return false
   }
 
   console.log(`[Short Memory Analysis] Found ${newMessages.length} new messages to analyze.`)
@@ -698,7 +700,7 @@ ${newConversation}
 
     if (!model) {
       console.error(`[Short Memory Analysis] Model ${shortMemoryAnalyzeModel} not found`)
-      return
+      return false
     }
 
     // 调用AI生成文本
@@ -710,37 +712,67 @@ ${newConversation}
     })
     console.log('[Short Memory Analysis] AI.generateText response:', result)
 
-    if (!result) {
-      console.log('[Short Memory Analysis] No result from AI analysis.')
-      return
+    if (!result || typeof result !== 'string' || result.trim() === '') {
+      console.log('[Short Memory Analysis] No valid result from AI analysis.')
+      return false
     }
 
-    // 解析结果
-    const lines = result
-      .split('\n')
-      .map((line: string) => line.trim())
-      .filter((line: string) => {
-        // 匹配以数字和点开头的行（如"1.", "2."）或者以短横线开头的行（如"-"）
-        return /^\d+\./.test(line) || line.startsWith('-')
-      })
-      .map((line: string) => {
-        // 如果是数字开头，移除数字和点，如果是短横线开头，移除短横线
-        if (/^\d+\./.test(line)) {
-          return line.replace(/^\d+\.\s*/, '').trim()
-        } else if (line.startsWith('-')) {
-          return line.substring(1).trim()
-        }
-        return line
-      })
-      .filter(Boolean)
+    // 改进的记忆提取逻辑
+    let extractedLines: string[] = []
 
-    console.log('[Short Memory Analysis] Extracted items:', lines)
+    // 首先尝试匹配带有数字或短横线的列表项
+    const listItemRegex = /(?:^|\n)(?:\d+\.\s*|\-\s*)(.+?)(?=\n\d+\.\s*|\n\-\s*|\n\n|$)/gs
+    let match
+    while ((match = listItemRegex.exec(result)) !== null) {
+      if (match[1] && match[1].trim()) {
+        extractedLines.push(match[1].trim())
+      }
+    }
 
-    // 过滤掉已存在的记忆
+    // 如果没有找到列表项，则尝试按行分割并过滤
+    if (extractedLines.length === 0) {
+      extractedLines = result
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => {
+          // 过滤掉空行和非内容行（如标题、分隔符等）
+          return line &&
+                 !line.startsWith('#') &&
+                 !line.startsWith('---') &&
+                 !line.startsWith('===') &&
+                 !line.includes('没有找到新的重要信息') &&
+                 !line.includes('No new important information')
+        })
+        // 清理行首的数字、点和短横线
+        .map(line => line.replace(/^(\d+\.\s*|\-\s*)/, '').trim())
+    }
+
+    console.log('[Short Memory Analysis] Extracted items:', extractedLines)
+
+    if (extractedLines.length === 0) {
+      console.log('[Short Memory Analysis] No memory items extracted from the analysis result.')
+      return false
+    }
+
+    // 过滤掉已存在的记忆（使用更严格的比较）
     const existingContents = topicShortMemories.map((memory) => memory.content.toLowerCase())
-    const newMemories = lines.filter((content: string) => !existingContents.includes(content.toLowerCase()))
+    const newMemories = extractedLines.filter((content: string) => {
+      const normalizedContent = content.toLowerCase()
+      // 检查是否与现有记忆完全匹配或高度相似
+      return !existingContents.some(existingContent =>
+        existingContent === normalizedContent ||
+        // 简单的相似度检查 - 如果一个字符串包含另一个的80%以上的内容
+        (existingContent.includes(normalizedContent) && normalizedContent.length > existingContent.length * 0.8) ||
+        (normalizedContent.includes(existingContent) && existingContent.length > normalizedContent.length * 0.8)
+      )
+    })
 
-    console.log(`[Short Memory Analysis] Found ${lines.length} items, ${newMemories.length} are new`)
+    console.log(`[Short Memory Analysis] Found ${extractedLines.length} items, ${newMemories.length} are new`)
+
+    if (newMemories.length === 0) {
+      console.log('[Short Memory Analysis] No new memories to add after filtering.')
+      return false
+    }
 
     // 收集新分析的消息ID
     const newMessageIds = newMessages.map((msg) => msg.id)
@@ -749,12 +781,39 @@ ${newConversation}
     const lastMessageId = messages[messages.length - 1]?.id
 
     // 添加新的短期记忆
+    const addedMemories: string[] = [] // Explicitly type addedMemories
     for (const content of newMemories) {
-      addShortMemoryItem(content, topicId, newMessageIds, lastMessageId)
-      console.log(`[Short Memory Analysis] Added new short memory: "${content}" to topic ${topicId}`)
+      try {
+        store.dispatch(
+          addShortMemory({
+            content,
+            topicId,
+            analyzedMessageIds: newMessageIds,
+            lastMessageId: lastMessageId
+          })
+        )
+        addedMemories.push(content)
+        console.log(`[Short Memory Analysis] Added new short memory: "${content}" to topic ${topicId}`)
+      } catch (error) {
+        console.error(`[Short Memory Analysis] Failed to add memory: "${content}"`, error)
+      }
     }
 
-    return newMemories.length > 0
+    // 显式触发保存操作，确保数据被持久化
+    try {
+      const state = store.getState().memory
+      await store.dispatch(saveMemoryData({
+        memoryLists: state.memoryLists,
+        memories: state.memories,
+        shortMemories: state.shortMemories
+      })).unwrap() // 使用unwrap()来等待异步操作完成并处理错误
+      console.log('[Short Memory Analysis] Memory data saved successfully')
+    } catch (error) {
+      console.error('[Short Memory Analysis] Failed to save memory data:', error)
+      // 即使保存失败，我们仍然返回true，因为记忆已经添加到Redux状态中
+    }
+
+    return addedMemories.length > 0
   } catch (error) {
     console.error('[Short Memory Analysis] Failed to analyze and add short memories:', error)
     return false
