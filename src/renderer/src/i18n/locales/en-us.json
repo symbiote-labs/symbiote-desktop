@@ -16,11 +16,11 @@
       "error": "Voice call error",
       "initializing": "Initializing voice call...",
       "ready": "Voice call ready",
-      "shortcut_key_setting": "[to be translated]:语音识别快捷键设置",
-      "press_any_key": "[to be translated]:请按任意键...",
-      "save": "[to be translated]:保存",
-      "cancel": "[to be translated]:取消",
-      "shortcut_key_tip": "[to be translated]:按下此快捷键开始录音，松开快捷键结束录音并发送"
+      "shortcut_key_setting": "Voice Recognition Shortcut Key Settings",
+      "press_any_key": "Press any key...",
+      "save": "Save",
+      "cancel": "Cancel",
+      "shortcut_key_tip": "Press this shortcut key to start recording, release to end recording and send"
     },
     "agents": {
       "add.button": "Add to Assistant",
@@ -1528,11 +1528,11 @@
           "not_enabled": "Speech recognition is not enabled",
           "start_failed": "Failed to start recording",
           "transcribe_failed": "Failed to transcribe speech",
-          "no_api_key": "[to be translated]:未设置API密钥",
-          "browser_not_support": "[to be translated]:浏览器不支持语音识别"
+          "no_api_key": "API key is not set",
+          "browser_not_support": "Browser does not support speech recognition"
         },
-        "auto_start_server": "[to be translated]:启动应用自动开启服务器",
-        "auto_start_server.help": "[to be translated]:启用后，应用启动时会自动开启语音识别服务器"
+        "auto_start_server": "Automatically start server when launching the application",
+        "auto_start_server.help": "When enabled, the speech recognition server will automatically start when the application launches"
       },
       "voice": {
         "title": "Voice Features",
