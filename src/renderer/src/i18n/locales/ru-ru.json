@@ -1396,6 +1396,7 @@
         "toggleActive": "[to be translated]:切换激活状态",
         "clearConfirmContentList": "[to be translated]:确定要清空 {{name}} 中的所有记忆吗？此操作不可恢复。",
         "shortMemory": "[to be translated]:短期记忆",
+        "longMemory": "[to be translated]:长期记忆",
         "toggleShortMemoryActive": "[to be translated]:切换短期记忆功能",
         "addShortMemory": "[to be translated]:添加短期记忆",
         "addShortMemoryPlaceholder": "[to be translated]:输入短期记忆内容，只在当前对话中有效",
