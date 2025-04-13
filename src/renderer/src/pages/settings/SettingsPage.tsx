@@ -164,6 +164,8 @@ const ContentContainer = styled.div`
   display: flex;
   flex: 1;
   flex-direction: row;
+  height: calc(100vh - var(--navbar-height)); /* 设置高度为视口高度减去导航栏高度 */
+  overflow: hidden; /* 防止内容溢出 */
 `
 
 const SettingMenus = styled.ul`
@@ -173,6 +175,26 @@ const SettingMenus = styled.ul`
   border-right: 0.5px solid var(--color-border);
   padding: 10px;
   user-select: none;
+  overflow-y: auto; /* 允许菜单滚动 */
+
+  /* 添加滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 `
 
 const MenuItemLink = styled(Link)`
@@ -217,6 +239,26 @@ const SettingContent = styled.div`
   height: 100%;
   flex: 1;
   border-right: 0.5px solid var(--color-border);
+  overflow-y: auto; /* 添加滚动属性，允许内容滚动 */
+
+  /* 添加滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
 `
 
 export default SettingsPage

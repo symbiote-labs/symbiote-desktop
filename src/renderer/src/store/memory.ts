@@ -19,6 +19,9 @@ export interface Memory {
   source?: string // 来源，例如"自动分析"或"手动添加"
   category?: string // 分类，例如"用户偏好"、"技术需求"等
   listId: string // 所属的记忆列表ID
+  analyzedMessageIds?: string[] // 记录该记忆是从哪些消息中分析出来的
+  lastMessageId?: string // 分析时的最后一条消息的ID，用于跟踪分析进度
+  topicId?: string // 关联的对话话题ID，用于跟踪该记忆来自哪个话题
 }
 
 // 短记忆项接口
@@ -27,6 +30,8 @@ export interface ShortMemory {
   content: string
   createdAt: string
   topicId: string // 关联的对话话题ID
+  analyzedMessageIds?: string[] // 记录该记忆是从哪些消息中分析出来的
+  lastMessageId?: string // 分析时的最后一条消息的ID，用于跟踪分析进度
 }
 
 export interface MemoryState {
@@ -37,7 +42,8 @@ export interface MemoryState {
   isActive: boolean // 记忆功能是否激活
   shortMemoryActive: boolean // 短记忆功能是否激活
   autoAnalyze: boolean // 是否自动分析
-  analyzeModel: string | null // 用于分析的模型ID
+  analyzeModel: string | null // 用于长期记忆分析的模型ID
+  shortMemoryAnalyzeModel: string | null // 用于短期记忆分析的模型ID
   lastAnalyzeTime: number | null // 上次分析时间
   isAnalyzing: boolean // 是否正在分析
 }
@@ -60,7 +66,8 @@ const initialState: MemoryState = {
   isActive: true,
   shortMemoryActive: true, // 默认启用短记忆功能
   autoAnalyze: true,
-  analyzeModel: 'gpt-3.5-turbo', // 设置默认模型
+  analyzeModel: 'gpt-3.5-turbo', // 设置默认长期记忆分析模型
+  shortMemoryAnalyzeModel: 'gpt-3.5-turbo', // 设置默认短期记忆分析模型
   lastAnalyzeTime: null,
   isAnalyzing: false
 }
@@ -72,7 +79,15 @@ const memorySlice = createSlice({
     // 添加新记忆
     addMemory: (
       state,
-      action: PayloadAction<{ content: string; source?: string; category?: string; listId?: string }>
+      action: PayloadAction<{
+        content: string
+        source?: string
+        category?: string
+        listId?: string
+        analyzedMessageIds?: string[]
+        lastMessageId?: string
+        topicId?: string
+      }>
     ) => {
       // 确保 memoryLists 存在
       if (!state.memoryLists) {
@@ -91,7 +106,10 @@ const memorySlice = createSlice({
         createdAt: new Date().toISOString(),
         source: action.payload.source || '手动添加',
         category: action.payload.category,
-        listId: listId
+        listId: listId,
+        analyzedMessageIds: action.payload.analyzedMessageIds,
+        lastMessageId: action.payload.lastMessageId,
+        topicId: action.payload.topicId
       }
 
       // 确保 memories 存在
@@ -141,9 +159,14 @@ const memorySlice = createSlice({
       state.autoAnalyze = action.payload
     },
 
-    // 设置分析模型
+    // 设置长期记忆分析模型
     setAnalyzeModel: (state, action: PayloadAction<string | null>) => {
       state.analyzeModel = action.payload
+    },
+
+    // 设置短期记忆分析模型
+    setShortMemoryAnalyzeModel: (state, action: PayloadAction<string | null>) => {
+      state.shortMemoryAnalyzeModel = action.payload
     },
 
     // 设置分析状态
@@ -285,12 +308,22 @@ const memorySlice = createSlice({
     },
 
     // 添加短记忆
-    addShortMemory: (state, action: PayloadAction<{ content: string; topicId: string }>) => {
+    addShortMemory: (
+      state,
+      action: PayloadAction<{
+        content: string
+        topicId: string
+        analyzedMessageIds?: string[]
+        lastMessageId?: string
+      }>
+    ) => {
       const newShortMemory: ShortMemory = {
         id: nanoid(),
         content: action.payload.content,
         createdAt: new Date().toISOString(),
-        topicId: action.payload.topicId
+        topicId: action.payload.topicId,
+        analyzedMessageIds: action.payload.analyzedMessageIds,
+        lastMessageId: action.payload.lastMessageId
       }
 
       // 确保 shortMemories 存在
@@ -345,6 +378,7 @@ export const {
   setMemoryActive,
   setAutoAnalyze,
   setAnalyzeModel,
+  setShortMemoryAnalyzeModel,
   setAnalyzing,
   importMemories,
   clearMemories,
