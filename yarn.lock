@@ -3934,7 +3934,7 @@ __metadata:
     "@types/adm-zip": "npm:^0"
     "@types/diff": "npm:^7"
     "@types/fs-extra": "npm:^11"
-    "@types/js-yaml": "npm:^4",
+    "@types/js-yaml": "npm:^4.0.0",
     "@types/lodash": "npm:^4.17.16",
     "@types/markdown-it": "npm:^14"
     "@types/md5": "npm:^2.3.5"
