@@ -1,12 +1,11 @@
-// @ts-ignore - Keep all imports for future use
 import {
-  CodeOutlined,
-  FileSearchOutlined,
+  CodeOutlined as _CodeOutlined,
+  FileSearchOutlined as _FileSearchOutlined,
   HolderOutlined,
-  PaperClipOutlined,
-  PauseCircleOutlined,
-  ThunderboltOutlined,
-  TranslationOutlined
+  PaperClipOutlined as _PaperClipOutlined,
+  PauseCircleOutlined as _PauseCircleOutlined,
+  ThunderboltOutlined as _ThunderboltOutlined,
+  TranslationOutlined as _TranslationOutlined
 } from '@ant-design/icons'
 import ASRButton from '@renderer/components/ASRButton'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
