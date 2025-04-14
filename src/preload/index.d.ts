@@ -46,6 +46,7 @@ declare global {
         listWebdavFiles: (webdavConfig: WebDavConfig) => Promise<BackupFile[]>
         checkConnection: (webdavConfig: WebDavConfig) => Promise<boolean>
         createDirectory: (webdavConfig: WebDavConfig, path: string, options?: CreateDirectoryOptions) => Promise<void>
+        deleteWebdavFile: (fileName: string, webdavConfig: WebDavConfig) => Promise<boolean>
       }
       file: {
         select: (options?: OpenDialogOptions) => Promise<FileType[] | null>
@@ -150,7 +151,15 @@ declare global {
         restartServer: (server: MCPServer) => Promise<void>
         stopServer: (server: MCPServer) => Promise<void>
         listTools: (server: MCPServer) => Promise<MCPTool[]>
-        callTool: ({ server, name, args }: { server: MCPServer; name: string; args: any }) => Promise<any>
+        callTool: ({
+          server,
+          name,
+          args
+        }: {
+          server: MCPServer
+          name: string
+          args: any
+        }) => Promise<MCPCallToolResponse>
         listPrompts: (server: MCPServer) => Promise<MCPPrompt[]>
         getPrompt: ({
           server,

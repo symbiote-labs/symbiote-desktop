@@ -46,7 +46,13 @@ win:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   target:
     - target: nsis
+      arch:
+        - x64
+        - arm64
     - target: portable
+      arch:
+        - x64
+        - arm64
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: ${productName}
@@ -85,20 +91,14 @@ linux:
   maintainer: electronjs.org
   category: Utility
 publish:
-  # provider: generic
-  # url: https://cherrystudio.ocool.online
-  provider: github
-  repo: cherry-studio
-  owner: CherryHQ
+  provider: generic
+  url: https://releases.cherry-ai.com
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 afterPack: scripts/after-pack.js
 afterSign: scripts/notarize.js
 releaseInfo:
   releaseNotes: |
-    增加对 grok-3 和 Grok-3-mini 的支持
-    助手支持使用拼音排序
-    网络搜索增加 Baidu, Google, Bing 支持（免费使用）
-    网络搜索增加 uBlacklist 订阅
-    快速面板 (QuickPanel) 进行性能优化
-    解决 mcp 依赖工具下载速度问题
+    全新图标风格
+    新的智能体界面
+    WebDAV 增加文件管理功能
