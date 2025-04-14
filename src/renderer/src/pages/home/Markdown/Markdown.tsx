@@ -38,8 +38,6 @@ const Markdown: FC<Props> = ({ block, role }) => {
   const { t } = useTranslation()
   const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
 
-  const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
-
   const messageContent = useMemo(() => {
     const empty = isEmpty(block.content)
     const paused = block.status === 'paused'
@@ -47,8 +45,8 @@ const Markdown: FC<Props> = ({ block, role }) => {
     return removeSvgEmptyLines(escapeBrackets(content))
   }, [block, t])
   const rehypePlugins = useMemo(() => {
-    return [rehypeRaw, [rehypeSanitize, sanitizeSchema], rehypeMath]
-  }, [rehypeMath])
+    return [rehypeRaw, [rehypeSanitize, sanitizeSchema], mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax]
+  }, [mathEngine])
 
   const components = useMemo(() => {
     const baseComponents = {
