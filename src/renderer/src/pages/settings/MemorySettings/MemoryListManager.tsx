@@ -1,12 +1,14 @@
 import { DeleteOutlined, EditOutlined, ExclamationCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import store from '@renderer/store'
 import {
   addMemoryList,
   deleteMemoryList,
   editMemoryList,
   MemoryList,
   setCurrentMemoryList,
-  toggleMemoryListActive
+  toggleMemoryListActive,
+  saveLongTermMemoryData
 } from '@renderer/store/memory'
 import { Button, Empty, Input, List, Modal, Switch, Tooltip, Typography } from 'antd'
 import React, { useState } from 'react'
@@ -46,14 +48,14 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
   }
 
   // 处理模态框确认
-  const handleOk = () => {
+  const handleOk = async () => {
     if (!newListName.trim()) {
       return // 名称不能为空
     }
 
     if (editingList) {
       // 编辑现有列表
-      dispatch(
+      await dispatch(
         editMemoryList({
           id: editingList.id,
           name: newListName,
@@ -62,13 +64,25 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
       )
     } else {
       // 添加新列表
-      dispatch(
+      await dispatch(
         addMemoryList({
           name: newListName,
           description: newListDescription,
           isActive: false
         })
       )
+    }
+
+    // 保存到长期记忆文件
+    try {
+      const state = store.getState().memory
+      await dispatch(saveLongTermMemoryData({
+        memoryLists: state.memoryLists,
+        currentListId: state.currentListId
+      })).unwrap()
+      console.log('[MemoryListManager] Memory lists saved to file after edit')
+    } catch (error) {
+      console.error('[MemoryListManager] Failed to save memory lists after edit:', error)
     }
 
     setIsModalVisible(false)
@@ -94,22 +108,58 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
       okText: t('common.delete'),
       okType: 'danger',
       cancelText: t('common.cancel'),
-      onOk() {
+      async onOk() {
         dispatch(deleteMemoryList(list.id))
+
+        // 保存到长期记忆文件
+        try {
+          const state = store.getState().memory
+          await dispatch(saveLongTermMemoryData({
+            memoryLists: state.memoryLists,
+            currentListId: state.currentListId
+          })).unwrap()
+          console.log('[MemoryListManager] Memory lists saved to file after delete')
+        } catch (error) {
+          console.error('[MemoryListManager] Failed to save memory lists after delete:', error)
+        }
       }
     })
   }
 
   // 切换列表激活状态
-  const handleToggleActive = (list: MemoryList, checked: boolean) => {
+  const handleToggleActive = async (list: MemoryList, checked: boolean) => {
     dispatch(toggleMemoryListActive({ id: list.id, isActive: checked }))
+
+    // 保存到长期记忆文件
+    try {
+      const state = store.getState().memory
+      await dispatch(saveLongTermMemoryData({
+        memoryLists: state.memoryLists,
+        currentListId: state.currentListId
+      })).unwrap()
+      console.log('[MemoryListManager] Memory lists saved to file after toggle active')
+    } catch (error) {
+      console.error('[MemoryListManager] Failed to save memory lists after toggle active:', error)
+    }
   }
 
   // 选择列表
-  const handleSelectList = (listId: string) => {
+  const handleSelectList = async (listId: string) => {
     dispatch(setCurrentMemoryList(listId))
     if (onSelectList) {
       onSelectList(listId)
+    }
+
+    // 保存到长期记忆文件
+    try {
+      const state = store.getState().memory
+      await dispatch(saveLongTermMemoryData({
+        memoryLists: state.memoryLists,
+        currentListId: state.currentListId
+      })).unwrap()
+      console.log('[MemoryListManager] Memory lists saved to file after select list')
+    } catch (error) {
+      console.error('[MemoryListManager] Failed to save memory lists after select list:', error)
     }
   }
 

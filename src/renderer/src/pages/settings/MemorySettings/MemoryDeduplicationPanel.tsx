@@ -144,19 +144,27 @@ const MemoryDeduplicationPanel: React.FC<MemoryDeduplicationPanelProps> = ({
     Modal.confirm({
       title: t(`${translationPrefix}.confirmApply`),
       content: t(`${translationPrefix}.confirmApplyContent`),
-      onOk: () => {
-        if (applyResults) {
-          // 使用自定义的应用函数
-          applyResults(deduplicationResult)
-        } else {
-          // 使用默认的应用函数
-          applyDeduplicationResult(deduplicationResult, true, isShortMemory)
+      onOk: async () => {
+        try {
+          if (applyResults) {
+            // 使用自定义的应用函数
+            applyResults(deduplicationResult)
+          } else {
+            // 使用默认的应用函数
+            await applyDeduplicationResult(deduplicationResult, true, isShortMemory)
+          }
+          setDeduplicationResult(null)
+          Modal.success({
+            title: t(`${translationPrefix}.applySuccess`),
+            content: t(`${translationPrefix}.applySuccessContent`)
+          })
+        } catch (error) {
+          console.error('[Memory Deduplication Panel] Error applying deduplication result:', error)
+          Modal.error({
+            title: t(`${translationPrefix}.applyError`) || '应用失败',
+            content: t(`${translationPrefix}.applyErrorContent`) || '应用去重结果时发生错误，请重试'
+          })
         }
-        setDeduplicationResult(null)
-        Modal.success({
-          title: t(`${translationPrefix}.applySuccess`),
-          content: t(`${translationPrefix}.applySuccessContent`)
-        })
       }
     })
   }

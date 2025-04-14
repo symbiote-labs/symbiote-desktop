@@ -1,61 +1,210 @@
-import { DeleteOutlined } from '@ant-design/icons'
+import { DeleteOutlined, ClearOutlined } from '@ant-design/icons'
 import { TopicManager } from '@renderer/hooks/useTopic'
-import { addShortMemoryItem } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
-import { deleteShortMemory, setShortMemoryActive, ShortMemory } from '@renderer/store/memory' // Import ShortMemory from here
-import { Topic } from '@renderer/types' // Remove ShortMemory import from here
-import { Button, Collapse, Empty, Input, List, Switch, Tooltip, Typography } from 'antd'
-import { useEffect, useState } from 'react'
+import { deleteShortMemory } from '@renderer/store/memory'
+import { Button, Collapse, Empty, List, Modal, Pagination, Tooltip, Typography } from 'antd'
+import { useEffect, useState, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-const { Title } = Typography
-// 不再需要确认对话框
-// const { Panel } = Collapse // Panel is no longer used
+// 定义话题和记忆的接口
+interface TopicWithMemories {
+  topic: {
+    id: string
+    name: string
+    assistantId: string
+    createdAt: string
+    updatedAt: string
+    messages: any[]
+  }
+  memories: ShortMemory[]
+  currentPage?: number // 当前页码
+}
 
-const HeaderContainer = styled.div`
+// 短期记忆接口
+interface ShortMemory {
+  id: string
+  content: string
+  topicId: string
+  createdAt: string
+  updatedAt?: string // 可选属性
+}
+
+// 记忆项组件的属性
+interface MemoryItemProps {
+  memory: ShortMemory
+  onDelete: (id: string) => void
+  t: any
+  index: number // 添加索引属性，用于显示序号
+}
+
+// 样式组件
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+  color: var(--color-text-2);
+`
+
+const StyledCollapse = styled(Collapse)`
+  width: 100%;
+  background-color: transparent;
+  border: none;
+
+  .ant-collapse-item {
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .ant-collapse-header {
+    background-color: var(--color-bg-2);
+    padding: 8px 16px !important;
+    position: relative;
+  }
+
+  /* 确保折叠图标不会遮挡内容 */
+  .ant-collapse-expand-icon {
+    margin-right: 8px;
+  }
+
+  .ant-collapse-content {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .ant-collapse-content-box {
+    padding: 4px 0 !important; /* 减少上下内边距，保持左右为0 */
+  }
+`
+
+const CollapseHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  width: 100%;
+  padding-right: 24px; /* 为删除按钮留出空间 */
+
+  /* 左侧内容区域，包含话题名称和记忆数量 */
+  > span {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+  }
+
+  /* 删除按钮样式 */
+  .ant-btn {
+    margin-left: 8px;
+  }
 `
 
-const InputContainer = styled.div`
-  margin-bottom: 16px;
-`
-
-const LoadingContainer = styled.div`
+const MemoryCount = styled.span`
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 10px;
+  padding: 0 8px;
+  font-size: 12px;
+  margin-left: 8px;
+  min-width: 24px;
   text-align: center;
-  padding: 20px 0;
+  display: inline-block;
+  z-index: 1; /* 确保计数显示在最上层 */
 `
 
-const AddButton = styled(Button)`
-  margin-top: 8px;
+const MemoryContent = styled.div`
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+  padding: 4px 0;
 `
 
-interface TopicWithMemories {
-  topic: Topic
-  memories: ShortMemory[]
-}
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+`
 
+const AnimatedListItem = styled(List.Item)`
+  transition: all 0.3s ease;
+  padding: 8px 24px; /* 增加左右内边距，减少上下内边距 */
+  margin: 4px 0; /* 减少上下外边距 */
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.deleting {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  /* 增加内容区域的内边距 */
+  .ant-list-item-meta {
+    padding-left: 24px;
+  }
+
+  /* 调整内容区域的标题和描述文字间距 */
+  .ant-list-item-meta-title {
+    margin-bottom: 4px; /* 减少标题和描述之间的间距 */
+  }
+
+  .ant-list-item-meta-description {
+    padding-left: 4px;
+  }
+`
+
+// 记忆项组件
+const MemoryItem = memo(({ memory, onDelete, t, index }: MemoryItemProps) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    // 添加小延迟，让动画有时间播放
+    setTimeout(() => {
+      onDelete(memory.id);
+    }, 300);
+  };
+
+  return (
+    <AnimatedListItem
+      className={isDeleting ? 'deleting' : ''}
+      actions={[
+        <Tooltip title={t('settings.memory.delete')} key="delete">
+          <Button
+            icon={<DeleteOutlined />}
+            onClick={handleDelete}
+            type="text"
+            danger
+          />
+        </Tooltip>
+      ]}
+    >
+      <List.Item.Meta
+        title={<MemoryContent><strong>{index + 1}. </strong>{memory.content}</MemoryContent>}
+        description={new Date(memory.createdAt).toLocaleString()}
+      />
+    </AnimatedListItem>
+  )
+})
+
+// 主组件
 const CollapsibleShortMemoryManager = () => {
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
 
-  // 获取短记忆状态
-  const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
+  // 获取短期记忆
   const shortMemories = useAppSelector((state) => state.memory?.shortMemories || [])
 
-  // 获取当前话题ID
-  const currentTopicId = useAppSelector((state) => state.messages?.currentTopic?.id)
-
-  // 添加短记忆的状态
-  const [newMemoryContent, setNewMemoryContent] = useState('')
-
-  // 话题列表和话题记忆映射
-  const [topicsWithMemories, setTopicsWithMemories] = useState<TopicWithMemories[]>([])
+  // 本地状态
   const [loading, setLoading] = useState(true)
+  const [topicsWithMemories, setTopicsWithMemories] = useState<TopicWithMemories[]>([])
+  const [activeKeys, setActiveKeys] = useState<string[]>([])
 
   // 加载所有话题和对应的短期记忆
   useEffect(() => {
@@ -118,7 +267,8 @@ const CollapsibleShortMemoryManager = () => {
 
               topicsMemories.push({
                 topic: topicInfo,
-                memories: topicMemories
+                memories: topicMemories,
+                currentPage: 1 // 初始化为第一页
               })
             }
           }
@@ -152,142 +302,190 @@ const CollapsibleShortMemoryManager = () => {
       setTopicsWithMemories([])
       setLoading(false)
     }
-  }, [shortMemories])
+  }, [shortMemories.length])
 
-  // 切换短记忆功能激活状态
-  const handleToggleActive = (checked: boolean) => {
-    dispatch(setShortMemoryActive(checked))
+  // 处理折叠面板变化
+  const handleCollapseChange = (keys: string | string[]) => {
+    setActiveKeys(Array.isArray(keys) ? keys : [keys])
   }
 
-  // 添加新的短记忆
-  const handleAddMemory = () => {
-    if (newMemoryContent.trim() && currentTopicId) {
-      addShortMemoryItem(newMemoryContent.trim(), currentTopicId)
-      setNewMemoryContent('') // 清空输入框
-    }
-  }
+  // 处理分页变化
+  const handlePageChange = useCallback((page: number, topicId: string) => {
+    setTopicsWithMemories(prev =>
+      prev.map(item =>
+        item.topic.id === topicId
+          ? { ...item, currentPage: page }
+          : item
+      )
+    );
+  }, [])
+
+  // 删除话题下的所有短期记忆
+  const handleDeleteTopicMemories = useCallback(async (topicId: string) => {
+    // 显示确认对话框
+    Modal.confirm({
+      title: t('settings.memory.confirmDeleteAll'),
+      content: t('settings.memory.confirmDeleteAllContent'),
+      okText: t('settings.memory.delete'),
+      cancelText: t('settings.memory.cancel'),
+      onOk: async () => {
+        // 获取该话题的所有记忆
+        const state = store.getState().memory;
+        const topicMemories = state.shortMemories.filter(memory => memory.topicId === topicId);
+        const memoryIds = topicMemories.map(memory => memory.id);
+
+        // 过滤掉要删除的记忆
+        const filteredShortMemories = state.shortMemories.filter(memory => memory.topicId !== topicId);
+
+        // 更新本地状态
+        setTopicsWithMemories(prev => prev.filter(item => item.topic.id !== topicId));
+
+        // 更新 Redux store
+        for (const id of memoryIds) {
+          dispatch(deleteShortMemory(id));
+        }
+
+        // 保存到本地存储
+        try {
+          const currentData = await window.api.memory.loadData();
+          const newData = {
+            ...currentData,
+            shortMemories: filteredShortMemories
+          };
+          const result = await window.api.memory.saveData(newData, true);
+
+          if (result) {
+            console.log(`[CollapsibleShortMemoryManager] Successfully deleted all memories for topic ${topicId}`);
+          } else {
+            console.error(`[CollapsibleShortMemoryManager] Failed to delete all memories for topic ${topicId}`);
+          }
+        } catch (error) {
+          console.error('[CollapsibleShortMemoryManager] Failed to delete all memories:', error);
+        }
+      }
+    });
+  }, [dispatch, t]);
 
   // 删除短记忆 - 直接删除无需确认
-  const handleDeleteMemory = (id: string) => {
-    // 直接删除记忆，无需确认对话框
+  const handleDeleteMemory = useCallback(async (id: string) => {
+    // 先从当前状态中获取要删除的记忆之外的所有记忆
+    const state = store.getState().memory
+    const filteredShortMemories = state.shortMemories.filter(memory => memory.id !== id)
+
+    // 在本地更新topicsWithMemories，避免触发useEffect
+    setTopicsWithMemories(prev => {
+      return prev.map(item => {
+        // 如果该话题包含要删除的记忆，则更新该话题的记忆列表
+        if (item.memories.some(memory => memory.id === id)) {
+          return {
+            ...item,
+            memories: item.memories.filter(memory => memory.id !== id)
+          }
+        }
+        return item
+      }).filter(item => item.memories.length > 0) // 移除没有记忆的话题
+    })
+
+    // 执行删除操作
     dispatch(deleteShortMemory(id))
-  }
+
+    // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+    try {
+      // 加载当前文件数据
+      const currentData = await window.api.memory.loadData()
+
+      // 替换 shortMemories 数组
+      const newData = {
+        ...currentData,
+        shortMemories: filteredShortMemories
+      }
+
+      // 使用 true 参数强制覆盖文件
+      const result = await window.api.memory.saveData(newData, true)
+
+      if (result) {
+        console.log(`[CollapsibleShortMemoryManager] Successfully deleted short memory with ID ${id}`)
+        // 使用App组件而不是静态方法，避免触发重新渲染
+        // message.success(t('settings.memory.deleteSuccess') || '删除成功')
+      } else {
+        console.error(`[CollapsibleShortMemoryManager] Failed to delete short memory with ID ${id}`)
+        // message.error(t('settings.memory.deleteError') || '删除失败')
+      }
+    } catch (error) {
+      console.error('[CollapsibleShortMemoryManager] Failed to delete short memory:', error)
+      // message.error(t('settings.memory.deleteError') || '删除失败')
+    }
+  }, [dispatch])
 
   return (
-    <div className="short-memory-manager">
-      <HeaderContainer>
-        <Title level={4}>{t('settings.memory.shortMemory')}</Title>
-        <Tooltip title={t('settings.memory.toggleShortMemoryActive')}>
-          <Switch checked={shortMemoryActive} onChange={handleToggleActive} />
-        </Tooltip>
-      </HeaderContainer>
+    <div>
+      <Typography.Title level={4}>{t('settings.memory.shortMemoriesByTopic') || '按话题分组的短期记忆'}</Typography.Title>
 
-      <InputContainer>
-        <Input.TextArea
-          value={newMemoryContent}
-          onChange={(e) => setNewMemoryContent(e.target.value)}
-          placeholder={t('settings.memory.addShortMemoryPlaceholder')}
-          autoSize={{ minRows: 2, maxRows: 4 }}
-          disabled={!shortMemoryActive || !currentTopicId}
-        />
-        <AddButton
-          type="primary"
-          onClick={handleAddMemory}
-          disabled={!shortMemoryActive || !newMemoryContent.trim() || !currentTopicId}>
-          {t('settings.memory.addShortMemory')}
-        </AddButton>
-      </InputContainer>
-
-      <div className="short-memories-list">
-        {loading ? (
-          <LoadingContainer>{t('settings.memory.loading') || '加载中...'}</LoadingContainer>
-        ) : topicsWithMemories.length > 0 ? (
-          <StyledCollapse
-            defaultActiveKey={[currentTopicId || '']}
-            items={topicsWithMemories.map(({ topic, memories }) => ({
-              key: topic.id,
-              label: (
-                <CollapseHeader>
-                  <span>{topic.name}</span>
+      {loading ? (
+        <LoadingContainer>{t('settings.memory.loading') || '加载中...'}</LoadingContainer>
+      ) : topicsWithMemories.length > 0 ? (
+        <StyledCollapse
+          activeKey={activeKeys}
+          onChange={handleCollapseChange}
+          items={topicsWithMemories.map(({ topic, memories, currentPage }) => ({
+            key: topic.id,
+            label: (
+              <CollapseHeader>
+                <span>
+                  {topic.name}
                   <MemoryCount>{memories.length}</MemoryCount>
-                </CollapseHeader>
-              ),
-              children: (
+                </span>
+                <Tooltip title={t('settings.memory.confirmDeleteAll')}>
+                  <Button
+                    icon={<ClearOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation(); // 阻止事件冒泡，避免触发折叠面板的展开/收起
+                      handleDeleteTopicMemories(topic.id);
+                    }}
+                    type="text"
+                    danger
+                    size="small"
+                  />
+                </Tooltip>
+              </CollapseHeader>
+            ),
+            children: (
+              <div>
                 <List
                   itemLayout="horizontal"
-                  dataSource={memories}
-                  renderItem={(memory) => (
-                    <List.Item
-                      actions={[
-                        <Tooltip title={t('settings.memory.delete')} key="delete">
-                          <Button
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDeleteMemory(memory.id)}
-                            type="text"
-                            danger
-                          />
-                        </Tooltip>
-                      ]}>
-                      <List.Item.Meta
-                        title={<MemoryContent>{memory.content}</MemoryContent>}
-                        description={new Date(memory.createdAt).toLocaleString()}
-                      />
-                    </List.Item>
+                  dataSource={memories.slice((currentPage ? currentPage - 1 : 0) * 15, (currentPage ? currentPage - 1 : 0) * 15 + 15)}
+                  style={{ padding: '4px 0' }}
+                  renderItem={(memory, index) => (
+                    <MemoryItem
+                      key={memory.id}
+                      memory={memory}
+                      onDelete={handleDeleteMemory}
+                      t={t}
+                      index={(currentPage ? currentPage - 1 : 0) * 15 + index}
+                    />
                   )}
                 />
-              )
-            }))}
-          />
-        ) : (
-          <Empty
-            description={!currentTopicId ? t('settings.memory.noCurrentTopic') : t('settings.memory.noShortMemories')}
-          />
-        )}
-      </div>
+                {memories.length > 15 && (
+                  <PaginationContainer>
+                    <Pagination
+                      current={currentPage || 1}
+                      onChange={(page) => handlePageChange(page, topic.id)}
+                      total={memories.length}
+                      pageSize={15}
+                      size="small"
+                      showSizeChanger={false}
+                    />
+                  </PaginationContainer>
+                )}
+              </div>
+            )
+          }))}
+        />
+      ) : (
+        <Empty description={t('settings.memory.noShortMemories') || '没有短期记忆'} />
+      )}
     </div>
   )
 }
-
-const StyledCollapse = styled(Collapse)`
-  background-color: transparent;
-  border: none;
-
-  .ant-collapse-item {
-    border: 1px solid var(--color-border);
-    border-radius: 8px !important;
-    margin-bottom: 8px;
-    overflow: hidden;
-  }
-
-  .ant-collapse-header {
-    background-color: var(--color-background-soft);
-    padding: 8px 16px !important;
-  }
-
-  .ant-collapse-content {
-    border-top: 1px solid var(--color-border);
-  }
-`
-
-const CollapseHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-`
-
-const MemoryCount = styled.span`
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: 10px;
-  padding: 0 8px;
-  font-size: 12px;
-  min-width: 20px;
-  text-align: center;
-`
-
-const MemoryContent = styled.div`
-  word-break: break-word;
-`
 
 export default CollapsibleShortMemoryManager

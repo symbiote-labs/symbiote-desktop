@@ -1025,6 +1025,13 @@
       "launch.title": "Launch",
       "launch.totray": "Minimize to Tray on Launch",
       "memory": {
+      "historicalContext": {
+        "title": "Historical Dialog Context",
+        "description": "Allow AI to automatically reference historical dialogs when needed, to provide more coherent answers.",
+        "enable": "Enable Historical Dialog Context",
+        "enableTip": "When enabled, AI will automatically analyze and reference historical dialogs when needed, to provide more coherent answers",
+        "analyzeModelTip": "Select the model used for historical dialog context analysis, it's recommended to choose a model with faster response"
+      },
         "title": "Memory Function",
         "description": "Manage AI assistant's long-term memory, automatically analyze conversations and extract important information",
         "enableMemory": "Enable Memory Function",
@@ -1048,6 +1055,14 @@
         "startingAnalysis": "Starting analysis...",
         "cannotAnalyze": "Cannot analyze, please check settings",
         "resetAnalyzingState": "Reset Analysis State",
+        "resetLongTermMemory": "Reset Analysis Markers",
+        "resetLongTermMemorySuccess": "Long-term memory analysis markers reset",
+        "resetLongTermMemoryNoChange": "No analysis markers to reset",
+        "resetLongTermMemoryError": "Failed to reset long-term memory analysis markers",
+        "saveAllSettings": "Save All Settings",
+        "saveAllSettingsDescription": "Save all memory function settings to file to ensure they persist after application restart.",
+        "saveAllSettingsSuccess": "All settings saved successfully",
+        "saveAllSettingsError": "Failed to save settings",
         "analyzeConversation": "Analyze Conversation",
         "shortMemoryAnalysisSuccess": "Analysis Successful",
         "shortMemoryAnalysisSuccessContent": "Successfully extracted and added important information to short-term memory",

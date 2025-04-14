@@ -170,7 +170,7 @@ export const buildSystemPrompt = async (
     // 应用内置记忆功能
     console.log('[Prompt] Applying app memories to prompt')
     // 直接将用户系统提示词传递给 applyMemoriesToPrompt，让它添加记忆
-    appMemoriesPrompt = applyMemoriesToPrompt(userSystemPrompt)
+    appMemoriesPrompt = await applyMemoriesToPrompt(userSystemPrompt)
     console.log('[Prompt] App memories prompt length:', appMemoriesPrompt.length - userSystemPrompt.length)
   } catch (error) {
     console.error('Error applying app memories:', error)

@@ -180,7 +180,10 @@ const api = {
   },
   memory: {
     loadData: () => ipcRenderer.invoke(IpcChannel.Memory_LoadData),
-    saveData: (data: any) => ipcRenderer.invoke(IpcChannel.Memory_SaveData, data)
+    saveData: (data: any) => ipcRenderer.invoke(IpcChannel.Memory_SaveData, data),
+    deleteShortMemoryById: (id: string) => ipcRenderer.invoke(IpcChannel.Memory_DeleteShortMemoryById, id),
+    loadLongTermData: () => ipcRenderer.invoke(IpcChannel.LongTermMemory_LoadData),
+    saveLongTermData: (data: any, forceOverwrite: boolean = false) => ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
   }
 }
 

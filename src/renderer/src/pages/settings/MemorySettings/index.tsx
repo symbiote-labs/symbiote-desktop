@@ -6,10 +6,12 @@ import {
   SearchOutlined,
   UnorderedListOutlined
 } from '@ant-design/icons'
+import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { TopicManager } from '@renderer/hooks/useTopic'
-import { analyzeAndAddShortMemories, useMemoryService } from '@renderer/services/MemoryService'
+import { analyzeAndAddShortMemories, resetLongTermMemoryAnalyzedMessageIds, useMemoryService } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
+import store from '@renderer/store' // Import store for direct access
 import {
   addMemory,
   clearMemories,
@@ -20,10 +22,12 @@ import {
   setAutoAnalyze,
   setMemoryActive,
   setShortMemoryAnalyzeModel,
-  saveMemoryData
+  saveMemoryData,
+  saveLongTermMemoryData,
+  saveAllMemorySettings
 } from '@renderer/store/memory'
 import { Topic } from '@renderer/types'
-import { Button, Empty, Input, List, message, Modal, Radio, Select, Switch, Tabs, Tag, Tooltip } from 'antd'
+import { Button, Empty, Input, List, message, Modal, Pagination, Radio, Select, Switch, Tabs, Tag, Tooltip } from 'antd'
 import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -43,6 +47,7 @@ import MemoryListManager from './MemoryListManager'
 import MemoryMindMap from './MemoryMindMap'
 import PriorityManagementSettings from './PriorityManagementSettings'
 import ContextualRecommendationSettings from './ContextualRecommendationSettings'
+import HistoricalContextSettings from './HistoricalContextSettings'
 
 const MemorySettings: FC = () => {
   const { t } = useTranslation()
@@ -71,74 +76,7 @@ const MemorySettings: FC = () => {
       .flatMap((provider) => provider.models || [])
   }, [providers])
 
-  // 使用 useMemo 缓存模型选项数组，避免不必要的重新渲染
-  const modelOptions = useMemo(() => {
-    if (models.length > 0) {
-      // 按提供商分组模型
-      const modelsByProvider = models.reduce(
-        (acc, model) => {
-          const provider = providers.find((p) => p.models.some((m) => m.id === model.id))
-          const providerName = provider ? (provider.isSystem ? t(`provider.${provider.id}`) : provider.name) : ''
-
-          if (!acc[providerName]) {
-            acc[providerName] = []
-          }
-
-          // 检查是否已经存在相同的模型，避免重复
-          const isDuplicate = acc[providerName].some((m) => m.value === model.id)
-          if (!isDuplicate) {
-            acc[providerName].push({
-              label: `${model.name}`,
-              value: model.id
-            })
-          }
-
-          return acc
-        },
-        {} as Record<string, { label: string; value: string }[]>
-      )
-
-      // 转换为Select组件的options格式
-      const groupedOptions = Object.entries(modelsByProvider).map(([provider, models]) => ({
-        label: provider,
-        options: models
-      }))
-
-      // 将分组选项展平为单个选项数组，以兼容现有代码
-      const flatOptions = models.reduce(
-        (acc, model) => {
-          // 检查是否已经存在相同的模型，避免重复
-          const isDuplicate = acc.some((m) => m.value === model.id)
-          if (!isDuplicate) {
-            acc.push({
-              label: model.name,
-              value: model.id
-            })
-          }
-          return acc
-        },
-        [] as { label: string; value: string }[]
-      )
-
-      return {
-        groupedOptions,
-        flatOptions
-      }
-    } else {
-      const defaultOptions = [
-        // 默认模型选项
-        { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' },
-        { label: 'GPT-4', value: 'gpt-4' },
-        { label: 'Claude 3 Opus', value: 'claude-3-opus-20240229' },
-        { label: 'Claude 3 Sonnet', value: 'claude-3-sonnet-20240229' },
-        { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' }
-      ]
-      return {
-        groupedOptions: [],
-        flatOptions: defaultOptions
-      }
-    }
-  }, [models, providers, t])
+  // 我们不再使用modelOptions，因为我们现在使用SelectModelPopup组件
 
   // 如果没有模型，添加一个默认模型
   useEffect(() => {
@@ -202,6 +140,8 @@ const MemorySettings: FC = () => {
   const [topics, setTopics] = useState<Topic[]>([])
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const pageSize = 15 // 每页显示15条记忆
 
   // 处理添加记忆
   const handleAddMemory = () => {
@@ -234,15 +174,69 @@ const MemorySettings: FC = () => {
   }
 
   // 处理删除记忆
-  const handleDeleteMemory = (id: string) => {
+  const handleDeleteMemory = async (id: string) => {
+    // 先从当前状态中获取要删除的记忆之外的所有记忆
+    const state = store.getState().memory
+    const filteredMemories = state.memories.filter(memory => memory.id !== id)
+
+    // 执行删除操作
     dispatch(deleteMemory(id))
-    message.success(t('settings.memory.deleteSuccess'))
+
+    // 保存到长期记忆文件，并强制覆盖
+    try {
+      await dispatch(saveLongTermMemoryData({
+        memories: filteredMemories, // 直接使用过滤后的数组，而不是使用当前状态
+        memoryLists: state.memoryLists,
+        currentListId: state.currentListId,
+        analyzeModel: state.analyzeModel,
+        forceOverwrite: true // 强制覆盖文件，而不是尝试合并
+      })).unwrap()
+      console.log('[Memory Settings] Long-term memories saved to file after deletion (force overwrite)')
+
+      message.success(t('settings.memory.deleteSuccess'))
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save long-term memory data after deletion:', error)
+    }
+  }
+
+  // 保存所有设置
+  const handleSaveAllSettings = async () => {
+    try {
+      const result = await dispatch(saveAllMemorySettings())
+      if (result.meta.requestStatus === 'fulfilled') {
+        message.success(t('settings.memory.saveAllSettingsSuccess') || '所有设置已成功保存')
+        console.log('[Memory Settings] All memory settings saved successfully')
+      } else {
+        message.error(t('settings.memory.saveAllSettingsError') || '保存设置失败')
+        console.error('[Memory Settings] Failed to save all memory settings:', result.payload)
+      }
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save all memory settings:', error)
+      message.error(t('settings.memory.saveAllSettingsError') || '保存设置失败')
+    }
   }
 
   // 处理清空记忆
-  const handleClearMemories = () => {
+  const handleClearMemories = async () => {
     dispatch(clearMemories(currentListId || undefined))
     setIsClearModalVisible(false)
+
+    // 将清空后的状态保存到长期记忆文件，并强制覆盖
+    try {
+      // 直接传递空数组作为 memories，确保完全清空
+      const state = store.getState().memory
+      await dispatch(saveLongTermMemoryData({
+        memories: [], // 直接使用空数组，而不是使用当前状态
+        memoryLists: state.memoryLists,
+        currentListId: state.currentListId,
+        analyzeModel: state.analyzeModel,
+        forceOverwrite: true // 强制覆盖文件，而不是合并
+      })).unwrap()
+      console.log('[Memory Settings] Long-term memories saved to file after clearing (force overwrite)')
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save long-term memory data after clearing:', error)
+    }
+
     message.success(t('settings.memory.clearSuccess'))
   }
 
@@ -335,6 +329,63 @@ const MemorySettings: FC = () => {
   const handleResetAnalyzingState = () => {
     dispatch(setAnalyzing(false))
     message.success(t('settings.memory.resetAnalyzingState') || '分析状态已重置')
+  }
+
+  // 获取当前选中长期记忆模型的名称
+  const getSelectedModelName = () => {
+    if (!analyzeModel) return ''
+
+    // 遍历所有服务商的模型找到匹配的模型
+    for (const provider of Object.values(providers)) {
+      const model = provider.models.find(m => m.id === analyzeModel)
+      if (model) {
+        return `${model.name} | ${provider.name}`
+      }
+    }
+
+    return analyzeModel
+  }
+
+  // 获取当前选中短期记忆模型的名称
+  const getSelectedShortMemoryModelName = () => {
+    if (!shortMemoryAnalyzeModel) return ''
+
+    // 遍历所有服务商的模型找到匹配的模型
+    for (const provider of Object.values(providers)) {
+      const model = provider.models.find(m => m.id === shortMemoryAnalyzeModel)
+      if (model) {
+        return `${model.name} | ${provider.name}`
+      }
+    }
+
+    return shortMemoryAnalyzeModel
+  }
+
+  // 重置长期记忆分析标记
+  const handleResetLongTermMemoryAnalyzedMessageIds = async () => {
+    if (!selectedTopicId) {
+      message.warning(t('settings.memory.selectTopicFirst') || '请先选择要重置的话题')
+      return
+    }
+
+    try {
+      const result = await resetLongTermMemoryAnalyzedMessageIds(selectedTopicId)
+      if (result) {
+        message.success(t('settings.memory.resetLongTermMemorySuccess') || '长期记忆分析标记已重置')
+
+        // 重置成功后，自动触发分析
+        message.info(t('settings.memory.startingAnalysis') || '开始分析...')
+        setTimeout(() => {
+          // 使用延时确保重置操作已完成
+          analyzeAndAddMemories(selectedTopicId)
+        }, 500)
+      } else {
+        message.info(t('settings.memory.resetLongTermMemoryNoChange') || '没有需要重置的分析标记')
+      }
+    } catch (error) {
+      console.error('Failed to reset long-term memory analyzed message IDs:', error)
+      message.error(t('settings.memory.resetLongTermMemoryError') || '重置长期记忆分析标记失败')
+    }
   }
 
   // 添加滚动检测
@@ -498,23 +549,35 @@ const MemorySettings: FC = () => {
                   </SettingRow>
 
                   {/* 短期记忆分析模型选择 */}
-                  {autoAnalyze && isActive && (
-                    <SettingRow>
-                      <SettingRowTitle>
-                        {t('settings.memory.shortMemoryAnalyzeModel') || '短期记忆分析模型'}
-                      </SettingRowTitle>
-                      <Select
-                        style={{ width: 250 }}
-                        value={shortMemoryAnalyzeModel}
-                        onChange={handleSelectShortMemoryModel}
-                        placeholder={t('settings.memory.selectModel') || '选择模型'}
-                        options={modelOptions.groupedOptions}
-                        disabled={!isActive || !autoAnalyze} // 确保在未激活或未开启自动分析时禁用
-                        optionFilterProp="label"
-                        listHeight={300}
-                      />
-                    </SettingRow>
-                  )}
+                  <SettingRow>
+                    <SettingRowTitle>
+                      {t('settings.memory.shortMemoryAnalyzeModel') || '短期记忆分析模型'}
+                    </SettingRowTitle>
+                    <Button
+                      onClick={async () => {
+                        // 找到当前选中的模型对象
+                        let currentModel: { id: string; provider: string; name: string; group: string } | undefined
+                        if (shortMemoryAnalyzeModel) {
+                          for (const provider of Object.values(providers)) {
+                            const model = provider.models.find(m => m.id === shortMemoryAnalyzeModel)
+                            if (model) {
+                              currentModel = model
+                              break
+                            }
+                          }
+                        }
+
+                        const selectedModel = await SelectModelPopup.show({ model: currentModel })
+                        if (selectedModel) {
+                          handleSelectShortMemoryModel(selectedModel.id)
+                        }
+                      }}
+                      style={{ width: 300 }}
+                      disabled={!isActive}
+                    >
+                      {shortMemoryAnalyzeModel ? getSelectedShortMemoryModelName() : t('settings.memory.selectModel') || '选择模型'}
+                    </Button>
+                  </SettingRow>
 
                   {/* 话题选择 */}
                   {isActive && (
@@ -593,6 +656,25 @@ const MemorySettings: FC = () => {
                   <PriorityManagementSettings />
                   <SettingDivider />
                   <ContextualRecommendationSettings />
+                  <SettingDivider />
+                  <HistoricalContextSettings />
+                  <SettingDivider />
+
+                  {/* 保存所有设置按钮 */}
+                  <SettingGroup>
+                    <SettingTitle>{t('settings.memory.saveAllSettings') || '保存所有设置'}</SettingTitle>
+                    <SettingHelpText>
+                      {t('settings.memory.saveAllSettingsDescription') || '将所有记忆功能的设置保存到文件中，确保应用重启后设置仍然生效。'}
+                    </SettingHelpText>
+                    <SettingRow>
+                      <Button
+                        type="primary"
+                        onClick={handleSaveAllSettings}
+                      >
+                        {t('settings.memory.saveAllSettings') || '保存所有设置'}
+                      </Button>
+                    </SettingRow>
+                  </SettingGroup>
                 </TabPaneSettingGroup>
               )
             },
@@ -626,21 +708,33 @@ const MemorySettings: FC = () => {
                   </SettingRow>
 
                   {/* 长期记忆分析模型选择 */}
-                  {autoAnalyze && isActive && (
-                    <SettingRow>
-                      <SettingRowTitle>{t('settings.memory.analyzeModel') || '长期记忆分析模型'}</SettingRowTitle>
-                      <Select
-                        style={{ width: 250 }}
-                        value={analyzeModel}
-                        onChange={handleSelectModel}
-                        placeholder={t('settings.memory.selectModel') || '选择模型'}
-                        options={modelOptions.groupedOptions}
-                        disabled={!isActive || !autoAnalyze}
-                        optionFilterProp="label"
-                        listHeight={300}
-                      />
-                    </SettingRow>
-                  )}
+                  <SettingRow>
+                    <SettingRowTitle>{t('settings.memory.analyzeModel') || '长期记忆分析模型'}</SettingRowTitle>
+                    <Button
+                      onClick={async () => {
+                        // 找到当前选中的模型对象
+                        let currentModel: { id: string; provider: string; name: string; group: string } | undefined
+                        if (analyzeModel) {
+                          for (const provider of Object.values(providers)) {
+                            const model = provider.models.find(m => m.id === analyzeModel)
+                            if (model) {
+                              currentModel = model
+                              break
+                            }
+                          }
+                        }
+
+                        const selectedModel = await SelectModelPopup.show({ model: currentModel })
+                        if (selectedModel) {
+                          handleSelectModel(selectedModel.id)
+                        }
+                      }}
+                      style={{ width: 300 }}
+                      disabled={!isActive}
+                    >
+                      {analyzeModel ? getSelectedModelName() : t('settings.memory.selectModel') || '选择模型'}
+                    </Button>
+                  </SettingRow>
 
                   {/* 话题选择 */}
                   {isActive && (
@@ -675,6 +769,12 @@ const MemorySettings: FC = () => {
                           disabled={!analyzeModel || isAnalyzing || !isActive}
                           icon={<SearchOutlined />}>
                           {t('settings.memory.analyzeNow') || '立即分析'}
+                        </Button>
+                        <Button
+                          onClick={handleResetLongTermMemoryAnalyzedMessageIds}
+                          disabled={!selectedTopicId || !isActive}
+                          type="default">
+                          {t('settings.memory.resetLongTermMemory') || '重置分析标记'}
                         </Button>
                         {isAnalyzing && (
                           <Button onClick={handleResetAnalyzingState} type="default" danger>
@@ -767,12 +867,14 @@ const MemorySettings: FC = () => {
                   <MemoryListContainer ref={listContainerRef}>
                     {viewMode === 'list' ? (
                       memories.length > 0 && isActive ? (
+                        <div>
                         <List
                           itemLayout="horizontal"
                           style={{ minHeight: '350px' }}
                           dataSource={memories
                             .filter((memory) => (currentListId ? memory.listId === currentListId : true))
-                            .filter((memory) => categoryFilter === null || memory.category === categoryFilter)}
+                            .filter((memory) => categoryFilter === null || memory.category === categoryFilter)
+                            .slice((currentPage - 1) * pageSize, currentPage * pageSize)}
                           renderItem={(memory) => (
                             <List.Item
                               actions={[
@@ -814,6 +916,24 @@ const MemorySettings: FC = () => {
                             </List.Item>
                           )}
                         />
+                        {/* 分页组件 */}
+                        {memories
+                          .filter((memory) => (currentListId ? memory.listId === currentListId : true))
+                          .filter((memory) => categoryFilter === null || memory.category === categoryFilter).length > pageSize && (
+                          <PaginationContainer>
+                            <Pagination
+                              current={currentPage}
+                              onChange={(page) => setCurrentPage(page)}
+                              total={memories
+                                .filter((memory) => (currentListId ? memory.listId === currentListId : true))
+                                .filter((memory) => categoryFilter === null || memory.category === categoryFilter).length}
+                              pageSize={pageSize}
+                              size="small"
+                              showSizeChanger={false}
+                            />
+                          </PaginationContainer>
+                        )}
+                        </div>
                       ) : (
                         <Empty description={t('settings.memory.noMemories')} />
                       )
@@ -1028,6 +1148,13 @@ const MemoryMindMapContainer = styled.div`
   @media (max-height: 700px) {
     height: calc(50vh - 80px);
   }
+`
+
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
 `
 
 const CategoryFilterContainer = styled.div`
