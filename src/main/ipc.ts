@@ -1,3 +1,5 @@
+import './services/MemoryFileService'
+
 import fs from 'node:fs'
 import { arch } from 'node:os'
 
@@ -19,6 +21,7 @@ import FileStorage from './services/FileStorage'
 import { GeminiService } from './services/GeminiService'
 import KnowledgeService from './services/KnowledgeService'
 import mcpService from './services/MCPService'
+import { memoryFileService } from './services/MemoryFileService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
@@ -310,5 +313,22 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   })
   ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, async (_, uid: string, url: string) => {
     return await searchService.openUrlInSearchWindow(uid, url)
+  })
+
+  // memory
+  ipcMain.handle(IpcChannel.Memory_LoadData, async () => {
+    return await memoryFileService.loadData()
+  })
+  ipcMain.handle(IpcChannel.Memory_SaveData, async (_, data, forceOverwrite = false) => {
+    return await memoryFileService.saveData(data, forceOverwrite)
+  })
+  ipcMain.handle(IpcChannel.Memory_DeleteShortMemoryById, async (_, id) => {
+    return await memoryFileService.deleteShortMemoryById(id)
+  })
+  ipcMain.handle(IpcChannel.LongTermMemory_LoadData, async () => {
+    return await memoryFileService.loadLongTermData()
+  })
+  ipcMain.handle(IpcChannel.LongTermMemory_SaveData, async (_, data, forceOverwrite = false) => {
+    return await memoryFileService.saveLongTermData(data, forceOverwrite)
   })
 }

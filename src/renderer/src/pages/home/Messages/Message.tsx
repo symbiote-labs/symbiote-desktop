@@ -8,6 +8,7 @@ import { getModelUniqId } from '@renderer/services/ModelService'
 import { Assistant, Message, Topic } from '@renderer/types'
 import { classNames } from '@renderer/utils'
 import { Divider, Dropdown } from 'antd'
+import { ItemType } from 'antd/es/menu/interface'
 import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -65,7 +66,11 @@ const MessageItem: FC<Props> = ({
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    const _selectedText = window.getSelection()?.toString()
+    const _selectedText = window.getSelection()?.toString() || ''
+
+    // 无论是否选中文本，都设置上下文菜单位置
+    setContextMenuPosition({ x: e.clientX, y: e.clientY })
+
     if (_selectedText) {
       const quotedText =
         _selectedText
@@ -73,8 +78,10 @@ const MessageItem: FC<Props> = ({
           .map((line) => `> ${line}`)
           .join('\n') + '\n-------------'
       setSelectedQuoteText(quotedText)
-      setContextMenuPosition({ x: e.clientX, y: e.clientY })
       setSelectedText(_selectedText)
+    } else {
+      setSelectedQuoteText('')
+      setSelectedText('')
     }
   }, [])
 
@@ -134,7 +141,7 @@ const MessageItem: FC<Props> = ({
       {contextMenuPosition && (
         <Dropdown
           overlayStyle={{ left: contextMenuPosition.x, top: contextMenuPosition.y, zIndex: 1000 }}
-          menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText) }}
+          menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText, message) }}
           open={true}
           trigger={['contextMenu']}>
           <div />
@@ -181,23 +188,46 @@ const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolea
     : undefined
 }
 
-const getContextMenuItems = (t: (key: string) => string, selectedQuoteText: string, selectedText: string) => [
-  {
-    key: 'copy',
-    label: t('common.copy'),
-    onClick: () => {
-      navigator.clipboard.writeText(selectedText)
-      window.message.success({ content: t('message.copied'), key: 'copy-message' })
-    }
-  },
-  {
-    key: 'quote',
-    label: t('chat.message.quote'),
-    onClick: () => {
-      EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
-    }
+const getContextMenuItems = (
+  t: (key: string) => string,
+  selectedQuoteText: string,
+  selectedText: string,
+  message: Message
+): ItemType[] => {
+  const items: ItemType[] = []
+
+  // 只有在选中文本时，才添加复制和引用选项
+  if (selectedText) {
+    items.push({
+      key: 'copy',
+      label: t('common.copy'),
+      onClick: () => {
+        navigator.clipboard.writeText(selectedText)
+        window.message.success({ content: t('message.copied'), key: 'copy-message' })
+      }
+    })
+
+    items.push({
+      key: 'quote',
+      label: t('chat.message.quote'),
+      onClick: () => {
+        EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
+      }
+    })
   }
-]
+
+  // 添加复制消息ID选项，但不显示ID
+  items.push({
+    key: 'copy_id',
+    label: t('message.copy_id') || '复制消息ID',
+    onClick: () => {
+      navigator.clipboard.writeText(message.id)
+      window.message.success({ content: t('message.id_copied') || '消息ID已复制', key: 'copy-message-id' })
+    }
+  })
+
+  return items
+}
 
 const MessageContainer = styled.div`
   display: flex;

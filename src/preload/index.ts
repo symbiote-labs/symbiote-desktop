@@ -182,6 +182,14 @@ const api = {
     openSearchWindow: (uid: string) => ipcRenderer.invoke(IpcChannel.SearchWindow_Open, uid),
     closeSearchWindow: (uid: string) => ipcRenderer.invoke(IpcChannel.SearchWindow_Close, uid),
     openUrlInSearchWindow: (uid: string, url: string) => ipcRenderer.invoke(IpcChannel.SearchWindow_OpenUrl, uid, url)
+  },
+  memory: {
+    loadData: () => ipcRenderer.invoke(IpcChannel.Memory_LoadData),
+    saveData: (data: any) => ipcRenderer.invoke(IpcChannel.Memory_SaveData, data),
+    deleteShortMemoryById: (id: string) => ipcRenderer.invoke(IpcChannel.Memory_DeleteShortMemoryById, id),
+    loadLongTermData: () => ipcRenderer.invoke(IpcChannel.LongTermMemory_LoadData),
+    saveLongTermData: (data: any, forceOverwrite: boolean = false) =>
+      ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
   }
 }
 

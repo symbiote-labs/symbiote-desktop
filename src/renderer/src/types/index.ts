@@ -73,6 +73,13 @@ export type Message = {
   useful?: boolean
   error?: Record<string, any>
   enabledMCPs?: MCPServer[]
+  // 引用消息
+  referencedMessages?: {
+    id: string
+    content: string
+    role: 'user' | 'assistant'
+    createdAt: string
+  }[]
   metadata?: {
     // Gemini
     groundingMetadata?: GroundingMetadata

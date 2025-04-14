@@ -50,6 +50,7 @@ export interface SettingsState {
   clickAssistantToShowTopic: boolean
   autoCheckUpdate: boolean
   renderInputMessageAsMarkdown: boolean
+  enableHistoricalContext: boolean // 是否启用历史对话上下文功能
   codeShowLineNumbers: boolean
   codeCollapsible: boolean
   codeWrappable: boolean
@@ -156,6 +157,7 @@ export const initialState: SettingsState = {
   clickAssistantToShowTopic: true,
   autoCheckUpdate: true,
   renderInputMessageAsMarkdown: false,
+  enableHistoricalContext: false, // 默认禁用历史对话上下文功能
   codeShowLineNumbers: false,
   codeCollapsible: false,
   codeWrappable: false,
@@ -309,6 +311,10 @@ const settingsSlice = createSlice({
     },
     setRenderInputMessageAsMarkdown: (state, action: PayloadAction<boolean>) => {
       state.renderInputMessageAsMarkdown = action.payload
+    },
+
+    setEnableHistoricalContext: (state, action: PayloadAction<boolean>) => {
+      state.enableHistoricalContext = action.payload
     },
     setClickAssistantToShowTopic: (state, action: PayloadAction<boolean>) => {
       state.clickAssistantToShowTopic = action.payload
@@ -519,6 +525,7 @@ export const {
   setPasteLongTextAsFile,
   setAutoCheckUpdate,
   setRenderInputMessageAsMarkdown,
+  setEnableHistoricalContext,
   setClickAssistantToShowTopic,
   setWebdavHost,
   setWebdavUser,

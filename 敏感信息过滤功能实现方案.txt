@@ -1,0 +1,280 @@
+# 敏感信息过滤功能实现方案（修改版）
+
+## 需求分析
+
+用户希望增加一个按钮，控制记忆功能是否过滤密钥等安全敏感信息。当开启过滤功能时，分析模型会过滤掉密钥等敏感信息；关闭则不过滤。此功能对于保护用户隐私和敏感数据至关重要。
+
+## 实现思路
+
+1. 在Redux状态中添加一个新的状态属性`filterSensitiveInfo`
+2. 在设置界面中添加一个开关按钮，默认为开启状态
+3. 修改分析函数，根据`filterSensitiveInfo`状态添加过滤指令
+4. 添加日志记录，跟踪过滤状态的变化
+
+## 修改文件
+
+### 1. 修改 src/renderer/src/store/memory.ts
+
+```typescript
+// 在 MemoryState 接口中添加
+export interface MemoryState {
+  // 其他属性...
+  filterSensitiveInfo: boolean // 是否过滤敏感信息
+}
+
+// 在 initialState 中添加
+const initialState: MemoryState = {
+  // 其他属性...
+  filterSensitiveInfo: true, // 默认启用敏感信息过滤
+}
+
+// 添加新的 action creator
+setFilterSensitiveInfo: (state, action: PayloadAction<boolean>) => {
+  state.filterSensitiveInfo = action.payload
+},
+
+// 导出 action
+export const {
+  // 其他 actions...
+  setFilterSensitiveInfo,
+} = memorySlice.actions
+
+// 修改 saveMemoryData 函数，确保 filterSensitiveInfo 设置也被保存
+const completeData = {
+  // 基本设置
+  isActive: memoryData.isActive !== undefined ? memoryData.isActive : state.isActive,
+  shortMemoryActive: memoryData.shortMemoryActive !== undefined ? memoryData.shortMemoryActive : state.shortMemoryActive,
+  autoAnalyze: memoryData.autoAnalyze !== undefined ? memoryData.autoAnalyze : state.autoAnalyze,
+  filterSensitiveInfo: memoryData.filterSensitiveInfo !== undefined ? memoryData.filterSensitiveInfo : state.filterSensitiveInfo,
+
+  // 其他属性...
+}
+
+// 同样修改 saveLongTermMemoryData 函数
+const completeData = {
+  // 基本设置
+  isActive: memoryData.isActive !== undefined ? memoryData.isActive : state.isActive,
+  autoAnalyze: memoryData.autoAnalyze !== undefined ? memoryData.autoAnalyze : state.autoAnalyze,
+  filterSensitiveInfo: memoryData.filterSensitiveInfo !== undefined ? memoryData.filterSensitiveInfo : state.filterSensitiveInfo,
+
+  // 其他属性...
+}
+```
+
+### 2. 修改 src/renderer/src/pages/settings/MemorySettings/index.tsx
+
+```typescript
+// 导入 InfoCircleOutlined 图标
+import {
+  AppstoreOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  InfoCircleOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  UnorderedListOutlined
+} from '@ant-design/icons'
+
+// 导入 setFilterSensitiveInfo action
+import {
+  addMemory,
+  clearMemories,
+  deleteMemory,
+  editMemory,
+  setAnalyzeModel,
+  setAnalyzing,
+  setAutoAnalyze,
+  setFilterSensitiveInfo,
+  setMemoryActive,
+  setShortMemoryAnalyzeModel,
+  saveMemoryData,
+  saveLongTermMemoryData,
+  saveAllMemorySettings
+} from '@renderer/store/memory'
+
+// 从 Redux 获取 filterSensitiveInfo 状态
+const filterSensitiveInfo = useAppSelector((state) => state.memory?.filterSensitiveInfo ?? true) // 默认启用敏感信息过滤
+
+// 添加处理切换敏感信息过滤的函数
+const handleToggleFilterSensitiveInfo = async (checked: boolean) => {
+  dispatch(setFilterSensitiveInfo(checked))
+  console.log('[Memory Settings] Filter sensitive info set:', checked)
+
+  // 使用Redux Thunk保存到JSON文件
+  try {
+    await dispatch(saveMemoryData({ filterSensitiveInfo: checked })).unwrap()
+    console.log('[Memory Settings] Filter sensitive info saved to file successfully:', checked)
+  } catch (error) {
+    console.error('[Memory Settings] Failed to save filter sensitive info to file:', error)
+  }
+}
+
+// 在短期记忆设置中添加开关按钮
+<SettingRow>
+  <SettingRowTitle>
+    {t('settings.memory.filterSensitiveInfo') || '过滤敏感信息'}
+    <Tooltip title={t('settings.memory.filterSensitiveInfoTip') || '启用后，记忆功能将不会提取API密钥、密码等敏感信息'}>
+      <InfoCircleOutlined style={{ marginLeft: 8 }} />
+    </Tooltip>
+  </SettingRowTitle>
+  <Switch checked={filterSensitiveInfo} onChange={handleToggleFilterSensitiveInfo} disabled={!isActive} />
+</SettingRow>
+
+// 在长期记忆设置中也添加相同的开关按钮
+<SettingRow>
+  <SettingRowTitle>
+    {t('settings.memory.filterSensitiveInfo') || '过滤敏感信息'}
+    <Tooltip title={t('settings.memory.filterSensitiveInfoTip') || '启用后，记忆功能将不会提取API密钥、密码等敏感信息'}>
+      <InfoCircleOutlined style={{ marginLeft: 8 }} />
+    </Tooltip>
+  </SettingRowTitle>
+  <Switch checked={filterSensitiveInfo} onChange={handleToggleFilterSensitiveInfo} disabled={!isActive} />
+</SettingRow>
+```
+
+### 3. 修改 src/renderer/src/services/MemoryService.ts
+
+```typescript
+// 修改 analyzeConversation 函数
+const analyzeConversation = async (
+  conversation: string,
+  modelId: string,
+  customPrompt?: string
+): Promise<Array<{ content: string; category: string }>> => {
+  try {
+    // 获取当前的过滤敏感信息设置
+    const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
+
+    // 使用自定义提示词或默认提示词
+    let basePrompt =
+      customPrompt ||
+      `
+请分析对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
+
+将每条信息分类并按以下格式返回：
+类别: 信息内容
+
+类别应该是以下几种之一：
+- 用户偏好：用户喜好、喜欢的事物、风格等
+- 技术需求：用户的技术相关需求、开发偏好等
+- 个人信息：用户的背景、经历等个人信息
+- 交互偏好：用户喜欢的交流方式、沟通风格等
+- 其他：不属于以上类别的重要信息
+
+请确保每条信息都是简洁、准确的。如果没有找到重要信息，请返回空字符串。
+`
+
+    // 如果启用了敏感信息过滤，添加相关指令
+    if (filterSensitiveInfo) {
+      basePrompt += `
+## 安全提示：
+请注意不要提取任何敏感信息，包括但不限于：
+- API密钥、访问令牌或其他凭证
+- 密码或密码提示
+- 私人联系方式（如电话号码、邮箱地址）
+- 个人身份信息（如身份证号、社保号）
+- 银行账户或支付信息
+- 私密的个人或商业信息
+
+如果发现此类信息，请完全忽略，不要以任何形式记录或提取。
+`
+    }
+
+    // 其余代码保持不变...
+  }
+}
+
+// 修改 analyzeAndAddShortMemories 函数
+export const analyzeAndAddShortMemories = async (topicId: string) => {
+  // 其他代码...
+
+  try {
+    // 获取当前的过滤敏感信息设置
+    const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
+
+    // 构建短期记忆分析提示词
+    let prompt = `
+请对以下对话内容进行非常详细的分析和总结，提取对当前对话至关重要的上下文信息。请注意，这个分析将用于生成短期记忆，帮助AI理解当前对话的完整上下文。
+
+分析要求：
+1. 非常详细地总结用户的每一句话中表达的关键信息、需求和意图
+2. 全面分析AI回复中的重要内容和对用户问题的解决方案
+3. 详细记录对话中的重要事实、数据、代码示例和具体细节
+4. 清晰捕捉对话的逻辑发展、转折点和关键决策
+5. 提取对理解当前对话上下文必不可少的信息
+6. 记录用户提出的具体问题和关注点
+7. 捕捉用户在对话中表达的偏好、困惑和反馈
+8. 记录对话中提到的文件、路径、变量名等具体技术细节
+`
+
+    // 如果启用了敏感信息过滤，添加相关指令
+    if (filterSensitiveInfo) {
+      prompt += `
+9. 请注意不要提取任何敏感信息，包括但不限于：
+   - API密钥、访问令牌或其他凭证
+   - 密码或密码提示
+   - 私人联系方式（如电话号码、邮箱地址）
+   - 个人身份信息（如身份证号、社保号）
+   - 银行账户或支付信息
+   - 私密的个人或商业信息
+   如果发现此类信息，请完全忽略，不要以任何形式记录或提取。
+`
+    }
+
+    // 其余代码保持不变...
+  }
+}
+```
+
+### 4. 修改 src/renderer/src/i18n/locales/zh-cn.json 和 en-us.json
+
+```json
+{
+  "settings": {
+    "memory": {
+      "filterSensitiveInfo": "过滤敏感信息",
+      "filterSensitiveInfoTip": "启用后，记忆功能将不会提取API密钥、密码等敏感信息"
+    }
+  }
+}
+```
+
+```json
+{
+  "settings": {
+    "memory": {
+      "filterSensitiveInfo": "Filter Sensitive Information",
+      "filterSensitiveInfoTip": "When enabled, memory function will not extract API keys, passwords, or other sensitive information"
+    }
+  }
+}
+```
+
+## 实现效果
+
+这些修改后，用户将能够通过开关按钮控制记忆功能是否过滤敏感信息：
+
+1. 当开启过滤功能时（默认状态），分析模型会被明确指示不要提取API密钥、密码等敏感信息
+2. 当关闭过滤功能时，分析模型会正常提取所有信息，包括可能的敏感信息
+
+开关按钮会出现在短期记忆和长期记忆设置中，用户可以根据需要随时切换。设置会被保存到配置文件中，确保应用重启后设置仍然生效。
+
+## 思考过程
+
+1. **状态管理**：首先考虑如何在Redux中添加新的状态属性，并确保它能够被正确保存和加载。
+
+2. **UI设计**：在设置界面中添加开关按钮，并提供提示信息，帮助用户理解这个功能的作用。
+
+3. **提示词修改**：根据开关状态修改分析提示词，添加不要提取敏感信息的指令。这是实现过滤功能的核心部分。
+
+4. **国际化支持**：添加相关的翻译键值对，确保功能在不同语言环境下都能正常使用。
+
+5. **持久化**：确保设置能够被正确保存到配置文件中，并在应用重启后加载。
+
+## 注意事项
+
+1. 这个功能只能在一定程度上防止敏感信息被提取，但不能完全保证。如果用户在对话中明确提到了敏感信息，AI模型可能仍然会提取部分内容。
+
+2. 建议用户在讨论敏感信息时，最好暂时关闭记忆功能，或者在对话中避免提及敏感信息。
+
+3. 这个功能只影响新分析的对话内容，已经存储的记忆不会受到影响。如果用户想要清除可能包含敏感信息的记忆，需要手动删除这些记忆。

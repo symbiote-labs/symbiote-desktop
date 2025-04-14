@@ -4,7 +4,7 @@ import { getModelUniqId } from '@renderer/services/ModelService'
 import { Message, Model } from '@renderer/types'
 import { getBriefInfo } from '@renderer/utils'
 import { withMessageThought } from '@renderer/utils/formats'
-import { Divider, Flex } from 'antd'
+import { Collapse, Divider, Flex } from 'antd'
 import { clone } from 'lodash'
 import { Search } from 'lucide-react'
 import React, { Fragment, useMemo } from 'react'
@@ -204,8 +204,100 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
         {message.mentions?.map((model) => <MentionTag key={getModelUniqId(model)}>{'@' + model.name}</MentionTag>)}
       </Flex>
-      <MessageThought message={message} />
-      <MessageTools message={message} />
+      {message.referencedMessages && message.referencedMessages.length > 0 && (
+        <div>
+          {message.referencedMessages.map((refMsg, index) => (
+            <Collapse
+              key={refMsg.id}
+              className="reference-collapse"
+              defaultActiveKey={['1']}
+              size="small"
+              items={[
+                {
+                  key: '1',
+                  label: (
+                    <div className="reference-header-label">
+                      <span className="reference-title">
+                        {t('message.referenced_message')}{' '}
+                        {message.referencedMessages && message.referencedMessages.length > 1
+                          ? `(${index + 1}/${message.referencedMessages.length})`
+                          : ''}
+                      </span>
+                      <span className="reference-role">{refMsg.role === 'user' ? t('common.you') : 'AI'}</span>
+                    </div>
+                  ),
+                  extra: (
+                    <span
+                      className="reference-id"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigator.clipboard.writeText(refMsg.id)
+                        window.message.success({
+                          content: t('message.id_copied') || '消息ID已复制',
+                          key: 'copy-reference-id'
+                        })
+                      }}>
+                      ID: {refMsg.id}
+                    </span>
+                  ),
+                  children: (
+                    <div className="reference-content">
+                      <div className="reference-text">{refMsg.content}</div>
+                      <div className="reference-bottom-spacing"></div>
+                    </div>
+                  )
+                }
+              ]}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 兼容旧版本的referencedMessage */}
+      {!message.referencedMessages && (message as any).referencedMessage && (
+        <Collapse
+          className="reference-collapse"
+          defaultActiveKey={['1']}
+          size="small"
+          items={[
+            {
+              key: '1',
+              label: (
+                <div className="reference-header-label">
+                  <span className="reference-title">{t('message.referenced_message')}</span>
+                  <span className="reference-role">
+                    {(message as any).referencedMessage.role === 'user' ? t('common.you') : 'AI'}
+                  </span>
+                </div>
+              ),
+              extra: (
+                <span
+                  className="reference-id"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText((message as any).referencedMessage.id)
+                    window.message.success({
+                      content: t('message.id_copied') || '消息ID已复制',
+                      key: 'copy-reference-id'
+                    })
+                  }}>
+                  ID: {(message as any).referencedMessage.id}
+                </span>
+              ),
+              children: (
+                <div className="reference-content">
+                  <div className="reference-text">{(message as any).referencedMessage.content}</div>
+                  <div className="reference-bottom-spacing"></div>
+                </div>
+              )
+            }
+          ]}
+        />
+      )}
+      <div className="message-content-tools">
+        <MessageThought message={message} />
+        <MessageTools message={message} />
+      </div>
       <Markdown message={{ ...message, content: processedContent.replace(toolUseRegex, '') }} />
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
@@ -312,5 +404,133 @@ const SearchingText = styled.div`
 const SearchEntryPoint = styled.div`
   margin: 10px 2px;
 `
+
+// 引用消息样式 - 使用全局样式
+const referenceStyles = `
+  .reference-collapse {
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+    background-color: var(--color-bg-1) !important;
+
+    .ant-collapse-header {
+      padding: 2px 8px !important;
+      background-color: var(--color-bg-2);
+      border-bottom: 1px solid var(--color-border);
+      font-size: 10px;
+      display: flex;
+      justify-content: space-between;
+      height: 18px;
+      min-height: 18px;
+      line-height: 14px;
+    }
+
+    .ant-collapse-expand-icon {
+      height: 18px;
+      line-height: 14px;
+      padding-top: 0 !important;
+      margin-top: -2px;
+      margin-right: 2px;
+    }
+
+    .ant-collapse-header-text {
+      flex: 0 1 auto;
+      max-width: 70%;
+    }
+
+    .ant-collapse-extra {
+      flex: 0 0 auto;
+      margin-left: 10px;
+      padding-right: 0;
+      position: relative;
+      right: 20px;
+    }
+
+    .reference-header-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 14px;
+      line-height: 14px;
+    }
+
+    .reference-title {
+      font-weight: 500;
+      color: var(--color-text-1);
+      font-size: 10px;
+    }
+
+    .reference-role {
+      color: var(--color-text-2);
+      font-size: 9px;
+    }
+
+    .reference-id {
+      color: var(--color-text-3);
+      font-size: 9px;
+      cursor: pointer;
+      padding: 1px 4px;
+      border-radius: 3px;
+      transition: background-color 0.2s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+      display: inline-block;
+
+      &:hover {
+        background-color: var(--color-bg-3);
+        color: var(--color-text-2);
+      }
+    }
+
+    .ant-collapse-extra {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+    }
+
+    .ant-collapse-content-box {
+      padding: 12px !important;
+      padding-top: 8px !important;
+      padding-bottom: 2px !important;
+    }
+
+    .reference-content {
+      max-height: 200px;
+      overflow-y: auto;
+      padding-bottom: 10px;
+
+      .reference-text {
+        color: var(--color-text-1);
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .reference-bottom-spacing {
+        height: 10px;
+      }
+    }
+  }
+`
+
+// 将样式添加到文档中
+try {
+  if (typeof document !== 'undefined') {
+    const styleElement = document.createElement('style')
+    styleElement.textContent =
+      referenceStyles +
+      `
+      .message-content-tools {
+        margin-top: 20px;
+      }
+    `
+    document.head.appendChild(styleElement)
+  }
+} catch (error) {
+  console.error('Failed to add reference styles:', error)
+}
 
 export default React.memo(MessageContent)

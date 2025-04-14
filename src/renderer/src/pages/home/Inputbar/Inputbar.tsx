@@ -14,7 +14,7 @@ import { useSidebarIconShow } from '@renderer/hooks/useSidebarIcon'
 import { addAssistantMessagesToTopic, getDefaultTopic } from '@renderer/services/AssistantService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import FileManager from '@renderer/services/FileManager'
-import { checkRateLimit, getUserMessage } from '@renderer/services/MessagesService'
+import { checkRateLimit, findMessageById, getUserMessage } from '@renderer/services/MessagesService'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { estimateMessageUsage, estimateTextTokens as estimateTxtTokens } from '@renderer/services/TokenService'
 import { translateText } from '@renderer/services/TranslateService'
@@ -184,9 +184,135 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
 
     try {
+      // 检查用户输入是否包含消息ID
+      const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+
+      // 从文本中提取所有消息ID
+      const matches = text.match(new RegExp(uuidRegex, 'g'))
+
+      // 如果只有ID且没有其他内容，则直接查找原始消息
+      if (matches && matches.length > 0 && text.trim() === matches.join(' ')) {
+        try {
+          // 创建引用消息
+          const userMessage = getUserMessage({ assistant, topic, type: 'text', content: '' })
+          userMessage.referencedMessages = []
+
+          // 处理所有匹配到的ID
+          let foundAnyMessage = false
+          for (const messageId of matches) {
+            console.log(`[引用消息] 尝试查找消息ID: ${messageId}`)
+            const originalMessage = await findMessageById(messageId)
+            if (originalMessage) {
+              userMessage.referencedMessages.push({
+                id: originalMessage.id,
+                content: originalMessage.content,
+                role: originalMessage.role,
+                createdAt: originalMessage.createdAt
+              })
+              foundAnyMessage = true
+              console.log(`[引用消息] 找到消息ID: ${messageId}`)
+            } else {
+              console.log(`[引用消息] 未找到消息ID: ${messageId}`)
+            }
+          }
+
+          if (foundAnyMessage) {
+            // 发送引用消息
+            userMessage.usage = await estimateMessageUsage(userMessage)
+            currentMessageId.current = userMessage.id
+
+            dispatch(
+              _sendMessage(userMessage, assistant, topic, {
+                mentions: mentionModels
+              })
+            )
+
+            // 清空输入框
+            setText('')
+            setFiles([])
+            setTimeout(() => setText(''), 500)
+            setTimeout(() => resizeTextArea(), 0)
+            setExpend(false)
+
+            window.message.success({
+              content:
+                t('message.ids_found', { count: userMessage.referencedMessages.length }) ||
+                `已找到${userMessage.referencedMessages.length}条原始消息`,
+              key: 'message-id-found'
+            })
+            return
+          } else {
+            window.message.error({
+              content: t('message.id_not_found') || '未找到原始消息',
+              key: 'message-id-not-found'
+            })
+          }
+        } catch (error) {
+          console.error(`[引用消息] 查找消息ID时出错:`, error)
+          window.message.error({ content: t('message.id_error') || '查找原始消息时出错', key: 'message-id-error' })
+        }
+      }
+
+      // 如果不是单独的ID或者没有找到原始消息，则正常发送消息
+      // 先检查消息内容是否包含消息ID，如果是则将其替换为空字符串
+      let messageContent = text
+
+      // 如果消息内容包含消息ID，则将其替换为空字符串
+      if (matches && matches.length > 0) {
+        // 检查是否是纯消息ID
+        const isOnlyUUID = text.trim() === matches[0]
+        if (isOnlyUUID) {
+          messageContent = ''
+        } else {
+          // 如果消息内容包含消息ID，则将消息ID替换为空字符串
+          for (const match of matches) {
+            messageContent = messageContent.replace(match, '')
+          }
+          // 去除多余的空格
+          messageContent = messageContent.replace(/\s+/g, ' ').trim()
+        }
+      }
+
       // Dispatch the sendMessage action with all options
       const uploadedFiles = await FileManager.uploadFiles(files)
-      const userMessage = getUserMessage({ assistant, topic, type: 'text', content: text })
+      const userMessage = getUserMessage({ assistant, topic, type: 'text', content: messageContent })
+
+      // 如果消息内容包含消息ID，则添加引用
+      if (matches && matches.length > 0) {
+        try {
+          // 初始化引用消息数组
+          userMessage.referencedMessages = []
+
+          // 处理所有匹配到的ID
+          for (const messageId of matches) {
+            console.log(`[引用消息] 尝试查找消息ID作为引用: ${messageId}`)
+            const originalMessage = await findMessageById(messageId)
+            if (originalMessage) {
+              userMessage.referencedMessages.push({
+                id: originalMessage.id,
+                content: originalMessage.content,
+                role: originalMessage.role,
+                createdAt: originalMessage.createdAt
+              })
+              console.log(`[引用消息] 找到消息ID作为引用: ${messageId}`)
+            } else {
+              console.log(`[引用消息] 未找到消息ID作为引用: ${messageId}`)
+            }
+          }
+
+          // 如果找到了引用消息，显示成功提示
+          if (userMessage.referencedMessages.length > 0) {
+            window.message.success({
+              content:
+                t('message.ids_found', { count: userMessage.referencedMessages.length }) ||
+                `已找到${userMessage.referencedMessages.length}条原始消息`,
+              key: 'message-id-found'
+            })
+          }
+        } catch (error) {
+          console.error(`[引用消息] 查找消息ID作为引用时出错:`, error)
+        }
+      }
 
       if (uploadedFiles) {
         userMessage.files = uploadedFiles
@@ -401,6 +527,20 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnterPressed = event.keyCode == 13
 
+    // 检查是否是消息ID格式
+    if (isEnterPressed && !event.shiftKey) {
+      const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+      const currentText = text.trim()
+      const isUUID = uuidRegex.test(currentText) && currentText.length === 36
+
+      if (isUUID) {
+        // 如果是消息ID格式，则不显示ID在对话中
+        event.preventDefault()
+        sendMessage()
+        return
+      }
+    }
+
     // 按下Tab键，自动选中${xxx}
     if (event.key === 'Tab' && inputFocus) {
       event.preventDefault()
@@ -540,7 +680,19 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value
-    setText(newText)
+
+    // 检查是否包含UUID格式的消息ID
+    const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+    const matches = newText.match(new RegExp(uuidRegex, 'g'))
+
+    // 如果输入的内容只是一个UUID，不更新文本框内容，直接处理引用
+    if (matches && matches.length === 1 && newText.trim() === matches[0]) {
+      // 不立即更新文本框，等待用户按下回车键时再处理
+      setText(newText)
+    } else {
+      // 正常更新文本框内容
+      setText(newText)
+    }
 
     const textArea = textareaRef.current?.resizableTextArea?.textArea
     const cursorPosition = textArea?.selectionStart ?? 0
@@ -563,8 +715,41 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     async (event: ClipboardEvent) => {
       const clipboardText = event.clipboardData?.getData('text')
       if (clipboardText) {
-        // Prioritize the text when pasting.
-        // handled by the default event
+        // 检查粘贴的内容是否是消息ID
+        const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i
+        const isUUID = uuidRegex.test(clipboardText.trim()) && clipboardText.trim().length === 36
+
+        if (isUUID) {
+          // 如果是消息ID，则阻止默认粘贴行为，自定义处理
+          event.preventDefault()
+
+          // 获取当前文本框的内容和光标位置
+          const textArea = textareaRef.current?.resizableTextArea?.textArea
+          if (textArea) {
+            const currentText = textArea.value
+            const cursorPosition = textArea.selectionStart
+            const cursorEnd = textArea.selectionEnd
+
+            // 如果有选中文本，则替换选中文本；否则在光标位置插入
+            const newText =
+              currentText.substring(0, cursorPosition) + clipboardText.trim() + currentText.substring(cursorEnd)
+
+            setText(newText)
+
+            // 将光标移到插入的ID后面
+            const newCursorPosition = cursorPosition + clipboardText.trim().length
+            setTimeout(() => {
+              if (textArea) {
+                textArea.focus()
+                textArea.setSelectionRange(newCursorPosition, newCursorPosition)
+              }
+            }, 0)
+          } else {
+            // 如果无法获取textArea，则直接设置文本
+            setText(clipboardText.trim())
+          }
+        }
+        // 其他文本内容由默认事件处理
       } else {
         for (const file of event.clipboardData?.files || []) {
           event.preventDefault()

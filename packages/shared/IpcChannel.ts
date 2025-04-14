@@ -156,5 +156,14 @@ export enum IpcChannel {
   // Search Window
   SearchWindow_Open = 'search-window:open',
   SearchWindow_Close = 'search-window:close',
-  SearchWindow_OpenUrl = 'search-window:open-url'
+  SearchWindow_OpenUrl = 'search-window:open-url',
+
+  // Memory File Storage
+  Memory_LoadData = 'memory:load-data',
+  Memory_SaveData = 'memory:save-data',
+  Memory_DeleteShortMemoryById = 'memory:delete-short-memory-by-id',
+
+  // Long-term Memory File Storage
+  LongTermMemory_LoadData = 'long-term-memory:load-data',
+  LongTermMemory_SaveData = 'long-term-memory:save-data'
 }

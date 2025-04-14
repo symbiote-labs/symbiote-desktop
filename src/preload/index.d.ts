@@ -201,6 +201,13 @@ declare global {
         closeSearchWindow: (uid: string) => Promise<string>
         openUrlInSearchWindow: (uid: string, url: string) => Promise<string>
       }
+      memory: {
+        loadData: () => Promise<any>
+        saveData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
+        deleteShortMemoryById: (id: string) => Promise<boolean>
+        loadLongTermData: () => Promise<any>
+        saveLongTermData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
+      }
     }
   }
 }
