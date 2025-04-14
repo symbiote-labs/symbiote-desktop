@@ -1,6 +1,6 @@
 import { isReasoningModel } from '@renderer/config/models'
 import { getAssistantById } from '@renderer/services/AssistantService'
-import { Message } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessageTypes'
 
 export function escapeDollarNumber(text: string) {
   let escapedText = ''

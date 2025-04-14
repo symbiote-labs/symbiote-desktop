@@ -1,5 +1,4 @@
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { estimateMessageUsage } from '@renderer/services/TokenService'
 import store, { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
   clearStreamMessage,
@@ -15,7 +14,8 @@ import {
   updateMessages,
   updateMessageThunk
 } from '@renderer/store/messages'
-import type { Assistant, Message, Topic } from '@renderer/types'
+import type { Assistant, Topic } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessageTypes'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { useCallback } from 'react'
 

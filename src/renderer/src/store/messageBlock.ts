@@ -45,9 +45,9 @@ const messageBlocksSlice = createSlice({
     setMessageBlocksError: (state, action: PayloadAction<string>) => {
       state.loadingState = 'failed'
       state.error = action.payload
-    }
+    },
     // 注意：如果只想更新现有块，也可以使用 `updateOne`
-    // updateOneBlock: messageBlocksAdapter.updateOne, // 期望 { id: EntityId, changes: Partial<MessageBlock> }
+    updateOneBlock: messageBlocksAdapter.updateOne // 期望 { id: EntityId, changes: Partial<MessageBlock> }
   }
   // 如果需要处理其他 slice 的 action，可以在这里添加 extraReducers。
 })
@@ -60,15 +60,13 @@ export const {
   removeManyBlocks,
   removeAllBlocks,
   setMessageBlocksLoading,
-  setMessageBlocksError
+  setMessageBlocksError,
+  updateOneBlock
 } = messageBlocksSlice.actions
 
 export const messageBlocksSelectors = messageBlocksAdapter.getSelectors<RootState>(
   (state) => state.messageBlocks // Ensure this matches the key in the root reducer
 )
-
-// Export the actions for use in thunks, etc.
-export const messageBlocksActions = messageBlocksSlice.actions
 
 export default messageBlocksSlice.reducer
 

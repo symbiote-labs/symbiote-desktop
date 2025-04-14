@@ -1,10 +1,4 @@
-import {
-  ContentListUnion,
-  createPartFromBase64,
-  FinishReason,
-  GenerateContentResponse,
-  GoogleGenAI
-} from '@google/genai'
+import { ContentListUnion, FinishReason, GenerateContentResponse, GoogleGenAI } from '@google/genai'
 import {
   Content,
   FileDataPart,
@@ -30,9 +24,12 @@ import {
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
 import WebSearchService from '@renderer/services/WebSearchService'
-import { Assistant, FileType, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types'
+import { Assistant, FileType, FileTypes, MCPToolResponse, Model, Provider, Suggestion } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessageTypes'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { parseAndCallTools } from '@renderer/utils/mcp-tools'
+// Import find helpers
+import { findFileBlocks, findImageBlocks, getMessageContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 import { MB } from '@shared/config/constant'
 import axios from 'axios'
@@ -110,44 +107,39 @@ export default class GeminiProvider extends BaseProvider {
    */
   private async getMessageContents(message: Message): Promise<Content> {
     const role = message.role === 'user' ? 'user' : 'model'
+    const parts: Part[] = []
 
-    const parts: Part[] = [{ text: await this.getMessageContent(message) }]
-    // Add any generated images from previous responses
-    if (message.metadata?.generateImage?.images && message.metadata.generateImage.images.length > 0) {
-      for (const imageUrl of message.metadata.generateImage.images) {
-        if (imageUrl && imageUrl.startsWith('data:')) {
-          // Extract base64 data and mime type from the data URL
-          const matches = imageUrl.match(/^data:(.+);base64,(.*)$/)
-          if (matches && matches.length === 3) {
-            const mimeType = matches[1]
-            const base64Data = matches[2]
-            parts.push({
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType
-              }
-            } as InlineDataPart)
-          }
+    // Get text content using helper
+    const textContent = getMessageContent(message)
+    if (textContent) {
+      parts.push({ text: textContent })
+    }
+
+    // Process Image Blocks using helper
+    const imageBlocks = findImageBlocks(message)
+    for (const imageBlock of imageBlocks) {
+      if (imageBlock.file) {
+        // Handle uploaded files
+        const file = imageBlock.file
+        const base64Data = await window.api.file.base64Image(file.id + file.ext)
+        parts.push({ inlineData: { data: base64Data.base64, mimeType: base64Data.mime } } as InlineDataPart)
+      } else if (imageBlock.url && imageBlock.url.startsWith('data:')) {
+        // Handle data URLs
+        const matches = imageBlock.url.match(/^data:(.+);base64,(.*)$/)
+        if (matches && matches.length === 3) {
+          parts.push({ inlineData: { data: matches[2], mimeType: matches[1] } } as InlineDataPart)
         }
       }
     }
 
-    for (const file of message.files || []) {
-      if (file.type === FileTypes.IMAGE) {
-        const base64Data = await window.api.file.base64Image(file.id + file.ext)
-        parts.push({
-          inlineData: {
-            data: base64Data.base64,
-            mimeType: base64Data.mime
-          }
-        } as InlineDataPart)
-      }
-
+    // Process File Blocks using helper
+    const fileBlocks = findFileBlocks(message)
+    for (const fileBlock of fileBlocks) {
+      const file = fileBlock.file
       if (file.ext === '.pdf') {
         parts.push(await this.handlePdfFile(file))
         continue
       }
-
       if ([FileTypes.TEXT, FileTypes.DOCUMENT].includes(file.type)) {
         const fileContent = await (await window.api.file.read(file.id + file.ext)).trim()
         parts.push({
@@ -386,17 +378,20 @@ export default class GeminiProvider extends BaseProvider {
       this.requestOptions
     )
 
-    const content =
+    // Get content using helper
+    const content = getMessageContent(message)
+
+    const gemmaContent =
       isGemmaModel(model) && assistant.prompt
-        ? `<start_of_turn>user\n${assistant.prompt}<end_of_turn>\n<start_of_turn>user\n${message.content}<end_of_turn>`
-        : message.content
+        ? `<start_of_turn>user\n${assistant.prompt}<end_of_turn>\n<start_of_turn>user\n${content}<end_of_turn>`
+        : content
 
     if (!onResponse) {
-      const { response } = await geminiModel.generateContent(content)
+      const { response } = await geminiModel.generateContent(gemmaContent)
       return response.text()
     }
 
-    const response = await geminiModel.generateContentStream(content)
+    const response = await geminiModel.generateContentStream(gemmaContent)
 
     let text = ''
 
@@ -421,7 +416,8 @@ export default class GeminiProvider extends BaseProvider {
       .filter((message) => !message.isPreset)
       .map((message) => ({
         role: message.role,
-        content: message.content
+        // Get content using helper
+        content: getMessageContent(message)
       }))
 
     const userMessageContent = userMessages.reduce((prev, curr) => {
@@ -510,10 +506,8 @@ export default class GeminiProvider extends BaseProvider {
       content: assistant.prompt
     }
 
-    const userMessage = {
-      role: 'user',
-      content: messages.map((m) => m.content).join('\n')
-    }
+    // Get content using helper
+    const userMessageContent = messages.map(getMessageContent).join('\n')
 
     const geminiModel = this.sdk.getGenerativeModel(
       {
@@ -530,7 +524,7 @@ export default class GeminiProvider extends BaseProvider {
     )
 
     const chat = await geminiModel.startChat()
-    const { response } = await chat.sendMessage(userMessage.content)
+    const { response } = await chat.sendMessage(userMessageContent)
 
     return response.text()
   }
@@ -602,16 +596,22 @@ export default class GeminiProvider extends BaseProvider {
    * @returns 更新后的内容列表
    */
   private async addImageFileToContents(message: Message, contents: ContentListUnion): Promise<ContentListUnion> {
-    if (message.files && message.files.length > 0) {
-      const file = message.files[0]
-      const fileContent = await window.api.file.base64Image(file.id + file.ext)
+    // Use helper to find image blocks
+    const imageBlocks = findImageBlocks(message)
+    const contentsArray = Array.isArray(contents) ? contents : [contents]
+    const updatedContents = [...contentsArray]
 
-      if (fileContent && fileContent.base64) {
-        const contentsArray = Array.isArray(contents) ? contents : [contents]
-        return [...contentsArray, createPartFromBase64(fileContent.base64, fileContent.mime)]
+    for (const imageBlock of imageBlocks) {
+      if (imageBlock.file) {
+        // Only process blocks with uploaded files
+        const file = imageBlock.file
+        const fileContent = await window.api.file.base64Image(file.id + file.ext)
+        if (fileContent && fileContent.base64) {
+          updatedContents.push({ inlineData: { data: fileContent.base64, mimeType: fileContent.mime } })
+        }
       }
     }
-    return contents
+    return updatedContents
   }
 
   /**
