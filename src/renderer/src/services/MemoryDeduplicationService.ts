@@ -125,6 +125,14 @@ ${memoriesToCheck}
 
     console.log('[Memory Deduplication] Analysis result:', result)
 
+    // 输出更详细的日志信息以便调试
+    console.log('[Memory Deduplication] Attempting to parse result with format:', {
+      hasGroupSection: result.includes('识别出的相似组'),
+      hasIndependentSection: result.includes('独立记忆项'),
+      containsGroupKeyword: result.includes('组'),
+      resultLength: result.length
+    })
+
     // 解析结果
     const similarGroups: DeduplicationResult['similarGroups'] = []
     const independentMemories: string[] = []
@@ -144,38 +152,139 @@ ${memoriesToCheck}
     if (similarGroupsMatch && similarGroupsMatch[1]) {
       const groupsText = similarGroupsMatch[1].trim()
       // 更新正则表达式以匹配新的格式，包括重要性和关键词
-      const groupRegex =
+      // 输出原始文本以便调试
+      console.log('[Memory Deduplication] Group text to parse:', groupsText)
+
+      // 原始正则表达式
+      const originalGroupRegex =
         /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*-\s*分类:\s*"([^"]+)"\s*(?:-\s*重要性:\s*"([^"]+)")?\s*(?:-\s*关键词:\s*"([^"]+)")?/g
 
-      let match: RegExpExecArray | null
-      while ((match = groupRegex.exec(groupsText)) !== null) {
-        const groupId = match[1] || String(similarGroups.length + 1)
-        const memoryIndices = match[2].split(',').map((s: string) => s.trim())
-        const mergedContent = match[3].trim()
-        const category = match[4]?.trim()
-        const importance = match[5] ? parseFloat(match[5].trim()) : undefined
-        const keywords = match[6]
-          ? match[6]
-              .trim()
-              .split(',')
-              .map((k: string) => k.trim())
-          : undefined
+      // 新增正则表达式，匹配AI返回的不同格式
+      const alternativeGroupRegex = /-\s*组(\d+)?:\s*(?:\*\*)?["\[]?([\d,\s]+)["\]]?(?:\*\*)?\s*-\s*合并建议:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?\s*-\s*分类:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?/g
+
+      // 简化的正则表达式，直接匹配组号和方括号内的数字
+      const simpleGroupRegex = /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*(.+?)\s*-\s*分类:\s*(.+?)(?=\s*$|\s*-\s*组|\s*\n)/gm
+
+      // 尝试所有正则表达式
+      const regexesToTry = [simpleGroupRegex, alternativeGroupRegex, originalGroupRegex]
+
+      // 逐个尝试正则表达式
+      for (const regex of regexesToTry) {
+        let match: RegExpExecArray | null
+        let found = false
+
+        // 重置正则表达式的lastIndex
+        regex.lastIndex = 0
+
+        while ((match = regex.exec(groupsText)) !== null) {
+          found = true
+          const groupId = match[1] || String(similarGroups.length + 1)
+          // 清理引号和方括号
+          const memoryIndicesStr = match[2].replace(/["'\[\]]/g, '')
+          const memoryIndices = memoryIndicesStr.split(',').map((s: string) => s.trim())
+          const mergedContent = match[3].trim().replace(/^["']|["']$/g, '') // 移除首尾的引号
+          const category = match[4]?.trim().replace(/^["']|["']$/g, '') // 移除首尾的引号
+
+          console.log(`[Memory Deduplication] Found group with regex ${regex.toString().substring(0, 30)}...`, {
+            groupId,
+            memoryIndices,
+            mergedContent,
+            category
+          })
+
+          similarGroups.push({
+            groupId,
+            memoryIds: memoryIndices,
+            mergedContent,
+            category: category || '其他'
+          })
+        }
+
+        // 如果找到了匹配项，就不再尝试其他正则表达式
+        if (found) break;
+      }
+
+      // 旧的解析代码已被上面的新代码替代
+    }
+
+    // 解析独立记忆项
+    console.log('[Memory Deduplication] Attempting to parse independent memories')
+
+    // 尝试多种正则表达式匹配独立记忆项
+    const independentRegexes = [
+      /2\.\s*独立记忆项:\s*(?:\*\*)?\s*\[?([\d,\s"]+)\]?(?:\*\*)?/i,
+      /2\.\s*独立记忆项\s*:\s*([\d,\s]+)/i,
+      /独立记忆项\s*:\s*([\d,\s]+)/i
+    ]
+
+    let independentFound = false
+
+    for (const regex of independentRegexes) {
+      const independentMatch = result.match(regex)
+      if (independentMatch && independentMatch[1]) {
+        // 处理可能包含引号的情况
+        const cleanedIndependentStr = independentMatch[1].replace(/["'\[\]]/g, '')
+        const items = cleanedIndependentStr.split(',').map((s: string) => s.trim())
+
+        console.log(`[Memory Deduplication] Found independent memories with regex ${regex.toString().substring(0, 30)}...`, items)
+
+        independentMemories.push(...items)
+        independentFound = true
+        break
+      }
+    }
+
+    // 如果没有找到独立记忆项，尝试直接从结果中提取数字
+    if (!independentFound) {
+      // 尝试直接提取数字
+      const numberMatches = result.match(/\b(\d+)\b/g)
+      if (numberMatches) {
+        // 过滤出不在相似组中的数字
+        const usedIndices = new Set()
+        similarGroups.forEach(group => {
+          group.memoryIds.forEach(id => usedIndices.add(id))
+        })
+
+        const unusedIndices = numberMatches.filter(num => !usedIndices.has(num))
+        if (unusedIndices.length > 0) {
+          console.log('[Memory Deduplication] Extracted independent memories from numbers in result:', unusedIndices)
+          independentMemories.push(...unusedIndices)
+        }
+      }
+    }
+
+    // 如果没有解析到相似组和独立记忆项，但结果中包含“组”字样，尝试使用更宽松的正则表达式
+    if (similarGroups.length === 0 && independentMemories.length === 0 && result.includes('组')) {
+      // 尝试使用更宽松的正则表达式提取组信息
+      const looseGroupRegex = /-\s*组\s*(\d+)?\s*:\s*["\[]?\s*([\d,\s"]+)\s*["\]]?\s*-\s*合并建议\s*:\s*["']?([^"'\n-]+)["']?/g
+
+      let looseMatch: RegExpExecArray | null
+      while ((looseMatch = looseGroupRegex.exec(result)) !== null) {
+        const groupId = looseMatch[1] || String(similarGroups.length + 1)
+        // 清理引号和方括号
+        const memoryIndicesStr = looseMatch[2].replace(/["'\[\]]/g, '')
+        const memoryIndices = memoryIndicesStr.split(',').map((s: string) => s.trim())
+        const mergedContent = looseMatch[3].trim()
 
         similarGroups.push({
           groupId,
           memoryIds: memoryIndices,
           mergedContent,
-          category,
-          importance,
-          keywords
+          category: '其他' // 默认类别
         })
       }
     }
 
-    // 解析独立记忆项
-    const independentMatch = result.match(/2\.\s*独立记忆项:\s*\[([\d,\s]+)\]/i)
-    if (independentMatch && independentMatch[1]) {
-      independentMemories.push(...independentMatch[1].split(',').map((s: string) => s.trim()))
+    // 如果仍然没有解析到任何内容，尝试直接从原始结果中提取信息
+    if (similarGroups.length === 0 && independentMemories.length === 0) {
+      console.log('[Memory Deduplication] No groups or independent memories found, attempting direct extraction')
+
+      // 尝试提取所有数字作为独立记忆项
+      const allNumbers = result.match(/\b(\d+)\b/g)
+      if (allNumbers && allNumbers.length > 0) {
+        console.log('[Memory Deduplication] Extracted all numbers as independent memories:', allNumbers)
+        independentMemories.push(...allNumbers)
+      }
     }
 
     console.log('[Memory Deduplication] Parsed result:', { similarGroups, independentMemories })

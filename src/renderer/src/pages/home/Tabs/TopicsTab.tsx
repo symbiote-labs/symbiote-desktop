@@ -6,6 +6,7 @@ import {
   FolderOutlined,
   PushpinOutlined,
   QuestionCircleOutlined,
+  SearchOutlined,
   UploadOutlined
 } from '@ant-design/icons'
 import DragableList from '@renderer/components/DragableList'
@@ -20,6 +21,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { analyzeAndAddShortMemories } from '@renderer/services/MemoryService'
 import store from '@renderer/store'
 import { RootState } from '@renderer/store'
 import { setGenerating } from '@renderer/store/runtime'
@@ -236,6 +238,24 @@ const Topics: FC<Props> = ({ assistant: _assistant, activeTopic, setActiveTopic 
               centered: true,
               onOk: () => onClearMessages(topic)
             })
+          }
+        },
+        {
+          label: t('settings.memory.analyzeConversation') || '分析对话',
+          key: 'analyze-conversation',
+          icon: <SearchOutlined />,
+          async onClick() {
+            try {
+              const result = await analyzeAndAddShortMemories(topic.id)
+              if (result) {
+                window.message.success(t('settings.memory.shortMemoryAnalysisSuccess') || '分析成功')
+              } else {
+                window.message.info(t('settings.memory.shortMemoryAnalysisNoNew') || '无新信息')
+              }
+            } catch (error) {
+              console.error('Failed to analyze conversation for short memory:', error)
+              window.message.error(t('settings.memory.shortMemoryAnalysisError') || '分析失败')
+            }
           }
         },
         {

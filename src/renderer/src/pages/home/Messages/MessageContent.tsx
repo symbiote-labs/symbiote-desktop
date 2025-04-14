@@ -222,7 +222,6 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
         {message.mentions?.map((model) => <MentionTag key={getModelUniqId(model)}>{'@' + model.name}</MentionTag>)}
       </Flex>
-<<<<<<< HEAD
       {message.referencedMessages && message.referencedMessages.length > 0 && (
         <div>
           {message.referencedMessages.map((refMsg, index) => (
@@ -317,16 +316,11 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         <MessageThought message={message} />
         <MessageTools message={message} />
       </div>
-      <Markdown message={{ ...message, content: processedContent.replace(toolUseRegex, '') }} />
-=======
-      <MessageThought message={message} />
-      <MessageTools message={message} />
       {isSegmentedPlayback ? (
         <TTSHighlightedText text={processedContent.replace(toolUseRegex, '')} />
       ) : (
         <Markdown message={{ ...message, content: processedContent.replace(toolUseRegex, '') }} />
       )}
->>>>>>> origin/1600822305-patch-2
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
         <Fragment>

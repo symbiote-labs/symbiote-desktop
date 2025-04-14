@@ -1,17 +1,4 @@
-import {
-  AppstoreOutlined,
-  CloudOutlined,
-  CodeOutlined,
-  ExperimentOutlined,
-  GlobalOutlined,
-  InfoCircleOutlined,
-  LayoutOutlined,
-  MacCommandOutlined,
-  RocketOutlined,
-  SaveOutlined,
-  SettingOutlined,
-  ThunderboltOutlined
-} from '@ant-design/icons'
+import { ExperimentOutlined } from '@ant-design/icons'
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import { useSidebarIconShow } from '@renderer/hooks/useSidebarIcon'
 import ModelSettings from '@renderer/pages/settings/ModelSettings/ModelSettings'
@@ -160,12 +147,9 @@ const SettingsPage: FC = () => {
             <Route path="model" element={<ModelSettings />} />
             <Route path="web-search" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
-<<<<<<< HEAD
             <Route path="memory" element={<MemorySettings />} />
             <Route path="general" element={<GeneralSettings />} />
-=======
             <Route path="general/*" element={<GeneralSettings />} />
->>>>>>> origin/1600822305-patch-2
             <Route path="display" element={<DisplaySettings />} />
             {showMiniAppSettings && <Route path="miniapps" element={<MiniAppSettings />} />}
             <Route path="shortcut" element={<ShortcutSettings />} />

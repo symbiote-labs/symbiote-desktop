@@ -1395,7 +1395,6 @@
         "title": "隱私設定",
         "enable_privacy_mode": "匿名發送錯誤報告和資料統計"
       },
-<<<<<<< HEAD
       "memory": {
         "title": "記憶功能",
         "description": "管理AI助手的長期記憶，自動分析對話並提取重要信息",
@@ -1453,7 +1452,7 @@
         "totalAnalyses": "總分析次數",
         "successRate": "成功率",
         "avgAnalysisTime": "平均分析時間"
-=======
+      },
       "tts": {
         "title": "語音設定",
         "enable": "啟用語音合成",
@@ -1618,7 +1617,6 @@
         "test": "測試通話",
         "test_info": "請使用輸入框右側的語音通話按鈕進行測試",
         "welcome_message": "您好，我是您的AI助理，請長按說話按鈕進行對話。"
->>>>>>> origin/1600822305-patch-2
       }
     },
     "translate": {

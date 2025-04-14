@@ -327,8 +327,8 @@ const getContextMenuItems = (
   t: (key: string) => string,
   selectedQuoteText: string,
   selectedText: string,
-<<<<<<< HEAD
-  message: Message
+  message: Message,
+  currentMessage?: Message
 ): ItemType[] => {
   const items: ItemType[] = []
 
@@ -350,47 +350,31 @@ const getContextMenuItems = (
         EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
       }
     })
-=======
-  currentMessage?: Message
-) => [
-  {
-    key: 'copy',
-    label: t('common.copy'),
-    onClick: () => {
-      navigator.clipboard.writeText(selectedText)
-      window.message.success({ content: t('message.copied'), key: 'copy-message' })
-    }
-  },
-  {
-    key: 'quote',
-    label: t('chat.message.quote'),
-    onClick: () => {
-      EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
-    }
-  },
-  {
-    key: 'speak',
-    label: '朗读',
-    onClick: () => {
-      // 从选中的文本开始朗读后面的内容
-      if (selectedText && currentMessage?.content) {
-        // 找到选中文本在消息中的位置
-        const startIndex = currentMessage.content.indexOf(selectedText)
-        if (startIndex !== -1) {
-          // 获取选中文本及其后面的所有内容
-          const textToSpeak = currentMessage.content.substring(startIndex)
-          import('@renderer/services/TTSService').then(({ default: TTSService }) => {
-            TTSService.speak(textToSpeak)
-          })
-        } else {
-          // 如果找不到精确位置，则只朗读选中的文本
-          import('@renderer/services/TTSService').then(({ default: TTSService }) => {
-            TTSService.speak(selectedText)
-          })
+
+    // 添加朗读选项
+    items.push({
+      key: 'speak',
+      label: '朗读',
+      onClick: () => {
+        // 从选中的文本开始朗读后面的内容
+        if (selectedText && currentMessage?.content) {
+          // 找到选中文本在消息中的位置
+          const startIndex = currentMessage.content.indexOf(selectedText)
+          if (startIndex !== -1) {
+            // 获取选中文本及其后面的所有内容
+            const textToSpeak = currentMessage.content.substring(startIndex)
+            import('@renderer/services/TTSService').then(({ default: TTSService }) => {
+              TTSService.speak(textToSpeak)
+            })
+          } else {
+            // 如果找不到精确位置，则只朗读选中的文本
+            import('@renderer/services/TTSService').then(({ default: TTSService }) => {
+              TTSService.speak(selectedText)
+            })
+          }
         }
       }
-    }
->>>>>>> origin/1600822305-patch-2
+    })
   }
 
   // 添加复制消息ID选项，但不显示ID

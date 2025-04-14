@@ -188,7 +188,6 @@ const api = {
     closeSearchWindow: (uid: string) => ipcRenderer.invoke(IpcChannel.SearchWindow_Close, uid),
     openUrlInSearchWindow: (uid: string, url: string) => ipcRenderer.invoke(IpcChannel.SearchWindow_OpenUrl, uid, url)
   },
-<<<<<<< HEAD
   memory: {
     loadData: () => ipcRenderer.invoke(IpcChannel.Memory_LoadData),
     saveData: (data: any) => ipcRenderer.invoke(IpcChannel.Memory_SaveData, data),
@@ -196,11 +195,10 @@ const api = {
     loadLongTermData: () => ipcRenderer.invoke(IpcChannel.LongTermMemory_LoadData),
     saveLongTermData: (data: any, forceOverwrite: boolean = false) =>
       ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
-=======
+  },
   asrServer: {
     startServer: () => ipcRenderer.invoke(IpcChannel.Asr_StartServer),
     stopServer: (pid: number) => ipcRenderer.invoke(IpcChannel.Asr_StopServer, pid)
->>>>>>> origin/1600822305-patch-2
   }
 }
 

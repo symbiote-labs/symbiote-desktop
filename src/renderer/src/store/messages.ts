@@ -74,13 +74,24 @@ const messagesSlice = createSlice({
         state.messagesByTopic[topicId] = []
       }
 
+      // 获取当前消息列表
+      const currentMessages = state.messagesByTopic[topicId]
+
       if (Array.isArray(messages)) {
         // 为了兼容多模型新发消息,一次性添加多个助手消息
         // 不是什么好主意,不符合语义
-        state.messagesByTopic[topicId].push(...messages)
+        // 检查每条消息是否已存在，避免重复添加
+        const messagesToAdd = messages.filter(msg =>
+          !currentMessages.some(existing => existing.id === msg.id)
+        )
+        if (messagesToAdd.length > 0) {
+          state.messagesByTopic[topicId].push(...messagesToAdd)
+        }
       } else {
-        // 添加单条消息
-        state.messagesByTopic[topicId].push(messages)
+        // 添加单条消息，先检查是否已存在
+        if (!currentMessages.some(existing => existing.id === messages.id)) {
+          state.messagesByTopic[topicId].push(messages)
+        }
       }
     },
     appendMessage: (
@@ -96,15 +107,23 @@ const messagesSlice = createSlice({
       // 确保消息数组存在并且拿到引用
       const messagesList = state.messagesByTopic[topicId]
 
-      // 要插入的消息
+      // 要插入的消息，先过滤掉已存在的消息
       const messagesToInsert = Array.isArray(messages) ? messages : [messages]
+      const uniqueMessagesToInsert = messagesToInsert.filter(msg =>
+        !messagesList.some(existing => existing.id === msg.id)
+      )
+
+      // 如果没有新消息需要插入，直接返回
+      if (uniqueMessagesToInsert.length === 0) {
+        return
+      }
 
       if (position !== undefined && position >= 0 && position <= messagesList.length) {
         // 如果指定了位置，在特定位置插入消息
-        messagesList.splice(position, 0, ...messagesToInsert)
+        messagesList.splice(position, 0, ...uniqueMessagesToInsert)
       } else {
         // 否则默认添加到末尾
-        messagesList.push(...messagesToInsert)
+        messagesList.push(...uniqueMessagesToInsert)
       }
     },
     updateMessage: (
@@ -158,16 +177,25 @@ const messagesSlice = createSlice({
       }
 
       // 尝试找到现有消息
-      const existingMessage = state.messagesByTopic[topicId].find(
+      const existingMessageIndex = state.messagesByTopic[topicId].findIndex(
         (m) => m.role === 'assistant' && m.id === streamMessage.id
       )
 
-      if (existingMessage) {
-        // 更新
-        Object.assign(existingMessage, streamMessage)
+      if (existingMessageIndex !== -1) {
+        // 更新现有消息
+        Object.assign(state.messagesByTopic[topicId][existingMessageIndex], streamMessage)
       } else {
-        // 添加新消息
-        state.messagesByTopic[topicId].push(streamMessage)
+        // 检查是否有重复的消息（相同的askId和内容）
+        const duplicateMessage = state.messagesByTopic[topicId].find(
+          (m) => m.role === 'assistant' &&
+                m.askId === streamMessage.askId &&
+                m.content === streamMessage.content
+        )
+
+        // 只有在没有重复消息的情况下才添加新消息
+        if (!duplicateMessage) {
+          state.messagesByTopic[topicId].push(streamMessage)
+        }
       }
 
       // 删除流状态

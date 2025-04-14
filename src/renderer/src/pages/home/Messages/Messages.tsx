@@ -265,11 +265,19 @@ const computeDisplayMessages = (messages: Message[], startIndex: number, display
 
   const userIdSet = new Set() // 用户消息 id 集合
   const assistantIdSet = new Set() // 助手消息 askId 集合
+  const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
   const displayMessages: Message[] = []
 
   // 处理单条消息的函数
   const processMessage = (message: Message) => {
     if (!message) return
+
+    // 跳过已处理的消息ID
+    if (processedIds.has(message.id)) {
+      return
+    }
+
+    processedIds.add(message.id) // 标记此消息ID为已处理
 
     const idSet = message.role === 'user' ? userIdSet : assistantIdSet
     const messageId = message.role === 'user' ? message.id : message.askId
@@ -279,8 +287,12 @@ const computeDisplayMessages = (messages: Message[], startIndex: number, display
       displayMessages.push(message)
       return
     }
-    // 如果是相同 askId 的助手消息，也要显示
-    displayMessages.push(message)
+
+    // 如果是相同 askId 的助手消息，检查是否已经有相同ID的消息
+    // 只有在没有相同ID的情况下才添加
+    if (message.role === 'assistant' && !displayMessages.some(m => m.id === message.id)) {
+      displayMessages.push(message)
+    }
   }
 
   // 遍历消息直到满足显示数量要求

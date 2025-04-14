@@ -7,8 +7,9 @@ import store from '@renderer/store'
 import { deleteShortMemory } from '@renderer/store/memory'
 import { Button, Card, Col, Empty, Input, List, message, Modal, Row, Statistic, Tooltip } from 'antd'
 import _ from 'lodash'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { createSelector } from 'reselect'
 import styled from 'styled-components'
 
 // 不再需要确认对话框
@@ -36,13 +37,27 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
   const dispatch = useAppDispatch()
   const [open, setOpen] = useState(true)
 
+  // 创建记忆选择器 - 使用createSelector进行记忆化
+  const selectShortMemoriesByTopicId = useMemo(
+    () =>
+      createSelector(
+        [(state) => state.memory?.shortMemories || [], (_state, topicId) => topicId],
+        (shortMemories, topicId) => {
+          return topicId ? shortMemories.filter((memory) => memory.topicId === topicId) : []
+        }
+      ),
+    []
+  )
+
   // 获取短记忆状态
   const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
-  const shortMemories = useAppSelector((state) => {
-    const allShortMemories = state.memory?.shortMemories || []
-    // 只显示当前话题的短记忆
-    return topicId ? allShortMemories.filter((memory) => memory.topicId === topicId) : []
-  })
+  const shortMemories = useAppSelector((state) => selectShortMemoriesByTopicId(state, topicId))
+
+  // 获取分析统计数据
+  const totalAnalyses = useAppSelector((state) => state.memory?.analysisStats?.totalAnalyses || 0)
+  const successfulAnalyses = useAppSelector((state) => state.memory?.analysisStats?.successfulAnalyses || 0)
+  const successRate = totalAnalyses ? (successfulAnalyses / totalAnalyses) * 100 : 0
+  const avgAnalysisTime = useAppSelector((state) => state.memory?.analysisStats?.averageAnalysisTime || 0)
 
   // 添加短记忆的状态
   const [newMemoryContent, setNewMemoryContent] = useState('')
@@ -185,20 +200,14 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
             <Col span={8}>
               <Statistic
                 title={t('settings.memory.totalAnalyses') || '总分析次数'}
-                value={store.getState().memory?.analysisStats?.totalAnalyses || 0}
+                value={totalAnalyses}
                 precision={0}
               />
             </Col>
             <Col span={8}>
               <Statistic
                 title={t('settings.memory.successRate') || '成功率'}
-                value={
-                  store.getState().memory?.analysisStats?.totalAnalyses
-                    ? ((store.getState().memory?.analysisStats?.successfulAnalyses || 0) /
-                        (store.getState().memory?.analysisStats?.totalAnalyses || 1)) *
-                      100
-                    : 0
-                }
+                value={successRate}
                 precision={1}
                 suffix="%"
               />
@@ -206,7 +215,7 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
             <Col span={8}>
               <Statistic
                 title={t('settings.memory.avgAnalysisTime') || '平均分析时间'}
-                value={store.getState().memory?.analysisStats?.averageAnalysisTime || 0}
+                value={avgAnalysisTime}
                 precision={0}
                 suffix="ms"
               />

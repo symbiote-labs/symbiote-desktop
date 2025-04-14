@@ -22,11 +22,8 @@ import FileStorage from './services/FileStorage'
 import { GeminiService } from './services/GeminiService'
 import KnowledgeService from './services/KnowledgeService'
 import mcpService from './services/MCPService'
-<<<<<<< HEAD
 import { memoryFileService } from './services/MemoryFileService'
-=======
 import * as MsTTSService from './services/MsTTSService'
->>>>>>> origin/1600822305-patch-2
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
@@ -310,7 +307,6 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   )
 
   // search window
-<<<<<<< HEAD
   ipcMain.handle(IpcChannel.SearchWindow_Open, async (_, uid: string) => {
     await searchService.openSearchWindow(uid)
   })
@@ -337,12 +333,6 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.LongTermMemory_SaveData, async (_, data, forceOverwrite = false) => {
     return await memoryFileService.saveLongTermData(data, forceOverwrite)
   })
-=======
-  ipcMain.handle(IpcChannel.SearchWindow_Open, (_, uid: string) => searchService.openSearchWindow(uid))
-  ipcMain.handle(IpcChannel.SearchWindow_Close, (_, uid: string) => searchService.closeSearchWindow(uid))
-  ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, (_, uid: string, url: string) =>
-    searchService.openUrlInSearchWindow(uid, url)
-  )
 
   // 注册ASR服务器IPC处理程序
   asrServerService.registerIpcHandlers()
@@ -352,5 +342,4 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.MsTTS_Synthesize, (_, text: string, voice: string, outputFormat: string) =>
     MsTTSService.synthesize(text, voice, outputFormat)
   )
->>>>>>> origin/1600822305-patch-2
 }

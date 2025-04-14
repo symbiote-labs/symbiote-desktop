@@ -1,4 +1,4 @@
-import { BookOutlined, FormOutlined, SearchOutlined } from '@ant-design/icons'
+import { BookOutlined } from '@ant-design/icons'
 import { Navbar, NavbarLeft, NavbarRight } from '@renderer/components/app/Navbar'
 import { HStack } from '@renderer/components/Layout'
 import MinAppsPopover from '@renderer/components/Popups/MinAppsPopover'
@@ -11,11 +11,11 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { analyzeAndAddShortMemories } from '@renderer/services/MemoryService'
+
 import { useAppDispatch } from '@renderer/store'
 import { setNarrowMode } from '@renderer/store/settings'
 import { Assistant, Topic } from '@renderer/types'
-import { Button, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import { t } from 'i18next'
 import { LayoutGrid, MessageSquareDiff, PanelLeftClose, PanelRightClose, Search } from 'lucide-react'
 import { FC } from 'react'
@@ -64,21 +64,7 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant, activeTopic }) => {
     }
   }
 
-  const handleAnalyzeShortMemory = async () => {
-    if (activeTopic && activeTopic.id) {
-      try {
-        const result = await analyzeAndAddShortMemories(activeTopic.id)
-        if (result) {
-          window.message.success(t('settings.memory.shortMemoryAnalysisSuccess') || '分析成功')
-        } else {
-          window.message.info(t('settings.memory.shortMemoryAnalysisNoNew') || '无新信息')
-        }
-      } catch (error) {
-        console.error('Failed to analyze conversation for short memory:', error)
-        window.message.error(t('settings.memory.shortMemoryAnalysisError') || '分析失败')
-      }
-    }
-  }
+
 
   return (
     <Navbar className="home-navbar">
@@ -116,9 +102,6 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant, activeTopic }) => {
               <BookOutlined />
             </NarrowIcon>
           </Tooltip>
-          <AnalyzeButton onClick={handleAnalyzeShortMemory}>
-            {t('settings.memory.analyzeConversation') || '分析对话'}
-          </AnalyzeButton>
           <Tooltip title={t('chat.assistant.search.placeholder')} mouseEnterDelay={0.8}>
             <NarrowIcon onClick={() => SearchPopup.show()}>
               <Search size={18} />
@@ -189,17 +172,6 @@ const NarrowIcon = styled(NavbarIcon)`
   }
 `
 
-const AnalyzeButton = styled(Button)`
-  font-size: 12px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 4px;
-  margin-right: 8px;
-  -webkit-app-region: none;
 
-  @media (max-width: 1000px) {
-    display: none;
-  }
-`
 
 export default HeaderNavbar

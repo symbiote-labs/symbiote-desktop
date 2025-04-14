@@ -185,8 +185,16 @@ export function getAssistantMessage({ assistant, topic }: { assistant: Assistant
 
 export function getGroupedMessages(messages: Message[]): { [key: string]: (Message & { index: number })[] } {
   const groups: { [key: string]: (Message & { index: number })[] } = {}
+  const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
 
   messages.forEach((message, index) => {
+    // 跳过已处理的消息ID
+    if (processedIds.has(message.id)) {
+      return
+    }
+
+    processedIds.add(message.id) // 标记此消息ID为已处理
+
     const key = message.askId ? 'assistant' + message.askId : 'user' + message.id
     if (key && !groups[key]) {
       groups[key] = []

@@ -137,7 +137,7 @@
     "@types/react-dom": "^19.0.4",
     "@types/react-infinite-scroll-component": "^5.0.0",
     "@types/tinycolor2": "^1",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "analytics": "^0.8.16",
     "antd": "^5.22.5",
     "applescript": "^1.0.0",
