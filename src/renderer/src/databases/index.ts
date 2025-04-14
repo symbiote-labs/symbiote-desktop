@@ -1,6 +1,6 @@
-import { FileType, KnowledgeItem, QuickPhrase, Topic, TranslateHistory } from '@renderer/types'
+import { FileType, KnowledgeItem, QuickPhrase, TranslateHistory } from '@renderer/types'
 // Import necessary types for blocks and new message structure
-import type { MessageBlock } from '@renderer/types/newMessageTypes'
+import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMessageTypes'
 import { Dexie, type EntityTable } from 'dexie'
 
 import { upgradeToV5, upgradeToV7 } from './upgrades'
@@ -8,12 +8,12 @@ import { upgradeToV5, upgradeToV7 } from './upgrades'
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio') as Dexie & {
   files: EntityTable<FileType, 'id'>
-  topics: EntityTable<Pick<Topic, 'id' | 'messages'>, 'id'>
+  topics: EntityTable<{ id: string; messages: NewMessage[] }, 'id'> // Correct type for topics
   settings: EntityTable<{ id: string; value: any }, 'id'>
   knowledge_notes: EntityTable<KnowledgeItem, 'id'>
   translate_history: EntityTable<TranslateHistory, 'id'>
   quick_phrases: EntityTable<QuickPhrase, 'id'>
-  message_blocks: EntityTable<MessageBlock, 'id'>
+  message_blocks: EntityTable<MessageBlock, 'id'> // Correct type for message_blocks
 }
 
 db.version(1).stores({
@@ -65,13 +65,12 @@ db.version(7)
   .stores({
     // Re-declare all tables for the new version
     files: 'id, name, origin_name, path, size, ext, type, created_at, count',
-    topics: '&id, messages', // Keep 'messages', but content will change structure
+    topics: '&id', // Correct index for topics
     settings: '&id, value',
     knowledge_notes: '&id, baseId, type, content, created_at, updated_at',
     translate_history: '&id, sourceText, targetText, sourceLanguage, targetLanguage, createdAt',
     quick_phrases: 'id',
-    // Add the new table schema
-    message_blocks: 'id, messageId, type, createdAt' // Primary key 'id', index 'messageId'
+    message_blocks: 'id, messageId' // Primary key 'id', index 'messageId'
   })
   .upgrade((tx) => upgradeToV7(tx))
 
