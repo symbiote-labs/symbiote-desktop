@@ -22,6 +22,7 @@ import {
   HardDrive,
   Info,
   LayoutGrid,
+  Mic,
   MonitorCog,
   Package,
   Rocket,
@@ -47,6 +48,7 @@ import ProvidersList from './ProviderSettings'
 import QuickAssistantSettings from './QuickAssistantSettings'
 import QuickPhraseSettings from './QuickPhraseSettings'
 import ShortcutSettings from './ShortcutSettings'
+import TTSSettings from './TTSSettings/TTSSettings'
 import WebSearchSettings from './WebSearchSettings'
 
 const SettingsPage: FC = () => {
@@ -139,6 +141,12 @@ const SettingsPage: FC = () => {
               {t('settings.data.title')}
             </MenuItem>
           </MenuItemLink>
+          <MenuItemLink to="/settings/tts">
+            <MenuItem className={isRoute('/settings/tts')}>
+              <Mic size={18} />
+              {t('settings.voice.title')}
+            </MenuItem>
+          </MenuItemLink>
           <MenuItemLink to="/settings/about">
             <MenuItem className={isRoute('/settings/about')}>
               <Info size={18} />
@@ -152,13 +160,18 @@ const SettingsPage: FC = () => {
             <Route path="model" element={<ModelSettings />} />
             <Route path="web-search" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
+<<<<<<< HEAD
             <Route path="memory" element={<MemorySettings />} />
             <Route path="general" element={<GeneralSettings />} />
+=======
+            <Route path="general/*" element={<GeneralSettings />} />
+>>>>>>> origin/1600822305-patch-2
             <Route path="display" element={<DisplaySettings />} />
             {showMiniAppSettings && <Route path="miniapps" element={<MiniAppSettings />} />}
             <Route path="shortcut" element={<ShortcutSettings />} />
             <Route path="quickAssistant" element={<QuickAssistantSettings />} />
-            <Route path="data" element={<DataSettings />} />
+            <Route path="data/*" element={<DataSettings />} />
+            <Route path="tts" element={<TTSSettings />} />
             <Route path="about" element={<AboutSettings />} />
             <Route path="quickPhrase" element={<QuickPhraseSettings />} />
           </Routes>
