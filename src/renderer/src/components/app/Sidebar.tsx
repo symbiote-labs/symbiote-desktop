@@ -12,10 +12,10 @@ import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Tooltip } from 'antd'
 import {
   CircleHelp,
+  FileSearch,
   Folder,
   Languages,
   LayoutGrid,
-  LibraryBig,
   MessageSquareQuote,
   Moon,
   Palette,
@@ -135,7 +135,7 @@ const MainMenus: FC = () => {
     paintings: <Palette size={18} className="icon" />,
     translate: <Languages size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
-    knowledge: <LibraryBig size={18} className="icon" />,
+    knowledge: <FileSearch size={18} className="icon" />,
     files: <Folder size={17} className="icon" />
   }
 

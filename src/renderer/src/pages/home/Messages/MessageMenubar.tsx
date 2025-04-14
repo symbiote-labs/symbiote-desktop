@@ -35,7 +35,6 @@ import {
   Save,
   Share,
   Split,
-  ThumbsDown,
   ThumbsUp,
   Trash
 } from 'lucide-react'
@@ -445,7 +444,11 @@ const MessageMenubar: FC<Props> = (props) => {
       {isAssistantMessage && isGrouped && (
         <Tooltip title={t('chat.message.useful')} mouseEnterDelay={0.8}>
           <ActionButton className="message-action-button" onClick={onUseful}>
-            {message.useful ? <ThumbsUp size={16} /> : <ThumbsDown size={16} />}
+            {message.useful ? (
+              <ThumbsUp size={17.5} fill="var(--color-primary)" strokeWidth={0} />
+            ) : (
+              <ThumbsUp size={16} />
+            )}
           </ActionButton>
         </Tooltip>
       )}
