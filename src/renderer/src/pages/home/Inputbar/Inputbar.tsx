@@ -1,3 +1,4 @@
+// @ts-ignore - Keep all imports for future use
 import {
   CodeOutlined,
   FileSearchOutlined,
