@@ -1,12 +1,4 @@
-import {
-  CodeOutlined as _CodeOutlined,
-  FileSearchOutlined as _FileSearchOutlined,
-  HolderOutlined,
-  PaperClipOutlined as _PaperClipOutlined,
-  PauseCircleOutlined as _PauseCircleOutlined,
-  ThunderboltOutlined as _ThunderboltOutlined,
-  TranslationOutlined as _TranslationOutlined
-} from '@ant-design/icons'
+import { HolderOutlined } from '@ant-design/icons'
 import ASRButton from '@renderer/components/ASRButton'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
 import TranslateButton from '@renderer/components/TranslateButton'
