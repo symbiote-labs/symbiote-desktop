@@ -1,7 +1,14 @@
 // 记忆去重与合并服务
 import { fetchGenerate } from '@renderer/services/ApiService'
 import store from '@renderer/store'
-import { addMemory, addShortMemory, deleteMemory, deleteShortMemory, saveMemoryData, saveLongTermMemoryData } from '@renderer/store/memory'
+import {
+  addMemory,
+  addShortMemory,
+  deleteMemory,
+  deleteShortMemory,
+  saveLongTermMemoryData,
+  saveMemoryData
+} from '@renderer/store/memory'
 
 // 记忆去重与合并的结果接口
 export interface DeduplicationResult {
@@ -137,7 +144,8 @@ ${memoriesToCheck}
     if (similarGroupsMatch && similarGroupsMatch[1]) {
       const groupsText = similarGroupsMatch[1].trim()
       // 更新正则表达式以匹配新的格式，包括重要性和关键词
-      const groupRegex = /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*-\s*分类:\s*"([^"]+)"\s*(?:-\s*重要性:\s*"([^"]+)")?\s*(?:-\s*关键词:\s*"([^"]+)")?/g
+      const groupRegex =
+        /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*-\s*分类:\s*"([^"]+)"\s*(?:-\s*重要性:\s*"([^"]+)")?\s*(?:-\s*关键词:\s*"([^"]+)")?/g
 
       let match: RegExpExecArray | null
       while ((match = groupRegex.exec(groupsText)) !== null) {
@@ -146,7 +154,12 @@ ${memoriesToCheck}
         const mergedContent = match[3].trim()
         const category = match[4]?.trim()
         const importance = match[5] ? parseFloat(match[5].trim()) : undefined
-        const keywords = match[6] ? match[6].trim().split(',').map((k: string) => k.trim()) : undefined
+        const keywords = match[6]
+          ? match[6]
+              .trim()
+              .split(',')
+              .map((k: string) => k.trim())
+          : undefined
 
         similarGroups.push({
           groupId,
@@ -299,18 +312,26 @@ export const applyDeduplicationResult = async (
       // 保存到文件
       if (isShortMemory) {
         // 短期记忆使用saveMemoryData
-        await store.dispatch(saveMemoryData({
-          shortMemories: currentState.shortMemories
-        })).unwrap()
+        await store
+          .dispatch(
+            saveMemoryData({
+              shortMemories: currentState.shortMemories
+            })
+          )
+          .unwrap()
         console.log('[Memory Deduplication] Short memories saved to file after merging')
       } else {
         // 长期记忆使用saveLongTermMemoryData
-        await store.dispatch(saveLongTermMemoryData({
-          memories: currentState.memories,
-          memoryLists: currentState.memoryLists,
-          currentListId: currentState.currentListId,
-          analyzeModel: currentState.analyzeModel
-        })).unwrap()
+        await store
+          .dispatch(
+            saveLongTermMemoryData({
+              memories: currentState.memories,
+              memoryLists: currentState.memoryLists,
+              currentListId: currentState.currentListId,
+              analyzeModel: currentState.analyzeModel
+            })
+          )
+          .unwrap()
         console.log('[Memory Deduplication] Long-term memories saved to file after merging')
       }
     } catch (error) {

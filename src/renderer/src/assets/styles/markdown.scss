@@ -1,6 +1,7 @@
 .markdown {
   color: var(--color-text);
   line-height: 1.6;
+  -webkit-user-select: text;
   user-select: text;
   word-break: break-word;
 

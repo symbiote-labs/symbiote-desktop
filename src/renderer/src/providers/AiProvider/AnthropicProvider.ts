@@ -502,7 +502,7 @@ export default class AnthropicProvider extends BaseProvider {
 
     // 应用记忆功能到系统提示词
     const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
-    const enhancedPrompt = applyMemoriesToPrompt(prompt)
+    const enhancedPrompt = await applyMemoriesToPrompt(prompt)
     console.log(
       '[AnthropicProvider] Applied memories to prompt, length difference:',
       enhancedPrompt.length - prompt.length

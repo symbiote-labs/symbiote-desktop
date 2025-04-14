@@ -7,26 +7,27 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store' // Import store
 // AiProvider no longer needed as we're using fetchGenerate
 import {
+  accessMemory,
   addAnalysisLatency,
   addMemory,
   addShortMemory,
-  setAnalyzing,
-  updateAnalysisStats,
-  updatePerformanceMetrics,
-  updateUserInterest,
-  updateMemoryPriorities,
-  accessMemory,
-  Memory,
-  saveMemoryData,
-  saveLongTermMemoryData,
-  updateCurrentRecommendations,
-  setRecommending,
   clearCurrentRecommendations,
-  MemoryRecommendation
+  Memory,
+  MemoryRecommendation,
+  saveLongTermMemoryData,
+  saveMemoryData,
+  setAnalyzing,
+  setRecommending,
+  updateAnalysisStats,
+  updateCurrentRecommendations,
+  updateMemoryPriorities,
+  updatePerformanceMetrics,
+  updateUserInterest
 } from '@renderer/store/memory'
-import { useCallback, useEffect, useRef } from 'react' // Add useRef back
-import { contextualMemoryService } from './ContextualMemoryService' // Import contextual memory service
 import { Message } from '@renderer/types' // Import Message type
+import { useCallback, useEffect, useRef } from 'react' // Add useRef back
+
+import { contextualMemoryService } from './ContextualMemoryService' // Import contextual memory service
 
 // 计算对话复杂度，用于调整分析深度
 const calculateConversationComplexity = (conversation: string): 'low' | 'medium' | 'high' => {
@@ -45,6 +46,8 @@ const calculateConversationComplexity = (conversation: string): 'low' | 'medium'
 }
 
 // 根据分析深度调整提示词
+// 注意：该函数当前未使用，保留供将来可能的功能扩展
+/*
 const adjustPromptForDepth = (basePrompt: string, depth: 'low' | 'medium' | 'high'): string => {
   switch (depth) {
     case 'low':
@@ -73,6 +76,7 @@ const adjustPromptForDepth = (basePrompt: string, depth: 'low' | 'medium' | 'hig
       return basePrompt
   }
 }
+*/
 
 // 提取用户关注点
 const extractUserInterests = (conversation: string): string[] => {
@@ -99,8 +103,11 @@ const analyzeConversation = async (
   customPrompt?: string
 ): Promise<Array<{ content: string; category: string }>> => {
   try {
+    // 获取当前的过滤敏感信息设置
+    const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
+
     // 使用自定义提示词或默认提示词
-    const basePrompt =
+    let basePrompt =
       customPrompt ||
       `
 请分析对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
@@ -117,6 +124,23 @@ const analyzeConversation = async (
 
 请确保每条信息都是简洁、准确的。如果没有找到重要信息，请返回空字符串。
 `
+
+    // 如果启用了敏感信息过滤，添加相关指令
+    if (filterSensitiveInfo) {
+      basePrompt += `
+## 安全提示：
+请注意不要提取任何敏感信息，包括但不限于：
+- API密钥、访问令牌或其他凭证
+- 密码或密码提示
+- 私人联系方式（如电话号码、邮箱地址）
+- 个人身份信息（如身份证号、社保号）
+- 银行账户或支付信息
+- 私密的个人或商业信息
+
+如果发现此类信息，请完全忽略，不要以任何形式记录或提取。
+`
+    }
+
     console.log(`[Memory Analysis] Analyzing conversation using model: ${modelId}`)
 
     // 将提示词和对话内容合并到一个系统提示词中
@@ -134,7 +158,7 @@ ${conversation}
     console.log('[Memory Analysis] Calling fetchGenerate with combined prompt...')
     const result = await fetchGenerate({
       prompt: combinedPrompt,
-      content: "", // 内容字段留空
+      content: '', // 内容字段留空
       modelId: modelId
     })
 
@@ -169,7 +193,7 @@ ${conversation}
   } catch (error) {
     console.error('Failed to analyze conversation with real AI:', error)
     // Consider logging the specific error details if possible
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return [] as Array<{ content: string; category: string }> // Return empty array on error
   }
 }
@@ -205,14 +229,10 @@ export const getContextualMemoryRecommendations = async (
     store.dispatch(setRecommending(true))
 
     // 调用上下文感知记忆服务获取推荐
-    const recommendations = await contextualMemoryService.getContextualMemoryRecommendations(
-      messages,
-      topicId,
-      limit
-    )
+    const recommendations = await contextualMemoryService.getContextualMemoryRecommendations(messages, topicId, limit)
 
     // 转换为Redux状态中的推荐格式
-    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map((rec) => ({
       memoryId: rec.memory.id,
       relevanceScore: rec.relevanceScore,
       source: rec.source,
@@ -239,10 +259,7 @@ export const getContextualMemoryRecommendations = async (
  * @param limit - 返回的最大记忆数量
  * @returns 与当前主题相关的记忆列表
  */
-export const getTopicRelatedMemories = async (
-  topicId: string,
-  limit: number = 10
-): Promise<MemoryRecommendation[]> => {
+export const getTopicRelatedMemories = async (topicId: string, limit: number = 10): Promise<MemoryRecommendation[]> => {
   try {
     // 获取当前状态
     const state = store.getState().memory
@@ -257,13 +274,10 @@ export const getTopicRelatedMemories = async (
     store.dispatch(setRecommending(true))
 
     // 调用上下文感知记忆服务获取推荐
-    const recommendations = await contextualMemoryService.getTopicRelatedMemories(
-      topicId,
-      limit
-    )
+    const recommendations = await contextualMemoryService.getTopicRelatedMemories(topicId, limit)
 
     // 转换为Redux状态中的推荐格式
-    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map((rec) => ({
       memoryId: rec.memory.id,
       relevanceScore: rec.relevanceScore,
       source: rec.source,
@@ -308,13 +322,10 @@ export const getAIEnhancedMemoryRecommendations = async (
     store.dispatch(setRecommending(true))
 
     // 调用上下文感知记忆服务获取推荐
-    const recommendations = await contextualMemoryService.getAIEnhancedMemoryRecommendations(
-      messages,
-      limit
-    )
+    const recommendations = await contextualMemoryService.getAIEnhancedMemoryRecommendations(messages, limit)
 
     // 转换为Redux状态中的推荐格式
-    const memoryRecommendations: MemoryRecommendation[] = recommendations.map(rec => ({
+    const memoryRecommendations: MemoryRecommendation[] = recommendations.map((rec) => ({
       memoryId: rec.memory.id,
       relevanceScore: rec.relevanceScore,
       source: rec.source,
@@ -342,7 +353,9 @@ export const useMemoryService = () => {
   const isActive = useAppSelector((state) => state.memory?.isActive || false)
   const autoAnalyze = useAppSelector((state) => state.memory?.autoAnalyze || false)
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
-  const contextualRecommendationEnabled = useAppSelector((state) => state.memory?.contextualRecommendationEnabled || false)
+  const contextualRecommendationEnabled = useAppSelector(
+    (state) => state.memory?.contextualRecommendationEnabled || false
+  )
   const autoRecommendMemories = useAppSelector((state) => state.memory?.autoRecommendMemories || false)
 
   // 使用 useCallback 定义分析函数，但减少依赖项
@@ -511,7 +524,7 @@ ${existingMemoriesContent}
 
         // 调用分析函数，传递自定义提示词和对话内容
         // 将对话内容直接放在提示词中，不再单独传递
-        const memories = await analyzeConversation("", memoryState.analyzeModel!, basePrompt)
+        const memories = await analyzeConversation('', memoryState.analyzeModel!, basePrompt)
 
         // 用户关注点学习
         if (memoryState.interestTrackingEnabled) {
@@ -623,12 +636,16 @@ ${existingMemoriesContent}
           if (addedNewMemories) {
             try {
               const state = store.getState().memory
-              await store.dispatch(saveLongTermMemoryData({
-                memories: state.memories,
-                memoryLists: state.memoryLists,
-                currentListId: state.currentListId,
-                analyzeModel: state.analyzeModel
-              })).unwrap()
+              await store
+                .dispatch(
+                  saveLongTermMemoryData({
+                    memories: state.memories,
+                    memoryLists: state.memoryLists,
+                    currentListId: state.currentListId,
+                    analyzeModel: state.analyzeModel
+                  })
+                )
+                .unwrap()
               console.log('[Memory Analysis] Long-term memories saved to file after analysis')
             } catch (error) {
               console.error('[Memory Analysis] Failed to save long-term memory data after analysis:', error)
@@ -712,8 +729,6 @@ ${existingMemoriesContent}
     analyzeAndAddMemoriesRef.current = analyzeAndAddMemories
   }, [analyzeAndAddMemories])
 
-
-
   // 记录记忆访问
   const recordMemoryAccess = useCallback((memoryId: string, isShortMemory: boolean = false) => {
     store.dispatch(accessMemory({ id: memoryId, isShortMemory }))
@@ -722,20 +737,23 @@ ${existingMemoriesContent}
   // Effect 来设置/清除定时器，只依赖于启动条件
   useEffect(() => {
     // 定期更新记忆优先级
-    const priorityUpdateInterval = setInterval(() => {
-      const memoryState = store.getState().memory
-      if (!memoryState?.priorityManagementEnabled) return
+    const priorityUpdateInterval = setInterval(
+      () => {
+        const memoryState = store.getState().memory
+        if (!memoryState?.priorityManagementEnabled) return
 
-      // 检查上次更新时间，避免频繁更新
-      const now = Date.now()
-      const lastUpdate = memoryState.lastPriorityUpdate || 0
-      const updateInterval = 30 * 60 * 1000 // 30分钟更新一次
+        // 检查上次更新时间，避免频繁更新
+        const now = Date.now()
+        const lastUpdate = memoryState.lastPriorityUpdate || 0
+        const updateInterval = 30 * 60 * 1000 // 30分钟更新一次
 
-      if (now - lastUpdate < updateInterval) return
+        if (now - lastUpdate < updateInterval) return
 
-      console.log('[Memory Priority] Updating memory priorities and freshness...')
-      store.dispatch(updateMemoryPriorities())
-    }, 10 * 60 * 1000) // 每10分钟检查一次
+        console.log('[Memory Priority] Updating memory priorities and freshness...')
+        store.dispatch(updateMemoryPriorities())
+      },
+      10 * 60 * 1000
+    ) // 每10分钟检查一次
 
     return () => {
       clearInterval(priorityUpdateInterval)
@@ -825,16 +843,19 @@ ${existingMemoriesContent}
     console.log('[ContextualMemory] Setting up auto recommendation timer...')
 
     // 每5分钟自动推荐一次记忆
-    const intervalId = setInterval(() => {
-      const state = store.getState()
-      const currentTopicId = state.messages.currentTopic?.id
-      const messages = currentTopicId ? state.messages.messagesByTopic?.[currentTopicId] || [] : []
+    const intervalId = setInterval(
+      () => {
+        const state = store.getState()
+        const currentTopicId = state.messages.currentTopic?.id
+        const messages = currentTopicId ? state.messages.messagesByTopic?.[currentTopicId] || [] : []
 
-      if (currentTopicId && messages.length > 0) {
-        console.log('[ContextualMemory] Auto recommendation triggered')
-        getContextualRecommendations(messages, currentTopicId)
-      }
-    }, 5 * 60 * 1000) // 5分钟
+        if (currentTopicId && messages.length > 0) {
+          console.log('[ContextualMemory] Auto recommendation triggered')
+          getContextualRecommendations(messages, currentTopicId)
+        }
+      },
+      5 * 60 * 1000
+    ) // 5分钟
 
     return () => {
       console.log('[ContextualMemory] Clearing auto recommendation timer')
@@ -873,10 +894,14 @@ export const addShortMemoryItem = async (
   // 保存到文件，并强制覆盖
   try {
     const state = store.getState().memory
-    await store.dispatch(saveMemoryData({
-      shortMemories: state.shortMemories,
-      forceOverwrite: true // 强制覆盖文件，确保数据正确保存
-    })).unwrap()
+    await store
+      .dispatch(
+        saveMemoryData({
+          shortMemories: state.shortMemories,
+          forceOverwrite: true // 强制覆盖文件，确保数据正确保存
+        })
+      )
+      .unwrap()
     console.log('[Memory] Short memory saved to file after manual addition (force overwrite)')
   } catch (error) {
     console.error('[Memory] Failed to save short memory data after manual addition:', error)
@@ -905,12 +930,16 @@ export const addMemoryItem = async (
   // 保存到长期记忆文件
   try {
     const state = store.getState().memory
-    await store.dispatch(saveLongTermMemoryData({
-      memories: state.memories,
-      memoryLists: state.memoryLists,
-      currentListId: state.currentListId,
-      analyzeModel: state.analyzeModel
-    })).unwrap()
+    await store
+      .dispatch(
+        saveLongTermMemoryData({
+          memories: state.memories,
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId,
+          analyzeModel: state.analyzeModel
+        })
+      )
+      .unwrap()
     console.log('[Memory] Long-term memory saved to file after manual addition')
   } catch (error) {
     console.error('[Memory] Failed to save long-term memory data after manual addition:', error)
@@ -934,7 +963,7 @@ export const resetLongTermMemoryAnalyzedMessageIds = async (topicId: string): Pr
 
     // 找到指定话题的所有长期记忆
     const memories = state.memories || []
-    const topicMemories = memories.filter(memory => memory.topicId === topicId)
+    const topicMemories = memories.filter((memory) => memory.topicId === topicId)
 
     if (topicMemories.length === 0) {
       console.log(`[Memory Reset] No long-term memories found for topic ${topicId}`)
@@ -947,7 +976,7 @@ export const resetLongTermMemoryAnalyzedMessageIds = async (topicId: string): Pr
     let hasChanges = false
 
     // 创建更新后的记忆数组
-    const updatedMemories = state.memories.map(memory => {
+    const updatedMemories = state.memories.map((memory) => {
       // 只更新指定话题的记忆
       if (memory.topicId === topicId && memory.analyzedMessageIds && memory.analyzedMessageIds.length > 0) {
         hasChanges = true
@@ -972,9 +1001,13 @@ export const resetLongTermMemoryAnalyzedMessageIds = async (topicId: string): Pr
     })
 
     // 保存更改到文件
-    await store.dispatch(saveMemoryData({
-      memories: updatedMemories
-    })).unwrap()
+    await store
+      .dispatch(
+        saveMemoryData({
+          memories: updatedMemories
+        })
+      )
+      .unwrap()
 
     // 尝试获取话题的消息，以确保分析时能找到消息
     try {
@@ -1089,8 +1122,11 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
     console.log(`[Short Memory Analysis] Analyzing topic: ${topicId}`)
     console.log('[Short Memory Analysis] New conversation length:', newConversation.length)
 
+    // 获取当前的过滤敏感信息设置
+    const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
+
     // 构建短期记忆分析提示词，包含已有记忆和新对话
-    const prompt = `
+    let prompt = `
 请对以下对话内容进行非常详细的分析和总结，提取对当前对话至关重要的上下文信息。请注意，这个分析将用于生成短期记忆，帮助AI理解当前对话的完整上下文。
 
 分析要求：
@@ -1101,7 +1137,22 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
 5. 提取对理解当前对话上下文必不可少的信息
 6. 记录用户提出的具体问题和关注点
 7. 捕捉用户在对话中表达的偏好、困惑和反馈
-8. 记录对话中提到的文件、路径、变量名等具体技术细节
+8. 记录对话中提到的文件、路径、变量名等具体技术细节`
+
+    // 如果启用了敏感信息过滤，添加相关指令
+    if (filterSensitiveInfo) {
+      prompt += `
+9. 请注意不要提取任何敏感信息，包括但不限于：
+   - API密钥、访问令牌或其他凭证
+   - 密码或密码提示
+   - 私人联系方式（如电话号码、邮箱地址）
+   - 个人身份信息（如身份证号、社保号）
+   - 银行账户或支付信息
+   - 私密的个人或商业信息
+   如果发现此类信息，请完全忽略，不要以任何形式记录或提取。`
+    }
+
+    prompt += `
 
 与长期记忆不同，短期记忆应该非常详细地关注当前对话的具体细节和上下文。每条短期记忆应该是对对话片段的精准总结，确保不遗漏任何重要信息。
 
@@ -1173,7 +1224,7 @@ ${newConversation}
     let extractedLines: string[] = []
 
     // 首先尝试匹配带有数字或短横线的列表项
-    const listItemRegex = /(?:^|\n)(?:\d+\.\s*|\-\s*)(.+?)(?=\n\d+\.\s*|\n\-\s*|\n\n|$)/gs
+    const listItemRegex = /(?:^|\n)(?:\d+\.\s*|-\s*)(.+?)(?=\n\d+\.\s*|\n-\s*|\n\n|$)/gs
     let match: RegExpExecArray | null
     while ((match = listItemRegex.exec(result)) !== null) {
       if (match[1] && match[1].trim()) {
@@ -1185,18 +1236,20 @@ ${newConversation}
     if (extractedLines.length === 0) {
       extractedLines = result
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => {
+        .map((line) => line.trim())
+        .filter((line) => {
           // 过滤掉空行和非内容行（如标题、分隔符等）
-          return line &&
-                 !line.startsWith('#') &&
-                 !line.startsWith('---') &&
-                 !line.startsWith('===') &&
-                 !line.includes('没有找到新的重要信息') &&
-                 !line.includes('No new important information')
+          return (
+            line &&
+            !line.startsWith('#') &&
+            !line.startsWith('---') &&
+            !line.startsWith('===') &&
+            !line.includes('没有找到新的重要信息') &&
+            !line.includes('No new important information')
+          )
         })
         // 清理行首的数字、点和短横线
-        .map(line => line.replace(/^(\d+\.\s*|\-\s*)/, '').trim())
+        .map((line) => line.replace(/^(\d+\.\s*|-\s*)/, '').trim())
     }
 
     console.log('[Short Memory Analysis] Extracted items:', extractedLines)
@@ -1211,11 +1264,12 @@ ${newConversation}
     const newMemories = extractedLines.filter((content: string) => {
       const normalizedContent = content.toLowerCase()
       // 检查是否与现有记忆完全匹配或高度相似
-      return !existingContents.some(existingContent =>
-        existingContent === normalizedContent ||
-        // 简单的相似度检查 - 如果一个字符串包含另一个的80%以上的内容
-        (existingContent.includes(normalizedContent) && normalizedContent.length > existingContent.length * 0.8) ||
-        (normalizedContent.includes(existingContent) && existingContent.length > normalizedContent.length * 0.8)
+      return !existingContents.some(
+        (existingContent) =>
+          existingContent === normalizedContent ||
+          // 简单的相似度检查 - 如果一个字符串包含另一个的80%以上的内容
+          (existingContent.includes(normalizedContent) && normalizedContent.length > existingContent.length * 0.8) ||
+          (normalizedContent.includes(existingContent) && existingContent.length > normalizedContent.length * 0.8)
       )
     })
 
@@ -1254,12 +1308,16 @@ ${newConversation}
     // 显式触发保存操作，确保数据被持久化，并强制覆盖
     try {
       const state = store.getState().memory
-      await store.dispatch(saveMemoryData({
-        memoryLists: state.memoryLists,
-        memories: state.memories,
-        shortMemories: state.shortMemories,
-        forceOverwrite: true // 强制覆盖文件，确保数据正确保存
-      })).unwrap() // 使用unwrap()来等待异步操作完成并处理错误
+      await store
+        .dispatch(
+          saveMemoryData({
+            memoryLists: state.memoryLists,
+            memories: state.memories,
+            shortMemories: state.shortMemories,
+            forceOverwrite: true // 强制覆盖文件，确保数据正确保存
+          })
+        )
+        .unwrap() // 使用unwrap()来等待异步操作完成并处理错误
       console.log('[Short Memory Analysis] Memory data saved successfully (force overwrite)')
     } catch (error) {
       console.error('[Short Memory Analysis] Failed to save memory data:', error)
@@ -1324,16 +1382,16 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
   // 处理上下文感知记忆推荐
   if (contextualRecommendationEnabled && currentRecommendations && currentRecommendations.length > 0) {
     // 获取推荐记忆的详细信息
-    const recommendedMemories: Array<{content: string, source: string, reason: string}> = []
+    const recommendedMemories: Array<{ content: string; source: string; reason: string }> = []
 
     // 处理每个推荐记忆
     for (const recommendation of currentRecommendations) {
       // 根据来源查找记忆
       let memory: any = null
       if (recommendation.source === 'long-term') {
-        memory = memories.find(m => m.id === recommendation.memoryId)
+        memory = memories.find((m) => m.id === recommendation.memoryId)
       } else if (recommendation.source === 'short-term') {
-        memory = shortMemories.find(m => m.id === recommendation.memoryId)
+        memory = shortMemories.find((m) => m.id === recommendation.memoryId)
       }
 
       if (memory) {
@@ -1344,10 +1402,12 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
         })
 
         // 记录访问
-        store.dispatch(accessMemory({
-          id: memory.id,
-          isShortMemory: recommendation.source === 'short-term'
-        }))
+        store.dispatch(
+          accessMemory({
+            id: memory.id,
+            isShortMemory: recommendation.source === 'short-term'
+          })
+        )
       }
     }
 
@@ -1355,8 +1415,10 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
       // 构建推荐记忆提示词
       // 按重要性排序
       recommendedMemories.sort((a, b) => {
-        const memoryA = memories.find(m => m.content === a.content) || shortMemories.find(m => m.content === a.content)
-        const memoryB = memories.find(m => m.content === b.content) || shortMemories.find(m => m.content === b.content)
+        const memoryA =
+          memories.find((m) => m.content === a.content) || shortMemories.find((m) => m.content === a.content)
+        const memoryB =
+          memories.find((m) => m.content === b.content) || shortMemories.find((m) => m.content === b.content)
         const importanceA = memoryA?.importance || 0.5
         const importanceB = memoryB?.importance || 0.5
         return importanceB - importanceA
@@ -1383,7 +1445,7 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
     // 如果启用了智能优先级管理，根据优先级排序
     if (priorityManagementEnabled && topicShortMemories.length > 0) {
       // 计算每个记忆的综合分数（重要性 * 衰减因子 * 鲜度）
-      const scoredMemories = topicShortMemories.map(memory => {
+      const scoredMemories = topicShortMemories.map((memory) => {
         // 记录访问
         store.dispatch(accessMemory({ id: memory.id, isShortMemory: true }))
 
@@ -1399,7 +1461,7 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
       scoredMemories.sort((a, b) => b.score - a.score)
 
       // 提取排序后的记忆
-      topicShortMemories = scoredMemories.map(item => item.memory)
+      topicShortMemories = scoredMemories.map((item) => item.memory)
 
       // 限制数量，避免提示词过长
       if (topicShortMemories.length > 10) {
@@ -1437,7 +1499,7 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
       // 如果启用了智能优先级管理，根据优先级排序
       if (priorityManagementEnabled && activeMemories.length > 0) {
         // 计算每个记忆的综合分数
-        const scoredMemories = activeMemories.map(memory => {
+        const scoredMemories = activeMemories.map((memory) => {
           // 记录访问
           store.dispatch(accessMemory({ id: memory.id }))
 
@@ -1457,9 +1519,9 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
         const memoriesByList: Record<string, Memory[]> = {}
 
         // 提取排序后的记忆
-        const sortedMemories = scoredMemories.map(item => item.memory)
+        const sortedMemories = scoredMemories.map((item) => item.memory)
 
-        sortedMemories.forEach(memory => {
+        sortedMemories.forEach((memory) => {
           if (!memoriesByList[memory.listId]) {
             memoriesByList[memory.listId] = []
           }

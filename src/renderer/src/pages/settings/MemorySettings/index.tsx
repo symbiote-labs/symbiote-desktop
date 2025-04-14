@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   DeleteOutlined,
   EditOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   SearchOutlined,
   UnorderedListOutlined
@@ -9,7 +10,11 @@ import {
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { TopicManager } from '@renderer/hooks/useTopic'
-import { analyzeAndAddShortMemories, resetLongTermMemoryAnalyzedMessageIds, useMemoryService } from '@renderer/services/MemoryService'
+import {
+  analyzeAndAddShortMemories,
+  resetLongTermMemoryAnalyzedMessageIds,
+  useMemoryService
+} from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store' // Import store for direct access
 import {
@@ -17,14 +22,15 @@ import {
   clearMemories,
   deleteMemory,
   editMemory,
+  saveAllMemorySettings,
+  saveLongTermMemoryData,
+  saveMemoryData,
   setAnalyzeModel,
   setAnalyzing,
   setAutoAnalyze,
+  setFilterSensitiveInfo,
   setMemoryActive,
-  setShortMemoryAnalyzeModel,
-  saveMemoryData,
-  saveLongTermMemoryData,
-  saveAllMemorySettings
+  setShortMemoryAnalyzeModel
 } from '@renderer/store/memory'
 import { Topic } from '@renderer/types'
 import { Button, Empty, Input, List, message, Modal, Pagination, Radio, Select, Switch, Tabs, Tag, Tooltip } from 'antd'
@@ -42,12 +48,12 @@ import {
   SettingTitle
 } from '..'
 import CollapsibleShortMemoryManager from './CollapsibleShortMemoryManager'
+import ContextualRecommendationSettings from './ContextualRecommendationSettings'
+import HistoricalContextSettings from './HistoricalContextSettings'
 import MemoryDeduplicationPanel from './MemoryDeduplicationPanel'
 import MemoryListManager from './MemoryListManager'
 import MemoryMindMap from './MemoryMindMap'
 import PriorityManagementSettings from './PriorityManagementSettings'
-import ContextualRecommendationSettings from './ContextualRecommendationSettings'
-import HistoricalContextSettings from './HistoricalContextSettings'
 
 const MemorySettings: FC = () => {
   const { t } = useTranslation()
@@ -61,6 +67,7 @@ const MemorySettings: FC = () => {
   const currentListId = useAppSelector((state) => state.memory?.currentListId || null)
   const isActive = useAppSelector((state) => state.memory?.isActive || false)
   const autoAnalyze = useAppSelector((state) => state.memory?.autoAnalyze || false)
+  const filterSensitiveInfo = useAppSelector((state) => state.memory?.filterSensitiveInfo ?? true) // 默认启用敏感信息过滤
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
   const shortMemoryAnalyzeModel = useAppSelector((state) => state.memory?.shortMemoryAnalyzeModel || null)
   const isAnalyzing = useAppSelector((state) => state.memory?.isAnalyzing || false)
@@ -72,7 +79,7 @@ const MemorySettings: FC = () => {
   const models = useMemo(() => {
     // 只获取已启用的提供商的模型
     return providers
-      .filter(provider => provider.enabled) // 只保留已启用的提供商
+      .filter((provider) => provider.enabled) // 只保留已启用的提供商
       .flatMap((provider) => provider.models || [])
   }, [providers])
 
@@ -177,20 +184,22 @@ const MemorySettings: FC = () => {
   const handleDeleteMemory = async (id: string) => {
     // 先从当前状态中获取要删除的记忆之外的所有记忆
     const state = store.getState().memory
-    const filteredMemories = state.memories.filter(memory => memory.id !== id)
+    const filteredMemories = state.memories.filter((memory) => memory.id !== id)
 
     // 执行删除操作
     dispatch(deleteMemory(id))
 
     // 保存到长期记忆文件，并强制覆盖
     try {
-      await dispatch(saveLongTermMemoryData({
-        memories: filteredMemories, // 直接使用过滤后的数组，而不是使用当前状态
-        memoryLists: state.memoryLists,
-        currentListId: state.currentListId,
-        analyzeModel: state.analyzeModel,
-        forceOverwrite: true // 强制覆盖文件，而不是尝试合并
-      })).unwrap()
+      await dispatch(
+        saveLongTermMemoryData({
+          memories: filteredMemories, // 直接使用过滤后的数组，而不是使用当前状态
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId,
+          analyzeModel: state.analyzeModel,
+          forceOverwrite: true // 强制覆盖文件，而不是尝试合并
+        })
+      ).unwrap()
       console.log('[Memory Settings] Long-term memories saved to file after deletion (force overwrite)')
 
       message.success(t('settings.memory.deleteSuccess'))
@@ -225,13 +234,15 @@ const MemorySettings: FC = () => {
     try {
       // 直接传递空数组作为 memories，确保完全清空
       const state = store.getState().memory
-      await dispatch(saveLongTermMemoryData({
-        memories: [], // 直接使用空数组，而不是使用当前状态
-        memoryLists: state.memoryLists,
-        currentListId: state.currentListId,
-        analyzeModel: state.analyzeModel,
-        forceOverwrite: true // 强制覆盖文件，而不是合并
-      })).unwrap()
+      await dispatch(
+        saveLongTermMemoryData({
+          memories: [], // 直接使用空数组，而不是使用当前状态
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId,
+          analyzeModel: state.analyzeModel,
+          forceOverwrite: true // 强制覆盖文件，而不是合并
+        })
+      ).unwrap()
       console.log('[Memory Settings] Long-term memories saved to file after clearing (force overwrite)')
     } catch (error) {
       console.error('[Memory Settings] Failed to save long-term memory data after clearing:', error)
@@ -248,6 +259,20 @@ const MemorySettings: FC = () => {
   // 处理切换自动分析
   const handleToggleAutoAnalyze = (checked: boolean) => {
     dispatch(setAutoAnalyze(checked))
+  }
+
+  // 处理切换敏感信息过滤
+  const handleToggleFilterSensitiveInfo = async (checked: boolean) => {
+    dispatch(setFilterSensitiveInfo(checked))
+    console.log('[Memory Settings] Filter sensitive info set:', checked)
+
+    // 使用Redux Thunk保存到JSON文件
+    try {
+      await dispatch(saveMemoryData({ filterSensitiveInfo: checked })).unwrap()
+      console.log('[Memory Settings] Filter sensitive info saved to file successfully:', checked)
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save filter sensitive info to file:', error)
+    }
   }
 
   // 处理选择长期记忆分析模型
@@ -337,7 +362,7 @@ const MemorySettings: FC = () => {
 
     // 遍历所有服务商的模型找到匹配的模型
     for (const provider of Object.values(providers)) {
-      const model = provider.models.find(m => m.id === analyzeModel)
+      const model = provider.models.find((m) => m.id === analyzeModel)
       if (model) {
         return `${model.name} | ${provider.name}`
       }
@@ -352,7 +377,7 @@ const MemorySettings: FC = () => {
 
     // 遍历所有服务商的模型找到匹配的模型
     for (const provider of Object.values(providers)) {
-      const model = provider.models.find(m => m.id === shortMemoryAnalyzeModel)
+      const model = provider.models.find((m) => m.id === shortMemoryAnalyzeModel)
       if (model) {
         return `${model.name} | ${provider.name}`
       }
@@ -547,6 +572,23 @@ const MemorySettings: FC = () => {
                     <SettingRowTitle>{t('settings.memory.enableAutoAnalyze')}</SettingRowTitle>
                     <Switch checked={autoAnalyze} onChange={handleToggleAutoAnalyze} disabled={!isActive} />
                   </SettingRow>
+                  <SettingRow>
+                    <SettingRowTitle>
+                      {t('settings.memory.filterSensitiveInfo') || '过滤敏感信息'}
+                      <Tooltip
+                        title={
+                          t('settings.memory.filterSensitiveInfoTip') ||
+                          '启用后，记忆功能将不会提取API密钥、密码等敏感信息'
+                        }>
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </Tooltip>
+                    </SettingRowTitle>
+                    <Switch
+                      checked={filterSensitiveInfo}
+                      onChange={handleToggleFilterSensitiveInfo}
+                      disabled={!isActive}
+                    />
+                  </SettingRow>
 
                   {/* 短期记忆分析模型选择 */}
                   <SettingRow>
@@ -559,7 +601,7 @@ const MemorySettings: FC = () => {
                         let currentModel: { id: string; provider: string; name: string; group: string } | undefined
                         if (shortMemoryAnalyzeModel) {
                           for (const provider of Object.values(providers)) {
-                            const model = provider.models.find(m => m.id === shortMemoryAnalyzeModel)
+                            const model = provider.models.find((m) => m.id === shortMemoryAnalyzeModel)
                             if (model) {
                               currentModel = model
                               break
@@ -573,9 +615,10 @@ const MemorySettings: FC = () => {
                         }
                       }}
                       style={{ width: 300 }}
-                      disabled={!isActive}
-                    >
-                      {shortMemoryAnalyzeModel ? getSelectedShortMemoryModelName() : t('settings.memory.selectModel') || '选择模型'}
+                      disabled={!isActive}>
+                      {shortMemoryAnalyzeModel
+                        ? getSelectedShortMemoryModelName()
+                        : t('settings.memory.selectModel') || '选择模型'}
                     </Button>
                   </SettingRow>
 
@@ -664,13 +707,11 @@ const MemorySettings: FC = () => {
                   <SettingGroup>
                     <SettingTitle>{t('settings.memory.saveAllSettings') || '保存所有设置'}</SettingTitle>
                     <SettingHelpText>
-                      {t('settings.memory.saveAllSettingsDescription') || '将所有记忆功能的设置保存到文件中，确保应用重启后设置仍然生效。'}
+                      {t('settings.memory.saveAllSettingsDescription') ||
+                        '将所有记忆功能的设置保存到文件中，确保应用重启后设置仍然生效。'}
                     </SettingHelpText>
                     <SettingRow>
-                      <Button
-                        type="primary"
-                        onClick={handleSaveAllSettings}
-                      >
+                      <Button type="primary" onClick={handleSaveAllSettings}>
                         {t('settings.memory.saveAllSettings') || '保存所有设置'}
                       </Button>
                     </SettingRow>
@@ -706,6 +747,23 @@ const MemorySettings: FC = () => {
                     <SettingRowTitle>{t('settings.memory.enableAutoAnalyze')}</SettingRowTitle>
                     <Switch checked={autoAnalyze} onChange={handleToggleAutoAnalyze} disabled={!isActive} />
                   </SettingRow>
+                  <SettingRow>
+                    <SettingRowTitle>
+                      {t('settings.memory.filterSensitiveInfo') || '过滤敏感信息'}
+                      <Tooltip
+                        title={
+                          t('settings.memory.filterSensitiveInfoTip') ||
+                          '启用后，记忆功能将不会提取API密钥、密码等敏感信息'
+                        }>
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </Tooltip>
+                    </SettingRowTitle>
+                    <Switch
+                      checked={filterSensitiveInfo}
+                      onChange={handleToggleFilterSensitiveInfo}
+                      disabled={!isActive}
+                    />
+                  </SettingRow>
 
                   {/* 长期记忆分析模型选择 */}
                   <SettingRow>
@@ -716,7 +774,7 @@ const MemorySettings: FC = () => {
                         let currentModel: { id: string; provider: string; name: string; group: string } | undefined
                         if (analyzeModel) {
                           for (const provider of Object.values(providers)) {
-                            const model = provider.models.find(m => m.id === analyzeModel)
+                            const model = provider.models.find((m) => m.id === analyzeModel)
                             if (model) {
                               currentModel = model
                               break
@@ -730,8 +788,7 @@ const MemorySettings: FC = () => {
                         }
                       }}
                       style={{ width: 300 }}
-                      disabled={!isActive}
-                    >
+                      disabled={!isActive}>
                       {analyzeModel ? getSelectedModelName() : t('settings.memory.selectModel') || '选择模型'}
                     </Button>
                   </SettingRow>
@@ -868,71 +925,75 @@ const MemorySettings: FC = () => {
                     {viewMode === 'list' ? (
                       memories.length > 0 && isActive ? (
                         <div>
-                        <List
-                          itemLayout="horizontal"
-                          style={{ minHeight: '350px' }}
-                          dataSource={memories
+                          <List
+                            itemLayout="horizontal"
+                            style={{ minHeight: '350px' }}
+                            dataSource={memories
+                              .filter((memory) => (currentListId ? memory.listId === currentListId : true))
+                              .filter((memory) => categoryFilter === null || memory.category === categoryFilter)
+                              .slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+                            renderItem={(memory) => (
+                              <List.Item
+                                actions={[
+                                  <Tooltip key="edit" title={t('common.edit')}>
+                                    <Button
+                                      icon={<EditOutlined />}
+                                      type="text"
+                                      onClick={() => {
+                                        setEditingMemory({ id: memory.id, content: memory.content })
+                                        setIsEditModalVisible(true)
+                                      }}
+                                      disabled={!isActive}
+                                    />
+                                  </Tooltip>,
+                                  <Tooltip key="delete" title={t('common.delete')}>
+                                    <Button
+                                      icon={<DeleteOutlined />}
+                                      type="text"
+                                      danger
+                                      onClick={() => handleDeleteMemory(memory.id)}
+                                      disabled={!isActive}
+                                    />
+                                  </Tooltip>
+                                ]}>
+                                <List.Item.Meta
+                                  title={
+                                    <div>
+                                      {memory.category && <TagWithCursor color="blue">{memory.category}</TagWithCursor>}
+                                      {memory.content}
+                                    </div>
+                                  }
+                                  description={
+                                    <MemoryItemMeta>
+                                      <span>{new Date(memory.createdAt).toLocaleString()}</span>
+                                      {memory.source && <span>{memory.source}</span>}
+                                    </MemoryItemMeta>
+                                  }
+                                />
+                              </List.Item>
+                            )}
+                          />
+                          {/* 分页组件 */}
+                          {memories
                             .filter((memory) => (currentListId ? memory.listId === currentListId : true))
-                            .filter((memory) => categoryFilter === null || memory.category === categoryFilter)
-                            .slice((currentPage - 1) * pageSize, currentPage * pageSize)}
-                          renderItem={(memory) => (
-                            <List.Item
-                              actions={[
-                                <Tooltip key="edit" title={t('common.edit')}>
-                                  <Button
-                                    icon={<EditOutlined />}
-                                    type="text"
-                                    onClick={() => {
-                                      setEditingMemory({ id: memory.id, content: memory.content })
-                                      setIsEditModalVisible(true)
-                                    }}
-                                    disabled={!isActive}
-                                  />
-                                </Tooltip>,
-                                <Tooltip key="delete" title={t('common.delete')}>
-                                  <Button
-                                    icon={<DeleteOutlined />}
-                                    type="text"
-                                    danger
-                                    onClick={() => handleDeleteMemory(memory.id)}
-                                    disabled={!isActive}
-                                  />
-                                </Tooltip>
-                              ]}>
-                              <List.Item.Meta
-                                title={
-                                  <div>
-                                    {memory.category && <TagWithCursor color="blue">{memory.category}</TagWithCursor>}
-                                    {memory.content}
-                                  </div>
+                            .filter((memory) => categoryFilter === null || memory.category === categoryFilter).length >
+                            pageSize && (
+                            <PaginationContainer>
+                              <Pagination
+                                current={currentPage}
+                                onChange={(page) => setCurrentPage(page)}
+                                total={
+                                  memories
+                                    .filter((memory) => (currentListId ? memory.listId === currentListId : true))
+                                    .filter((memory) => categoryFilter === null || memory.category === categoryFilter)
+                                    .length
                                 }
-                                description={
-                                  <MemoryItemMeta>
-                                    <span>{new Date(memory.createdAt).toLocaleString()}</span>
-                                    {memory.source && <span>{memory.source}</span>}
-                                  </MemoryItemMeta>
-                                }
+                                pageSize={pageSize}
+                                size="small"
+                                showSizeChanger={false}
                               />
-                            </List.Item>
+                            </PaginationContainer>
                           )}
-                        />
-                        {/* 分页组件 */}
-                        {memories
-                          .filter((memory) => (currentListId ? memory.listId === currentListId : true))
-                          .filter((memory) => categoryFilter === null || memory.category === categoryFilter).length > pageSize && (
-                          <PaginationContainer>
-                            <Pagination
-                              current={currentPage}
-                              onChange={(page) => setCurrentPage(page)}
-                              total={memories
-                                .filter((memory) => (currentListId ? memory.listId === currentListId : true))
-                                .filter((memory) => categoryFilter === null || memory.category === categoryFilter).length}
-                              pageSize={pageSize}
-                              size="small"
-                              showSizeChanger={false}
-                            />
-                          </PaginationContainer>
-                        )}
                         </div>
                       ) : (
                         <Empty description={t('settings.memory.noMemories')} />

@@ -1,11 +1,11 @@
 import { InfoCircleOutlined } from '@ant-design/icons'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import {
+  clearCurrentRecommendations,
   saveMemoryData,
-  setContextualRecommendationEnabled,
   setAutoRecommendMemories,
-  setRecommendationThreshold,
-  clearCurrentRecommendations
+  setContextualRecommendationEnabled,
+  setRecommendationThreshold
 } from '@renderer/store/memory'
 import { Button, InputNumber, Slider, Switch, Tooltip } from 'antd'
 import { FC } from 'react'
@@ -40,7 +40,10 @@ const ContextualRecommendationSettings: FC = () => {
       await dispatch(saveMemoryData({ contextualRecommendationEnabled: checked })).unwrap()
       console.log('[ContextualRecommendationSettings] Contextual recommendation enabled setting saved:', checked)
     } catch (error) {
-      console.error('[ContextualRecommendationSettings] Failed to save contextual recommendation enabled setting:', error)
+      console.error(
+        '[ContextualRecommendationSettings] Failed to save contextual recommendation enabled setting:',
+        error
+      )
     }
   }
 
@@ -87,8 +90,11 @@ const ContextualRecommendationSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.contextualRecommendation.enable') || '启用上下文感知记忆推荐'}
-          <Tooltip title={t('settings.memory.contextualRecommendation.enableTip') ||
-            '启用后，系统将根据当前对话上下文自动推荐相关记忆'}>
+          <Tooltip
+            title={
+              t('settings.memory.contextualRecommendation.enableTip') ||
+              '启用后，系统将根据当前对话上下文自动推荐相关记忆'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -100,8 +106,11 @@ const ContextualRecommendationSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.contextualRecommendation.autoRecommend') || '自动推荐记忆'}
-          <Tooltip title={t('settings.memory.contextualRecommendation.autoRecommendTip') ||
-            '启用后，系统将定期自动分析当前对话并推荐相关记忆'}>
+          <Tooltip
+            title={
+              t('settings.memory.contextualRecommendation.autoRecommendTip') ||
+              '启用后，系统将定期自动分析当前对话并推荐相关记忆'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -115,8 +124,10 @@ const ContextualRecommendationSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.contextualRecommendation.threshold') || '推荐阈值'}
-          <Tooltip title={t('settings.memory.contextualRecommendation.thresholdTip') ||
-            '设置记忆推荐的相似度阈值，值越高要求越严格'}>
+          <Tooltip
+            title={
+              t('settings.memory.contextualRecommendation.thresholdTip') || '设置记忆推荐的相似度阈值，值越高要求越严格'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -147,15 +158,12 @@ const ContextualRecommendationSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.contextualRecommendation.clearRecommendations') || '清除当前推荐'}
-          <Tooltip title={t('settings.memory.contextualRecommendation.clearRecommendationsTip') ||
-            '清除当前的记忆推荐列表'}>
+          <Tooltip
+            title={t('settings.memory.contextualRecommendation.clearRecommendationsTip') || '清除当前的记忆推荐列表'}>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
-        <Button
-          onClick={handleClearRecommendations}
-          disabled={!contextualRecommendationEnabled}
-        >
+        <Button onClick={handleClearRecommendations} disabled={!contextualRecommendationEnabled}>
           {t('settings.memory.contextualRecommendation.clear') || '清除'}
         </Button>
       </SettingRow>

@@ -1,3 +1,5 @@
+import './services/MemoryFileService'
+
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { replaceDevtoolsFont } from '@main/utils/windowUtil'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -7,7 +9,6 @@ import Logger from 'electron-log'
 
 import { registerIpc } from './ipc'
 import { configManager } from './services/ConfigManager'
-import './services/MemoryFileService'
 import mcpService from './services/MCPService'
 import { CHERRY_STUDIO_PROTOCOL, handleProtocolUrl, registerProtocolClient } from './services/ProtocolClient'
 import { registerShortcuts } from './services/ShortcutService'

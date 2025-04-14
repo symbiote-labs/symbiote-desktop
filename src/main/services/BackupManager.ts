@@ -8,9 +8,9 @@ import * as fs from 'fs-extra'
 import * as path from 'path'
 import { createClient, CreateDirectoryOptions, FileStat } from 'webdav'
 
+import { getConfigDir } from '../utils/file'
 import WebDav from './WebDav'
 import { windowService } from './WindowService'
-import { getConfigDir } from '../utils/file'
 
 class BackupManager {
   private tempDir = path.join(app.getPath('temp'), 'cherry-studio', 'backup', 'temp')

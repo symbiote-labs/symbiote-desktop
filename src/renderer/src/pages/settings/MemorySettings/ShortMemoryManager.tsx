@@ -4,8 +4,8 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
 import { deleteShortMemory, setShortMemoryActive } from '@renderer/store/memory'
 import { Button, Empty, Input, List, Switch, Tooltip, Typography } from 'antd'
-import { useState, useCallback } from 'react'
 import _ from 'lodash'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const { Title } = Typography
@@ -35,46 +35,52 @@ const ShortMemoryManager = () => {
   }
 
   // 添加新的短记忆 - 使用防抖减少频繁更新
-  const handleAddMemory = useCallback(_.debounce(() => {
-    if (newMemoryContent.trim() && currentTopicId) {
-      addShortMemoryItem(newMemoryContent.trim(), currentTopicId)
-      setNewMemoryContent('') // 清空输入框
-    }
-  }, 300), [newMemoryContent, currentTopicId])
+  const handleAddMemory = useCallback(
+    _.debounce(() => {
+      if (newMemoryContent.trim() && currentTopicId) {
+        addShortMemoryItem(newMemoryContent.trim(), currentTopicId)
+        setNewMemoryContent('') // 清空输入框
+      }
+    }, 300),
+    [newMemoryContent, currentTopicId]
+  )
 
   // 删除短记忆 - 直接删除无需确认，使用节流避免频繁删除操作
-  const handleDeleteMemory = useCallback(_.throttle(async (id: string) => {
-    // 先从当前状态中获取要删除的记忆之外的所有记忆
-    const state = store.getState().memory
-    const filteredShortMemories = state.shortMemories.filter(memory => memory.id !== id)
+  const handleDeleteMemory = useCallback(
+    _.throttle(async (id: string) => {
+      // 先从当前状态中获取要删除的记忆之外的所有记忆
+      const state = store.getState().memory
+      const filteredShortMemories = state.shortMemories.filter((memory) => memory.id !== id)
 
-    // 执行删除操作
-    dispatch(deleteShortMemory(id))
+      // 执行删除操作
+      dispatch(deleteShortMemory(id))
 
-    // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
-    try {
-      // 加载当前文件数据
-      const currentData = await window.api.memory.loadData()
+      // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+      try {
+        // 加载当前文件数据
+        const currentData = await window.api.memory.loadData()
 
-      // 替换 shortMemories 数组
-      const newData = {
-        ...currentData,
-        shortMemories: filteredShortMemories
+        // 替换 shortMemories 数组
+        const newData = {
+          ...currentData,
+          shortMemories: filteredShortMemories
+        }
+
+        // 使用 true 参数强制覆盖文件
+        const result = await window.api.memory.saveData(newData, true)
+
+        if (result) {
+          console.log(`[ShortMemoryManager] Successfully deleted short memory with ID ${id}`)
+          // 移除消息提示，避免触发界面重新渲染
+        } else {
+          console.error(`[ShortMemoryManager] Failed to delete short memory with ID ${id}`)
+        }
+      } catch (error) {
+        console.error('[ShortMemoryManager] Failed to delete short memory:', error)
       }
-
-      // 使用 true 参数强制覆盖文件
-      const result = await window.api.memory.saveData(newData, true)
-
-      if (result) {
-        console.log(`[ShortMemoryManager] Successfully deleted short memory with ID ${id}`)
-        // 移除消息提示，避免触发界面重新渲染
-      } else {
-        console.error(`[ShortMemoryManager] Failed to delete short memory with ID ${id}`)
-      }
-    } catch (error) {
-      console.error('[ShortMemoryManager] Failed to delete short memory:', error)
-    }
-  }, 500), [dispatch])
+    }, 500),
+    [dispatch]
+  )
 
   return (
     <div className="short-memory-manager">

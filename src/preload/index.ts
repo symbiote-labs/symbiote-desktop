@@ -183,7 +183,8 @@ const api = {
     saveData: (data: any) => ipcRenderer.invoke(IpcChannel.Memory_SaveData, data),
     deleteShortMemoryById: (id: string) => ipcRenderer.invoke(IpcChannel.Memory_DeleteShortMemoryById, id),
     loadLongTermData: () => ipcRenderer.invoke(IpcChannel.LongTermMemory_LoadData),
-    saveLongTermData: (data: any, forceOverwrite: boolean = false) => ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
+    saveLongTermData: (data: any, forceOverwrite: boolean = false) =>
+      ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
   }
 }
 

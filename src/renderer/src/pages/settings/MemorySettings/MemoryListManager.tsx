@@ -6,9 +6,9 @@ import {
   deleteMemoryList,
   editMemoryList,
   MemoryList,
+  saveLongTermMemoryData,
   setCurrentMemoryList,
-  toggleMemoryListActive,
-  saveLongTermMemoryData
+  toggleMemoryListActive
 } from '@renderer/store/memory'
 import { Button, Empty, Input, List, Modal, Switch, Tooltip, Typography } from 'antd'
 import React, { useState } from 'react'
@@ -76,10 +76,12 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
     // 保存到长期记忆文件
     try {
       const state = store.getState().memory
-      await dispatch(saveLongTermMemoryData({
-        memoryLists: state.memoryLists,
-        currentListId: state.currentListId
-      })).unwrap()
+      await dispatch(
+        saveLongTermMemoryData({
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId
+        })
+      ).unwrap()
       console.log('[MemoryListManager] Memory lists saved to file after edit')
     } catch (error) {
       console.error('[MemoryListManager] Failed to save memory lists after edit:', error)
@@ -114,10 +116,12 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
         // 保存到长期记忆文件
         try {
           const state = store.getState().memory
-          await dispatch(saveLongTermMemoryData({
-            memoryLists: state.memoryLists,
-            currentListId: state.currentListId
-          })).unwrap()
+          await dispatch(
+            saveLongTermMemoryData({
+              memoryLists: state.memoryLists,
+              currentListId: state.currentListId
+            })
+          ).unwrap()
           console.log('[MemoryListManager] Memory lists saved to file after delete')
         } catch (error) {
           console.error('[MemoryListManager] Failed to save memory lists after delete:', error)
@@ -133,10 +137,12 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
     // 保存到长期记忆文件
     try {
       const state = store.getState().memory
-      await dispatch(saveLongTermMemoryData({
-        memoryLists: state.memoryLists,
-        currentListId: state.currentListId
-      })).unwrap()
+      await dispatch(
+        saveLongTermMemoryData({
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId
+        })
+      ).unwrap()
       console.log('[MemoryListManager] Memory lists saved to file after toggle active')
     } catch (error) {
       console.error('[MemoryListManager] Failed to save memory lists after toggle active:', error)
@@ -153,10 +159,12 @@ const MemoryListManager: React.FC<MemoryListManagerProps> = ({ onSelectList }) =
     // 保存到长期记忆文件
     try {
       const state = store.getState().memory
-      await dispatch(saveLongTermMemoryData({
-        memoryLists: state.memoryLists,
-        currentListId: state.currentListId
-      })).unwrap()
+      await dispatch(
+        saveLongTermMemoryData({
+          memoryLists: state.memoryLists,
+          currentListId: state.currentListId
+        })
+      ).unwrap()
       console.log('[MemoryListManager] Memory lists saved to file after select list')
     } catch (error) {
       console.error('[MemoryListManager] Failed to save memory lists after select list:', error)

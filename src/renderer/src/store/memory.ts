@@ -1,7 +1,6 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import { nanoid } from 'nanoid'
-import log from 'electron-log'
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
 import store, { RootState } from '@renderer/store'
+import { nanoid } from 'nanoid'
 
 // 记忆列表接口
 export interface MemoryList {
@@ -93,6 +92,7 @@ export interface MemoryState {
   isActive: boolean // 记忆功能是否激活
   shortMemoryActive: boolean // 短记忆功能是否激活
   autoAnalyze: boolean // 是否自动分析
+  filterSensitiveInfo: boolean // 是否过滤敏感信息
   analyzeModel: string | null // 用于长期记忆分析的模型ID
   shortMemoryAnalyzeModel: string | null // 用于短期记忆分析的模型ID
   historicalContextAnalyzeModel: string | null // 用于历史对话上下文分析的模型ID
@@ -148,6 +148,7 @@ const initialState: MemoryState = {
   isActive: true,
   shortMemoryActive: true, // 默认启用短记忆功能
   autoAnalyze: true,
+  filterSensitiveInfo: true, // 默认启用敏感信息过滤
   analyzeModel: 'gpt-3.5-turbo', // 设置默认长期记忆分析模型
   shortMemoryAnalyzeModel: 'gpt-3.5-turbo', // 设置默认短期记忆分析模型
   historicalContextAnalyzeModel: 'gpt-3.5-turbo', // 设置默认历史对话上下文分析模型
@@ -286,6 +287,11 @@ const memorySlice = createSlice({
     // 设置是否自动分析
     setAutoAnalyze: (state, action: PayloadAction<boolean>) => {
       state.autoAnalyze = action.payload
+    },
+
+    // 设置是否过滤敏感信息
+    setFilterSensitiveInfo: (state, action: PayloadAction<boolean>) => {
+      state.filterSensitiveInfo = action.payload
     },
 
     // 设置长期记忆分析模型
@@ -497,10 +503,12 @@ const memorySlice = createSlice({
         const messageIdReferences = new Map<string, number>()
 
         // 统计所有记忆中每个消息ID的引用次数
-        state.shortMemories.forEach(memory => {
-          if (memory.id !== action.payload && memory.analyzedMessageIds) { // 排除要删除的记忆
-            memory.analyzedMessageIds.forEach(msgId => {
-              if (messageIdsToCheck.has(msgId)) { // 只关注要删除的记忆中的消息ID
+        state.shortMemories.forEach((memory) => {
+          if (memory.id !== action.payload && memory.analyzedMessageIds) {
+            // 排除要删除的记忆
+            memory.analyzedMessageIds.forEach((msgId) => {
+              if (messageIdsToCheck.has(msgId)) {
+                // 只关注要删除的记忆中的消息ID
                 messageIdReferences.set(msgId, (messageIdReferences.get(msgId) || 0) + 1)
               }
             })
@@ -508,10 +516,12 @@ const memorySlice = createSlice({
         })
 
         // 找出没有被其他记忆引用的消息ID
-        const unusedMessageIds = Array.from(messageIdsToCheck).filter(msgId => !messageIdReferences.has(msgId))
+        const unusedMessageIds = Array.from(messageIdsToCheck).filter((msgId) => !messageIdReferences.has(msgId))
 
         if (unusedMessageIds.length > 0) {
-          console.log(`[Memory] Found ${unusedMessageIds.length} message IDs that are no longer referenced by any memory`)
+          console.log(
+            `[Memory] Found ${unusedMessageIds.length} message IDs that are no longer referenced by any memory`
+          )
 
           // 将这些消息ID标记为未分析，以便下次分析时重新分析这些消息
           // 注意：我们不需要显式地清除标记，因为分析逻辑会检查消息ID是否在任何记忆的analyzedMessageIds中
@@ -655,11 +665,11 @@ const memorySlice = createSlice({
 
       // 更新长期记忆优先级
       if (state.memories && state.memories.length > 0) {
-        state.memories.forEach(memory => {
+        state.memories.forEach((memory) => {
           // 计算时间衰减因子
           if (state.decayEnabled && memory.lastAccessedAt) {
             const daysSinceLastAccess = (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
-            const decayFactor = Math.max(0, 1 - (daysSinceLastAccess * state.decayRate))
+            const decayFactor = Math.max(0, 1 - daysSinceLastAccess * state.decayRate)
             memory.decayFactor = decayFactor
           } else {
             memory.decayFactor = 1 // 无衰减
@@ -673,20 +683,20 @@ const memorySlice = createSlice({
               : daysSinceCreation
 
             // 鲜度评分结合创建时间和最后访问时间
-            const creationFreshness = Math.max(0, 1 - (daysSinceCreation / 30)) // 30天内创建的记忆较新
-            const accessFreshness = Math.max(0, 1 - (lastAccessDays / 7)) // 7天内访问的记忆较新
-            memory.freshness = (creationFreshness * 0.3) + (accessFreshness * 0.7) // 加权平均
+            const creationFreshness = Math.max(0, 1 - daysSinceCreation / 30) // 30天内创建的记忆较新
+            const accessFreshness = Math.max(0, 1 - lastAccessDays / 7) // 7天内访问的记忆较新
+            memory.freshness = creationFreshness * 0.3 + accessFreshness * 0.7 // 加权平均
           }
         })
       }
 
       // 更新短期记忆优先级
       if (state.shortMemories && state.shortMemories.length > 0) {
-        state.shortMemories.forEach(memory => {
+        state.shortMemories.forEach((memory) => {
           // 计算时间衰减因子
           if (state.decayEnabled && memory.lastAccessedAt) {
             const hoursSinceLastAccess = (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60)
-            const decayFactor = Math.max(0, 1 - (hoursSinceLastAccess * state.decayRate * 4)) // 短期记忆衰减更快
+            const decayFactor = Math.max(0, 1 - hoursSinceLastAccess * state.decayRate * 4) // 短期记忆衰减更快
             memory.decayFactor = decayFactor
           } else {
             memory.decayFactor = 1 // 无衰减
@@ -700,9 +710,9 @@ const memorySlice = createSlice({
               : hoursSinceCreation
 
             // 短期记忆的鲜度评分更注重最近性
-            const creationFreshness = Math.max(0, 1 - (hoursSinceCreation / 24)) // 24小时内创建的记忆较新
-            const accessFreshness = Math.max(0, 1 - (lastAccessHours / 6)) // 6小时内访问的记忆较新
-            memory.freshness = (creationFreshness * 0.2) + (accessFreshness * 0.8) // 加权平均，更注重访问时间
+            const creationFreshness = Math.max(0, 1 - hoursSinceCreation / 24) // 24小时内创建的记忆较新
+            const accessFreshness = Math.max(0, 1 - lastAccessHours / 6) // 6小时内访问的记忆较新
+            memory.freshness = creationFreshness * 0.2 + accessFreshness * 0.8 // 加权平均，更注重访问时间
           }
         })
       }
@@ -718,29 +728,29 @@ const memorySlice = createSlice({
 
       // 更新长期记忆鲜度
       if (state.memories && state.memories.length > 0) {
-        state.memories.forEach(memory => {
+        state.memories.forEach((memory) => {
           const daysSinceCreation = (now - new Date(memory.createdAt).getTime()) / (1000 * 60 * 60 * 24)
           const lastAccessDays = memory.lastAccessedAt
             ? (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
             : daysSinceCreation
 
-          const creationFreshness = Math.max(0, 1 - (daysSinceCreation / 30))
-          const accessFreshness = Math.max(0, 1 - (lastAccessDays / 7))
-          memory.freshness = (creationFreshness * 0.3) + (accessFreshness * 0.7)
+          const creationFreshness = Math.max(0, 1 - daysSinceCreation / 30)
+          const accessFreshness = Math.max(0, 1 - lastAccessDays / 7)
+          memory.freshness = creationFreshness * 0.3 + accessFreshness * 0.7
         })
       }
 
       // 更新短期记忆鲜度
       if (state.shortMemories && state.shortMemories.length > 0) {
-        state.shortMemories.forEach(memory => {
+        state.shortMemories.forEach((memory) => {
           const hoursSinceCreation = (now - new Date(memory.createdAt).getTime()) / (1000 * 60 * 60)
           const lastAccessHours = memory.lastAccessedAt
             ? (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60)
             : hoursSinceCreation
 
-          const creationFreshness = Math.max(0, 1 - (hoursSinceCreation / 24))
-          const accessFreshness = Math.max(0, 1 - (lastAccessHours / 6))
-          memory.freshness = (creationFreshness * 0.2) + (accessFreshness * 0.8)
+          const creationFreshness = Math.max(0, 1 - hoursSinceCreation / 24)
+          const accessFreshness = Math.max(0, 1 - lastAccessHours / 6)
+          memory.freshness = creationFreshness * 0.2 + accessFreshness * 0.8
         })
       }
     },
@@ -752,14 +762,14 @@ const memorySlice = createSlice({
 
       if (isShortMemory) {
         // 更新短期记忆访问信息
-        const memory = state.shortMemories?.find(m => m.id === id)
+        const memory = state.shortMemories?.find((m) => m.id === id)
         if (memory) {
           memory.accessCount = (memory.accessCount || 0) + 1
           memory.lastAccessedAt = now
         }
       } else {
         // 更新长期记忆访问信息
-        const memory = state.memories?.find(m => m.id === id)
+        const memory = state.memories?.find((m) => m.id === id)
         if (memory) {
           memory.accessCount = (memory.accessCount || 0) + 1
           memory.lastAccessedAt = now
@@ -822,7 +832,7 @@ const memorySlice = createSlice({
             console.log('[Memory Reducer] Loaded short memory analyze model:', action.payload.shortMemoryAnalyzeModel)
           }
 
-          log.info('Short-term memory data loaded into state')
+          console.log('Short-term memory data loaded into state')
         }
       })
       .addCase(loadLongTermMemoryData.fulfilled, (state, action) => {
@@ -840,7 +850,7 @@ const memorySlice = createSlice({
           // 自动选择默认的记忆列表
           if (!state.currentListId && state.memoryLists && state.memoryLists.length > 0) {
             // 先尝试找到一个isActive为true的列表
-            const activeList = state.memoryLists.find(list => list.isActive)
+            const activeList = state.memoryLists.find((list) => list.isActive)
             if (activeList) {
               state.currentListId = activeList.id
               console.log('[Memory Reducer] Auto-selected active memory list:', activeList.name)
@@ -851,15 +861,21 @@ const memorySlice = createSlice({
             }
           }
 
-          log.info('Long-term memory data loaded into state')
+          console.log('Long-term memory data loaded into state')
 
           if (action.payload.historicalContextAnalyzeModel) {
             state.historicalContextAnalyzeModel = action.payload.historicalContextAnalyzeModel
-            console.log('[Memory Reducer] Loaded historical context analyze model:', action.payload.historicalContextAnalyzeModel)
+            console.log(
+              '[Memory Reducer] Loaded historical context analyze model:',
+              action.payload.historicalContextAnalyzeModel
+            )
           } else {
             // 如果文件中没有historicalContextAnalyzeModel，使用shortMemoryAnalyzeModel或analyzeModel作为默认值
             state.historicalContextAnalyzeModel = state.shortMemoryAnalyzeModel || state.analyzeModel
-            console.log('[Memory Reducer] Using default model for historical context:', state.historicalContextAnalyzeModel)
+            console.log(
+              '[Memory Reducer] Using default model for historical context:',
+              state.historicalContextAnalyzeModel
+            )
           }
 
           if (action.payload.vectorizeModel) {
@@ -867,7 +883,7 @@ const memorySlice = createSlice({
             console.log('[Memory Reducer] Loaded vectorize model:', action.payload.vectorizeModel)
           }
 
-          log.info('Memory data loaded into state')
+          console.log('Memory data loaded into state')
         }
       })
   }
@@ -879,6 +895,7 @@ export const {
   editMemory,
   setMemoryActive,
   setAutoAnalyze,
+  setFilterSensitiveInfo,
   setAnalyzeModel,
   setShortMemoryAnalyzeModel,
   setHistoricalContextAnalyzeModel,
@@ -972,8 +989,11 @@ export const saveMemoryData = createAsyncThunk(
       const completeData = {
         // 基本设置
         isActive: memoryData.isActive !== undefined ? memoryData.isActive : state.isActive,
-        shortMemoryActive: memoryData.shortMemoryActive !== undefined ? memoryData.shortMemoryActive : state.shortMemoryActive,
+        shortMemoryActive:
+          memoryData.shortMemoryActive !== undefined ? memoryData.shortMemoryActive : state.shortMemoryActive,
         autoAnalyze: memoryData.autoAnalyze !== undefined ? memoryData.autoAnalyze : state.autoAnalyze,
+        filterSensitiveInfo:
+          memoryData.filterSensitiveInfo !== undefined ? memoryData.filterSensitiveInfo : state.filterSensitiveInfo,
 
         // 模型选择
         analyzeModel: memoryData.analyzeModel || state.analyzeModel,
@@ -987,26 +1007,47 @@ export const saveMemoryData = createAsyncThunk(
         currentListId: memoryData.currentListId || state.currentListId,
 
         // 自适应分析相关
-        adaptiveAnalysisEnabled: memoryData.adaptiveAnalysisEnabled !== undefined ? memoryData.adaptiveAnalysisEnabled : state.adaptiveAnalysisEnabled,
-        analysisFrequency: memoryData.analysisFrequency !== undefined ? memoryData.analysisFrequency : state.analysisFrequency,
+        adaptiveAnalysisEnabled:
+          memoryData.adaptiveAnalysisEnabled !== undefined
+            ? memoryData.adaptiveAnalysisEnabled
+            : state.adaptiveAnalysisEnabled,
+        analysisFrequency:
+          memoryData.analysisFrequency !== undefined ? memoryData.analysisFrequency : state.analysisFrequency,
         analysisDepth: memoryData.analysisDepth || state.analysisDepth,
 
         // 用户关注点相关
-        interestTrackingEnabled: memoryData.interestTrackingEnabled !== undefined ? memoryData.interestTrackingEnabled : state.interestTrackingEnabled,
+        interestTrackingEnabled:
+          memoryData.interestTrackingEnabled !== undefined
+            ? memoryData.interestTrackingEnabled
+            : state.interestTrackingEnabled,
 
         // 性能监控相关
-        monitoringEnabled: memoryData.monitoringEnabled !== undefined ? memoryData.monitoringEnabled : state.monitoringEnabled,
+        monitoringEnabled:
+          memoryData.monitoringEnabled !== undefined ? memoryData.monitoringEnabled : state.monitoringEnabled,
 
         // 智能优先级与时效性管理相关
-        priorityManagementEnabled: memoryData.priorityManagementEnabled !== undefined ? memoryData.priorityManagementEnabled : state.priorityManagementEnabled,
+        priorityManagementEnabled:
+          memoryData.priorityManagementEnabled !== undefined
+            ? memoryData.priorityManagementEnabled
+            : state.priorityManagementEnabled,
         decayEnabled: memoryData.decayEnabled !== undefined ? memoryData.decayEnabled : state.decayEnabled,
-        freshnessEnabled: memoryData.freshnessEnabled !== undefined ? memoryData.freshnessEnabled : state.freshnessEnabled,
+        freshnessEnabled:
+          memoryData.freshnessEnabled !== undefined ? memoryData.freshnessEnabled : state.freshnessEnabled,
         decayRate: memoryData.decayRate !== undefined ? memoryData.decayRate : state.decayRate,
 
         // 上下文感知记忆推荐相关
-        contextualRecommendationEnabled: memoryData.contextualRecommendationEnabled !== undefined ? memoryData.contextualRecommendationEnabled : state.contextualRecommendationEnabled,
-        autoRecommendMemories: memoryData.autoRecommendMemories !== undefined ? memoryData.autoRecommendMemories : state.autoRecommendMemories,
-        recommendationThreshold: memoryData.recommendationThreshold !== undefined ? memoryData.recommendationThreshold : state.recommendationThreshold,
+        contextualRecommendationEnabled:
+          memoryData.contextualRecommendationEnabled !== undefined
+            ? memoryData.contextualRecommendationEnabled
+            : state.contextualRecommendationEnabled,
+        autoRecommendMemories:
+          memoryData.autoRecommendMemories !== undefined
+            ? memoryData.autoRecommendMemories
+            : state.autoRecommendMemories,
+        recommendationThreshold:
+          memoryData.recommendationThreshold !== undefined
+            ? memoryData.recommendationThreshold
+            : state.recommendationThreshold
       }
 
       const result = await window.api.memory.saveData(completeData, forceOverwrite)
@@ -1020,20 +1061,17 @@ export const saveMemoryData = createAsyncThunk(
 )
 
 // 加载长期记忆数据的异步 thunk
-export const loadLongTermMemoryData = createAsyncThunk(
-  'memory/loadLongTermData',
-  async () => {
-    try {
-      console.log('[Long-term Memory] Loading long-term memory data from file...')
-      const data = await window.api.memory.loadLongTermData()
-      console.log('[Long-term Memory] Long-term memory data loaded successfully')
-      return data
-    } catch (error) {
-      console.error('[Long-term Memory] Failed to load long-term memory data:', error)
-      return null
-    }
+export const loadLongTermMemoryData = createAsyncThunk('memory/loadLongTermData', async () => {
+  try {
+    console.log('[Long-term Memory] Loading long-term memory data from file...')
+    const data = await window.api.memory.loadLongTermData()
+    console.log('[Long-term Memory] Long-term memory data loaded successfully')
+    return data
+  } catch (error) {
+    console.error('[Long-term Memory] Failed to load long-term memory data:', error)
+    return null
   }
-)
+})
 
 // 保存长期记忆数据的异步 thunk
 export const saveLongTermMemoryData = createAsyncThunk(
@@ -1060,6 +1098,8 @@ export const saveLongTermMemoryData = createAsyncThunk(
         // 基本设置
         isActive: memoryData.isActive !== undefined ? memoryData.isActive : state.isActive,
         autoAnalyze: memoryData.autoAnalyze !== undefined ? memoryData.autoAnalyze : state.autoAnalyze,
+        filterSensitiveInfo:
+          memoryData.filterSensitiveInfo !== undefined ? memoryData.filterSensitiveInfo : state.filterSensitiveInfo,
 
         // 模型选择
         analyzeModel: memoryData.analyzeModel || state.analyzeModel,
@@ -1070,26 +1110,47 @@ export const saveLongTermMemoryData = createAsyncThunk(
         currentListId: memoryData.currentListId || state.currentListId,
 
         // 自适应分析相关
-        adaptiveAnalysisEnabled: memoryData.adaptiveAnalysisEnabled !== undefined ? memoryData.adaptiveAnalysisEnabled : state.adaptiveAnalysisEnabled,
-        analysisFrequency: memoryData.analysisFrequency !== undefined ? memoryData.analysisFrequency : state.analysisFrequency,
+        adaptiveAnalysisEnabled:
+          memoryData.adaptiveAnalysisEnabled !== undefined
+            ? memoryData.adaptiveAnalysisEnabled
+            : state.adaptiveAnalysisEnabled,
+        analysisFrequency:
+          memoryData.analysisFrequency !== undefined ? memoryData.analysisFrequency : state.analysisFrequency,
         analysisDepth: memoryData.analysisDepth || state.analysisDepth,
 
         // 用户关注点相关
-        interestTrackingEnabled: memoryData.interestTrackingEnabled !== undefined ? memoryData.interestTrackingEnabled : state.interestTrackingEnabled,
+        interestTrackingEnabled:
+          memoryData.interestTrackingEnabled !== undefined
+            ? memoryData.interestTrackingEnabled
+            : state.interestTrackingEnabled,
 
         // 性能监控相关
-        monitoringEnabled: memoryData.monitoringEnabled !== undefined ? memoryData.monitoringEnabled : state.monitoringEnabled,
+        monitoringEnabled:
+          memoryData.monitoringEnabled !== undefined ? memoryData.monitoringEnabled : state.monitoringEnabled,
 
         // 智能优先级与时效性管理相关
-        priorityManagementEnabled: memoryData.priorityManagementEnabled !== undefined ? memoryData.priorityManagementEnabled : state.priorityManagementEnabled,
+        priorityManagementEnabled:
+          memoryData.priorityManagementEnabled !== undefined
+            ? memoryData.priorityManagementEnabled
+            : state.priorityManagementEnabled,
         decayEnabled: memoryData.decayEnabled !== undefined ? memoryData.decayEnabled : state.decayEnabled,
-        freshnessEnabled: memoryData.freshnessEnabled !== undefined ? memoryData.freshnessEnabled : state.freshnessEnabled,
+        freshnessEnabled:
+          memoryData.freshnessEnabled !== undefined ? memoryData.freshnessEnabled : state.freshnessEnabled,
         decayRate: memoryData.decayRate !== undefined ? memoryData.decayRate : state.decayRate,
 
         // 上下文感知记忆推荐相关
-        contextualRecommendationEnabled: memoryData.contextualRecommendationEnabled !== undefined ? memoryData.contextualRecommendationEnabled : state.contextualRecommendationEnabled,
-        autoRecommendMemories: memoryData.autoRecommendMemories !== undefined ? memoryData.autoRecommendMemories : state.autoRecommendMemories,
-        recommendationThreshold: memoryData.recommendationThreshold !== undefined ? memoryData.recommendationThreshold : state.recommendationThreshold,
+        contextualRecommendationEnabled:
+          memoryData.contextualRecommendationEnabled !== undefined
+            ? memoryData.contextualRecommendationEnabled
+            : state.contextualRecommendationEnabled,
+        autoRecommendMemories:
+          memoryData.autoRecommendMemories !== undefined
+            ? memoryData.autoRecommendMemories
+            : state.autoRecommendMemories,
+        recommendationThreshold:
+          memoryData.recommendationThreshold !== undefined
+            ? memoryData.recommendationThreshold
+            : state.recommendationThreshold
       }
 
       const result = await window.api.memory.saveLongTermData(completeData, forceOverwrite)
@@ -1103,57 +1164,54 @@ export const saveLongTermMemoryData = createAsyncThunk(
 )
 
 // 保存所有记忆设置的函数
-export const saveAllMemorySettings = createAsyncThunk(
-  'memory/saveAllSettings',
-  async (_, { dispatch, getState }) => {
-    try {
-      const state = (getState() as RootState).memory
+export const saveAllMemorySettings = createAsyncThunk('memory/saveAllSettings', async (_, { dispatch, getState }) => {
+  try {
+    const state = (getState() as RootState).memory
 
-      // 创建一个包含所有设置的对象，但不包含记忆内容和记忆列表
-      const settings = {
-        // 基本设置
-        isActive: state.isActive,
-        shortMemoryActive: state.shortMemoryActive,
-        autoAnalyze: state.autoAnalyze,
+    // 创建一个包含所有设置的对象，但不包含记忆内容和记忆列表
+    const settings = {
+      // 基本设置
+      isActive: state.isActive,
+      shortMemoryActive: state.shortMemoryActive,
+      autoAnalyze: state.autoAnalyze,
 
-        // 模型选择
-        analyzeModel: state.analyzeModel,
-        shortMemoryAnalyzeModel: state.shortMemoryAnalyzeModel,
-        historicalContextAnalyzeModel: state.historicalContextAnalyzeModel,
-        vectorizeModel: state.vectorizeModel,
+      // 模型选择
+      analyzeModel: state.analyzeModel,
+      shortMemoryAnalyzeModel: state.shortMemoryAnalyzeModel,
+      historicalContextAnalyzeModel: state.historicalContextAnalyzeModel,
+      vectorizeModel: state.vectorizeModel,
 
-        // 自适应分析相关
-        adaptiveAnalysisEnabled: state.adaptiveAnalysisEnabled,
-        analysisFrequency: state.analysisFrequency,
-        analysisDepth: state.analysisDepth,
+      // 自适应分析相关
+      adaptiveAnalysisEnabled: state.adaptiveAnalysisEnabled,
+      analysisFrequency: state.analysisFrequency,
+      analysisDepth: state.analysisDepth,
 
-        // 用户关注点相关
-        interestTrackingEnabled: state.interestTrackingEnabled,
+      // 用户关注点相关
+      interestTrackingEnabled: state.interestTrackingEnabled,
 
-        // 性能监控相关
-        monitoringEnabled: state.monitoringEnabled,
+      // 性能监控相关
+      monitoringEnabled: state.monitoringEnabled,
 
-        // 智能优先级与时效性管理相关
-        priorityManagementEnabled: state.priorityManagementEnabled,
-        decayEnabled: state.decayEnabled,
-        freshnessEnabled: state.freshnessEnabled,
-        decayRate: state.decayRate,
+      // 智能优先级与时效性管理相关
+      priorityManagementEnabled: state.priorityManagementEnabled,
+      decayEnabled: state.decayEnabled,
+      freshnessEnabled: state.freshnessEnabled,
+      decayRate: state.decayRate,
 
-        // 上下文感知记忆推荐相关
-        contextualRecommendationEnabled: state.contextualRecommendationEnabled,
-        autoRecommendMemories: state.autoRecommendMemories,
-        recommendationThreshold: state.recommendationThreshold,
-      }
-
-      const result = await dispatch(saveMemoryData(settings)).unwrap()
-      console.log('[Memory] All memory settings saved successfully')
-      return result
-    } catch (error) {
-      console.error('[Memory] Failed to save all memory settings:', error)
-      throw error
+      // 上下文感知记忆推荐相关
+      contextualRecommendationEnabled: state.contextualRecommendationEnabled,
+      autoRecommendMemories: state.autoRecommendMemories,
+      recommendationThreshold: state.recommendationThreshold
     }
+
+    const result = await dispatch(saveMemoryData(settings)).unwrap()
+    console.log('[Memory] All memory settings saved successfully')
+    return result
+  } catch (error) {
+    console.error('[Memory] Failed to save all memory settings:', error)
+    throw error
   }
-)
+})
 
 // Middleware removed to prevent duplicate saves triggered by batch additions.
 // Explicit saves should be handled where needed, e.g., at the end of analysis functions.

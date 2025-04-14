@@ -44,7 +44,7 @@ const HistoricalContextSettings: FC = () => {
 
     // 遍历所有服务商的模型找到匹配的模型
     for (const provider of Object.values(providers)) {
-      const model = provider.models.find(m => m.id === historicalContextAnalyzeModel)
+      const model = provider.models.find((m) => m.id === historicalContextAnalyzeModel)
       if (model) {
         return `${model.name} | ${provider.name}`
       }
@@ -57,15 +57,17 @@ const HistoricalContextSettings: FC = () => {
     <SettingGroup>
       <SettingTitle>{t('settings.memory.historicalContext.title') || '历史对话上下文'}</SettingTitle>
       <SettingHelpText>
-        {t('settings.memory.historicalContext.description') ||
-          '允许AI在需要时自动引用历史对话，以提供更连贯的回答。'}
+        {t('settings.memory.historicalContext.description') || '允许AI在需要时自动引用历史对话，以提供更连贯的回答。'}
       </SettingHelpText>
 
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.historicalContext.enable') || '启用历史对话上下文'}
-          <Tooltip title={t('settings.memory.historicalContext.enableTip') ||
-            '启用后，AI会在需要时自动分析并引用历史对话，以提供更连贯的回答'}>
+          <Tooltip
+            title={
+              t('settings.memory.historicalContext.enableTip') ||
+              '启用后，AI会在需要时自动分析并引用历史对话，以提供更连贯的回答'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -75,8 +77,11 @@ const HistoricalContextSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.analyzeModel') || '分析模型'}
-          <Tooltip title={t('settings.memory.historicalContext.analyzeModelTip') ||
-            '选择用于历史对话上下文分析的模型，建议选择响应较快的模型'}>
+          <Tooltip
+            title={
+              t('settings.memory.historicalContext.analyzeModelTip') ||
+              '选择用于历史对话上下文分析的模型，建议选择响应较快的模型'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -86,7 +91,7 @@ const HistoricalContextSettings: FC = () => {
             let currentModel: { id: string; provider: string; name: string; group: string } | undefined
             if (historicalContextAnalyzeModel) {
               for (const provider of Object.values(providers)) {
-                const model = provider.models.find(m => m.id === historicalContextAnalyzeModel)
+                const model = provider.models.find((m) => m.id === historicalContextAnalyzeModel)
                 if (model) {
                   currentModel = model
                   break
@@ -99,8 +104,7 @@ const HistoricalContextSettings: FC = () => {
               handleModelChange(selectedModel.id)
             }
           }}
-          style={{ width: 300 }}
-        >
+          style={{ width: 300 }}>
           {historicalContextAnalyzeModel ? getSelectedModelName() : t('settings.memory.selectModel') || '选择模型'}
         </Button>
       </SettingRow>

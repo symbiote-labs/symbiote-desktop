@@ -1,11 +1,12 @@
 // src/renderer/src/services/ContextualMemoryService.ts
 
-import store from '@renderer/store'
-import { vectorService } from './VectorService'
-import { addMemoryRetrievalLatency } from '@renderer/store/memory'
-import { fetchGenerate } from '@renderer/services/ApiService'
-import { Message } from '@renderer/types'
 import { TopicManager } from '@renderer/hooks/useTopic'
+import { fetchGenerate } from '@renderer/services/ApiService'
+import store from '@renderer/store'
+import { addMemoryRetrievalLatency } from '@renderer/store/memory'
+import { Message } from '@renderer/types'
+
+import { vectorService } from './VectorService'
 
 // 记忆项接口（从store/memory.ts导入）
 interface Memory {
@@ -107,7 +108,7 @@ class ContextualMemoryService {
       ])
 
       // 合并并排序推荐结果
-      let allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
+      const allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
 
       // 按相关性分数排序
       allRecommendations.sort((a, b) => b.relevanceScore - a.relevanceScore)
@@ -120,7 +121,9 @@ class ContextualMemoryService {
       const latency = endTime - startTime
       store.dispatch(addMemoryRetrievalLatency(latency))
 
-      console.log(`[ContextualMemory] Found ${limitedRecommendations.length} recommendations in ${latency.toFixed(2)}ms`)
+      console.log(
+        `[ContextualMemory] Found ${limitedRecommendations.length} recommendations in ${latency.toFixed(2)}ms`
+      )
 
       return limitedRecommendations
     } catch (error) {
@@ -180,7 +183,7 @@ class ContextualMemoryService {
       ])
 
       // 合并并排序推荐结果
-      let allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
+      const allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
 
       // 按相关性分数排序
       allRecommendations.sort((a, b) => b.relevanceScore - a.relevanceScore)
@@ -223,7 +226,7 @@ class ContextualMemoryService {
       ])
 
       // 合并并排序推荐结果
-      let allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
+      const allRecommendations = [...longTermRecommendations, ...shortTermRecommendations]
 
       // 按相关性分数排序
       allRecommendations.sort((a, b) => b.relevanceScore - a.relevanceScore)
@@ -274,7 +277,7 @@ class ContextualMemoryService {
       }
 
       // 构建对话内容
-      const conversation = recentMessages.map(msg => `${msg.role || 'user'}: ${msg.content || ''}`).join('\n')
+      const conversation = recentMessages.map((msg) => `${msg.role || 'user'}: ${msg.content || ''}`).join('\n')
 
       // 构建提示词
       const prompt = `
@@ -307,8 +310,8 @@ ${conversation}
       // 提取关键信息
       const keyPoints = result
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line && !line.startsWith('#') && !line.startsWith('-'))
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#') && !line.startsWith('-'))
 
       console.log('[ContextualMemory] Extracted key points:', keyPoints)
 
@@ -331,7 +334,7 @@ ${conversation}
    */
   private _buildContextQuery(messages: Message[]): string {
     // 提取最近消息的内容
-    const messageContents = messages.map(msg => msg.content || '').filter(content => content.trim() !== '')
+    const messageContents = messages.map((msg) => msg.content || '').filter((content) => content.trim() !== '')
 
     // 如果没有有效内容，返回空字符串
     if (messageContents.length === 0) {
@@ -349,10 +352,7 @@ ${conversation}
    * @returns 长期记忆推荐列表
    * @private
    */
-  private async _getLongTermMemoryRecommendations(
-    query: string,
-    topicId?: string
-  ): Promise<MemoryRecommendation[]> {
+  private async _getLongTermMemoryRecommendations(query: string, topicId?: string): Promise<MemoryRecommendation[]> {
     // 获取当前状态
     const state = store.getState()
     const memoryState = state.memory
@@ -363,16 +363,14 @@ ${conversation}
     }
 
     // 获取所有激活的记忆列表
-    const activeListIds = memoryState.memoryLists
-      .filter(list => list.isActive)
-      .map(list => list.id)
+    const activeListIds = memoryState.memoryLists.filter((list) => list.isActive).map((list) => list.id)
 
     if (activeListIds.length === 0) {
       return []
     }
 
     // 获取激活列表中的记忆
-    const memories = memoryState.memories.filter(memory => activeListIds.includes(memory.listId))
+    const memories = memoryState.memories.filter((memory) => activeListIds.includes(memory.listId))
 
     if (memories.length === 0) {
       return []
@@ -387,7 +385,7 @@ ${conversation}
     )
 
     // 转换为推荐格式
-    const recommendations: MemoryRecommendation[] = results.map(result => ({
+    const recommendations: MemoryRecommendation[] = results.map((result) => ({
       memory: result.memory as Memory,
       relevanceScore: result.similarity,
       source: 'long-term',
@@ -405,10 +403,7 @@ ${conversation}
    * @returns 短期记忆推荐列表
    * @private
    */
-  private async _getShortTermMemoryRecommendations(
-    query: string,
-    topicId?: string
-  ): Promise<MemoryRecommendation[]> {
+  private async _getShortTermMemoryRecommendations(query: string, topicId?: string): Promise<MemoryRecommendation[]> {
     // 获取当前状态
     const state = store.getState()
     const memoryState = state.memory
@@ -423,7 +418,7 @@ ${conversation}
 
     // 如果指定了话题ID，只获取该话题的短期记忆
     if (topicId) {
-      shortMemories = shortMemories.filter(memory => memory.topicId === topicId)
+      shortMemories = shortMemories.filter((memory) => memory.topicId === topicId)
     }
 
     if (shortMemories.length === 0) {
@@ -439,7 +434,7 @@ ${conversation}
     )
 
     // 转换为推荐格式
-    const recommendations: MemoryRecommendation[] = results.map(result => ({
+    const recommendations: MemoryRecommendation[] = results.map((result) => ({
       memory: result.memory as ShortMemory,
       relevanceScore: result.similarity,
       source: 'short-term',
@@ -472,57 +467,57 @@ ${conversation}
     const memoryState = state.memory
 
     // 应用多因素排序优化
-    return recommendations.map(rec => {
-      const memory = rec.memory
-      let adjustedScore = rec.relevanceScore
+    return recommendations
+      .map((rec) => {
+        const memory = rec.memory
+        let adjustedScore = rec.relevanceScore
 
-      // 1. 考虑记忆的重要性
-      if (memory.importance && memoryState.priorityManagementEnabled) {
-        adjustedScore *= (1 + memory.importance * 0.5) // 重要性最多提升50%的分数
-      }
-
-      // 2. 考虑记忆的鲜度
-      if (memory.freshness && memoryState.freshnessEnabled) {
-        adjustedScore *= (1 + memory.freshness * 0.3) // 鲜度最多提升30%的分数
-      }
-
-      // 3. 考虑记忆的衰减因子
-      if (memory.decayFactor && memoryState.decayEnabled) {
-        adjustedScore *= memory.decayFactor // 直接应用衰减因子
-      }
-
-      // 4. 如果记忆与当前话题相关，提高分数
-      if (topicId && memory.topicId === topicId) {
-        adjustedScore *= 1.2 // 提高20%的分数
-      }
-
-      // 5. 考虑访问频率，常用的记忆可能更相关
-      if (memory.accessCount && memory.accessCount > 0) {
-        // 访问次数越多，提升越大，但有上限
-        const accessBoost = Math.min(memory.accessCount / 10, 0.2) // 最多提升20%
-        adjustedScore *= (1 + accessBoost)
-      }
-
-      // 6. 考虑关键词匹配
-      if (memory.keywords && memory.keywords.length > 0) {
-        const queryLower = query.toLowerCase()
-        const keywordMatches = memory.keywords.filter(keyword =>
-          queryLower.includes(keyword.toLowerCase())
-        ).length
-
-        if (keywordMatches > 0) {
-          // 关键词匹配越多，提升越大
-          const keywordBoost = Math.min(keywordMatches * 0.1, 0.3) // 最多提升30%
-          adjustedScore *= (1 + keywordBoost)
+        // 1. 考虑记忆的重要性
+        if (memory.importance && memoryState.priorityManagementEnabled) {
+          adjustedScore *= 1 + memory.importance * 0.5 // 重要性最多提升50%的分数
         }
-      }
 
-      // 返回调整后的推荐
-      return {
-        ...rec,
-        relevanceScore: adjustedScore
-      }
-    }).sort((a, b) => b.relevanceScore - a.relevanceScore) // 按调整后的分数重新排序
+        // 2. 考虑记忆的鲜度
+        if (memory.freshness && memoryState.freshnessEnabled) {
+          adjustedScore *= 1 + memory.freshness * 0.3 // 鲜度最多提升30%的分数
+        }
+
+        // 3. 考虑记忆的衰减因子
+        if (memory.decayFactor && memoryState.decayEnabled) {
+          adjustedScore *= memory.decayFactor // 直接应用衰减因子
+        }
+
+        // 4. 如果记忆与当前话题相关，提高分数
+        if (topicId && memory.topicId === topicId) {
+          adjustedScore *= 1.2 // 提高20%的分数
+        }
+
+        // 5. 考虑访问频率，常用的记忆可能更相关
+        if (memory.accessCount && memory.accessCount > 0) {
+          // 访问次数越多，提升越大，但有上限
+          const accessBoost = Math.min(memory.accessCount / 10, 0.2) // 最多提升20%
+          adjustedScore *= 1 + accessBoost
+        }
+
+        // 6. 考虑关键词匹配
+        if (memory.keywords && memory.keywords.length > 0) {
+          const queryLower = query.toLowerCase()
+          const keywordMatches = memory.keywords.filter((keyword) => queryLower.includes(keyword.toLowerCase())).length
+
+          if (keywordMatches > 0) {
+            // 关键词匹配越多，提升越大
+            const keywordBoost = Math.min(keywordMatches * 0.1, 0.3) // 最多提升30%
+            adjustedScore *= 1 + keywordBoost
+          }
+        }
+
+        // 返回调整后的推荐
+        return {
+          ...rec,
+          relevanceScore: adjustedScore
+        }
+      })
+      .sort((a, b) => b.relevanceScore - a.relevanceScore) // 按调整后的分数重新排序
   }
 }
 

@@ -1,10 +1,10 @@
-import { DeleteOutlined, ClearOutlined } from '@ant-design/icons'
+import { ClearOutlined, DeleteOutlined } from '@ant-design/icons'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
 import { deleteShortMemory } from '@renderer/store/memory'
 import { Button, Collapse, Empty, List, Modal, Pagination, Tooltip, Typography } from 'antd'
-import { useEffect, useState, useCallback, memo } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -161,32 +161,31 @@ const AnimatedListItem = styled(List.Item)`
 
 // 记忆项组件
 const MemoryItem = memo(({ memory, onDelete, t, index }: MemoryItemProps) => {
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
-    setIsDeleting(true);
+    setIsDeleting(true)
     // 添加小延迟，让动画有时间播放
     setTimeout(() => {
-      onDelete(memory.id);
-    }, 300);
-  };
+      onDelete(memory.id)
+    }, 300)
+  }
 
   return (
     <AnimatedListItem
       className={isDeleting ? 'deleting' : ''}
       actions={[
         <Tooltip title={t('settings.memory.delete')} key="delete">
-          <Button
-            icon={<DeleteOutlined />}
-            onClick={handleDelete}
-            type="text"
-            danger
-          />
+          <Button icon={<DeleteOutlined />} onClick={handleDelete} type="text" danger />
         </Tooltip>
-      ]}
-    >
+      ]}>
       <List.Item.Meta
-        title={<MemoryContent><strong>{index + 1}. </strong>{memory.content}</MemoryContent>}
+        title={
+          <MemoryContent>
+            <strong>{index + 1}. </strong>
+            {memory.content}
+          </MemoryContent>
+        }
         description={new Date(memory.createdAt).toLocaleString()}
       />
     </AnimatedListItem>
@@ -311,115 +310,121 @@ const CollapsibleShortMemoryManager = () => {
 
   // 处理分页变化
   const handlePageChange = useCallback((page: number, topicId: string) => {
-    setTopicsWithMemories(prev =>
-      prev.map(item =>
-        item.topic.id === topicId
-          ? { ...item, currentPage: page }
-          : item
-      )
-    );
+    setTopicsWithMemories((prev) =>
+      prev.map((item) => (item.topic.id === topicId ? { ...item, currentPage: page } : item))
+    )
   }, [])
 
   // 删除话题下的所有短期记忆
-  const handleDeleteTopicMemories = useCallback(async (topicId: string) => {
-    // 显示确认对话框
-    Modal.confirm({
-      title: t('settings.memory.confirmDeleteAll'),
-      content: t('settings.memory.confirmDeleteAllContent'),
-      okText: t('settings.memory.delete'),
-      cancelText: t('settings.memory.cancel'),
-      onOk: async () => {
-        // 获取该话题的所有记忆
-        const state = store.getState().memory;
-        const topicMemories = state.shortMemories.filter(memory => memory.topicId === topicId);
-        const memoryIds = topicMemories.map(memory => memory.id);
+  const handleDeleteTopicMemories = useCallback(
+    async (topicId: string) => {
+      // 显示确认对话框
+      Modal.confirm({
+        title: t('settings.memory.confirmDeleteAll'),
+        content: t('settings.memory.confirmDeleteAllContent'),
+        okText: t('settings.memory.delete'),
+        cancelText: t('settings.memory.cancel'),
+        onOk: async () => {
+          // 获取该话题的所有记忆
+          const state = store.getState().memory
+          const topicMemories = state.shortMemories.filter((memory) => memory.topicId === topicId)
+          const memoryIds = topicMemories.map((memory) => memory.id)
 
-        // 过滤掉要删除的记忆
-        const filteredShortMemories = state.shortMemories.filter(memory => memory.topicId !== topicId);
+          // 过滤掉要删除的记忆
+          const filteredShortMemories = state.shortMemories.filter((memory) => memory.topicId !== topicId)
 
-        // 更新本地状态
-        setTopicsWithMemories(prev => prev.filter(item => item.topic.id !== topicId));
+          // 更新本地状态
+          setTopicsWithMemories((prev) => prev.filter((item) => item.topic.id !== topicId))
 
-        // 更新 Redux store
-        for (const id of memoryIds) {
-          dispatch(deleteShortMemory(id));
-        }
-
-        // 保存到本地存储
-        try {
-          const currentData = await window.api.memory.loadData();
-          const newData = {
-            ...currentData,
-            shortMemories: filteredShortMemories
-          };
-          const result = await window.api.memory.saveData(newData, true);
-
-          if (result) {
-            console.log(`[CollapsibleShortMemoryManager] Successfully deleted all memories for topic ${topicId}`);
-          } else {
-            console.error(`[CollapsibleShortMemoryManager] Failed to delete all memories for topic ${topicId}`);
+          // 更新 Redux store
+          for (const id of memoryIds) {
+            dispatch(deleteShortMemory(id))
           }
-        } catch (error) {
-          console.error('[CollapsibleShortMemoryManager] Failed to delete all memories:', error);
+
+          // 保存到本地存储
+          try {
+            const currentData = await window.api.memory.loadData()
+            const newData = {
+              ...currentData,
+              shortMemories: filteredShortMemories
+            }
+            const result = await window.api.memory.saveData(newData, true)
+
+            if (result) {
+              console.log(`[CollapsibleShortMemoryManager] Successfully deleted all memories for topic ${topicId}`)
+            } else {
+              console.error(`[CollapsibleShortMemoryManager] Failed to delete all memories for topic ${topicId}`)
+            }
+          } catch (error) {
+            console.error('[CollapsibleShortMemoryManager] Failed to delete all memories:', error)
+          }
         }
-      }
-    });
-  }, [dispatch, t]);
+      })
+    },
+    [dispatch, t]
+  )
 
   // 删除短记忆 - 直接删除无需确认
-  const handleDeleteMemory = useCallback(async (id: string) => {
-    // 先从当前状态中获取要删除的记忆之外的所有记忆
-    const state = store.getState().memory
-    const filteredShortMemories = state.shortMemories.filter(memory => memory.id !== id)
+  const handleDeleteMemory = useCallback(
+    async (id: string) => {
+      // 先从当前状态中获取要删除的记忆之外的所有记忆
+      const state = store.getState().memory
+      const filteredShortMemories = state.shortMemories.filter((memory) => memory.id !== id)
 
-    // 在本地更新topicsWithMemories，避免触发useEffect
-    setTopicsWithMemories(prev => {
-      return prev.map(item => {
-        // 如果该话题包含要删除的记忆，则更新该话题的记忆列表
-        if (item.memories.some(memory => memory.id === id)) {
-          return {
-            ...item,
-            memories: item.memories.filter(memory => memory.id !== id)
-          }
+      // 在本地更新topicsWithMemories，避免触发useEffect
+      setTopicsWithMemories((prev) => {
+        return prev
+          .map((item) => {
+            // 如果该话题包含要删除的记忆，则更新该话题的记忆列表
+            if (item.memories.some((memory) => memory.id === id)) {
+              return {
+                ...item,
+                memories: item.memories.filter((memory) => memory.id !== id)
+              }
+            }
+            return item
+          })
+          .filter((item) => item.memories.length > 0) // 移除没有记忆的话题
+      })
+
+      // 执行删除操作
+      dispatch(deleteShortMemory(id))
+
+      // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+      try {
+        // 加载当前文件数据
+        const currentData = await window.api.memory.loadData()
+
+        // 替换 shortMemories 数组
+        const newData = {
+          ...currentData,
+          shortMemories: filteredShortMemories
         }
-        return item
-      }).filter(item => item.memories.length > 0) // 移除没有记忆的话题
-    })
 
-    // 执行删除操作
-    dispatch(deleteShortMemory(id))
+        // 使用 true 参数强制覆盖文件
+        const result = await window.api.memory.saveData(newData, true)
 
-    // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
-    try {
-      // 加载当前文件数据
-      const currentData = await window.api.memory.loadData()
-
-      // 替换 shortMemories 数组
-      const newData = {
-        ...currentData,
-        shortMemories: filteredShortMemories
-      }
-
-      // 使用 true 参数强制覆盖文件
-      const result = await window.api.memory.saveData(newData, true)
-
-      if (result) {
-        console.log(`[CollapsibleShortMemoryManager] Successfully deleted short memory with ID ${id}`)
-        // 使用App组件而不是静态方法，避免触发重新渲染
-        // message.success(t('settings.memory.deleteSuccess') || '删除成功')
-      } else {
-        console.error(`[CollapsibleShortMemoryManager] Failed to delete short memory with ID ${id}`)
+        if (result) {
+          console.log(`[CollapsibleShortMemoryManager] Successfully deleted short memory with ID ${id}`)
+          // 使用App组件而不是静态方法，避免触发重新渲染
+          // message.success(t('settings.memory.deleteSuccess') || '删除成功')
+        } else {
+          console.error(`[CollapsibleShortMemoryManager] Failed to delete short memory with ID ${id}`)
+          // message.error(t('settings.memory.deleteError') || '删除失败')
+        }
+      } catch (error) {
+        console.error('[CollapsibleShortMemoryManager] Failed to delete short memory:', error)
         // message.error(t('settings.memory.deleteError') || '删除失败')
       }
-    } catch (error) {
-      console.error('[CollapsibleShortMemoryManager] Failed to delete short memory:', error)
-      // message.error(t('settings.memory.deleteError') || '删除失败')
-    }
-  }, [dispatch])
+    },
+    [dispatch]
+  )
 
   return (
     <div>
-      <Typography.Title level={4}>{t('settings.memory.shortMemoriesByTopic') || '按话题分组的短期记忆'}</Typography.Title>
+      <Typography.Title level={4}>
+        {t('settings.memory.shortMemoriesByTopic') || '按话题分组的短期记忆'}
+      </Typography.Title>
 
       {loading ? (
         <LoadingContainer>{t('settings.memory.loading') || '加载中...'}</LoadingContainer>
@@ -439,8 +444,8 @@ const CollapsibleShortMemoryManager = () => {
                   <Button
                     icon={<ClearOutlined />}
                     onClick={(e) => {
-                      e.stopPropagation(); // 阻止事件冒泡，避免触发折叠面板的展开/收起
-                      handleDeleteTopicMemories(topic.id);
+                      e.stopPropagation() // 阻止事件冒泡，避免触发折叠面板的展开/收起
+                      handleDeleteTopicMemories(topic.id)
                     }}
                     type="text"
                     danger
@@ -453,7 +458,10 @@ const CollapsibleShortMemoryManager = () => {
               <div>
                 <List
                   itemLayout="horizontal"
-                  dataSource={memories.slice((currentPage ? currentPage - 1 : 0) * 15, (currentPage ? currentPage - 1 : 0) * 15 + 15)}
+                  dataSource={memories.slice(
+                    (currentPage ? currentPage - 1 : 0) * 15,
+                    (currentPage ? currentPage - 1 : 0) * 15 + 15
+                  )}
                   style={{ padding: '4px 0' }}
                   renderItem={(memory, index) => (
                     <MemoryItem
