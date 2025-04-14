@@ -1,5 +1,6 @@
 import SearchPopup from '@renderer/components/Popups/SearchPopup'
 import { DEFAULT_CONTEXTCOUNT } from '@renderer/config/constant'
+import db from '@renderer/databases'
 import { getTopicById } from '@renderer/hooks/useTopic'
 import i18n from '@renderer/i18n'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
@@ -198,6 +199,40 @@ export function getGroupedMessages(messages: Message[]): { [key: string]: (Messa
 
 export function getMessageModelId(message: Message) {
   return message?.model?.id || message.modelId
+}
+
+/**
+ * 根据消息ID查找消息
+ * @param messageId 消息ID
+ * @returns 找到的消息，如果未找到则返回null
+ */
+export async function findMessageById(messageId: string): Promise<Message | null> {
+  console.log(`[findMessageById] 正在查找消息ID: ${messageId}`)
+
+  try {
+    // 获取所有话题
+    const topics = await db.topics.toArray()
+    console.log(`[findMessageById] 找到 ${topics.length} 个话题`)
+
+    // 遍历所有话题，查找消息
+    for (const topic of topics) {
+      if (!topic.messages || topic.messages.length === 0) {
+        continue
+      }
+
+      const message = topic.messages.find((msg) => msg.id === messageId)
+      if (message) {
+        console.log(`[findMessageById] 在话题 ${topic.id} 中找到消息`)
+        return message
+      }
+    }
+
+    console.log(`[findMessageById] 未找到消息ID: ${messageId}`)
+    return null
+  } catch (error) {
+    console.error(`[findMessageById] 查找消息时出错:`, error)
+    return null
+  }
 }
 
 export function resetAssistantMessage(message: Message, model?: Model): Message {

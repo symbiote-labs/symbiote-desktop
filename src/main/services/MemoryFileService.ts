@@ -1,7 +1,8 @@
+import log from 'electron-log'
 import { promises as fs } from 'fs'
 import path from 'path'
+
 import { getConfigDir } from '../utils/file'
-import log from 'electron-log'
 
 // 定义记忆文件路径
 const memoryDataPath = path.join(getConfigDir(), 'memory-data.json')
@@ -30,11 +31,13 @@ export class MemoryFileService {
         // 文件不存在，创建默认文件
         log.info('Memory data file does not exist, creating default file')
         const defaultData = {
-          memoryLists: [{
-            id: 'default',
-            name: '默认列表',
-            isActive: true
-          }],
+          memoryLists: [
+            {
+              id: 'default',
+              name: '默认列表',
+              isActive: true
+            }
+          ],
           shortMemories: [],
           analyzeModel: 'gpt-3.5-turbo',
           shortMemoryAnalyzeModel: 'gpt-3.5-turbo',
@@ -150,13 +153,15 @@ export class MemoryFileService {
         log.info('Long-term memory data file does not exist, creating default file')
         const now = new Date().toISOString()
         const defaultData = {
-          memoryLists: [{
-            id: 'default',
-            name: '默认列表',
-            isActive: true,
-            createdAt: now,
-            updatedAt: now
-          }],
+          memoryLists: [
+            {
+              id: 'default',
+              name: '默认列表',
+              isActive: true,
+              createdAt: now,
+              updatedAt: now
+            }
+          ],
           memories: [],
           currentListId: 'default',
           analyzeModel: 'gpt-3.5-turbo'

@@ -659,7 +659,7 @@ export default class OpenAIProvider extends BaseProvider {
     // 获取当前话题ID
     const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
     // 使用双重类型断言强制转换类型
-    const enhancedPrompt = await applyMemoriesToPrompt(originalPrompt as string, currentTopicId) as unknown as string
+    const enhancedPrompt = (await applyMemoriesToPrompt(originalPrompt as string, currentTopicId)) as unknown as string
     // 存储原始提示词长度
     const originalPromptLength = (originalPrompt as string).length
     console.log(
@@ -768,7 +768,7 @@ export default class OpenAIProvider extends BaseProvider {
     // 应用记忆功能到系统提示词
     const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
     // 使用双重类型断言强制转换类型
-    const enhancedPrompt = await applyMemoriesToPrompt(prompt as string) as unknown as string
+    const enhancedPrompt = (await applyMemoriesToPrompt(prompt as string)) as unknown as string
     // 存储原始提示词长度
     const promptLength = (prompt as string).length
     console.log('[OpenAIProvider] Applied memories to prompt, length difference:', enhancedPrompt.length - promptLength)

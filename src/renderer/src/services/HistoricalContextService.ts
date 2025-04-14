@@ -1,9 +1,9 @@
 // src/renderer/src/services/HistoricalContextService.ts
-import store from '@renderer/store'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import { fetchGenerate } from '@renderer/services/ApiService'
-import { Message, Topic } from '@renderer/types'
+import store from '@renderer/store'
 import { ShortMemory } from '@renderer/store/memory'
+import { Message } from '@renderer/types'
 
 /**
  * 分析当前对话并决定是否需要调用历史对话
@@ -112,11 +112,11 @@ const analyzeNeedForHistoricalContext = async (
   try {
     // 准备分析提示词
     const messagesContent = recentMessages
-      .map(msg => `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`)
+      .map((msg) => `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`)
       .join('\n')
 
     const memoriesContent = shortMemories
-      .map(memory => `话题ID: ${memory.topicId}\n内容: ${memory.content}`)
+      .map((memory) => `话题ID: ${memory.topicId}\n内容: ${memory.content}`)
       .join('\n\n')
 
     const prompt = `
@@ -153,7 +153,8 @@ ${memoriesContent}
     // 获取分析模型
     const state = store.getState()
     // 优先使用历史对话上下文分析模型，如果没有设置，则使用短期记忆分析模型或长期记忆分析模型
-    const analyzeModel = state.memory?.historicalContextAnalyzeModel || state.memory?.shortMemoryAnalyzeModel || state.memory?.analyzeModel
+    const analyzeModel =
+      state.memory?.historicalContextAnalyzeModel || state.memory?.shortMemoryAnalyzeModel || state.memory?.analyzeModel
 
     if (!analyzeModel) {
       console.log('[HistoricalContext] No analyze model set')
@@ -199,8 +200,7 @@ ${memoriesContent}
       }
 
       // 如果都失败了，尝试简单的文本分析
-      const needsContext = result.toLowerCase().includes('true') &&
-                          !result.toLowerCase().includes('false')
+      const needsContext = result.toLowerCase().includes('true') && !result.toLowerCase().includes('false')
       const topicIdMatch = result.match(/selectedTopicId["\s:]+([^"\s,}]+)/)
       const reasonMatch = result.match(/reason["\s:]+"([^"]+)"/) || result.match(/reason["\s:]+([^,}\s]+)/)
 
@@ -229,9 +229,7 @@ const getOriginalDialogContent = async (topicId: string): Promise<string | null>
     }
 
     // 格式化对话内容
-    const dialogContent = messages
-      .map(msg => `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`)
-      .join('\n\n')
+    const dialogContent = messages.map((msg) => `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`).join('\n\n')
 
     return dialogContent
   } catch (error) {

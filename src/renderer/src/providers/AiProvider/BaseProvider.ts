@@ -102,8 +102,20 @@ export default abstract class BaseProvider {
   }
 
   public async getMessageContent(message: Message) {
-    if (isEmpty(message.content)) {
+    if (isEmpty(message.content) && !message.referencedMessages?.length) {
       return message.content
+    }
+
+    // 处理引用消息
+    if (message.referencedMessages && message.referencedMessages.length > 0) {
+      const refMsg = message.referencedMessages[0]
+      const roleText = refMsg.role === 'user' ? '用户' : 'AI'
+      const referencedContent = `===引用消息开始===\n角色: ${roleText}\n内容: ${refMsg.content}\n===引用消息结束===`
+      // 如果消息内容为空，则直接返回引用内容
+      if (isEmpty(message.content.trim())) {
+        return referencedContent
+      }
+      return `${message.content}\n\n${referencedContent}`
     }
 
     const webSearchReferences = await this.getWebSearchReferences(message)

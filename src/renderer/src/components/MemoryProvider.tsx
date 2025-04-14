@@ -3,24 +3,24 @@ import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
 import {
   clearShortMemories,
-  loadMemoryData,
   loadLongTermMemoryData,
-  setCurrentMemoryList,
-  setMemoryActive,
-  setShortMemoryActive,
-  setAutoAnalyze,
+  loadMemoryData,
   setAdaptiveAnalysisEnabled,
-  setAnalysisFrequency,
   setAnalysisDepth,
+  setAnalysisFrequency,
+  setAutoAnalyze,
+  setAutoRecommendMemories,
+  setContextualRecommendationEnabled,
+  setCurrentMemoryList,
+  setDecayEnabled,
+  setDecayRate,
+  setFreshnessEnabled,
   setInterestTrackingEnabled,
+  setMemoryActive,
   setMonitoringEnabled,
   setPriorityManagementEnabled,
-  setDecayEnabled,
-  setFreshnessEnabled,
-  setDecayRate,
-  setContextualRecommendationEnabled,
-  setAutoRecommendMemories,
-  setRecommendationThreshold
+  setRecommendationThreshold,
+  setShortMemoryActive
 } from '@renderer/store/memory'
 import { FC, ReactNode, useEffect, useRef } from 'react'
 
@@ -76,33 +76,38 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
           if (data.autoAnalyze !== undefined) dispatch(setAutoAnalyze(data.autoAnalyze))
 
           // 自适应分析相关
-          if (data.adaptiveAnalysisEnabled !== undefined) dispatch(setAdaptiveAnalysisEnabled(data.adaptiveAnalysisEnabled))
+          if (data.adaptiveAnalysisEnabled !== undefined)
+            dispatch(setAdaptiveAnalysisEnabled(data.adaptiveAnalysisEnabled))
           if (data.analysisFrequency !== undefined) dispatch(setAnalysisFrequency(data.analysisFrequency))
           if (data.analysisDepth !== undefined) dispatch(setAnalysisDepth(data.analysisDepth))
 
           // 用户关注点相关
-          if (data.interestTrackingEnabled !== undefined) dispatch(setInterestTrackingEnabled(data.interestTrackingEnabled))
+          if (data.interestTrackingEnabled !== undefined)
+            dispatch(setInterestTrackingEnabled(data.interestTrackingEnabled))
 
           // 性能监控相关
           if (data.monitoringEnabled !== undefined) dispatch(setMonitoringEnabled(data.monitoringEnabled))
 
           // 智能优先级与时效性管理相关
-          if (data.priorityManagementEnabled !== undefined) dispatch(setPriorityManagementEnabled(data.priorityManagementEnabled))
+          if (data.priorityManagementEnabled !== undefined)
+            dispatch(setPriorityManagementEnabled(data.priorityManagementEnabled))
           if (data.decayEnabled !== undefined) dispatch(setDecayEnabled(data.decayEnabled))
           if (data.freshnessEnabled !== undefined) dispatch(setFreshnessEnabled(data.freshnessEnabled))
           if (data.decayRate !== undefined) dispatch(setDecayRate(data.decayRate))
 
           // 上下文感知记忆推荐相关
-          if (data.contextualRecommendationEnabled !== undefined) dispatch(setContextualRecommendationEnabled(data.contextualRecommendationEnabled))
+          if (data.contextualRecommendationEnabled !== undefined)
+            dispatch(setContextualRecommendationEnabled(data.contextualRecommendationEnabled))
           if (data.autoRecommendMemories !== undefined) dispatch(setAutoRecommendMemories(data.autoRecommendMemories))
-          if (data.recommendationThreshold !== undefined) dispatch(setRecommendationThreshold(data.recommendationThreshold))
+          if (data.recommendationThreshold !== undefined)
+            dispatch(setRecommendationThreshold(data.recommendationThreshold))
 
           console.log('[MemoryProvider] Memory settings loaded successfully')
         } else {
           console.log('[MemoryProvider] No short-term memory data loaded or loading failed')
         }
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('[MemoryProvider] Error loading short-term memory data:', error)
       })
 
@@ -117,7 +122,7 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
             const state = store.getState().memory
             if (!state.currentListId && state.memoryLists && state.memoryLists.length > 0) {
               // 先尝试找到一个isActive为true的列表
-              const activeList = state.memoryLists.find(list => list.isActive)
+              const activeList = state.memoryLists.find((list) => list.isActive)
               if (activeList) {
                 console.log('[MemoryProvider] Auto-selecting active memory list:', activeList.name)
                 dispatch(setCurrentMemoryList(activeList.id))
@@ -132,7 +137,7 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
           console.log('[MemoryProvider] No long-term memory data loaded or loading failed')
         }
       })
-      .catch(error => {
+      .catch((error) => {
         console.error('[MemoryProvider] Error loading long-term memory data:', error)
       })
   }, [dispatch])
@@ -189,9 +194,9 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
       const state = store.getState().memory
       if (state.memoryLists && state.memoryLists.length > 0) {
         // 如果没有选中的记忆列表，或者选中的列表不存在
-        if (!state.currentListId || !state.memoryLists.some(list => list.id === state.currentListId)) {
+        if (!state.currentListId || !state.memoryLists.some((list) => list.id === state.currentListId)) {
           // 先尝试找到一个isActive为true的列表
-          const activeList = state.memoryLists.find(list => list.isActive)
+          const activeList = state.memoryLists.find((list) => list.isActive)
           if (activeList) {
             console.log('[MemoryProvider] Setting active memory list:', activeList.name)
             dispatch(setCurrentMemoryList(activeList.id))

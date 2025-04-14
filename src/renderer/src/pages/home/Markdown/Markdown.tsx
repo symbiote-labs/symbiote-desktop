@@ -61,18 +61,18 @@ const Markdown: FC<Props> = ({ message }) => {
       think: (props: any) => {
         // 将think标签内容渲染为带样式的div
         return (
-          <div className="thinking-content" style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            padding: '10px 15px',
-            borderRadius: '8px',
-            marginBottom: '15px',
-            borderLeft: '3px solid var(--color-primary)',
-            fontStyle: 'italic',
-            color: 'var(--color-text-2)'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-              思考过程:
-            </div>
+          <div
+            className="thinking-content"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              padding: '10px 15px',
+              borderRadius: '8px',
+              marginBottom: '15px',
+              borderLeft: '3px solid var(--color-primary)',
+              fontStyle: 'italic',
+              color: 'var(--color-text-2)'
+            }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>思考过程:</div>
             {props.children}
           </div>
         )

@@ -101,8 +101,11 @@ const PriorityManagementSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.priorityManagement.enable') || '启用智能优先级管理'}
-          <Tooltip title={t('settings.memory.priorityManagement.enableTip') ||
-            '启用后，系统将根据重要性、访问频率和时间因素自动排序记忆'}>
+          <Tooltip
+            title={
+              t('settings.memory.priorityManagement.enableTip') ||
+              '启用后，系统将根据重要性、访问频率和时间因素自动排序记忆'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -114,23 +117,19 @@ const PriorityManagementSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.priorityManagement.decay') || '记忆衰减'}
-          <Tooltip title={t('settings.memory.priorityManagement.decayTip') ||
-            '随着时间推移，未访问的记忆重要性会逐渐降低'}>
+          <Tooltip
+            title={t('settings.memory.priorityManagement.decayTip') || '随着时间推移，未访问的记忆重要性会逐渐降低'}>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
-        <Switch
-          checked={decayEnabled}
-          onChange={handleDecayToggle}
-          disabled={!priorityManagementEnabled}
-        />
+        <Switch checked={decayEnabled} onChange={handleDecayToggle} disabled={!priorityManagementEnabled} />
       </SettingRow>
 
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.priorityManagement.decayRate') || '衰减速率'}
-          <Tooltip title={t('settings.memory.priorityManagement.decayRateTip') ||
-            '值越大，记忆衰减越快。0.05表示每天衰减5%'}>
+          <Tooltip
+            title={t('settings.memory.priorityManagement.decayRateTip') || '值越大，记忆衰减越快。0.05表示每天衰减5%'}>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
@@ -161,30 +160,25 @@ const PriorityManagementSettings: FC = () => {
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.priorityManagement.freshness') || '记忆鲜度'}
-          <Tooltip title={t('settings.memory.priorityManagement.freshnessTip') ||
-            '考虑记忆的创建时间和最后访问时间，优先显示较新的记忆'}>
+          <Tooltip
+            title={
+              t('settings.memory.priorityManagement.freshnessTip') ||
+              '考虑记忆的创建时间和最后访问时间，优先显示较新的记忆'
+            }>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
-        <Switch
-          checked={freshnessEnabled}
-          onChange={handleFreshnessToggle}
-          disabled={!priorityManagementEnabled}
-        />
+        <Switch checked={freshnessEnabled} onChange={handleFreshnessToggle} disabled={!priorityManagementEnabled} />
       </SettingRow>
 
       <SettingRow>
         <SettingRowTitle>
           {t('settings.memory.priorityManagement.updateNow') || '立即更新优先级'}
-          <Tooltip title={t('settings.memory.priorityManagement.updateNowTip') ||
-            '手动更新所有记忆的优先级和鲜度评分'}>
+          <Tooltip title={t('settings.memory.priorityManagement.updateNowTip') || '手动更新所有记忆的优先级和鲜度评分'}>
             <InfoCircleOutlined style={{ marginLeft: 8 }} />
           </Tooltip>
         </SettingRowTitle>
-        <Button
-          onClick={handleUpdatePriorities}
-          disabled={!priorityManagementEnabled}
-        >
+        <Button onClick={handleUpdatePriorities} disabled={!priorityManagementEnabled}>
           {t('settings.memory.priorityManagement.update') || '更新'}
         </Button>
       </SettingRow>
