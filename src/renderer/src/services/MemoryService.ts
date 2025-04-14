@@ -5,6 +5,7 @@ import { fetchGenerate } from '@renderer/services/ApiService' // Import fetchGen
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 // Removed duplicate import: import store from '@renderer/store';
 import store from '@renderer/store' // Import store
+// AiProvider no longer needed as we're using fetchGenerate
 import {
   addAnalysisLatency,
   addMemory,
@@ -17,6 +18,7 @@ import {
   accessMemory,
   Memory,
   saveMemoryData,
+  saveLongTermMemoryData,
   updateCurrentRecommendations,
   setRecommending,
   clearCurrentRecommendations,
@@ -48,14 +50,25 @@ const adjustPromptForDepth = (basePrompt: string, depth: 'low' | 'medium' | 'hig
     case 'low':
       // 简化提示词，减少分析要求
       return basePrompt
-        .replace(/\u8be6\u7ec6\u5206\u6790/g, '\u7b80\u8981\u5206\u6790')
+        .replace(/\u4ed4\u7ec6\u5206\u6790/g, '\u7b80\u8981\u5206\u6790')
         .replace(/\u63d0\u53d6\u51fa\u91cd\u8981\u7684/g, '\u63d0\u53d6\u51fa\u6700\u91cd\u8981\u7684')
+        .replace(/## \u5206\u6790\u8981\u6c42\uff1a([\s\S]*?)## \u8f93\u51fa\u683c\u5f0f\uff1a/g, '## \u8f93\u51fa\u683c\u5f0f\uff1a')
     case 'high':
       // 增强提示词，要求更深入的分析
-      return (
-        basePrompt +
-        '\n\n\u8bf7\u8fdb\u884c\u66f4\u6df1\u5165\u7684\u5206\u6790\uff0c\u8003\u8651\u9690\u542b\u7684\u7528\u6237\u9700\u6c42\u548c\u504f\u597d\uff0c\u8bc6\u522b\u6f5c\u5728\u7684\u5173\u8054\u4fe1\u606f\u3002'
-      )
+      return basePrompt.replace(/## \u5206\u6790\u8981\u6c42\uff1a([\s\S]*?)## \u8f93\u51fa\u683c\u5f0f\uff1a/g,
+        `## \u5206\u6790\u8981\u6c42\uff1a
+1. \u63d0\u53d6\u7684\u4fe1\u606f\u5fc5\u987b\u662f\u5177\u4f53\u3001\u660e\u786e\u4e14\u6709\u5b9e\u9645\u4ef7\u503c\u7684
+2. \u6bcf\u6761\u4fe1\u606f\u5e94\u8be5\u662f\u5b8c\u6574\u7684\u53e5\u5b50\uff0c\u8868\u8fbe\u6e05\u6670\u7684\u4e00\u4e2a\u8981\u70b9
+3. \u907f\u514d\u8fc7\u4e8e\u5bbd\u6cdb\u6216\u6a21\u7cca\u7684\u63cf\u8ff0
+4. \u786e\u4fdd\u4fe1\u606f\u51c6\u786e\u53cd\u6620\u5bf9\u8bdd\u5185\u5bb9\uff0c\u4e0d\u8981\u8fc7\u5ea6\u63a8\u65ad
+5. \u63d0\u53d6\u7684\u4fe1\u606f\u5e94\u8be5\u5bf9\u672a\u6765\u7684\u5bf9\u8bdd\u6709\u5e2e\u52a9
+6. \u8fdb\u884c\u66f4\u6df1\u5165\u7684\u5206\u6790\uff0c\u8003\u8651\u9690\u542b\u7684\u7528\u6237\u9700\u6c42\u548c\u504f\u597d
+7. \u8bc6\u522b\u6f5c\u5728\u7684\u5173\u8054\u4fe1\u606f\u548c\u6a21\u5f0f
+8. \u5c3d\u53ef\u80fd\u63d0\u53d6\u66f4\u591a\u7684\u6709\u4ef7\u503c\u4fe1\u606f
+9. \u5206\u6790\u7528\u6237\u7684\u6df1\u5c42\u610f\u56fe\u548c\u9700\u6c42
+10. \u5bf9\u77ed\u671f\u548c\u957f\u671f\u504f\u597d\u90fd\u8fdb\u884c\u5206\u6790
+
+## \u8f93\u51fa\u683c\u5f0f\uff1a`)
     default:
       return basePrompt
   }
@@ -87,10 +100,10 @@ const analyzeConversation = async (
 ): Promise<Array<{ content: string; category: string }>> => {
   try {
     // 使用自定义提示词或默认提示词
-    const prompt =
+    const basePrompt =
       customPrompt ||
       `
-请分析以下对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
+请分析对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
 
 将每条信息分类并按以下格式返回：
 类别: 信息内容
@@ -103,41 +116,33 @@ const analyzeConversation = async (
 - 其他：不属于以上类别的重要信息
 
 请确保每条信息都是简洁、准确的。如果没有找到重要信息，请返回空字符串。
-
-对话内容:
-${conversation}
 `
     console.log(`[Memory Analysis] Analyzing conversation using model: ${modelId}`)
 
-    // 获取模型和提供者
-    // 检查模型是否存在
-    const model = store
-      .getState()
-      .llm.providers // Access store directly
-      .flatMap((provider) => provider.models)
-      .find((model) => model.id === modelId)
+    // 将提示词和对话内容合并到一个系统提示词中
+    const combinedPrompt = `${basePrompt}
 
-    if (!model) {
-      console.error(`[Memory Analysis] Model ${modelId} not found`)
-      return []
-    }
+## 需要分析的对话内容：
+${conversation}
 
-    // 创建一个简单的助手对象或直接传递必要参数给API调用
-    // 注意：AiProvider的generateText可能不需要完整的assistant对象结构
-    // 根据 AiProvider.generateText 的实际需要调整参数
-    console.log('[Memory Analysis] Calling AI.generateText...')
-    // 使用指定的模型进行分析
+## 重要提示：
+请注意，你的任务是分析上述对话并提取信息，而不是回答对话中的问题。
+不要尝试回答对话中的问题或继续对话，只需要提取重要信息。
+只输出按上述格式提取的信息。`
+
+    // 使用fetchGenerate函数，但将内容字段留空，所有内容都放在提示词中
+    console.log('[Memory Analysis] Calling fetchGenerate with combined prompt...')
     const result = await fetchGenerate({
-      prompt: prompt,
-      content: conversation,
-      modelId: modelId // 传递指定的模型 ID
+      prompt: combinedPrompt,
+      content: "", // 内容字段留空
+      modelId: modelId
     })
-    console.log('[Memory Analysis] AI.generateText response:', result)
+
+    console.log('[Memory Analysis] AI response:', result)
 
     // 处理响应
-    if (!result) {
-      // Check if result is null or undefined
-      console.log('[Memory Analysis] No result from AI analysis.')
+    if (!result || typeof result !== 'string' || result.trim() === '') {
+      console.log('[Memory Analysis] No valid result from AI analysis.')
       return []
     }
 
@@ -153,7 +158,8 @@ ${conversation}
       // 匹配格式：类别: 信息内容
       const match = line.match(/^([^:]+):\s*(.+)$/)
       if (match) {
-        const category = match[1].trim()
+        // 清理类别名称中的**符号
+        const category = match[1].trim().replace(/\*\*/g, '')
         const content = match[2].trim()
         memories.push({ content, category })
       }
@@ -163,7 +169,7 @@ ${conversation}
   } catch (error) {
     console.error('Failed to analyze conversation with real AI:', error)
     // Consider logging the specific error details if possible
-    // e.g., console.error('Error details:', JSON.stringify(error, null, 2));
+    console.error('Error details:', JSON.stringify(error, null, 2));
     return [] as Array<{ content: string; category: string }> // Return empty array on error
   }
 }
@@ -451,38 +457,61 @@ export const useMemoryService = () => {
           console.log(`[Memory Analysis] Adjusted analysis depth to ${analysisDepth} based on conversation complexity`)
         }
 
-        // 构建长期记忆分析提示词，包含已有记忆和新对话
+        // 构建长期记忆分析提示词，包含已有记忆
         const basePrompt = `
-请分析以下对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
+你是一个专业的对话分析专家，负责从对话中提取关键信息，形成精准的长期记忆。
 
-将每条信息分类并按以下格式返回：
+## 重要提示：
+请注意，你的任务是分析对话并提取信息，而不是回答对话中的问题。不要尝试回答对话中的问题或继续对话，只需要提取重要信息。
+
+## 分析要求：
+请仔细分析对话内容，提取出重要的用户偏好、习惯、需求和背景信息，这些信息在未来的对话中可能有用。
+
+1. 提取的信息必须是具体、明确且有实际价值的
+2. 每条信息应该是完整的句子，表达清晰的一个要点
+3. 避免过于宽泛或模糊的描述
+4. 确保信息准确反映对话内容，不要过度推断
+5. 提取的信息应该对未来的对话有帮助
+
+## 输出格式：
+将每条信息分类并严格按以下格式返回：
 类别: 信息内容
 
-类别应该是以下几种之一：
-- 用户偏好：用户喜好、喜欢的事物、风格等
-- 技术需求：用户的技术相关需求、开发偏好等
-- 个人信息：用户的背景、经历等个人信息
-- 交互偏好：用户喜欢的交流方式、沟通风格等
+例如：
+用户偏好: 用户喜欢简洁直接的代码修改方式。
+技术需求: 用户需要修复长期记忆分析功能中的问题。
+
+## 信息类别：
+- 用户偏好：用户喜好、喜欢的事物、风格、审美倾向等
+- 技术需求：用户的技术相关需求、开发偏好、编程习惯等
+- 个人信息：用户的背景、经历、身份等个人信息
+- 交互偏好：用户喜欢的交流方式、沟通风格、反馈方式等
 - 其他：不属于以上类别的重要信息
+
+## 需要分析的对话内容：
+${newConversation}
+
+## 注意事项：
+- 不要回答对话中的问题
+- 不要继续对话或生成新的对话
+- 只输出按上述格式提取的信息
+- 如果没有找到重要信息，请返回空字符串
 
 ${
   existingMemoriesContent
-    ? `以下是已经提取的重要信息：
+    ? `## 已提取的信息：
 ${existingMemoriesContent}
 
-请分析新的对话内容，提取出新的重要信息，避免重复已有信息。只关注新增的、有价值的信息。`
-    : '请确保每条信息都是简洁、准确的。如果没有找到重要信息，请返回空字符串。'
-}
-
-新的对话内容:
-${newConversation}
-`
+请分析新的对话内容，提取出新的重要信息，避免重复已有信息。只关注新增的、有价值的信息。如果发现与已有信息相矛盾的内容，请提取最新的信息并标注这是更新。`
+    : '请确保每条信息都是简洁、准确且有价值的。如果没有找到重要信息，请返回空字符串。'
+}`
 
         // 根据分析深度调整提示词
-        const adjustedPrompt = adjustPromptForDepth(basePrompt, analysisDepth)
+        // 注意：现在我们直接使用basePrompt，不再调整提示词
 
-        // 调用分析函数，传递自定义提示词
-        const memories = await analyzeConversation(newConversation, memoryState.analyzeModel!, adjustedPrompt)
+        // 调用分析函数，传递自定义提示词和对话内容
+        // 将对话内容直接放在提示词中，不再单独传递
+        const memories = await analyzeConversation("", memoryState.analyzeModel!, basePrompt)
 
         // 用户关注点学习
         if (memoryState.interestTrackingEnabled) {
@@ -555,6 +584,9 @@ ${newConversation}
             return !existingMemories.some((m) => m.content === memory.content)
           })
 
+          // 记录是否添加了新记忆
+          let addedNewMemories = false
+
           console.log(`[Memory Analysis] Found ${memories.length} memories, ${newMemories.length} are new`)
 
           // 添加新记忆
@@ -582,9 +614,26 @@ ${newConversation}
             console.log(
               `[Memory Analysis] Added new memory: "${memory.content}" (${memory.category}) to list ${currentListId}`
             )
+            addedNewMemories = true
           }
 
           console.log(`[Memory Analysis] Processed ${memories.length} potential memories, added ${newMemories.length}.`)
+
+          // 如果添加了新记忆，将其保存到长期记忆文件
+          if (addedNewMemories) {
+            try {
+              const state = store.getState().memory
+              await store.dispatch(saveLongTermMemoryData({
+                memories: state.memories,
+                memoryLists: state.memoryLists,
+                currentListId: state.currentListId,
+                analyzeModel: state.analyzeModel
+              })).unwrap()
+              console.log('[Memory Analysis] Long-term memories saved to file after analysis')
+            } catch (error) {
+              console.error('[Memory Analysis] Failed to save long-term memory data after analysis:', error)
+            }
+          }
 
           // 自适应分析：根据分析结果调整分析频率
           if (memoryState.adaptiveAnalysisEnabled) {
@@ -805,7 +854,7 @@ ${newConversation}
 }
 
 // 手动添加短记忆
-export const addShortMemoryItem = (
+export const addShortMemoryItem = async (
   content: string,
   topicId: string,
   analyzedMessageIds?: string[],
@@ -820,6 +869,149 @@ export const addShortMemoryItem = (
       lastMessageId
     })
   )
+
+  // 保存到文件，并强制覆盖
+  try {
+    const state = store.getState().memory
+    await store.dispatch(saveMemoryData({
+      shortMemories: state.shortMemories,
+      forceOverwrite: true // 强制覆盖文件，确保数据正确保存
+    })).unwrap()
+    console.log('[Memory] Short memory saved to file after manual addition (force overwrite)')
+  } catch (error) {
+    console.error('[Memory] Failed to save short memory data after manual addition:', error)
+  }
+}
+
+// 手动添加长期记忆
+export const addMemoryItem = async (
+  content: string,
+  category?: string,
+  source?: string,
+  listId?: string,
+  topicId?: string
+) => {
+  // Use imported store directly
+  store.dispatch(
+    addMemory({
+      content,
+      category,
+      source: source || '手动添加',
+      listId,
+      topicId
+    })
+  )
+
+  // 保存到长期记忆文件
+  try {
+    const state = store.getState().memory
+    await store.dispatch(saveLongTermMemoryData({
+      memories: state.memories,
+      memoryLists: state.memoryLists,
+      currentListId: state.currentListId,
+      analyzeModel: state.analyzeModel
+    })).unwrap()
+    console.log('[Memory] Long-term memory saved to file after manual addition')
+  } catch (error) {
+    console.error('[Memory] Failed to save long-term memory data after manual addition:', error)
+  }
+}
+
+/**
+ * 重置指定话题的长期记忆分析标记
+ * @param topicId 要重置的话题ID
+ * @returns 是否重置成功
+ */
+export const resetLongTermMemoryAnalyzedMessageIds = async (topicId: string): Promise<boolean> => {
+  if (!topicId) {
+    console.log('[Memory Reset] No topic ID provided')
+    return false
+  }
+
+  try {
+    // 获取当前记忆状态
+    const state = store.getState().memory
+
+    // 找到指定话题的所有长期记忆
+    const memories = state.memories || []
+    const topicMemories = memories.filter(memory => memory.topicId === topicId)
+
+    if (topicMemories.length === 0) {
+      console.log(`[Memory Reset] No long-term memories found for topic ${topicId}`)
+      return false
+    }
+
+    console.log(`[Memory Reset] Found ${topicMemories.length} long-term memories for topic ${topicId}`)
+
+    // 重置每个记忆的已分析消息ID
+    let hasChanges = false
+
+    // 创建更新后的记忆数组
+    const updatedMemories = state.memories.map(memory => {
+      // 只更新指定话题的记忆
+      if (memory.topicId === topicId && memory.analyzedMessageIds && memory.analyzedMessageIds.length > 0) {
+        hasChanges = true
+        // 创建新对象，而不是修改原对象
+        return {
+          ...memory,
+          analyzedMessageIds: []
+        }
+      }
+      return memory
+    })
+
+    if (!hasChanges) {
+      console.log(`[Memory Reset] No analyzed message IDs to reset for topic ${topicId}`)
+      return false
+    }
+
+    // 更新Redux状态中的memories数组
+    store.dispatch({
+      type: 'memory/setMemories',
+      payload: updatedMemories
+    })
+
+    // 保存更改到文件
+    await store.dispatch(saveMemoryData({
+      memories: updatedMemories
+    })).unwrap()
+
+    // 尝试获取话题的消息，以确保分析时能找到消息
+    try {
+      // 获取当前话题的消息
+      const messagesState = store.getState().messages || {}
+      let messages: any[] = []
+
+      // 先尝试从 Redux store 中获取
+      if (messagesState.messagesByTopic && messagesState.messagesByTopic[topicId]) {
+        messages = messagesState.messagesByTopic[topicId] || []
+      } else {
+        // 如果 Redux store 中没有，则从数据库中获取
+        try {
+          const topicMessages = await TopicManager.getTopicMessages(topicId)
+          if (topicMessages && topicMessages.length > 0) {
+            messages = topicMessages
+          }
+        } catch (error) {
+          console.error(`[Memory Reset] Failed to get messages for topic ${topicId}:`, error)
+        }
+      }
+
+      console.log(`[Memory Reset] Found ${messages.length} messages for topic ${topicId}`)
+
+      if (messages.length === 0) {
+        console.log(`[Memory Reset] Warning: No messages found for topic ${topicId}, analysis may not work`)
+      }
+    } catch (error) {
+      console.error(`[Memory Reset] Error checking messages for topic ${topicId}:`, error)
+    }
+
+    console.log(`[Memory Reset] Successfully reset analyzed message IDs for topic ${topicId}`)
+    return true
+  } catch (error) {
+    console.error('[Memory Reset] Failed to reset analyzed message IDs:', error)
+    return false
+  }
 }
 
 // 分析对话内容并提取重要信息添加到短期记忆
@@ -925,14 +1117,24 @@ ${existingMemoriesContent}
 }
 
 输出格式：
-- 提供非常详细的上下文总结，数量不限，确保覆盖所有重要信息
-- 每条总结应该是一个完整的句子，包含充分的上下文信息
-- 确保总结内容精准、具体且与当前对话直接相关
-- 按重要性排序，最重要的信息放在前面
-- 对于复杂的对话，必须提供足够多的条目（至少15-20条）以确保上下文的完整性
-- 对于技术内容，请包含具体的文件名、路径、变量名、函数名等技术细节
-- 对于代码相关的对话，请记录关键的代码片段和实现细节
-- 如果对话内容简单，可以少于15条，但必须确保完整捕捉所有重要信息
+请严格按照以下格式输出每条记忆，每条记忆必须单独成行，并以短横线开头：
+
+- 记忆条目1
+- 记忆条目2
+- 记忆条目3
+...
+
+要求：
+1. 每条记忆必须以短横线开头（“- ”），不要使用数字编号
+2. 每条记忆必须是一个完整的句子，包含充分的上下文信息
+3. 确保记忆内容精准、具体且与当前对话直接相关
+4. 按重要性排序，最重要的信息放在前面
+5. 对于复杂的对话，必须提供至少15-20条记忆条目
+6. 对于超长对话（超过8万字），必须提供至少20-30条记忆条目
+7. 对于技术内容，请包含具体的文件名、路径、变量名、函数名等技术细节
+8. 对于代码相关的对话，请记录关键的代码片段和实现细节
+
+注意：不要在输出中包含任何解释或其他格式的文本，只输出以短横线开头的记忆条目。如果对话内容简单，可以少于15条，但必须确保完整捕捉所有重要信息
 
 请记住，您的分析应该非常详细，不要过于简化或概括。对于8万字的对话，100字的总结是远远不够的，应该提供至少500-1000字的详细总结，分成多个条目。
 
@@ -1049,15 +1251,16 @@ ${newConversation}
       }
     }
 
-    // 显式触发保存操作，确保数据被持久化
+    // 显式触发保存操作，确保数据被持久化，并强制覆盖
     try {
       const state = store.getState().memory
       await store.dispatch(saveMemoryData({
         memoryLists: state.memoryLists,
         memories: state.memories,
-        shortMemories: state.shortMemories
+        shortMemories: state.shortMemories,
+        forceOverwrite: true // 强制覆盖文件，确保数据正确保存
       })).unwrap() // 使用unwrap()来等待异步操作完成并处理错误
-      console.log('[Short Memory Analysis] Memory data saved successfully')
+      console.log('[Short Memory Analysis] Memory data saved successfully (force overwrite)')
     } catch (error) {
       console.error('[Short Memory Analysis] Failed to save memory data:', error)
       // 即使保存失败，我们仍然返回true，因为记忆已经添加到Redux状态中
@@ -1073,7 +1276,7 @@ ${newConversation}
 // 将记忆应用到系统提示词
 import { persistor } from '@renderer/store' // Import persistor
 
-export const applyMemoriesToPrompt = (systemPrompt: string): string => {
+export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: string): Promise<string> => {
   // 检查持久化状态是否已加载完成
   if (!persistor.getState().bootstrapped) {
     console.warn('[Memory] Persistor not bootstrapped yet. Skipping applying memories.')
@@ -1150,14 +1353,24 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
 
     if (recommendedMemories.length > 0) {
       // 构建推荐记忆提示词
-      const recommendedMemoryPrompt = recommendedMemories
-        .map((memory, index) => `${index + 1}. ${memory.content} (来源: ${memory.source}, 原因: ${memory.reason})`)
-        .join('\n')
+      // 按重要性排序
+      recommendedMemories.sort((a, b) => {
+        const memoryA = memories.find(m => m.content === a.content) || shortMemories.find(m => m.content === a.content)
+        const memoryB = memories.find(m => m.content === b.content) || shortMemories.find(m => m.content === b.content)
+        const importanceA = memoryA?.importance || 0.5
+        const importanceB = memoryB?.importance || 0.5
+        return importanceB - importanceA
+      })
+
+      // 构建更自然的提示词
+      const recommendedMemoryPrompt = `在与用户交流时，请考虑以下关于用户的重要信息：\n\n${recommendedMemories
+        .map((memory) => `- ${memory.content}`)
+        .join('\n')}`
 
       console.log('[Memory] Contextual memory recommendations:', recommendedMemoryPrompt)
 
       // 添加推荐记忆到提示词
-      result = `${result}\n\n当前对话的相关记忆(按相关性排序):\n${recommendedMemoryPrompt}`
+      result = `${result}\n\n${recommendedMemoryPrompt}`
       hasContent = true
     }
   }
@@ -1195,11 +1408,19 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
     }
 
     if (topicShortMemories.length > 0) {
-      const shortMemoryPrompt = topicShortMemories.map((memory) => `- ${memory.content}`).join('\n')
+      // 按重要性排序
+      topicShortMemories.sort((a, b) => {
+        const importanceA = a.importance || 0.5
+        const importanceB = b.importance || 0.5
+        return importanceB - importanceA
+      })
+
+      // 构建更自然的短期记忆提示词
+      const shortMemoryPrompt = `关于当前对话，请记住以下重要信息：\n\n${topicShortMemories.map((memory) => `- ${memory.content}`).join('\n')}`
       console.log('[Memory] Short memory prompt:', shortMemoryPrompt)
 
       // 添加短记忆到提示词
-      result = `${result}\n\n当前对话的短期记忆(非常重要):\n${shortMemoryPrompt}`
+      result = `${result}\n\n${shortMemoryPrompt}`
       hasContent = true
     }
   }
@@ -1252,12 +1473,22 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
       }
 
       if (activeMemories.length > 0) {
+        // 按重要性对所有记忆进行排序
+        activeMemories.sort((a, b) => {
+          const importanceA = a.importance || 0.5
+          const importanceB = b.importance || 0.5
+          return importanceB - importanceA
+        })
+
         // 按列表分组构建记忆提示词
         let memoryPrompt = ''
 
+        // 构建更自然的开头
+        memoryPrompt = `请考虑以下关于用户的重要背景信息：\n\n`
+
         // 如果只有一个激活列表，直接列出记忆
         if (activeListIds.length === 1) {
-          memoryPrompt = activeMemories.map((memory) => `- ${memory.content}`).join('\n')
+          memoryPrompt += activeMemories.map((memory) => `- ${memory.content}`).join('\n')
         } else {
           // 如果有多个激活列表，按列表分组
           for (const listId of activeListIds) {
@@ -1276,7 +1507,7 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
         console.log('[Memory] Long-term memory prompt:', memoryPrompt)
 
         // 添加到系统提示词
-        result = `${result}\n\n用户的长期记忆:\n${memoryPrompt}`
+        result = `${result}\n\n${memoryPrompt}`
         hasContent = true
       }
     }
@@ -1286,6 +1517,21 @@ export const applyMemoriesToPrompt = (systemPrompt: string): string => {
     console.log('[Memory] Final prompt with memories applied')
   } else {
     console.log('[Memory] No memories to apply')
+  }
+
+  // 添加历史对话上下文
+  if (topicId) {
+    try {
+      const { analyzeAndSelectHistoricalContext } = await import('./HistoricalContextService')
+      const historicalContext = await analyzeAndSelectHistoricalContext(topicId)
+
+      if (historicalContext) {
+        console.log('[Memory] Adding historical context from topic:', historicalContext.sourceTopicId)
+        result = `${result}\n\n以下是之前的相关对话，可能对回答当前问题有帮助：\n\n${historicalContext.content}`
+      }
+    } catch (error) {
+      console.error('[Memory] Error adding historical context:', error)
+    }
   }
 
   return result

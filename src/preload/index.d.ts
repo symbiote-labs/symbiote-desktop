@@ -192,7 +192,10 @@ declare global {
       }
       memory: {
         loadData: () => Promise<any>
-        saveData: (data: any) => Promise<boolean>
+        saveData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
+        deleteShortMemoryById: (id: string) => Promise<boolean>
+        loadLongTermData: () => Promise<any>
+        saveLongTermData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
       }
     }
   }

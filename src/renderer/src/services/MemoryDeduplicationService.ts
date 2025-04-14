@@ -1,7 +1,7 @@
 // 记忆去重与合并服务
 import { fetchGenerate } from '@renderer/services/ApiService'
 import store from '@renderer/store'
-import { addMemory, addShortMemory, deleteMemory, deleteShortMemory } from '@renderer/store/memory'
+import { addMemory, addShortMemory, deleteMemory, deleteShortMemory, saveMemoryData, saveLongTermMemoryData } from '@renderer/store/memory'
 
 // 记忆去重与合并的结果接口
 export interface DeduplicationResult {
@@ -10,6 +10,8 @@ export interface DeduplicationResult {
     memoryIds: string[]
     mergedContent: string
     category?: string
+    importance?: number // 新增重要性评分
+    keywords?: string[] // 新增关键词
   }[]
   independentMemories: string[]
   rawResponse: string
@@ -134,20 +136,25 @@ ${memoriesToCheck}
     const similarGroupsMatch = result.match(/1\.\s*识别出的相似组:([\s\S]*?)(?=2\.\s*独立记忆项:|$)/i)
     if (similarGroupsMatch && similarGroupsMatch[1]) {
       const groupsText = similarGroupsMatch[1].trim()
-      const groupRegex = /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*(?:-\s*分类:\s*"([^"]+)")?/g
+      // 更新正则表达式以匹配新的格式，包括重要性和关键词
+      const groupRegex = /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*-\s*分类:\s*"([^"]+)"\s*(?:-\s*重要性:\s*"([^"]+)")?\s*(?:-\s*关键词:\s*"([^"]+)")?/g
 
-      let match
+      let match: RegExpExecArray | null
       while ((match = groupRegex.exec(groupsText)) !== null) {
         const groupId = match[1] || String(similarGroups.length + 1)
-        const memoryIndices = match[2].split(',').map((s) => s.trim())
+        const memoryIndices = match[2].split(',').map((s: string) => s.trim())
         const mergedContent = match[3].trim()
         const category = match[4]?.trim()
+        const importance = match[5] ? parseFloat(match[5].trim()) : undefined
+        const keywords = match[6] ? match[6].trim().split(',').map((k: string) => k.trim()) : undefined
 
         similarGroups.push({
           groupId,
           memoryIds: memoryIndices,
           mergedContent,
-          category
+          category,
+          importance,
+          keywords
         })
       }
     }
@@ -155,7 +162,7 @@ ${memoriesToCheck}
     // 解析独立记忆项
     const independentMatch = result.match(/2\.\s*独立记忆项:\s*\[([\d,\s]+)\]/i)
     if (independentMatch && independentMatch[1]) {
-      independentMemories.push(...independentMatch[1].split(',').map((s) => s.trim()))
+      independentMemories.push(...independentMatch[1].split(',').map((s: string) => s.trim()))
     }
 
     console.log('[Memory Deduplication] Parsed result:', { similarGroups, independentMemories })
@@ -171,13 +178,15 @@ ${memoriesToCheck}
   }
 }
 
+// 已在顶部导入saveMemoryData和saveLongTermMemoryData
+
 /**
  * 应用去重结果，合并相似记忆
  * @param result 去重分析结果
  * @param autoApply 是否自动应用合并结果
  * @param isShortMemory 是否处理短期记忆
  */
-export const applyDeduplicationResult = (
+export const applyDeduplicationResult = async (
   result: DeduplicationResult,
   autoApply: boolean = false,
   isShortMemory: boolean = false
@@ -239,7 +248,9 @@ export const applyDeduplicationResult = (
               content: group.mergedContent,
               topicId: topicId,
               analyzedMessageIds: Array.from(allAnalyzedMessageIds),
-              lastMessageId: lastMessageId
+              lastMessageId: lastMessageId,
+              importance: group.importance, // 添加重要性评分
+              keywords: group.keywords // 添加关键词
             })
           )
 
@@ -263,7 +274,9 @@ export const applyDeduplicationResult = (
             listId: listId, // 使用安全获取的 listId
             analyzedMessageIds: Array.from(allAnalyzedMessageIds),
             lastMessageId: lastMessageId,
-            topicId: topicIds.size === 1 ? Array.from(topicIds)[0] : undefined
+            topicId: topicIds.size === 1 ? Array.from(topicIds)[0] : undefined,
+            importance: group.importance, // 添加重要性评分
+            keywords: group.keywords // 添加关键词
           })
         )
 
@@ -274,6 +287,34 @@ export const applyDeduplicationResult = (
       }
 
       console.log(`[Memory Deduplication] Applied group ${group.groupId}: merged ${groupMemories.length} memories`)
+    }
+  }
+
+  // 合并完成后，将更改保存到文件
+  if (autoApply) {
+    try {
+      // 获取最新的状态
+      const currentState = store.getState().memory
+
+      // 保存到文件
+      if (isShortMemory) {
+        // 短期记忆使用saveMemoryData
+        await store.dispatch(saveMemoryData({
+          shortMemories: currentState.shortMemories
+        })).unwrap()
+        console.log('[Memory Deduplication] Short memories saved to file after merging')
+      } else {
+        // 长期记忆使用saveLongTermMemoryData
+        await store.dispatch(saveLongTermMemoryData({
+          memories: currentState.memories,
+          memoryLists: currentState.memoryLists,
+          currentListId: currentState.currentListId,
+          analyzeModel: currentState.analyzeModel
+        })).unwrap()
+        console.log('[Memory Deduplication] Long-term memories saved to file after merging')
+      }
+    } catch (error) {
+      console.error('[Memory Deduplication] Failed to save memory data after merging:', error)
     }
   }
 }

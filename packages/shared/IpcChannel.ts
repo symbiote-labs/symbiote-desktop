@@ -157,5 +157,10 @@ export enum IpcChannel {
 
   // Memory File Storage
   Memory_LoadData = 'memory:load-data',
-  Memory_SaveData = 'memory:save-data'
+  Memory_SaveData = 'memory:save-data',
+  Memory_DeleteShortMemoryById = 'memory:delete-short-memory-by-id',
+
+  // Long-term Memory File Storage
+  LongTermMemory_LoadData = 'long-term-memory:load-data',
+  LongTermMemory_SaveData = 'long-term-memory:save-data'
 }

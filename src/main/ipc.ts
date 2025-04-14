@@ -26,6 +26,7 @@ import { searchService } from './services/SearchService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'
+import { memoryFileService } from './services/MemoryFileService'
 import { getResourcePath } from './utils'
 import { decrypt, encrypt } from './utils/aes'
 import { getConfigDir, getFilesDir } from './utils/file'
@@ -305,5 +306,22 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   })
   ipcMain.handle(IpcChannel.SearchWindow_OpenUrl, async (_, uid: string, url: string) => {
     return await searchService.openUrlInSearchWindow(uid, url)
+  })
+
+  // memory
+  ipcMain.handle(IpcChannel.Memory_LoadData, async () => {
+    return await memoryFileService.loadData()
+  })
+  ipcMain.handle(IpcChannel.Memory_SaveData, async (_, data, forceOverwrite = false) => {
+    return await memoryFileService.saveData(data, forceOverwrite)
+  })
+  ipcMain.handle(IpcChannel.Memory_DeleteShortMemoryById, async (_, id) => {
+    return await memoryFileService.deleteShortMemoryById(id)
+  })
+  ipcMain.handle(IpcChannel.LongTermMemory_LoadData, async () => {
+    return await memoryFileService.loadLongTermData()
+  })
+  ipcMain.handle(IpcChannel.LongTermMemory_SaveData, async (_, data, forceOverwrite = false) => {
+    return await memoryFileService.saveLongTermData(data, forceOverwrite)
   })
 }

@@ -1025,6 +1025,13 @@
       "launch.title": "启动",
       "launch.totray": "启动时最小化到托盘",
       "memory": {
+      "historicalContext": {
+        "title": "历史对话上下文",
+        "description": "允许AI在需要时自动引用历史对话，以提供更连贯的回答。",
+        "enable": "启用历史对话上下文",
+        "enableTip": "启用后，AI会在需要时自动分析并引用历史对话，以提供更连贯的回答",
+        "analyzeModelTip": "选择用于历史对话上下文分析的模型，建议选择响应较快的模型"
+      },
         "title": "记忆功能",
         "description": "管理AI助手的长期记忆，自动分析对话并提取重要信息",
         "enableMemory": "启用记忆功能",
@@ -1053,6 +1060,14 @@
         "startingAnalysis": "开始分析...",
         "cannotAnalyze": "无法分析，请检查设置",
         "resetAnalyzingState": "重置分析状态",
+        "resetLongTermMemory": "重置分析标记",
+        "resetLongTermMemorySuccess": "长期记忆分析标记已重置",
+        "resetLongTermMemoryNoChange": "没有需要重置的分析标记",
+        "resetLongTermMemoryError": "重置长期记忆分析标记失败",
+        "saveAllSettings": "保存所有设置",
+        "saveAllSettingsDescription": "将所有记忆功能的设置保存到文件中，确保应用重启后设置仍然生效。",
+        "saveAllSettingsSuccess": "所有设置已成功保存",
+        "saveAllSettingsError": "保存设置失败",
         "analyzeConversation": "分析对话",
         "shortMemoryAnalysisSuccess": "分析成功",
         "shortMemoryAnalysisSuccessContent": "已成功提取并添加重要信息到短期记忆",
@@ -1181,9 +1196,13 @@
         "noCurrentTopic": "请先选择一个对话话题",
         "confirmDelete": "确认删除",
         "confirmDeleteContent": "确定要删除这条短期记忆吗？",
+        "confirmDeleteAll": "确认删除全部",
+        "confirmDeleteAllContent": "确定要删除该话题下的所有短期记忆吗？",
         "delete": "删除",
+        "cancel": "取消",
         "allTopics": "所有话题",
-        "noTopics": "没有话题"
+        "noTopics": "没有话题",
+        "shortMemoriesByTopic": "按话题分组的短期记忆"
       },
       "mcp": {
         "actions": "操作",
