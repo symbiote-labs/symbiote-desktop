@@ -1,5 +1,11 @@
 appId: com.kangfenmao.CherryStudio
 productName: Cherry Studio
+electronLanguages:
+  - zh-CN
+  - zh-TW
+  - en-GB
+  - en-US
+  - ru
 directories:
   buildResources: build
 files:
@@ -31,16 +37,16 @@ files:
   - '!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}'
 asarUnpack: # Removed ASR server rules from 'files' section
   - resources/**
-  - '**/*.{node,dll,metal,exp,lib}'
+  - '**/*.{metal,exp,lib}'
 extraResources: # Add extraResources to copy the prepared asr-server directory
   - from: asr-server # Copy the folder from project root
-    to: app/asr-server  # Copy TO the 'app' subfolder within resources
+    to: app/asr-server # Copy TO the 'app' subfolder within resources
     filter:
-      - "**/*"      # Include everything inside
+      - '**/*' # Include everything inside
   - from: resources/data # Copy the data folder with agents.json
-    to: data  # Copy TO the 'data' subfolder within resources
+    to: data # Copy TO the 'data' subfolder within resources
     filter:
-      - "**/*"      # Include everything inside
+      - '**/*' # Include everything inside
 win:
   executableName: Cherry Studio
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
