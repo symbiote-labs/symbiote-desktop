@@ -1,5 +1,3 @@
-import { isReasoningModel } from '@renderer/config/models'
-import { getAssistantById } from '@renderer/services/AssistantService'
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type { CitationBlock, Message } from '@renderer/types/newMessageTypes'
@@ -76,7 +74,7 @@ const findCitationBlockWithGrounding = (message: Message): CitationBlock | undef
   for (const blockId of message.blocks) {
     const block = messageBlocksSelectors.selectById(state, blockId)
     if (block && block.type === MessageBlockType.CITATION) {
-      const citation = block as CitationBlock
+      const citation = block
       if (citation.citationType === 'grounding' && citation.groundingMetadata) {
         return citation
       }
@@ -181,31 +179,36 @@ const thinkTagProcessor: ThoughtProcessor = {
   }
 }
 
-export function withMessageThought(message: Message): { reasoning?: string; content: string } {
-  const originalContent = getMessageContent(message).trim()
+export function withMessageThought(message: Message): Message {
+  return message
+  // const originalContent = getMessageContent(message).trim()
 
-  if (message.role !== 'assistant') {
-    return { content: originalContent }
-  }
+  // if (message.role !== 'assistant') {
+  //   return message
+  // }
 
-  const model = message.model
-  if (!model || !isReasoningModel(model)) return { content: originalContent }
+  // const model = message.model
+  // if (!model || !isReasoningModel(model)) return message
 
-  const isClaude37Sonnet = model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
-  if (isClaude37Sonnet) {
-    const assistant = getAssistantById(message.assistantId)
-    if (!assistant?.settings?.reasoning_effort) return { content: originalContent }
-  }
+  // const isClaude37Sonnet = model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
+  // if (isClaude37Sonnet) {
+  //   const assistant = getAssistantById(message.assistantId)
+  //   if (!assistant?.settings?.reasoning_effort) return message
+  // }
+  // const processors: ThoughtProcessor[] = [glmZeroPreviewProcessor, thinkTagProcessor]
+  // const processor = processors.find((p) => p.canProcess(originalContent, message))
 
-  const processors: ThoughtProcessor[] = [glmZeroPreviewProcessor, thinkTagProcessor]
-  const processor = processors.find((p) => p.canProcess(originalContent, message))
+  // if (processor) {
+  //   const { reasoning, content: processedContent } = processor.process(originalContent)
 
-  if (processor) {
-    const { reasoning, content: processedContent } = processor.process(originalContent)
-    return { reasoning: reasoning || undefined, content: processedContent }
-  }
+  //   const thinkingBlock = createThinkingBlock(message.id, reasoning, {
+  //     status: MessageBlockStatus.SUCCESS
+  //   })
 
-  return { content: originalContent }
+  //   return { reasoning: reasoning || undefined, content: processedContent }
+  // }
+
+  // return { content: originalContent }
 }
 
 export function withGenerateImage(message: Message): { content: string; images?: string[] } {

@@ -4,8 +4,8 @@ import { getTopicById } from '@renderer/hooks/useTopic'
 import i18n from '@renderer/i18n'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import store from '@renderer/store'
-import { messageBlocksSelectors, removeManyBlocks, upsertManyBlocks } from '@renderer/store/messageBlock'
-import type { Assistant, FileType, Model, Topic } from '@renderer/types'
+import { messageBlocksSelectors, removeManyBlocks } from '@renderer/store/messageBlock'
+import type { Assistant, FileType, MCPServer, Model, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessageTypes'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
@@ -91,27 +91,45 @@ export async function locateToMessage(navigate: NavigateFunction, message: Messa
   setTimeout(() => EventEmitter.emit(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id), 300)
 }
 
+/**
+ * Creates a user message object and associated blocks based on input.
+ * This is a pure function and does not dispatch to the store.
+ *
+ * @param params - The parameters for creating the message.
+ * @returns An object containing the created message and its blocks.
+ */
 export function getUserMessage({
   assistant,
   topic,
   type,
   content,
-  files
+  files,
+  // Keep other potential params if needed by createMessage
+  knowledgeBaseIds,
+  mentions,
+  enabledMCPs
 }: {
   assistant: Assistant
   topic: Topic
   type: Message['type']
   content?: string
   files?: FileType[]
-}): Message {
+  knowledgeBaseIds?: string[]
+  mentions?: Model[]
+  enabledMCPs?: MCPServer[]
+}): { message: Message; blocks: MessageBlock[] } {
   const defaultModel = getDefaultModel()
   const model = assistant.model || defaultModel
-  const messageId = uuid()
+  const messageId = uuid() // Generate ID here
   const blocks: MessageBlock[] = []
   const blockIds: string[] = []
 
   if (content?.trim()) {
-    const textBlock = createMainTextBlock(messageId, content, { status: MessageBlockStatus.SUCCESS })
+    // Pass messageId when creating blocks
+    const textBlock = createMainTextBlock(messageId, content, {
+      status: MessageBlockStatus.SUCCESS,
+      knowledgeBaseIds
+    })
     blocks.push(textBlock)
     blockIds.push(textBlock.id)
   }
@@ -129,15 +147,25 @@ export function getUserMessage({
     })
   }
 
-  if (blocks.length > 0) {
-    store.dispatch(upsertManyBlocks(blocks))
-  }
+  // 直接在createMessage中传入id
+  const message = createMessage(
+    'user',
+    topic.id, // topic.id已经是string类型
+    assistant.id,
+    type || 'text',
+    {
+      id: messageId, // 直接传入ID，避免冲突
+      modelId: model?.id,
+      model: model,
+      blocks: blockIds,
+      // 移除knowledgeBaseIds
+      mentions,
+      enabledMCPs
+    }
+  )
 
-  return createMessage('user', topic.id, assistant.id, type || 'text', {
-    modelId: model?.id,
-    model: model,
-    blocks: blockIds
-  })
+  // 不再需要手动合并ID
+  return { message, blocks }
 }
 
 export function getAssistantMessage({ assistant, topic }: { assistant: Assistant; topic: Topic }): Message {

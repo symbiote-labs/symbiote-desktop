@@ -104,7 +104,7 @@ export interface ToolBlock extends BaseMessageBlock {
 }
 
 // Consolidated Citation Block
-export interface CitationBlock extends BaseMessageBlock {
+export interface CitationMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.CITATION
   citationType: 'grounding' | 'citation' | 'annotation' | 'webSearchInfo'
   originalData: any
@@ -144,7 +144,7 @@ export type MessageBlock =
   | WebSearchMessageBlock
   | FileMessageBlock
   | ErrorMessageBlock
-  | CitationBlock
+  | CitationMessageBlock
 
 // Message 核心类型 - 包含元数据和块集合
 export type Message = {
@@ -154,7 +154,7 @@ export type Message = {
   topicId: string
   createdAt: string
   // updatedAt?: string
-  status: 'sending' | 'processing' | 'success' | 'paused' | 'error'
+  status: 'sending' | 'searching' | 'processing' | 'success' | 'paused' | 'error'
 
   // 消息元数据
   modelId?: string

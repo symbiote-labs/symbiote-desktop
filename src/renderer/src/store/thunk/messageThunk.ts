@@ -1,17 +1,14 @@
 import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
-import type { Assistant, FileType, MCPToolResponse, Topic } from '@renderer/types'
-import { FileTypes } from '@renderer/types'
+import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock } from '@renderer/types/newMessageTypes'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
 import {
   createAssistantMessage,
   createErrorBlock,
-  createFileBlock,
   createImageBlock,
   createMainTextBlock,
-  createMessage,
   createToolBlock
 } from '@renderer/utils/messageUtils/create'
 import { getTopicQueue } from '@renderer/utils/queue'
@@ -118,11 +115,11 @@ const fetchAndProcessAssistantResponseImpl = async (
   assistant: Assistant,
   userMessage: Message,
   _contextMessages: Message[],
-  passedTopic: Topic
+  passedTopicId: Topic['id']
 ) => {
   let assistantMessage: Message | null = null
   try {
-    assistantMessage = createAssistantMessage(assistant.id, passedTopic, { askId: userMessage.id })
+    assistantMessage = createAssistantMessage(assistant.id, passedTopicId, { askId: userMessage.id })
     const assistantMsgId = assistantMessage.id
 
     dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
@@ -294,62 +291,45 @@ const fetchAndProcessAssistantResponseImpl = async (
   }
 }
 
+/**
+ * 发送消息并处理助手回复
+ * @param userMessage 已创建的用户消息
+ * @param userMessageBlocks 用户消息关联的消息块
+ * @param assistant 助手对象
+ * @param topicId 主题ID
+ */
 export const sendMessage =
-  (userInput: { content: string; files?: FileType[] }, assistant: Assistant, topic: Topic) =>
+  (userMessage: Message, userMessageBlocks: MessageBlock[], assistant: Assistant, topicId: Topic['id']) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
-    let userMessage: Message | null = null
-    const userMessageBlocks: MessageBlock[] = []
-    const topicId = topic.id
-
     try {
-      // Create user message and blocks (same as before)
-      userMessage = createMessage('user', topicId, assistant.id, 'text')
-      if (userInput.content?.trim()) {
-        const textBlock = createMainTextBlock(userMessage.id, userInput.content, { status: MessageBlockStatus.SUCCESS })
-        userMessageBlocks.push(textBlock)
-        userMessage.blocks.push(textBlock.id)
-      }
-      if (userInput.files?.length) {
-        userInput.files.forEach((file) => {
-          if (file.type === FileTypes.IMAGE) {
-            const imgBlock = createImageBlock(userMessage!.id, { file: file, status: MessageBlockStatus.SUCCESS })
-            userMessageBlocks.push(imgBlock)
-            userMessage!.blocks.push(imgBlock.id)
-          } else {
-            const fileBlock = createFileBlock(userMessage!.id, file, { status: MessageBlockStatus.SUCCESS })
-            userMessageBlocks.push(fileBlock)
-            userMessage!.blocks.push(fileBlock.id)
-          }
-        })
-      }
       if (userMessage.blocks.length === 0) {
-        console.warn('sendMessage: No content or files provided.')
+        console.warn('sendMessage: No blocks in the provided message.')
         return
       }
 
-      // Update store and DB for user message (same as before)
+      // 更新store和DB
       dispatch(newMessagesActions.addMessage({ topicId, message: userMessage }))
       if (userMessageBlocks.length > 0) {
         dispatch(upsertManyBlocks(userMessageBlocks))
       }
       await saveMessageAndBlocksToDB(userMessage, userMessageBlocks)
 
-      // Add the fetch/process call to the queue
+      // 将获取/处理调用添加到队列
       const queue = getTopicQueue(topicId)
       queue.add(async () => {
         const currentState = getState()
         const allMessages = currentState.messages.messagesByTopic[topicId] || []
-        // Pass the raw message list up to the user message
-        const contextMessages = allMessages.slice(0, allMessages.findIndex((m) => m.id === userMessage!.id) + 1)
+        // 传递原始消息列表直到用户消息
+        const contextMessages = allMessages.slice(0, allMessages.findIndex((m) => m.id === userMessage.id) + 1)
 
         await fetchAndProcessAssistantResponseImpl(
           dispatch,
           getState,
           topicId,
           assistant,
-          userMessage!, // User message reference
-          contextMessages, // Raw context for filtering inside the impl
-          topic
+          userMessage,
+          contextMessages,
+          topicId
         )
       })
     } catch (error) {
@@ -362,5 +342,36 @@ export const resendMessage =
   (messageToResend: Message, assistant: Assistant, topic: Topic) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
     console.warn('resendMessage thunk not fully implemented yet.')
-    // TODO: Implement resend logic using _fetchAndProcessAssistantResponse
+    // 初步实现resendMessage逻辑
+    try {
+      const topicId = topic.id
+      // 1. 获取要重发的消息
+      const state = getState()
+
+      // 2. 创建新的助手消息作为回复
+      const assistantMessage = createAssistantMessage(assistant.id, topicId, { askId: messageToResend.id })
+
+      // 3. 将消息添加到store
+      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+
+      // 4. 使用现有的fetchAndProcessAssistantResponseImpl处理助手响应
+      // 找到消息上下文
+      const allMessages = state.messages.messagesByTopic[topicId] || []
+      const messageIndex = allMessages.findIndex((m) => m.id === messageToResend.id)
+      const contextMessages =
+        messageIndex !== -1 ? allMessages.slice(0, messageIndex + 1) : [...allMessages, messageToResend]
+
+      // 调用处理助手响应的函数
+      await fetchAndProcessAssistantResponseImpl(
+        dispatch,
+        getState,
+        topicId,
+        assistant,
+        messageToResend,
+        contextMessages,
+        topicId
+      )
+    } catch (error) {
+      console.error('Error in resendMessage thunk:', error)
+    }
   }

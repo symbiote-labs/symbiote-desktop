@@ -316,25 +316,25 @@ export function createMessage(
   assistantId: string,
   type: 'text' | '@' | 'clear',
   overrides: PartialBy<
-    Omit<Message, 'id' | 'role' | 'topicId' | 'assistantId' | 'createdAt' | 'status' | 'type'>,
-    'blocks'
-  > & { initialContent?: string } = {}
+    Omit<Message, 'role' | 'topicId' | 'assistantId' | 'createdAt' | 'status' | 'type'>,
+    'blocks' | 'id'
+  > = {}
 ): Message {
   const now = new Date().toISOString()
-  const messageId = uuidv4()
+  const messageId = overrides.id || uuidv4()
 
-  const { initialContent, blocks: initialBlocks, ...restOverrides } = overrides
+  const { blocks: initialBlocks, id, ...restOverrides } = overrides
 
   let blocks: string[] = initialBlocks || []
 
-  if (initialContent && role !== 'system' && (!initialBlocks || initialBlocks.length === 0)) {
+  if (role !== 'system' && (!initialBlocks || initialBlocks.length === 0)) {
     console.warn('createMessage: initialContent provided but no initialBlocks. Block must be created separately.')
   }
 
   blocks = blocks.map(String)
 
   return {
-    id: messageId,
+    id: id ?? messageId,
     role,
     topicId,
     assistantId,
@@ -356,7 +356,7 @@ export function createMessage(
  */
 export function createAssistantMessage(
   assistantId: Assistant['id'],
-  topic: Topic,
+  topicId: Topic['id'],
   overrides: Partial<
     Omit<Message, 'id' | 'role' | 'assistantId' | 'topicId' | 'createdAt' | 'type' | 'status' | 'blocks'>
   > = {}
@@ -368,7 +368,7 @@ export function createAssistantMessage(
     id: messageId,
     role: 'assistant',
     assistantId: assistantId,
-    topicId: topic.id,
+    topicId,
     createdAt: now,
     type: 'text', // Default type
     status: 'sending', // Initial status

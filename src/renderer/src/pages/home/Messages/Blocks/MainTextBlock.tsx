@@ -1,6 +1,7 @@
+import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
-import type { Model } from '@renderer/types/index'
-import type { MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
+import type { Model } from '@renderer/types'
+import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
 import { Flex } from 'antd'
 import React, { useMemo } from 'react'
 import styled from 'styled-components'
@@ -21,25 +22,105 @@ const encodeHTML = (str: string): string => {
 
 interface Props {
   block: MainTextMessageBlock
+  citationsBlock?: CitationMessageBlock
   model?: Model
-  citationsData?: Map<string, { url: string; title?: string; content?: string }>
-  formattedCitations?: { number: number; url: string; hostname?: string; title?: string }[]
   mentions?: Model[]
+  message: Message
 }
 
 const MainTextBlock: React.FC<Props> = ({
   block,
+  citationsBlock,
   model,
-  citationsData = new Map(),
-  formattedCitations = [],
+  message,
+  // citationsData = new Map(),
+  // formattedCitations = [],
   mentions = []
 }) => {
+  const formattedCitations = useMemo(() => {
+    if (!citationsBlock?.citations?.length && !citationsBlock?.annotations?.length) return null
+
+    let citations: any[] = []
+
+    if (model && isOpenAIWebSearch(model)) {
+      citations =
+        citationsBlock?.metadata?.annotations?.map((url, index) => {
+          return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title }
+        }) || []
+    } else {
+      citations =
+        citationsBlock?.metadata?.citations?.map((url, index) => {
+          try {
+            const hostname = new URL(url).hostname
+            return { number: index + 1, url, hostname }
+          } catch {
+            return { number: index + 1, url, hostname: url }
+          }
+        }) || []
+    }
+    console.log('citations', citations)
+    // Deduplicate by URL
+    const urlSet = new Set()
+    return citations
+      .filter((citation) => {
+        if (!citation.url || urlSet.has(citation.url)) return false
+        urlSet.add(citation.url)
+        return true
+      })
+      .map((citation, index) => ({
+        ...citation,
+        number: index + 1 // Renumber citations sequentially after deduplication
+      }))
+  }, [citationsBlock?.citations, citationsBlock?.annotations, model])
+
+  // 获取引用数据
+  const citationsData = useMemo(() => {
+    const searchResults =
+      citationsBlock?.metadata?.webSearch?.results ||
+      citationsBlock?.metadata?.webSearchInfo ||
+      citationsBlock?.metadata?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
+      citationsBlock?.metadata?.annotations?.map((annotation) => annotation.url_citation) ||
+      []
+    const citationsUrls = formattedCitations || []
+
+    // 合并引用数据
+    const data = new Map()
+
+    // 添加webSearch结果
+    searchResults.forEach((result) => {
+      data.set(result.url || result.uri || result.link, {
+        url: result.url || result.uri || result.link,
+        title: result.title || result.hostname,
+        content: result.content
+      })
+    })
+
+    // 添加citations
+    citationsUrls.forEach((result) => {
+      if (!data.has(result.url)) {
+        data.set(result.url, {
+          url: result.url,
+          title: result.title || result.hostname || undefined,
+          content: result.content || undefined
+        })
+      }
+    })
+
+    return data
+  }, [
+    formattedCitations,
+    citationsBlock?.metadata?.annotations,
+    citationsBlock?.metadata?.groundingMetadata?.groundingChunks,
+    citationsBlock?.metadata?.webSearch?.results,
+    citationsBlock?.metadata?.webSearchInfo
+  ])
+
   // Process content to make citation numbers clickable
   const processedContentForMarkdown = useMemo(() => {
     let content = block.content
 
     // Only attempt citation processing if we have citation data
-    if (formattedCitations.length > 0 && citationsData.size > 0) {
+    if (formattedCitations && formattedCitations.length > 0 && citationsData.size > 0) {
       const citationUrls = formattedCitations.map((c) => c.url)
 
       // Logic for Perplexity/OpenRouter style: [1], [2]
@@ -85,12 +166,6 @@ const MainTextBlock: React.FC<Props> = ({
     return content
   }, [block.content, formattedCitations, citationsData, model])
 
-  // Create a minimal message object stub required by the Markdown component
-  const minimalMessageStub: Partial<Message> = {
-    id: block.messageId,
-    role: 'assistant' // Assuming this block belongs to an assistant message
-  }
-
   return (
     <>
       {/* Render mentions associated with the message */}
@@ -101,8 +176,7 @@ const MainTextBlock: React.FC<Props> = ({
           ))}
         </Flex>
       )}
-      {/* Render the main content */}
-      <Markdown message={{ ...minimalMessageStub, content: processedContentForMarkdown } as Message} />
+      <Markdown message={{ ...message, content: processedContentForMarkdown } as Message & { content: string }} />
     </>
   )
 }
