@@ -2,7 +2,7 @@ import { getOpenAIWebSearchParams, isOpenAIWebSearch } from '@renderer/config/mo
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
 import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
-import type { Assistant, MCPTool, Provider, Suggestion, WebSearchResponse } from '@renderer/types'
+import type { Assistant, MCPTool, Model, Provider, Suggestion, WebSearchResponse } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessageTypes'
 import { fetchWebContents } from '@renderer/utils/fetch'
 import { filterContextMessages, filterMessages, filterUsefulMessages } from '@renderer/utils/messageUtils/filters'
@@ -244,4 +244,62 @@ export async function fetchModels(provider: Provider) {
 
 export const formatApiKeys = (value: string) => {
   return value.replaceAll('，', ',').replaceAll(' ', ',').replaceAll(' ', '').replaceAll('\n', ',')
+}
+
+export function checkApiProvider(provider: Provider): {
+  valid: boolean
+  error: Error | null
+} {
+  const key = 'api-check'
+  const style = { marginTop: '3vh' }
+
+  if (provider.id !== 'ollama' && provider.id !== 'lmstudio') {
+    if (!provider.apiKey) {
+      window.message.error({ content: i18n.t('message.error.enter.api.key'), key, style })
+      return {
+        valid: false,
+        error: new Error(i18n.t('message.error.enter.api.key'))
+      }
+    }
+  }
+
+  if (!provider.apiHost) {
+    window.message.error({ content: i18n.t('message.error.enter.api.host'), key, style })
+    return {
+      valid: false,
+      error: new Error(i18n.t('message.error.enter.api.host'))
+    }
+  }
+
+  if (isEmpty(provider.models)) {
+    window.message.error({ content: i18n.t('message.error.enter.model'), key, style })
+    return {
+      valid: false,
+      error: new Error(i18n.t('message.error.enter.model'))
+    }
+  }
+
+  return {
+    valid: true,
+    error: null
+  }
+}
+
+export async function checkApi(provider: Provider, model: Model) {
+  const validation = checkApiProvider(provider)
+  if (!validation.valid) {
+    return {
+      valid: validation.valid,
+      error: validation.error
+    }
+  }
+
+  const AI = new AiProvider(provider)
+
+  const { valid, error } = await AI.check(model)
+
+  return {
+    valid,
+    error
+  }
 }

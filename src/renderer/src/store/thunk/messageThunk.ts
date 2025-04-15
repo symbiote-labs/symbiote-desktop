@@ -3,7 +3,7 @@ import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import type { Assistant, FileType, MCPToolResponse, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
-import type { MainTextMessageBlock, Message as NewMessage, MessageBlock } from '@renderer/types/newMessageTypes'
+import type { MainTextMessageBlock, Message, MessageBlock } from '@renderer/types/newMessageTypes'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
 import {
   createAssistantMessage,
@@ -21,7 +21,7 @@ import type { AppDispatch, RootState } from '../index'
 import { updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
 import { newMessagesActions } from '../newMessage'
 
-const saveMessageAndBlocksToDB = async (message: NewMessage, blocks: MessageBlock[]) => {
+const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]) => {
   try {
     if (blocks.length > 0) {
       await db.message_blocks.bulkPut(blocks)
@@ -46,7 +46,7 @@ const saveMessageAndBlocksToDB = async (message: NewMessage, blocks: MessageBloc
 }
 
 const updateExistingMessageAndBlocksInDB = async (
-  updatedMessage: Partial<NewMessage> & Pick<NewMessage, 'id' | 'topicId'>,
+  updatedMessage: Partial<Message> & Pick<Message, 'id' | 'topicId'>,
   updatedBlocks: MessageBlock[]
 ) => {
   try {
@@ -77,7 +77,7 @@ const throttledStateUpdate = throttle(
     messageId: string,
     topicId: string,
     blockUpdates: MessageBlock[],
-    messageUpdates: Partial<NewMessage>,
+    messageUpdates: Partial<Message>,
     getState: () => RootState
   ) => {
     if (blockUpdates.length > 0) {
@@ -100,7 +100,7 @@ const throttledStateUpdate = throttle(
 const throttledDbUpdate = throttle(
   async (messageId: string, topicId: string, getState: () => RootState) => {
     const state = getState()
-    const message = state.newMessages.messagesByTopic[topicId]?.find((m) => m.id === messageId)
+    const message = state.messages.messagesByTopic[topicId]?.find((m) => m.id === messageId)
     if (!message) return
     const blockIds = message.blocks
     const blocks = blockIds.map((id) => state.messageBlocks.entities[id]).filter((b): b is MessageBlock => !!b)
@@ -116,13 +116,14 @@ const fetchAndProcessAssistantResponseImpl = async (
   getState: () => RootState,
   topicId: string,
   assistant: Assistant,
-  userMessage: NewMessage,
-  contextMessages: NewMessage[],
+  userMessage: Message,
+  _contextMessages: Message[],
   passedTopic: Topic
 ) => {
-  let assistantMessage: NewMessage | null = null
+  let assistantMessage: Message | null = null
   try {
     assistantMessage = createAssistantMessage(assistant.id, passedTopic, { askId: userMessage.id })
+    const assistantMsgId = assistantMessage.id
 
     dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
     await saveMessageAndBlocksToDB(assistantMessage, [])
@@ -131,7 +132,16 @@ const fetchAndProcessAssistantResponseImpl = async (
 
     let accumulatedContent = ''
     let mainTextBlockId: string | null = null
-    const assistantMsgId = assistantMessage.id
+
+    // --- Context Message Filtering --- START
+    const allMessagesForTopic = getState().messages.messagesByTopic[topicId] || []
+    // Filter messages: include up to the assistant message stub, remove 'ing' statuses
+    const assistantMessageIndex = allMessagesForTopic.findIndex((m) => m.id === assistantMsgId)
+    const messagesForContext = (
+      assistantMessageIndex !== -1 ? allMessagesForTopic.slice(0, assistantMessageIndex) : allMessagesForTopic
+    ).filter((m) => !m.status?.includes('ing'))
+    // TODO: Apply further filtering based on assistant settings (maxContextMessages, etc.) if needed
+    // --- Context Message Filtering --- END
 
     const callbacks: StreamProcessorCallbacks = {
       onTextChunk: (text) => {
@@ -174,7 +184,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onCitationData: (citations) => {
-        console.warn('onCitationData received, but createCitationBlock is not implemented.', citations)
+        console.warn('onCitationData received, creating placeholder CitationBlock.', citations)
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images[0]
@@ -187,10 +197,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onWebSearchGrounding: (groundingMetadata) => {
-        console.warn(
-          'onWebSearchGrounding received, but handler/createWebSearchBlock not fully implemented.',
-          groundingMetadata
-        )
+        console.warn('onWebSearchGrounding received, creating placeholder WebSearchBlock.', groundingMetadata)
       },
       onError: (error) => {
         console.error('Stream processing error:', error)
@@ -216,42 +223,34 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onComplete: async (status: 'error' | 'success', finalError?: any) => {
-        // Log the error if present
         if (status === 'error' && finalError) {
           console.error('Stream completed with error:', finalError)
         }
-
         const finalState = getState()
-        const finalAssistantMsg = finalState.newMessages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
+        const finalAssistantMsg = finalState.messages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
 
-        // Find the main text block ID if it exists
         const mainTextBlockId = finalAssistantMsg?.blocks.find((blockId) => {
           const block = finalState.messageBlocks.entities[blockId]
           return block && block.type === MessageBlockType.MAIN_TEXT
         })
 
-        // Update main text block status if it was streaming
         if (mainTextBlockId) {
           const mainTextBlock = finalState.messageBlocks.entities[mainTextBlockId] as MainTextMessageBlock | undefined
           if (mainTextBlock && mainTextBlock.status === MessageBlockStatus.STREAMING) {
-            // If the overall status is error, set block to error, otherwise success
             const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
             dispatch(updateOneBlock({ id: mainTextBlockId, changes: { status: blockFinalStatus } }))
           }
           // TODO: Find a way to get final usage/metrics and update the block here if needed.
-          // Example: dispatch(updateOneBlock({ id: mainTextBlockId, changes: { usage: finalUsage, metrics: finalMetrics } }));
         }
 
-        // Update final message status based on the overall stream status
-        const updates: Partial<NewMessage> = { status }
-        // TODO: Find a way to get the final model used, maybe from finalError or another callback?
-        // if (finalModel) updates.model = finalModel;
+        const updates: Partial<Message> = { status }
+        // TODO: Find a way to get the final model used
 
         dispatch(
           newMessagesActions.updateMessage({
             topicId,
             messageId: assistantMsgId,
-            updates // Only update status (and potentially model if available)
+            updates
           })
         )
         throttledDbUpdate(assistantMsgId, topicId, getState) // Ensure final DB update
@@ -260,15 +259,11 @@ const fetchAndProcessAssistantResponseImpl = async (
 
     const streamProcessorFn = createStreamProcessor(callbacks)
 
-    // Prepare messages for API
-    // TODO: Implement context filtering logic here based on assistant settings
-
-    // Call fetchChatCompletion without the incorrect type assertion
+    // Call fetchChatCompletion with filtered context and new callback signature
     await fetchChatCompletion({
-      messages: [],
+      messages: messagesForContext,
       assistant: assistant,
       onChunkReceived: streamProcessorFn
-      // Note: Handling of debug/askId needs clarification in fetchChatCompletion
     })
   } catch (error: any) {
     console.error('Error fetching chat completion:', error)
@@ -288,17 +283,21 @@ const fetchAndProcessAssistantResponseImpl = async (
       dispatch(
         newMessagesActions.updateMessage({ topicId, messageId: assistantMessage.id, updates: { status: 'error' } })
       )
-      throttledDbUpdate(assistantMessage.id, topicId, getState)
+      throttledDbUpdate(assistantMessage.id, topicId, getState) // Ensure DB is updated on error
     }
   } finally {
-    dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+    // Check if still loading before setting to false, another message might have started
+    const isLoading = getState().messages.loadingByTopic[topicId]
+    if (isLoading) {
+      dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+    }
   }
 }
 
 export const sendMessage =
   (userInput: { content: string; files?: FileType[] }, assistant: Assistant, topic: Topic) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
-    let userMessage: NewMessage | null = null
+    let userMessage: Message | null = null
     const userMessageBlocks: MessageBlock[] = []
     const topicId = topic.id
 
@@ -335,33 +334,32 @@ export const sendMessage =
       }
       await saveMessageAndBlocksToDB(userMessage, userMessageBlocks)
 
-      // --- Call the extracted function ---
+      // Add the fetch/process call to the queue
       const queue = getTopicQueue(topicId)
       queue.add(async () => {
         const currentState = getState()
-        const allMessages = currentState.newMessages.messagesByTopic[topicId] || []
-        // TODO: Implement context filtering logic here based on assistant settings
-        // For now, send all messages up to the current user message
+        const allMessages = currentState.messages.messagesByTopic[topicId] || []
+        // Pass the raw message list up to the user message
         const contextMessages = allMessages.slice(0, allMessages.findIndex((m) => m.id === userMessage!.id) + 1)
+
         await fetchAndProcessAssistantResponseImpl(
           dispatch,
           getState,
           topicId,
           assistant,
-          userMessage!,
-          contextMessages,
+          userMessage!, // User message reference
+          contextMessages, // Raw context for filtering inside the impl
           topic
         )
       })
     } catch (error) {
       console.error('Error in sendMessage thunk:', error)
-      // Handle potential errors during user message creation/saving if necessary
     }
   }
 
 // Placeholder for the new resendMessage thunk
 export const resendMessage =
-  (messageToResend: NewMessage, assistant: Assistant, topic: Topic) =>
+  (messageToResend: Message, assistant: Assistant, topic: Topic) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
     console.warn('resendMessage thunk not fully implemented yet.')
     // TODO: Implement resend logic using _fetchAndProcessAssistantResponse

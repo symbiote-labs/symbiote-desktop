@@ -1,10 +1,10 @@
 import { SyncOutlined, TranslationOutlined } from '@ant-design/icons'
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
-import { Message, Model } from '@renderer/types'
+import { Model } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessageTypes'
 import { getBriefInfo } from '@renderer/utils'
-import { withMessageThought } from '@renderer/utils/formats'
-import { Divider, Flex } from 'antd'
+import { Flex } from 'antd'
 import { clone } from 'lodash'
 import { Search } from 'lucide-react'
 import React, { Fragment, useMemo } from 'react'
@@ -13,13 +13,7 @@ import BarLoader from 'react-spinners/BarLoader'
 import BeatLoader from 'react-spinners/BeatLoader'
 import styled from 'styled-components'
 
-import Markdown from '../Markdown/Markdown'
-import CitationsList from './CitationsList'
-import MessageAttachments from './MessageAttachments'
 import MessageError from './MessageError'
-import MessageImage from './MessageImage'
-import MessageThought from './MessageThought'
-import MessageTools from './MessageTools'
 
 interface Props {
   message: Message
@@ -220,7 +214,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
           )}
         </Fragment>
       )}
-      {message?.metadata?.groundingMetadata && message.status == 'success' && (
+      {/* {message?.metadata?.groundingMetadata && message.status == 'success' && (
         <>
           <CitationsList
             citations={
@@ -242,8 +236,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
             }}
           />
         </>
-      )}
-      {formattedCitations && (
+      )} */}
+      {/* {formattedCitations && (
         <CitationsList
           citations={formattedCitations.map((citation) => ({
             number: citation.number,
@@ -272,8 +266,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
             showFavicon: true
           }))}
         />
-      )}
-      <MessageAttachments message={message} />
+      )} */}
+      {/* <MessageAttachments message={message} /> // TODO 没想好放在哪 */}
     </Fragment>
   )
 }

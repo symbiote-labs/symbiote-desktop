@@ -1,10 +1,12 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type {
+  CitationBlock,
   FileMessageBlock,
   ImageMessageBlock,
   MainTextMessageBlock,
-  Message
+  Message,
+  WebSearchMessageBlock
 } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 
@@ -85,6 +87,46 @@ export const getMessageContent = (message: Message): string => {
 export const getKnowledgeBaseIds = (message: Message): string[] | undefined => {
   const mainTextBlock = findMainTextBlock(message)
   return mainTextBlock?.knowledgeBaseIds
+}
+
+/**
+ * Finds all CitationBlocks associated with a given message.
+ * @param message - The message object.
+ * @returns An array of CitationBlocks (empty if none found).
+ */
+export const findCitationBlocks = (message: Message): CitationBlock[] => {
+  if (!message || !message.blocks || message.blocks.length === 0) {
+    return []
+  }
+  const state = store.getState()
+  const citationBlocks: CitationBlock[] = []
+  for (const blockId of message.blocks) {
+    const block = messageBlocksSelectors.selectById(state, blockId)
+    if (block && block.type === MessageBlockType.CITATION) {
+      citationBlocks.push(block as CitationBlock)
+    }
+  }
+  return citationBlocks
+}
+
+/**
+ * Finds the WebSearchMessageBlock associated with a given message.
+ * Assumes only one web search block per message.
+ * @param message - The message object.
+ * @returns The WebSearchMessageBlock or undefined if not found.
+ */
+export const findWebSearchBlock = (message: Message): WebSearchMessageBlock | undefined => {
+  if (!message || !message.blocks || message.blocks.length === 0) {
+    return undefined
+  }
+  const state = store.getState()
+  for (const blockId of message.blocks) {
+    const block = messageBlocksSelectors.selectById(state, blockId)
+    if (block && block.type === MessageBlockType.WEB_SEARCH) {
+      return block as WebSearchMessageBlock
+    }
+  }
+  return undefined
 }
 
 // You can add more helper functions here to find other block types if needed.

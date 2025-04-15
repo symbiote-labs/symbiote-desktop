@@ -32,7 +32,8 @@ export {
   filterEmptyMessages,
   filterMessages,
   filterUsefulMessages,
-  filterUserRoleStartMessages
+  filterUserRoleStartMessages,
+  getGroupedMessages
 } from '@renderer/utils/messageUtils/filters'
 
 export function getContextCount(assistant: Assistant, messages: Message[]) {
