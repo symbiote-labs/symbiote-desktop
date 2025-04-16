@@ -81,18 +81,50 @@ const messagesSlice = createSlice({
         state.loadingByTopic[topicId] = false
       }
     },
-    updateMessage(state, action: PayloadAction<{ topicId: string; messageId: string; updates: Partial<Message> }>) {
+    updateMessage(
+      state,
+      action: PayloadAction<{
+        topicId: string
+        messageId: string
+        updates: Partial<Message> & { blockInstruction?: { id: string; position?: number } }
+      }>
+    ) {
       const { topicId, messageId, updates } = action.payload
       const topicMessages = state.messagesByTopic[topicId]
       if (topicMessages) {
         const messageIndex = topicMessages.findIndex((msg) => msg.id === messageId)
         if (messageIndex !== -1) {
           const messageToUpdate = topicMessages[messageIndex]
-          // Ensure incoming blocks update is string[] if present
-          if (updates.blocks) {
-            updates.blocks = updates.blocks.map(String)
+
+          // Separate blockInstruction from other updates
+          const { blockInstruction, ...otherUpdates } = updates
+
+          // Apply other updates first
+          // Ensure incoming blocks update (if any) is string[]
+          if (otherUpdates.blocks) {
+            otherUpdates.blocks = otherUpdates.blocks.map(String)
           }
-          Object.assign(messageToUpdate, updates)
+          Object.assign(messageToUpdate, otherUpdates)
+
+          // Handle adding a block if instruction exists
+          if (blockInstruction) {
+            const { id: blockIdToAdd, position } = blockInstruction
+
+            if (!messageToUpdate.blocks) {
+              messageToUpdate.blocks = []
+            }
+
+            // Ensure we don't add duplicates if accidentally called multiple times
+            if (!messageToUpdate.blocks.includes(blockIdToAdd)) {
+              if (typeof position === 'number' && position >= 0 && position <= messageToUpdate.blocks.length) {
+                // Insert at specific position
+                messageToUpdate.blocks.splice(position, 0, blockIdToAdd)
+              } else {
+                // Push to the end (default or invalid position)
+                messageToUpdate.blocks.push(blockIdToAdd)
+              }
+            }
+          }
         }
       }
     },

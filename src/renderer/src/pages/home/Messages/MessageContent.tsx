@@ -21,19 +21,6 @@ interface Props {
 const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   const { t } = useTranslation()
   const message = withMessageThought(clone(_message))
-  // HTML实体编码辅助函数
-  const encodeHTML = (str: string) => {
-    return str.replace(/[&<>"']/g, (match) => {
-      const entities: { [key: string]: string } = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&apos;'
-      }
-      return entities[match]
-    })
-  }
 
   // Format citations for display
   // const formattedCitations = useMemo(() => {
@@ -190,7 +177,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   // }
   // const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
 
-  console.log('message', message)
+  // console.log('message', message)
 
   return (
     <Fragment>

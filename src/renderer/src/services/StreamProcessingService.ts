@@ -33,14 +33,14 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
   return (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => {
     try {
       // 1. Handle the manual final signal first
-      if ('type' in chunk && chunk.type === 'final') {
-        callbacks.onComplete?.(chunk.status, chunk.error)
+      if (chunk?.type === 'final' && chunk?.status === 'success') {
+        callbacks.onComplete?.(chunk?.status)
         return
       }
 
       // 2. Process the actual ChunkCallbackData
       const data = chunk as ChunkCallbackData // Cast after checking for 'final'
-
+      console.log('createStreamProcessor', data)
       // Invoke callbacks based on the fields present in the chunk data
       if (data.text && callbacks.onTextChunk) {
         callbacks.onTextChunk(data.text)

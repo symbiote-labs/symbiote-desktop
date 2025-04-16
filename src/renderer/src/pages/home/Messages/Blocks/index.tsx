@@ -34,7 +34,6 @@ interface Props {
 const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   // 始终调用useSelector，避免条件调用Hook
   const blockEntities = useSelector((state: RootState) => messageBlocksSelectors.selectEntities(state))
-  console.log('blocks', blocks)
   if (!blocks || blocks.length === 0) return null
 
   // 判断blocks是否为ID数组
@@ -44,8 +43,6 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   const renderedBlocks = isBlockIds
     ? ((blocks as string[]).map((blockId) => blockEntities[blockId]).filter(Boolean) as MessageBlock[])
     : (blocks as MessageBlock[])
-
-  console.log('blocks', renderedBlocks)
 
   return (
     <>

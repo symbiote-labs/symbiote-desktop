@@ -27,7 +27,7 @@ export async function fetchChatCompletion({
 }: {
   messages: Message[]
   assistant: Assistant
-  onChunkReceived: (chunk: ChunkCallbackData) => void
+  onChunkReceived: (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => void
 }) {
   const provider = getAssistantProvider(assistant)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
@@ -118,8 +118,10 @@ export async function fetchChatCompletion({
       },
       mcpTools: mcpTools
     })
+    onChunkReceived({ type: 'final', status: 'success' })
   } catch (error: any) {
     console.error('Error during AI.completions call:', error)
+    onChunkReceived({ type: 'final', status: 'error', error })
     throw error
   }
 }
