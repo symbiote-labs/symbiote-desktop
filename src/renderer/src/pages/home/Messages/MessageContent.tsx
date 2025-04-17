@@ -59,6 +59,17 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   //     }))
   // }, [message.metadata?.citations, message.metadata?.annotations, model])
 
+  // 判断是否有引用内容
+  // 挪到 CitationBlock 组件中
+  // const hasCitations = useMemo(() => {
+  //   return !!(
+  //     (formattedCitations && formattedCitations.length > 0) ||
+  //     (message?.metadata?.webSearch && message.status === 'success') ||
+  //     (message?.metadata?.webSearchInfo && message.status === 'success') ||
+  //     (message?.metadata?.groundingMetadata && message.status === 'success')
+  //   )
+  // }, [formattedCitations, message])
+
   // 获取引用数据
   // const citationsData = useMemo(() => {
   //   const searchResults =
