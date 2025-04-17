@@ -35,16 +35,12 @@ interface Props {
 const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   // 始终调用useSelector，避免条件调用Hook
   const blockEntities = useSelector((state: RootState) => messageBlocksSelectors.selectEntities(state))
-  if (!blocks || blocks.length === 0) return null
-
-  // 判断blocks是否为ID数组
-  const isBlockIds = typeof blocks[0] === 'string'
+  // if (!blocks || blocks.length === 0) return null
 
   // 根据blocks类型处理渲染数据
-  const renderedBlocks = isBlockIds
-    ? ((blocks as string[]).map((blockId) => blockEntities[blockId]).filter(Boolean) as MessageBlock[])
-    : (blocks as MessageBlock[])
-
+  const renderedBlocks = blocks.map((blockId) => blockEntities[blockId]).filter(Boolean)
+  console.log('renderedBlocks', renderedBlocks)
+  console.log('renderMessage', message)
   return (
     <>
       {renderedBlocks.map((block) => {

@@ -1,8 +1,9 @@
 import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
+import store from '@renderer/store'
 import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
-import type { MainTextMessageBlock, Message, MessageBlock } from '@renderer/types/newMessageTypes'
+import type { Message, MessageBlock } from '@renderer/types/newMessageTypes'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
 import {
   createAssistantMessage,
@@ -77,32 +78,24 @@ const updateExistingMessageAndBlocksInDB = async (
     console.error(`[updateExistingMsg] Failed to update message ${updatedMessage.id}:`, error)
   }
 }
+const throttledBlockUpdate = throttle((id, blockUpdate) => {
+  store.dispatch(updateOneBlock({ id, changes: blockUpdate }))
+}, 150)
 
-const throttledStateUpdate = throttle(
-  (
-    dispatch: AppDispatch,
-    messageId: string,
-    topicId: string,
-    blockUpdates: MessageBlock[],
-    messageUpdates: Partial<Message> & { blockInstruction?: { id: string; position?: number } },
-    getState: () => RootState
-  ) => {
-    if (blockUpdates.length > 0) {
-      dispatch(upsertManyBlocks(blockUpdates))
-      const currentState = getState()
-      blockUpdates.forEach((block) => {
-        if (!currentState.messageBlocks.entities[block.id]) {
-          dispatch(newMessagesActions.upsertBlockReference({ messageId, blockId: block.id, status: block.status }))
-        }
-      })
-    }
-    if (Object.keys(messageUpdates).length > 0) {
-      dispatch(newMessagesActions.updateMessage({ topicId, messageId, updates: messageUpdates }))
-    }
-  },
-  150,
-  { leading: true, trailing: true }
-)
+// const throttledMessageUpdate = throttle((topicId, messageId, messageUpdates) => {
+//   const dispatch = store.dispatch
+//   dispatch(newMessagesActions.updateMessage({ topicId, messageId, updates: { blockInstruction: messageUpdates } }))
+// }, 150)
+
+const messageAndBlockUpdate = (topicId, messageId, blockUpdate) => {
+  const dispatch = store.dispatch
+  store.dispatch(
+    newMessagesActions.updateMessage({ topicId, messageId, updates: { blockInstruction: { id: blockUpdate.id } } })
+  )
+  dispatch(upsertOneBlock(blockUpdate))
+
+  dispatch(newMessagesActions.upsertBlockReference({ messageId, blockId: blockUpdate.id, status: blockUpdate.status }))
+}
 
 const throttledDbUpdate = throttle(
   async (messageId: string, topicId: string, getState: () => RootState) => {
@@ -110,7 +103,7 @@ const throttledDbUpdate = throttle(
     const message = state.messages.messagesByTopic[topicId]?.find((m) => m.id === messageId)
     if (!message) return
     const blockIds = message.blocks
-    const blocks = blockIds.map((id) => state.messageBlocks.entities[id]).filter((b): b is MessageBlock => !!b)
+    const blocks = blockIds.map((id) => state.messageBlocks.entities[id]).filter((b) => !!b)
     await updateExistingMessageAndBlocksInDB({ id: messageId, topicId, status: message.status }, blocks)
   },
   500,
@@ -129,11 +122,14 @@ const fetchAndProcessAssistantResponseImpl = async (
 ) => {
   let assistantMessage: Message | null = null
   try {
+    // 创建助手消息
     assistantMessage = createAssistantMessage(assistant.id, passedTopicId, { askId: userMessage.id })
     const assistantMsgId = assistantMessage.id
-
+    // 将助手消息添加到store
     dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-
+    // 保存助手消息到DB
+    await saveMessageAndBlocksToDB(assistantMessage, [])
+    // 设置会话加载状态
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
     let accumulatedContent = ''
@@ -151,19 +147,16 @@ const fetchAndProcessAssistantResponseImpl = async (
     // TODO: Apply further filtering based on assistant settings (maxContextMessages, etc.) if needed
     // --- Context Message Filtering --- END
 
+    // const _throttledBlockUpdate = throttledBlockUpdate.bind(null, dispatch)
+    // const _messageAndBlockUpdate = messageAndBlockUpdate.bind(null, dispatch)
+
     const callbacks: StreamProcessorCallbacks = {
       onTextChunk: (text) => {
         accumulatedContent += text
-        let blockToUpsert: MessageBlock | null = null
-
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
-          // Append to existing main text block
-          dispatch(
-            updateOneBlock({
-              id: lastBlockId, // Use lastBlockId
-              changes: { content: accumulatedContent, status: MessageBlockStatus.STREAMING }
-            })
-          )
+          throttledBlockUpdate(lastBlockId, {
+            content: accumulatedContent
+          })
         } else {
           // Create a new main text block
           const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
@@ -171,17 +164,9 @@ const fetchAndProcessAssistantResponseImpl = async (
           })
           lastBlockId = newBlock.id // Update tracker
           lastBlockType = MessageBlockType.MAIN_TEXT // Update tracker
-          blockToUpsert = newBlock // Pass this new block to the throttled update
+          messageAndBlockUpdate(topicId, assistantMsgId, newBlock)
         }
 
-        throttledStateUpdate(
-          dispatch,
-          assistantMsgId,
-          topicId,
-          blockToUpsert ? [blockToUpsert] : [], // Only pass block if newly created
-          { status: 'processing', blockInstruction: { id: lastBlockId } }, // Pass the prepared message updates
-          getState
-        )
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onToolCallComplete: (toolResponse: MCPToolResponse) => {
@@ -268,50 +253,44 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onComplete: async (status: 'error' | 'success', finalError?: any) => {
-        if (status === 'error' && finalError) {
-          console.error('Stream completed with error:', finalError)
-        }
-        const finalState = getState()
-        const finalAssistantMsg = finalState.messages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
-
-        // Find the LAST main text block ID if it exists
-        const lastMainTextBlockId = finalAssistantMsg?.blocks
-          .slice()
-          .reverse()
-          .find((blockId) => {
-            const block = finalState.messageBlocks.entities[blockId]
-            return block && block.type === MessageBlockType.MAIN_TEXT
-          })
-
-        // Set the final status of the last streaming block (if it was main text)
-        if (lastMainTextBlockId) {
-          const lastMainTextBlock = finalState.messageBlocks.entities[lastMainTextBlockId] as
-            | MainTextMessageBlock
-            | undefined
-          if (lastMainTextBlock && lastMainTextBlock.status === MessageBlockStatus.STREAMING) {
-            const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
-            dispatch(updateOneBlock({ id: lastMainTextBlockId, changes: { status: blockFinalStatus } }))
-          }
-        } else if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
-          // Handle case where the very last block added was main text and might still be streaming
-          const lastBlock = finalState.messageBlocks.entities[lastBlockId] as MainTextMessageBlock | undefined
-          if (lastBlock && lastBlock.status === MessageBlockStatus.STREAMING) {
-            const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
-            dispatch(updateOneBlock({ id: lastBlockId, changes: { status: blockFinalStatus } }))
-          }
-        }
-
-        const updates: Partial<Message> = { status }
-        // TODO: Find a way to get the final model used
-
-        dispatch(
-          newMessagesActions.updateMessage({
-            topicId,
-            messageId: assistantMsgId,
-            updates
-          })
-        )
-        throttledDbUpdate(assistantMsgId, topicId, getState) // Ensure final DB update
+        // if (status === 'error' && finalError) {
+        //   console.error('Stream completed with error:', finalError)
+        // }
+        // const finalState = getState()
+        // const finalAssistantMsg = finalState.messages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
+        // // Find the LAST main text block ID if it exists
+        // const lastMainTextBlockId = finalAssistantMsg?.blocks
+        //   .slice()
+        //   .reverse()
+        //   .find((blockId) => {
+        //     const block = finalState.messageBlocks.entities[blockId]
+        //     return block && block.type === MessageBlockType.MAIN_TEXT
+        //   })
+        // // Set the final status of the last streaming block (if it was main text)
+        // if (lastMainTextBlockId) {
+        //   const lastMainTextBlock = finalState.messageBlocks.entities[lastMainTextBlockId]
+        //   if (lastMainTextBlock && lastMainTextBlock.status === MessageBlockStatus.STREAMING) {
+        //     const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
+        //     dispatch(updateOneBlock({ id: lastMainTextBlockId, changes: { status: blockFinalStatus } }))
+        //   }
+        // } else if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
+        //   // Handle case where the very last block added was main text and might still be streaming
+        //   const lastBlock = finalState.messageBlocks.entities[lastBlockId]
+        //   if (lastBlock && lastBlock.status === MessageBlockStatus.STREAMING) {
+        //     const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
+        //     dispatch(updateOneBlock({ id: lastBlockId, changes: { status: blockFinalStatus } }))
+        //   }
+        // }
+        // const updates: Partial<Message> = { status }
+        // // TODO: Find a way to get the final model used
+        // dispatch(
+        //   newMessagesActions.updateMessage({
+        //     topicId,
+        //     messageId: assistantMsgId,
+        //     updates
+        //   })
+        // )
+        // throttledDbUpdate(assistantMsgId, topicId, getState) // Ensure final DB update
       }
     }
 

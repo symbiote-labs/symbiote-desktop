@@ -95,35 +95,27 @@ const messagesSlice = createSlice({
         const messageIndex = topicMessages.findIndex((msg) => msg.id === messageId)
         if (messageIndex !== -1) {
           const messageToUpdate = topicMessages[messageIndex]
-
           // Separate blockInstruction from other updates
           const { blockInstruction, ...otherUpdates } = updates
 
-          // Apply other updates first
-          // Ensure incoming blocks update (if any) is string[]
-          if (otherUpdates.blocks) {
-            otherUpdates.blocks = otherUpdates.blocks.map(String)
-          }
-          Object.assign(messageToUpdate, otherUpdates)
-
-          // Handle adding a block if instruction exists
           if (blockInstruction) {
+            // 获取要添加的块ID和位置，用于某个blockId的更新
             const { id: blockIdToAdd, position } = blockInstruction
-
-            if (!messageToUpdate.blocks) {
-              messageToUpdate.blocks = []
-            }
-
-            // Ensure we don't add duplicates if accidentally called multiple times
             if (!messageToUpdate.blocks.includes(blockIdToAdd)) {
+              // 有position就插入
               if (typeof position === 'number' && position >= 0 && position <= messageToUpdate.blocks.length) {
-                // Insert at specific position
                 messageToUpdate.blocks.splice(position, 0, blockIdToAdd)
               } else {
-                // Push to the end (default or invalid position)
+                // 没有position就添加到末尾
                 messageToUpdate.blocks.push(blockIdToAdd)
               }
             }
+          } else {
+            // 直接覆盖
+            if (otherUpdates.blocks) {
+              otherUpdates.blocks = otherUpdates.blocks.map(String)
+            }
+            Object.assign(messageToUpdate, otherUpdates)
           }
         }
       }
@@ -162,7 +154,7 @@ const messagesSlice = createSlice({
       // Update Message Status based on block status
       if (status) {
         if (
-          status === MessageBlockStatus.PROCESSING &&
+          (status === MessageBlockStatus.PROCESSING || status === MessageBlockStatus.STREAMING) &&
           message.status !== 'processing' &&
           message.status !== 'success' &&
           message.status !== 'error'

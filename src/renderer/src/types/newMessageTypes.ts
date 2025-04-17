@@ -28,7 +28,7 @@ export enum MessageBlockType {
 
 // 块状态定义 - 更细粒度地表达处理状态
 export enum MessageBlockStatus {
-  PENDING = 'pending', // 等待处理
+  //   PENDING = 'pending', // 等待处理
   PROCESSING = 'processing', // 正在处理
   STREAMING = 'streaming', // 正在流式接收
   SUCCESS = 'success', // 处理成功
@@ -154,7 +154,7 @@ export type Message = {
   topicId: string
   createdAt: string
   // updatedAt?: string
-  status: 'sending' | 'searching' | 'processing' | 'success' | 'paused' | 'error'
+  status: 'sending' | 'processing' | 'success' | 'paused' | 'error'
 
   // 消息元数据
   modelId?: string

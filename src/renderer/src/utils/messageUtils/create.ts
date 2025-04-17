@@ -235,7 +235,7 @@ export function createToolBlock(
   toolId: string,
   overrides: Partial<Omit<ToolBlock, 'id' | 'messageId' | 'type' | 'toolId'>> = {}
 ): ToolBlock {
-  let initialStatus = MessageBlockStatus.PENDING
+  let initialStatus = MessageBlockStatus.PROCESSING
   if (overrides.content !== undefined || overrides.error !== undefined) {
     initialStatus = overrides.error ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
   } else if (overrides.toolName || overrides.arguments) {

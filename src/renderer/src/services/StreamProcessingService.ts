@@ -1,4 +1,4 @@
-import type { GroundingMetadata } from '@google/generative-ai'
+import type { GroundingMetadata } from '@google/genai'
 import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
 import { GenerateImageResponse, MCPToolResponse } from '@renderer/types'
 import type OpenAI from 'openai'

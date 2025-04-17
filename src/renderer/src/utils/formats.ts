@@ -1,6 +1,6 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { CitationBlock, Message } from '@renderer/types/newMessageTypes'
+import type { CitationMessageBlock, Message } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 
 import { findImageBlocks, getMessageContent } from './messageUtils/find'
@@ -66,7 +66,7 @@ export function removeSvgEmptyLines(text: string): string {
 
 // Helper function to find the first citation block with grounding metadata
 // Ideally, move this to find.ts later
-const findCitationBlockWithGrounding = (message: Message): CitationBlock | undefined => {
+const findCitationBlockWithGrounding = (message: Message): CitationMessageBlock | undefined => {
   if (!message || !message.blocks || message.blocks.length === 0) {
     return undefined
   }
