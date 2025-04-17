@@ -92,7 +92,7 @@ export interface ImageMessageBlock extends BaseMessageBlock {
 }
 
 // Added unified ToolBlock
-export interface ToolBlock extends BaseMessageBlock {
+export interface ToolMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.TOOL
   toolId: string
   toolName?: string
@@ -140,7 +140,7 @@ export type MessageBlock =
   | TranslationMessageBlock
   | CodeMessageBlock
   | ImageMessageBlock
-  | ToolBlock
+  | ToolMessageBlock
   | WebSearchMessageBlock
   | FileMessageBlock
   | ErrorMessageBlock

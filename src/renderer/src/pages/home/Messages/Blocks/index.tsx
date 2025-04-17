@@ -22,6 +22,7 @@ import FileBlock from './FileBlock'
 import ImageBlock from './ImageBlock'
 import MainTextBlock from './MainTextBlock'
 import ThinkingBlock from './ThinkingBlock'
+import ToolBlock from './ToolBlock'
 import TranslationBlock from './TranslationBlock'
 import WebSearchBlock from './WebSearchBlock'
 interface Props {
@@ -64,8 +65,8 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
             return <ImageBlock key={block.id} block={block as ImageMessageBlock} />
           case MessageBlockType.FILE:
             return <FileBlock key={block.id} block={block as FileMessageBlock} />
-          // case MessageBlockType.TOOL:
-          //   return <ToolBlock key={block.id} block={block as ToolBlock} />
+          case MessageBlockType.TOOL:
+            return <ToolBlock key={block.id} block={block} />
           case MessageBlockType.CITATION:
             return <CitationBlock key={block.id} block={block} model={model} />
           case MessageBlockType.WEB_SEARCH:

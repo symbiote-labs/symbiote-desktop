@@ -1,7 +1,7 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type {
-  CitationBlock,
+  CitationMessageBlock,
   FileMessageBlock,
   ImageMessageBlock,
   MainTextMessageBlock,
@@ -94,16 +94,16 @@ export const getKnowledgeBaseIds = (message: Message): string[] | undefined => {
  * @param message - The message object.
  * @returns An array of CitationBlocks (empty if none found).
  */
-export const findCitationBlocks = (message: Message): CitationBlock[] => {
+export const findCitationBlocks = (message: Message): CitationMessageBlock[] => {
   if (!message || !message.blocks || message.blocks.length === 0) {
     return []
   }
   const state = store.getState()
-  const citationBlocks: CitationBlock[] = []
+  const citationBlocks: CitationMessageBlock[] = []
   for (const blockId of message.blocks) {
     const block = messageBlocksSelectors.selectById(state, blockId)
     if (block && block.type === MessageBlockType.CITATION) {
-      citationBlocks.push(block as CitationBlock)
+      citationBlocks.push(block as CitationMessageBlock)
     }
   }
   return citationBlocks

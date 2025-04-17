@@ -2,7 +2,7 @@ import type { Assistant, FileType, Topic, WebSearchResult } from '@renderer/type
 import { FileTypes } from '@renderer/types'
 import type {
   BaseMessageBlock,
-  CitationBlock,
+  CitationMessageBlock,
   CodeMessageBlock,
   ErrorMessageBlock,
   FileMessageBlock,
@@ -270,9 +270,9 @@ export function createToolBlock(
  */
 export function createCitationBlock(
   messageId: string,
-  citationData: Omit<CitationBlock, keyof BaseMessageBlock | 'type'>,
-  overrides: Partial<Omit<CitationBlock, 'id' | 'messageId' | 'type' | keyof typeof citationData>> = {}
-): CitationBlock {
+  citationData: Omit<CitationMessageBlock, keyof BaseMessageBlock | 'type'>,
+  overrides: Partial<Omit<CitationMessageBlock, 'id' | 'messageId' | 'type' | keyof typeof citationData>> = {}
+): CitationMessageBlock {
   const {
     citationType,
     originalData,
@@ -374,5 +374,43 @@ export function createAssistantMessage(
     status: 'sending', // Initial status
     blocks: [], // Initialize with empty block IDs array
     ...overrides
+  }
+}
+
+/**
+ * Creates a new Message object based on an existing one, resetting mutable fields
+ * typically needed before regeneration or significant updates.
+ * This function is pure and does not interact with the Redux store.
+ * The caller is responsible for managing the removal of old blocks from the store if necessary.
+ *
+ * @param originalMessage - The message to reset.
+ * @param updates - Optional updates for model, modelId, and status.
+ * @returns A new Message object with reset fields.
+ */
+export function resetMessage(
+  originalMessage: Message,
+  updates: Partial<Pick<Message, 'model' | 'modelId' | 'status' | 'blocks'>> = {}
+): Message {
+  return {
+    // Keep immutable core properties
+    id: originalMessage.id,
+    role: originalMessage.role,
+    topicId: originalMessage.topicId,
+    assistantId: originalMessage.assistantId,
+    type: originalMessage.type,
+    createdAt: originalMessage.createdAt, // Keep original creation timestamp
+
+    // Apply updates or use existing values
+    model: updates.model ?? originalMessage.model,
+    modelId: updates.modelId ?? originalMessage.modelId,
+    status: updates.status ?? 'processing', // Default reset status to 'processing'
+
+    // Reset mutable/volatile properties
+    blocks: updates.blocks ?? [], // Always clear blocks array
+    useful: undefined,
+    askId: undefined,
+    mentions: undefined,
+    enabledMCPs: undefined
+    // NOTE: Add any other fields here that should be reset upon message regeneration
   }
 }

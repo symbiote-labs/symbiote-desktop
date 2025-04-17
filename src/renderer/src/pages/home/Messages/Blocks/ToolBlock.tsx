@@ -1,14 +1,14 @@
-import type { ToolBlock as ToolBlockType } from '@renderer/types/newMessageTypes'
+import type { ToolMessageBlock } from '@renderer/types/newMessageTypes'
 import React from 'react'
 
 import MessageTools from '../MessageTools'
 
 interface Props {
-  block: ToolBlockType
+  block: ToolMessageBlock
 }
 
 const ToolBlock: React.FC<Props> = ({ block }) => {
-  return <MessageTools message={block} />
+  return <MessageTools blocks={block} />
 }
 
 export default React.memo(ToolBlock)

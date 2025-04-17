@@ -15,7 +15,8 @@ import {
   createFileBlock,
   createImageBlock,
   createMainTextBlock,
-  createMessage
+  createMessage,
+  resetMessage
 } from '@renderer/utils/messageUtils/create'
 import { getMessageContent } from '@renderer/utils/messageUtils/find'
 import dayjs from 'dayjs'
@@ -172,7 +173,7 @@ export function getAssistantMessage({ assistant, topic }: { assistant: Assistant
   const defaultModel = getDefaultModel()
   const model = assistant.model || defaultModel
 
-  return createAssistantMessage(assistant.id, topic, {
+  return createAssistantMessage(assistant.id, topic.id, {
     modelId: model?.id,
     model: model
   })
@@ -210,9 +211,7 @@ export async function getMessageTitle(message: Message, length = 30): Promise<st
       window.message.loading({ content: t('chat.topics.export.wait_for_title_naming'), key: 'message-title-naming' })
 
       const tempTextBlock = createMainTextBlock(message.id, content, { status: MessageBlockStatus.SUCCESS })
-      const tempMessage = createMessage(message.role, message.topicId, message.assistantId, message.type, {
-        id: message.id,
-        createdAt: message.createdAt,
+      const tempMessage = resetMessage(message, {
         status: 'success',
         blocks: [tempTextBlock.id]
       })

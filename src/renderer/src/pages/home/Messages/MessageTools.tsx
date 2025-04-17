@@ -1,6 +1,6 @@
 import { CheckOutlined, ExpandOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { Message } from '@renderer/types'
+import { ToolBlock } from '@renderer/types/newMessageTypes'
 import { Collapse, message as antdMessage, Modal, Tooltip } from 'antd'
 import { isEmpty } from 'lodash'
 import { FC, useMemo, useState } from 'react'
@@ -8,10 +8,11 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 interface Props {
-  message: Message
+  blocks: ToolBlock
 }
 
-const MessageTools: FC<Props> = ({ message }) => {
+const MessageTools: FC<Props> = ({ blocks }) => {
+  console.log('blocks', blocks)
   const [activeKeys, setActiveKeys] = useState<string[]>([])
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({})
   const [expandedResponse, setExpandedResponse] = useState<{ content: string; title: string } | null>(null)

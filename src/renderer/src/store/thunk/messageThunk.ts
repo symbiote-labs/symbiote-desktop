@@ -47,22 +47,32 @@ const updateExistingMessageAndBlocksInDB = async (
   updatedBlocks: MessageBlock[]
 ) => {
   try {
+    // Always update blocks if provided
     if (updatedBlocks.length > 0) {
       await db.message_blocks.bulkPut(updatedBlocks)
     }
-    const topic = await db.topics.get(updatedMessage.topicId)
-    if (topic) {
-      const messageIndex = topic.messages.findIndex((m) => m.id === updatedMessage.id)
-      if (messageIndex !== -1) {
-        const newMessages = [...topic.messages]
-        Object.assign(newMessages[messageIndex], updatedMessage)
-        await db.topics.update(updatedMessage.topicId, { messages: newMessages })
+
+    // Check if there are message properties to update beyond id and topicId
+    const messageKeysToUpdate = Object.keys(updatedMessage).filter((key) => key !== 'id' && key !== 'topicId')
+
+    // Only proceed with topic update if there are actual message changes
+    if (messageKeysToUpdate.length > 0) {
+      const topic = await db.topics.get(updatedMessage.topicId)
+      if (topic) {
+        const messageIndex = topic.messages.findIndex((m) => m.id === updatedMessage.id)
+        if (messageIndex !== -1) {
+          const newMessages = [...topic.messages]
+          // Apply the updates passed in updatedMessage
+          Object.assign(newMessages[messageIndex], updatedMessage)
+          await db.topics.update(updatedMessage.topicId, { messages: newMessages })
+        } else {
+          console.error(`[updateExistingMsg] Message ${updatedMessage.id} not found in topic ${updatedMessage.topicId}`)
+        }
       } else {
-        console.error(`[updateExistingMsg] Message ${updatedMessage.id} not found in topic ${updatedMessage.topicId}`)
+        console.error(`[updateExistingMsg] Topic ${updatedMessage.topicId} not found.`)
       }
-    } else {
-      console.error(`[updateExistingMsg] Topic ${updatedMessage.topicId} not found.`)
     }
+    // If messageKeysToUpdate.length === 0, we skip topic fetch/update entirely
   } catch (error) {
     console.error(`[updateExistingMsg] Failed to update message ${updatedMessage.id}:`, error)
   }
@@ -424,5 +434,60 @@ export const resendMessage =
       )
     } catch (error) {
       console.error('Error in resendMessage thunk:', error)
+    }
+  }
+
+/**
+ * Loads messages and their blocks for a specific topic from the database
+ * and updates the Redux store.
+ */
+export const loadTopicMessagesThunk =
+  (topicId: string, forceReload: boolean = false) =>
+  async (dispatch: AppDispatch, getState: () => RootState) => {
+    const state = getState()
+    const topicMessagesExist = state.messages.messagesByTopic[topicId]
+    const isLoading = state.messages.loadingByTopic[topicId]
+
+    // Avoid refetching if messages already exist and not forcing reload, or if already loading
+    if ((topicMessagesExist && !forceReload) || isLoading) {
+      if (topicMessagesExist && isLoading) {
+        dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+      }
+      return
+    }
+
+    dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
+
+    try {
+      // Fetch the topic object which contains the messages array
+      const topic = await db.topics.get(topicId)
+      const messages = topic?.messages || [] // Get messages or default to empty array
+
+      if (messages.length > 0) {
+        const messageIds = messages.map((m) => m.id)
+        // Fetch all blocks associated with these messages
+        const blocks = await db.message_blocks.where('messageId').anyOf(messageIds).toArray()
+
+        // Dispatch actions to update the store
+        if (blocks && blocks.length > 0) {
+          dispatch(upsertManyBlocks(blocks))
+        }
+        // Ensure message.blocks is an array of strings before dispatching
+        const messagesWithBlockIds = messages.map((m) => ({
+          ...m,
+          blocks: m.blocks || []
+        }))
+        dispatch(newMessagesActions.messagesReceived({ topicId, messages: messagesWithBlockIds }))
+      } else {
+        // No messages found for the topic, dispatch empty array
+        dispatch(newMessagesActions.messagesReceived({ topicId, messages: [] }))
+      }
+    } catch (error: any) {
+      // Added type assertion for error
+      console.error(`[loadTopicMessagesThunk] Failed to load messages for topic ${topicId}:`, error)
+      // Dispatch error state (optional, depends on if you have an error state in newMessage slice)
+      // dispatch(newMessagesActions.setTopicError({ topicId, error: error.message }));
+      // Ensure loading is set to false even on error
+      dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
     }
   }
