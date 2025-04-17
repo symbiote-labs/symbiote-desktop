@@ -31,8 +31,8 @@ files:
   - '!**/{.DS_Store,Thumbs.db}'
   - '!**/{LICENSE,LICENSE.txt,LICENSE-MIT.txt,*.LICENSE.txt,NOTICE.txt,README.md,CHANGELOG.md}'
   - '!node_modules/rollup-plugin-visualizer'
-  - '!node_modules/js-tiktoken'
-  - '!node_modules/@tavily/core/node_modules/js-tiktoken'
+  # - '!node_modules/js-tiktoken'
+  # - '!node_modules/@tavily/core/node_modules/js-tiktoken'
   - '!node_modules/pdf-parse/lib/pdf.js/{v1.9.426,v1.10.88,v2.0.550}'
   - '!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}'
 asarUnpack: # Removed ASR server rules from 'files' section
@@ -54,11 +54,9 @@ win:
     - target: nsis
       arch:
         - x64
-        - arm64
     - target: portable
       arch:
         - x64
-        - arm64
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: ${productName}

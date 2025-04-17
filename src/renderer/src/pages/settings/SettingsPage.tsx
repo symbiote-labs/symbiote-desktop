@@ -31,6 +31,7 @@ import MCPSettings from './MCPSettings'
 import { McpSettingsNavbar } from './MCPSettings/McpSettingsNavbar'
 import MemorySettings from './MemorySettings'
 import MiniAppSettings from './MiniappSettings/MiniAppSettings'
+import ModelCombinationSettings from './ModelCombinationSettings'
 import ProvidersList from './ProviderSettings'
 import QuickAssistantSettings from './QuickAssistantSettings'
 import QuickPhraseSettings from './QuickPhraseSettings'
@@ -64,6 +65,12 @@ const SettingsPage: FC = () => {
             <MenuItem className={isRoute('/settings/model')}>
               <Package size={18} />
               {t('settings.model')}
+            </MenuItem>
+          </MenuItemLink>
+          <MenuItemLink to="/settings/model-combination">
+            <MenuItem className={isRoute('/settings/model-combination')}>
+              <Package size={18} />
+              {t('settings.modelCombination.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/web-search">
@@ -145,6 +152,7 @@ const SettingsPage: FC = () => {
           <Routes>
             <Route path="provider" element={<ProvidersList />} />
             <Route path="model" element={<ModelSettings />} />
+            <Route path="model-combination" element={<ModelCombinationSettings />} />
             <Route path="web-search" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
             <Route path="memory" element={<MemorySettings />} />

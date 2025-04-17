@@ -4,7 +4,7 @@ import { autoRenameTopic, TopicManager } from '@renderer/hooks/useTopic'
 import i18n from '@renderer/i18n'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getAssistantMessage, resetAssistantMessage } from '@renderer/services/MessagesService'
-import type { AppDispatch, RootState } from '@renderer/store'
+import store, { type AppDispatch, type RootState } from '@renderer/store'
 import type { Assistant, Message, Topic } from '@renderer/types'
 import type { Model } from '@renderer/types'
 import { clearTopicQueue, getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
@@ -14,6 +14,7 @@ export interface MessagesState {
   messagesByTopic: Record<string, Message[]>
   streamMessagesByTopic: Record<string, Record<string, Message | null>>
   currentTopic: Topic | null
+  currentAssistant: Assistant | null
   loadingByTopic: Record<string, boolean> // 每个会话独立的loading状态
   displayCount: number
   error: string | null
@@ -23,6 +24,7 @@ const initialState: MessagesState = {
   messagesByTopic: {},
   streamMessagesByTopic: {},
   currentTopic: null,
+  currentAssistant: null,
   loadingByTopic: {},
   displayCount: 20,
   error: null
@@ -142,6 +144,9 @@ const messagesSlice = createSlice({
     setCurrentTopic: (state, action: PayloadAction<Topic | null>) => {
       state.currentTopic = action.payload
     },
+    setCurrentAssistant: (state, action: PayloadAction<Assistant | null>) => {
+      state.currentAssistant = action.payload
+    },
     clearTopicMessages: (state, action: PayloadAction<string>) => {
       const topicId = action.payload
       state.messagesByTopic[topicId] = []
@@ -218,22 +223,24 @@ const handleResponseMessageUpdate = (
   dispatch: AppDispatch,
   getState: () => RootState
 ) => {
-  dispatch(setStreamMessage({ topicId, message }))
-  if (message.status !== 'pending') {
-    // When message is complete, commit to messages and sync with DB
-    if (message.status === 'success') {
-      autoRenameTopic(assistant, topicId)
-    }
+  setTimeout(() => {
+    dispatch(setStreamMessage({ topicId, message }))
+    if (message.status !== 'pending') {
+      // When message is complete, commit to messages and sync with DB
+      if (message.status === 'success') {
+        autoRenameTopic(assistant, topicId)
+      }
 
-    if (message.status !== 'sending') {
-      dispatch(commitStreamMessage({ topicId, messageId: message.id }))
-      const state = getState()
-      const topicMessages = state.messages.messagesByTopic[topicId]
-      if (topicMessages) {
-        syncMessagesWithDB(topicId, topicMessages)
+      if (message.status !== 'sending') {
+        dispatch(commitStreamMessage({ topicId, messageId: message.id }))
+        const state = getState()
+        const topicMessages = state.messages.messagesByTopic[topicId]
+        if (topicMessages) {
+          syncMessagesWithDB(topicId, topicMessages)
+        }
       }
     }
-  }
+  }, 0)
 }
 
 // Helper function to sync messages with database
@@ -379,9 +386,8 @@ export const sendMessage =
                 : topic.prompt
             }
 
-            // 节流
-            const throttledDispatch = throttle(handleResponseMessageUpdate, 100, { trailing: true }) // 100ms的节流时间应足够平衡用户体验和性能
-            // 寻找当前正在处理的消息在消息列表中的位置
+            // 节流，降低到 50ms，因为已经在handleResponseMessageUpdate内保证react能调度。
+            const throttledDispatch = throttle(handleResponseMessageUpdate, 50, { trailing: true })
             // const messageIndex = messages.findIndex((m) => m.id === assistantMessage.id)
             const handleMessages = (): Message[] => {
               // 找到对应的用户消息位置
@@ -517,19 +523,29 @@ export const resendMessage =
     }
   }
 
-// Modified loadTopicMessages thunk
+// Modified loadTopicMessages thunk - 优化性能，减少日志输出
 export const loadTopicMessagesThunk = (topic: Topic) => async (dispatch: AppDispatch) => {
   // 设置会话的loading状态
   dispatch(setTopicLoading({ topicId: topic.id, loading: true }))
-  dispatch(setCurrentTopic(topic))
+
+  // 如果已经有消息，不需要再次加载
+  const state = store.getState()
+  if (state.messages.messagesByTopic[topic.id]?.length > 0) {
+    dispatch(setCurrentTopic(topic))
+    dispatch(setTopicLoading({ topicId: topic.id, loading: false }))
+    return
+  }
+
   try {
-    // 使用 getTopic 获取会话对象
+    // 使用 getTopic 获取会话对象，使用缓存减少数据库访问
     const topicWithDB = await TopicManager.getTopic(topic.id)
     if (topicWithDB) {
-      // 如果数据库中有会话，加载消息，保存会话
+      // 如果数据库中有会话，加载消息
       dispatch(loadTopicMessages({ topicId: topic.id, messages: topicWithDB.messages }))
     }
+    dispatch(setCurrentTopic(topic))
   } catch (error) {
+    // 静默处理错误，减少日志输出
     dispatch(setError(error instanceof Error ? error.message : 'Failed to load messages'))
   } finally {
     // 清除会话的loading状态
@@ -645,6 +661,7 @@ export const {
   addMessage,
   updateMessage,
   setCurrentTopic,
+  setCurrentAssistant,
   clearTopicMessages,
   loadTopicMessages,
   setStreamMessage,

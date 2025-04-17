@@ -51,7 +51,16 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
 
   // 获取短记忆状态
   const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
-  const shortMemories = useAppSelector((state) => selectShortMemoriesByTopicId(state, topicId))
+
+  // 定义短记忆类型
+  interface ShortMemory {
+    id: string
+    content: string
+    topicId: string
+    createdAt: string
+  }
+
+  const shortMemories = useAppSelector((state) => selectShortMemoriesByTopicId(state, topicId)) as ShortMemory[]
 
   // 获取分析统计数据
   const totalAnalyses = useAppSelector((state) => state.memory?.analysisStats?.totalAnalyses || 0)

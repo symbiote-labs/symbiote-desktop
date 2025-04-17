@@ -8,6 +8,7 @@ import {
   removeTtsCustomModel,
   removeTtsCustomVoice,
   resetTtsCustomValues,
+  setAutoPlayTTSOutsideVoiceCall,
   setShowTTSProgressBar,
   setTtsApiKey,
   setTtsApiUrl,
@@ -530,6 +531,17 @@ const TTSSettings: FC = () => {
                     <Switch checked={ttsEnabled} onChange={(checked) => dispatch(setTtsEnabled(checked))} />
                   </SettingRow>
                   <SettingHelpText>{t('settings.tts.enable.help')}</SettingHelpText>
+
+                  {/* 自动播放TTS设置 */}
+                  <SettingRow style={{ marginTop: 16 }}>
+                    <SettingRowTitle>在语音通话模式之外自动播放TTS</SettingRowTitle>
+                    <Switch
+                      checked={settings.autoPlayTTSOutsideVoiceCall}
+                      onChange={(checked) => dispatch(setAutoPlayTTSOutsideVoiceCall(checked))}
+                      disabled={!ttsEnabled}
+                    />
+                  </SettingRow>
+                  <SettingHelpText>启用后，即使不在语音通话模式下，也会自动播放新消息的TTS</SettingHelpText>
                 </SettingGroup>
 
                 {/* 重置按钮 */}

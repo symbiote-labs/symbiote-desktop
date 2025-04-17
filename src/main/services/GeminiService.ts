@@ -46,7 +46,7 @@ export class GeminiService {
     if (response.files) {
       return response.files
         .filter((file) => file.state === FileState.ACTIVE)
-        .find((i) => i.displayName === file.origin_name && Number(i.sizeBytes) === file.size)
+        .find((i) => i.displayName === file.origin_name && parseInt(i.sizeBytes) === file.size)
     }
     return undefined
   }

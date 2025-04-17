@@ -6,6 +6,7 @@ import i18n from '@renderer/i18n'
 class ASRServerService {
   private serverProcess: any = null
   private isServerRunning = false
+  private serverPort: number = 34515 // 默认端口
 
   /**
    * 启动ASR服务器
@@ -34,7 +35,13 @@ class ASRServerService {
       if (result.success) {
         this.isServerRunning = true
         this.serverProcess = result.pid
-        console.log('[ASRServerService] ASR服务器启动成功，PID:', result.pid)
+        // 如果返回了端口号，则更新端口
+        if (result.port) {
+          this.serverPort = result.port
+          console.log('[ASRServerService] ASR服务器启动成功，PID:', result.pid, '端口:', result.port)
+        } else {
+          console.log('[ASRServerService] ASR服务器启动成功，PID:', result.pid, '使用默认端口:', this.serverPort)
+        }
         if (window.message) {
           window.message.success({ content: i18n.t('settings.asr.server.started'), key: 'asr-server' })
         }
@@ -126,8 +133,11 @@ class ASRServerService {
    * @returns string 网页URL
    */
   getServerUrl = (): string => {
-    console.log('[ASRServerService] 获取服务器URL: http://localhost:34515')
-    return 'http://localhost:34515'
+    // 将端口保存到localStorage中，便于浏览器页面读取
+    localStorage.setItem('asr-server-port', this.serverPort.toString())
+    const url = `http://localhost:${this.serverPort}`
+    console.log('[ASRServerService] 获取服务器URL:', url)
+    return url
   }
 
   /**

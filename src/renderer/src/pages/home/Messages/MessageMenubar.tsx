@@ -1,4 +1,5 @@
-import { CheckOutlined, EditOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons'
+import { CheckOutlined, EditOutlined, QuestionCircleOutlined, SyncOutlined, BookOutlined } from '@ant-design/icons'
+import AssistantMemoryPopup from '@renderer/components/AssistantMemoryPopup'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import TextEditPopup from '@renderer/components/Popups/TextEditPopup'
@@ -52,7 +53,7 @@ interface Props {
   isGrouped?: boolean
   isLastMessage: boolean
   isAssistantMessage: boolean
-  messageContainerRef: React.RefObject<HTMLDivElement>
+  messageContainerRef: React.RefObject<HTMLDivElement | null>
   setModel: (model: Model) => void
 }
 
@@ -414,6 +415,18 @@ const MessageMenubar: FC<Props> = (props) => {
         </Tooltip>
       )}
       {isAssistantMessage && ttsEnabled && <TTSButton message={message} className="message-action-button" />}
+      {isAssistantMessage && (
+        <Tooltip title={t('settings.memory.assistantMemory') || '助手记忆'} mouseEnterDelay={0.8}>
+          <ActionButton
+            className="message-action-button"
+            onClick={(e) => {
+              e.stopPropagation()
+              AssistantMemoryPopup.show({ assistantId: assistant.id })
+            }}>
+            <BookOutlined />
+          </ActionButton>
+        </Tooltip>
+      )}
       {!isUserMessage && (
         <Dropdown
           menu={{

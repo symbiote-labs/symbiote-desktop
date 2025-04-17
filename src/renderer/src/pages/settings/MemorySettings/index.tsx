@@ -17,6 +17,7 @@ import {
 } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store' // Import store for direct access
+import { getModelUniqId } from '@renderer/utils'
 import {
   addMemory,
   clearMemories,
@@ -27,9 +28,12 @@ import {
   saveMemoryData,
   setAnalyzeModel,
   setAnalyzing,
+  setAssistantMemoryActive,
+  setAssistantMemoryAnalyzeModel,
   setAutoAnalyze,
   setFilterSensitiveInfo,
   setMemoryActive,
+  setShortMemoryActive,
   setShortMemoryAnalyzeModel
 } from '@renderer/store/memory'
 import { Topic } from '@renderer/types'
@@ -47,6 +51,7 @@ import {
   SettingRowTitle,
   SettingTitle
 } from '..'
+import AssistantMemoryManager from './AssistantMemoryManager'
 import CollapsibleShortMemoryManager from './CollapsibleShortMemoryManager'
 import ContextualRecommendationSettings from './ContextualRecommendationSettings'
 import HistoricalContextSettings from './HistoricalContextSettings'
@@ -66,10 +71,13 @@ const MemorySettings: FC = () => {
   const memoryLists = useAppSelector((state) => state.memory?.memoryLists || [])
   const currentListId = useAppSelector((state) => state.memory?.currentListId || null)
   const isActive = useAppSelector((state) => state.memory?.isActive || false)
+  const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
+  const assistantMemoryActive = useAppSelector((state) => state.memory?.assistantMemoryActive || false)
   const autoAnalyze = useAppSelector((state) => state.memory?.autoAnalyze || false)
   const filterSensitiveInfo = useAppSelector((state) => state.memory?.filterSensitiveInfo ?? true) // 默认启用敏感信息过滤
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
   const shortMemoryAnalyzeModel = useAppSelector((state) => state.memory?.shortMemoryAnalyzeModel || null)
+  const assistantMemoryAnalyzeModel = useAppSelector((state) => state.memory?.assistantMemoryAnalyzeModel || null)
   const isAnalyzing = useAppSelector((state) => state.memory?.isAnalyzing || false)
 
   // 从 Redux 获取所有模型，不仅仅是可用的模型
@@ -256,6 +264,16 @@ const MemorySettings: FC = () => {
     dispatch(setMemoryActive(checked))
   }
 
+  // 处理切换短期记忆功能
+  const handleToggleShortMemory = (checked: boolean) => {
+    dispatch(setShortMemoryActive(checked))
+  }
+
+  // 处理切换助手记忆功能
+  const handleToggleAssistantMemory = (checked: boolean) => {
+    dispatch(setAssistantMemoryActive(checked))
+  }
+
   // 处理切换自动分析
   const handleToggleAutoAnalyze = (checked: boolean) => {
     dispatch(setAutoAnalyze(checked))
@@ -276,30 +294,50 @@ const MemorySettings: FC = () => {
   }
 
   // 处理选择长期记忆分析模型
-  const handleSelectModel = async (modelId: string) => {
-    dispatch(setAnalyzeModel(modelId))
-    console.log('[Memory Settings] Analyze model set:', modelId)
+  const handleSelectModel = async (model: any) => {
+    // 保存完整的模型信息，包含供应商
+    const modelUniqId = getModelUniqId(model)
+    dispatch(setAnalyzeModel(modelUniqId))
+    console.log('[Memory Settings] Analyze model set:', modelUniqId, 'Provider:', model.provider)
 
     // 使用Redux Thunk保存到JSON文件
     try {
-      await dispatch(saveMemoryData({ analyzeModel: modelId })).unwrap()
-      console.log('[Memory Settings] Analyze model saved to file successfully:', modelId)
+      await dispatch(saveMemoryData({ analyzeModel: modelUniqId })).unwrap()
+      console.log('[Memory Settings] Analyze model saved to file successfully:', modelUniqId)
     } catch (error) {
       console.error('[Memory Settings] Failed to save analyze model to file:', error)
     }
   }
 
   // 处理选择短期记忆分析模型
-  const handleSelectShortMemoryModel = async (modelId: string) => {
-    dispatch(setShortMemoryAnalyzeModel(modelId))
-    console.log('[Memory Settings] Short memory analyze model set:', modelId)
+  const handleSelectShortMemoryModel = async (model: any) => {
+    // 保存完整的模型信息，包含供应商
+    const modelUniqId = getModelUniqId(model)
+    dispatch(setShortMemoryAnalyzeModel(modelUniqId))
+    console.log('[Memory Settings] Short memory analyze model set:', modelUniqId, 'Provider:', model.provider)
 
     // 使用Redux Thunk保存到JSON文件
     try {
-      await dispatch(saveMemoryData({ shortMemoryAnalyzeModel: modelId })).unwrap()
-      console.log('[Memory Settings] Short memory analyze model saved to file successfully:', modelId)
+      await dispatch(saveMemoryData({ shortMemoryAnalyzeModel: modelUniqId })).unwrap()
+      console.log('[Memory Settings] Short memory analyze model saved to file successfully:', modelUniqId)
     } catch (error) {
       console.error('[Memory Settings] Failed to save short memory analyze model to file:', error)
+    }
+  }
+
+  // 处理选择助手记忆分析模型
+  const handleSelectAssistantMemoryModel = async (model: any) => {
+    // 保存完整的模型信息，包含供应商
+    const modelUniqId = getModelUniqId(model)
+    dispatch(setAssistantMemoryAnalyzeModel(modelUniqId))
+    console.log('[Memory Settings] Assistant memory analyze model set:', modelUniqId, 'Provider:', model.provider)
+
+    // 使用Redux Thunk保存到JSON文件
+    try {
+      await dispatch(saveMemoryData({ assistantMemoryAnalyzeModel: modelUniqId })).unwrap()
+      console.log('[Memory Settings] Assistant memory analyze model saved to file successfully:', modelUniqId)
+    } catch (error) {
+      console.error('[Memory Settings] Failed to save assistant memory analyze model to file:', error)
     }
   }
 
@@ -360,12 +398,37 @@ const MemorySettings: FC = () => {
   const getSelectedModelName = () => {
     if (!analyzeModel) return ''
 
-    // 遍历所有服务商的模型找到匹配的模型
-    for (const provider of Object.values(providers)) {
-      const model = provider.models.find((m) => m.id === analyzeModel)
-      if (model) {
-        return `${model.name} | ${provider.name}`
+    try {
+      // 尝试解析JSON格式的模型ID
+      let modelId = analyzeModel
+
+      if (typeof analyzeModel === 'string' && analyzeModel.startsWith('{')) {
+        const parsedModel = JSON.parse(analyzeModel)
+        modelId = parsedModel.id
+
+        // 遍历所有服务商的模型找到匹配的模型和供应商
+        for (const provider of Object.values(providers)) {
+          if (provider.id === parsedModel.provider) {
+            const model = provider.models.find((m) => m.id === modelId)
+            if (model) {
+              return `${model.name} | ${provider.name}`
+            }
+          }
+        }
+
+        // 如果没找到匹配的模型，返回模型ID和供应商ID
+        return `${modelId} | ${parsedModel.provider}`
+      } else {
+        // 兼容旧格式，直接根据ID查找
+        for (const provider of Object.values(providers)) {
+          const model = provider.models.find((m) => m.id === modelId)
+          if (model) {
+            return `${model.name} | ${provider.name}`
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error parsing model ID:', error)
     }
 
     return analyzeModel
@@ -375,15 +438,85 @@ const MemorySettings: FC = () => {
   const getSelectedShortMemoryModelName = () => {
     if (!shortMemoryAnalyzeModel) return ''
 
-    // 遍历所有服务商的模型找到匹配的模型
-    for (const provider of Object.values(providers)) {
-      const model = provider.models.find((m) => m.id === shortMemoryAnalyzeModel)
-      if (model) {
-        return `${model.name} | ${provider.name}`
+    try {
+      // 尝试解析JSON格式的模型ID
+      let modelId = shortMemoryAnalyzeModel
+
+      if (typeof shortMemoryAnalyzeModel === 'string' && shortMemoryAnalyzeModel.startsWith('{')) {
+        const parsedModel = JSON.parse(shortMemoryAnalyzeModel)
+        modelId = parsedModel.id
+
+        // 遍历所有服务商的模型找到匹配的模型和供应商
+        for (const provider of Object.values(providers)) {
+          if (provider.id === parsedModel.provider) {
+            const model = provider.models.find((m) => m.id === modelId)
+            if (model) {
+              return `${model.name} | ${provider.name}`
+            }
+          }
+        }
+
+        // 如果没找到匹配的模型，返回模型ID和供应商ID
+        return `${modelId} | ${parsedModel.provider}`
+      } else {
+        // 兼容旧格式，直接根据ID查找
+        for (const provider of Object.values(providers)) {
+          const model = provider.models.find((m) => m.id === modelId)
+          if (model) {
+            return `${model.name} | ${provider.name}`
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error parsing short memory model ID:', error)
     }
 
     return shortMemoryAnalyzeModel
+  }
+
+  // 获取当前选中助手记忆模型的名称
+  const getSelectedAssistantMemoryModelName = () => {
+    if (!assistantMemoryAnalyzeModel) return ''
+
+    try {
+      // 尝试解析JSON格式的模型ID
+      let modelId = assistantMemoryAnalyzeModel
+
+      if (typeof assistantMemoryAnalyzeModel === 'string' && assistantMemoryAnalyzeModel.startsWith('{')) {
+        const parsedModel = JSON.parse(assistantMemoryAnalyzeModel)
+        modelId = parsedModel.id
+
+        // 遍历所有服务商的模型找到匹配的模型和供应商
+        for (const provider of Object.values(providers)) {
+          if (provider.id === parsedModel.provider) {
+            const model = provider.models.find((m) => m.id === modelId)
+            if (model) {
+              return `${model.name} | ${provider.name}`
+            }
+          }
+        }
+
+        // 如果没找到匹配的模型，返回模型ID和供应商ID
+        return `${modelId} | ${parsedModel.provider}`
+      } else {
+        // 兼容旧格式，直接根据ID查找
+        for (const provider of Object.values(providers)) {
+          const model = provider.models.find((m) => m.id === modelId)
+          if (model) {
+            return `${model.name} | ${provider.name}`
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing assistant memory model ID:', error)
+    }
+
+    return assistantMemoryAnalyzeModel
+  }
+
+  // 获取模型的完整ID，包含供应商信息
+  const getModelUniqId = (model: any) => {
+    return JSON.stringify({ id: model.id, provider: model.provider })
   }
 
   // 重置长期记忆分析标记
@@ -545,6 +678,90 @@ const MemorySettings: FC = () => {
           animated={{ inkBar: true, tabPane: true }}
           items={[
             {
+              key: 'assistantMemory',
+              label: (
+                <TabLabelContainer>
+                  <TabDot color="#f5222d">●</TabDot>
+                  {t('settings.memory.assistantMemory') || '助手记忆'}
+                </TabLabelContainer>
+              ),
+              children: (
+                <TabPaneSettingGroup theme={theme}>
+                  <SettingTitle>{t('settings.memory.title')}</SettingTitle>
+                  <SettingHelpText>{t('settings.memory.description')}</SettingHelpText>
+                  <SettingDivider />
+
+                  <SettingTitle>{t('settings.memory.assistantMemorySettings') || '助手记忆设置'}</SettingTitle>
+                  <SettingHelpText>{t('settings.memory.assistantMemoryDescription') || '助手记忆是与特定助手关联的记忆，可以帮助助手记住重要信息。'}</SettingHelpText>
+                  <SettingDivider />
+
+                  {/* 助手记忆设置 */}
+                  <SettingRow>
+                    <SettingRowTitle>{t('settings.memory.enableAssistantMemory') || '启用助手记忆'}</SettingRowTitle>
+                    <Switch checked={assistantMemoryActive} onChange={handleToggleAssistantMemory} />
+                  </SettingRow>
+                  <SettingRow>
+                    <SettingRowTitle>{t('settings.memory.enableAutoAnalyze')}</SettingRowTitle>
+                    <Switch checked={autoAnalyze} onChange={handleToggleAutoAnalyze} disabled={!isActive} />
+                  </SettingRow>
+                  <SettingRow>
+                    <SettingRowTitle>
+                      {t('settings.memory.filterSensitiveInfo') || '过滤敏感信息'}
+                      <Tooltip
+                        title={
+                          t('settings.memory.filterSensitiveInfoTip') ||
+                          '启用后，记忆功能将不会提取API密钥、密码等敏感信息'
+                        }>
+                        <InfoCircleOutlined style={{ marginLeft: 8 }} />
+                      </Tooltip>
+                    </SettingRowTitle>
+                    <Switch
+                      checked={filterSensitiveInfo}
+                      onChange={handleToggleFilterSensitiveInfo}
+                      disabled={!isActive}
+                    />
+                  </SettingRow>
+
+                  {/* 助手记忆分析模型选择 */}
+                  <SettingRow>
+                    <SettingRowTitle>
+                      {t('settings.memory.assistantMemoryAnalyzeModel') || '助手记忆分析模型'}
+                    </SettingRowTitle>
+                    <Button
+                      onClick={async () => {
+                        // 找到当前选中的模型对象
+                        let currentModel: { id: string; provider: string; name: string; group: string } | undefined
+                        if (assistantMemoryAnalyzeModel) {
+                          for (const provider of Object.values(providers)) {
+                            const model = provider.models.find((m) => m.id === assistantMemoryAnalyzeModel)
+                            if (model) {
+                              currentModel = model
+                              break
+                            }
+                          }
+                        }
+
+                        const selectedModel = await SelectModelPopup.show({ model: currentModel })
+                        if (selectedModel) {
+                          handleSelectAssistantMemoryModel(selectedModel)
+                        }
+                      }}
+                      style={{ width: 300 }}
+                      disabled={!isActive}>
+                      {assistantMemoryAnalyzeModel
+                        ? getSelectedAssistantMemoryModelName()
+                        : t('settings.memory.selectModel') || '选择模型'}
+                    </Button>
+                  </SettingRow>
+
+                  <SettingDivider />
+
+                  {/* 助手记忆管理器 */}
+                  <AssistantMemoryManager />
+                </TabPaneSettingGroup>
+              )
+            },
+            {
               key: 'shortMemory',
               label: (
                 <TabLabelContainer>
@@ -563,10 +780,10 @@ const MemorySettings: FC = () => {
                   <SettingHelpText>{t('settings.memory.shortMemoryDescription')}</SettingHelpText>
                   <SettingDivider />
 
-                  {/* 保留原有的短期记忆设置 */}
+                  {/* 短期记忆设置 */}
                   <SettingRow>
-                    <SettingRowTitle>{t('settings.memory.enableMemory')}</SettingRowTitle>
-                    <Switch checked={isActive} onChange={handleToggleMemory} />
+                    <SettingRowTitle>{t('settings.memory.enableShortMemory') || '启用短期记忆'}</SettingRowTitle>
+                    <Switch checked={shortMemoryActive} onChange={handleToggleShortMemory} />
                   </SettingRow>
                   <SettingRow>
                     <SettingRowTitle>{t('settings.memory.enableAutoAnalyze')}</SettingRowTitle>
@@ -611,7 +828,7 @@ const MemorySettings: FC = () => {
 
                         const selectedModel = await SelectModelPopup.show({ model: currentModel })
                         if (selectedModel) {
-                          handleSelectShortMemoryModel(selectedModel.id)
+                          handleSelectShortMemoryModel(selectedModel)
                         }
                       }}
                       style={{ width: 300 }}
@@ -738,7 +955,7 @@ const MemorySettings: FC = () => {
                   <SettingHelpText>{t('settings.memory.longMemoryDescription')}</SettingHelpText>
                   <SettingDivider />
 
-                  {/* 保留原有的长期记忆设置 */}
+                  {/* 长期记忆设置 */}
                   <SettingRow>
                     <SettingRowTitle>{t('settings.memory.enableMemory')}</SettingRowTitle>
                     <Switch checked={isActive} onChange={handleToggleMemory} />
@@ -784,7 +1001,7 @@ const MemorySettings: FC = () => {
 
                         const selectedModel = await SelectModelPopup.show({ model: currentModel })
                         if (selectedModel) {
-                          handleSelectModel(selectedModel.id)
+                          handleSelectModel(selectedModel)
                         }
                       }}
                       style={{ width: 300 }}

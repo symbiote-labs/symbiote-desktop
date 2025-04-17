@@ -23,28 +23,28 @@ export const analyzeAndSelectHistoricalContext = async (
     const isEnabled = state.settings?.enableHistoricalContext ?? false
 
     if (!isEnabled) {
-      console.log('[HistoricalContext] Feature is disabled')
+      // 减少日志输出
       return null
     }
 
     // 2. 获取最近的消息
     const recentMessages = await getRecentMessages(topicId, recentMessageCount)
     if (!recentMessages || recentMessages.length === 0) {
-      console.log('[HistoricalContext] No recent messages found')
+      // 减少日志输出
       return null
     }
 
     // 3. 获取所有短期记忆（已分析的对话）
     const shortMemories = state.memory?.shortMemories || []
     if (shortMemories.length === 0) {
-      console.log('[HistoricalContext] No short memories available')
+      // 减少日志输出
       return null
     }
 
     // 4. 使用快速模型分析是否需要历史上下文
     const analysisResult = await analyzeNeedForHistoricalContext(recentMessages, shortMemories)
     if (!analysisResult.needsHistoricalContext) {
-      console.log('[HistoricalContext] Analysis indicates no need for historical context')
+      // 减少日志输出
       return null
     }
 
@@ -70,7 +70,7 @@ export const analyzeAndSelectHistoricalContext = async (
 
     return null
   } catch (error) {
-    console.error('[HistoricalContext] Error analyzing and selecting historical context:', error)
+    // 静默处理错误，减少日志输出
     return null
   }
 }
@@ -97,7 +97,7 @@ const getRecentMessages = async (topicId: string, count: number): Promise<Messag
     // 返回最近的count条消息
     return messages.slice(-count)
   } catch (error) {
-    console.error('[HistoricalContext] Error getting recent messages:', error)
+    // 静默处理错误，减少日志输出
     return []
   }
 }
@@ -157,12 +157,11 @@ ${memoriesContent}
       state.memory?.historicalContextAnalyzeModel || state.memory?.shortMemoryAnalyzeModel || state.memory?.analyzeModel
 
     if (!analyzeModel) {
-      console.log('[HistoricalContext] No analyze model set')
+      // 减少日志输出
       return { needsHistoricalContext: false }
     }
 
     // 调用模型进行分析
-    console.log('[HistoricalContext] Calling AI model for analysis...')
     const result = await fetchGenerate({
       prompt,
       content: '',
@@ -170,7 +169,7 @@ ${memoriesContent}
     })
 
     if (!result) {
-      console.log('[HistoricalContext] No result from AI analysis')
+      // 减少日志输出
       return { needsHistoricalContext: false }
     }
 
@@ -195,7 +194,7 @@ ${memoriesContent}
             reason: extractedJson.reason
           }
         } catch (extractError) {
-          console.error('[HistoricalContext] Failed to extract JSON from result:', extractError)
+          // 静默处理错误，减少日志输出
         }
       }
 
@@ -211,7 +210,7 @@ ${memoriesContent}
       }
     }
   } catch (error) {
-    console.error('[HistoricalContext] Error analyzing need for historical context:', error)
+    // 静默处理错误，减少日志输出
     return { needsHistoricalContext: false }
   }
 }
@@ -224,7 +223,7 @@ const getOriginalDialogContent = async (topicId: string): Promise<string | null>
     // 获取话题的原始消息
     const messages = await TopicManager.getTopicMessages(topicId)
     if (!messages || messages.length === 0) {
-      console.log(`[HistoricalContext] No messages found for topic ${topicId}`)
+      // 减少日志输出
       return null
     }
 
@@ -233,7 +232,7 @@ const getOriginalDialogContent = async (topicId: string): Promise<string | null>
 
     return dialogContent
   } catch (error) {
-    console.error('[HistoricalContext] Error getting original dialog content:', error)
+    // 静默处理错误，减少日志输出
     return null
   }
 }

@@ -1,0 +1,20 @@
+{
+    "project_path": "J:\\Cherry\\cherry-studioTTS",
+    "backup_path": "J:\\Cherry\\Backups",
+    "excludes": [
+        "node_modules",
+        "dist",
+        "out",
+        ".git",
+        "release",
+        "__pycache__",
+        "*.log",
+        "*.lock",
+        "*.exe",
+        "*.dll",
+        "*.zip",
+        "*.tar.gz",
+        "checkpoint_config.json",
+        "checkpoint_info.txt"
+    ]
+}

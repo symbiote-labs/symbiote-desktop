@@ -18,9 +18,10 @@ class TTSService {
    * 将文本转换为语音并播放
    * @param text 要转换的文本
    * @param segmented 是否使用分段播放
+   * @param messageId 消息ID，用于关联进度条和停止按钮
    */
-  speak = async (text: string, segmented: boolean = false): Promise<void> => {
-    await this.service.speak(text, segmented)
+  speak = async (text: string, segmented: boolean = false, messageId?: string): Promise<void> => {
+    await this.service.speak(text, segmented, messageId)
   }
 
   /**

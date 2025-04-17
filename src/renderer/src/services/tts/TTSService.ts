@@ -160,9 +160,10 @@ export class TTSService {
    * 播放文本
    * @param text 要播放的文本
    * @param segmented 是否使用分段播放
+   * @param messageId 消息ID，用于关联进度条和停止按钮
    * @returns 是否成功播放
    */
-  public async speak(text: string, segmented: boolean = false): Promise<boolean> {
+  public async speak(text: string, segmented: boolean = false, messageId?: string): Promise<boolean> {
     try {
       // 检查TTS是否启用
       const settings = store.getState().settings
@@ -196,6 +197,15 @@ export class TTSService {
 
       // 设置分段播放模式
       this.isSegmentedPlayback = segmented
+
+      // 如果提供了messageId，则设置playingMessageId
+      if (messageId) {
+        this.playingMessageId = messageId
+        // 更新最后播放的消息ID
+        const dispatch = store.dispatch
+        dispatch(setLastPlayedMessageId(messageId))
+        console.log('更新最后播放的消息ID:', messageId)
+      }
 
       if (segmented) {
         // 分段播放模式
@@ -305,8 +315,11 @@ export class TTSService {
     // 停止进度更新
     this.stopProgressUpdates()
 
-    // 更新状态并触发事件
-    this.updatePlayingState(false)
+    // 直接设置isPlaying为false，并触发事件，确保无论当前状态如何，都会触发事件
+    this.isPlaying = false
+    console.log('TTS播放状态更新: 停止播放')
+    const event = new CustomEvent('tts-state-change', { detail: { isPlaying: false } })
+    window.dispatchEvent(event)
 
     // 清除正在播放的消息ID
     this.playingMessageId = null

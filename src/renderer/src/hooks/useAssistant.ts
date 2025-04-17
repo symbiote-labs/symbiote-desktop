@@ -71,7 +71,10 @@ export function useAssistant(id: string) {
     updateTopics: (topics: Topic[]) => dispatch(updateTopics({ assistantId: assistant.id, topics })),
     removeAllTopics: () => dispatch(removeAllTopics({ assistantId: assistant.id })),
     setModel: useCallback(
-      (model: Model) => assistant && dispatch(setModel({ assistantId: assistant?.id, model })),
+      (model: Model) => {
+        console.log('[useAssistant] 设置模型:', model.id, model.name, model.provider)
+        assistant && dispatch(setModel({ assistantId: assistant?.id, model }))
+      },
       [assistant, dispatch]
     ),
     updateAssistant: (assistant: Assistant) => dispatch(updateAssistant(assistant)),

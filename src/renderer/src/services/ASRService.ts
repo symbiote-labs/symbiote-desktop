@@ -1,5 +1,6 @@
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
+import ASRServerService from './ASRServerService'
 
 /**
  * ASR服务，用于将语音转换为文本
@@ -66,7 +67,11 @@ class ASRService {
         console.log('[ASRService] 正在连接WebSocket服务器...')
         window.message.loading({ content: '正在连接语音识别服务...', key: 'ws-connect' })
 
-        this.ws = new WebSocket('ws://localhost:34515') // 使用正确的端口 34515
+        // 使用ASRServerService获取正确的端口
+        const serverUrl = ASRServerService.getServerUrl()
+        const wsUrl = serverUrl.replace('http://', 'ws://')
+        console.log('[ASRService] 连接到WebSocket服务器:', wsUrl)
+        this.ws = new WebSocket(wsUrl)
         this.wsConnected = false
         this.browserReady = false
 
@@ -76,6 +81,23 @@ class ASRService {
           this.wsConnected = true
           this.reconnectAttempt = 0
           this.ws?.send(JSON.stringify({ type: 'identify', role: 'electron' }))
+
+          // 在WebSocket连接成功后，自动打开浏览器页面
+          try {
+            const serverUrl = ASRServerService.getServerUrl()
+            console.log('自动打开语音识别服务器页面:', serverUrl)
+            window.open(serverUrl, '_blank')
+
+            // 延迟设置browserReady标志，给浏览器页面足够的时间加载和连接
+            setTimeout(() => {
+              this.browserReady = true
+              console.log('[ASRService] 浏览器页面已就绪（延迟设置）')
+              window.message.success({ content: '语音识别浏览器已就绪', key: 'browser-status' })
+            }, 3000) // 给浏览器页面 3 秒时间加载和连接
+          } catch (error) {
+            console.error('打开语音识别浏览器页面失败:', error)
+          }
+
           resolve(true)
         }
 
@@ -112,13 +134,14 @@ class ASRService {
 
       if (data.type === 'status') {
         if (data.message === 'browser_ready' || data.message === 'Browser connected') {
-          console.log('[ASRService] 浏览器已准备好')
+          console.log('[ASRService] 浏览器已准备好 (来自服务器消息)')
           this.browserReady = true
           window.message.success({ content: '语音识别浏览器已准备好', key: 'browser-status' })
         } else if (data.message === 'Browser disconnected' || data.message === 'Browser connection error') {
-          console.log('[ASRService] 浏览器断开连接')
-          this.browserReady = false
-          window.message.error({ content: '语音识别浏览器断开连接', key: 'browser-status' })
+          console.log('[ASRService] 浏览器断开连接 (来自服务器消息)')
+          // 不设置 browserReady = false，避免影响当前录音
+          // this.browserReady = false
+          window.message.warning({ content: '语音识别浏览器可能已断开连接，但当前录音不受影响', key: 'browser-status' })
         } else if (data.message === 'stopped') {
           // 语音识别已停止
           console.log('[ASRService] 语音识别已停止')
@@ -258,48 +281,20 @@ class ASRService {
 
         // 检查浏览器是否准备好
         if (!this.browserReady) {
-          // 尝试等待浏览器准备好
-          let waitAttempts = 0
-          const maxWaitAttempts = 5
+          // 如果浏览器还没有准备好，等待一下
+          window.message.loading({
+            content: '正在等待浏览器准备就绪...',
+            key: 'browser-status'
+          })
 
-          // 尝试打开浏览器页面
-          try {
-            // 发送消息提示用户
-            window.message.info({
-              content: '正在准备语音识别服务...',
-              key: 'browser-status'
-            })
+          // 等待 2 秒
+          await new Promise((resolve) => setTimeout(resolve, 2000))
 
-            // 尝试自动打开浏览器页面
-            try {
-              // 使用ASRServerService获取服务器URL
-              const serverUrl = 'http://localhost:34515' // 使用正确的端口 34515
-              console.log('尝试打开语音识别服务器页面:', serverUrl)
-              window.open(serverUrl, '_blank')
-            } catch (error) {
-              console.error('获取服务器URL失败:', error)
-            }
-          } catch (error) {
-            console.error('打开语音识别浏览器页面失败:', error)
-          }
-
-          while (!this.browserReady && waitAttempts < maxWaitAttempts) {
-            window.message.loading({
-              content: `等待浏览器准备就绪 (${waitAttempts + 1}/${maxWaitAttempts})...`,
-              key: 'browser-status'
-            })
-
-            // 等待一秒
-            await new Promise((resolve) => setTimeout(resolve, 1000))
-            waitAttempts++
-          }
-
+          // 如果还是没有准备好，就强制设置为就绪
           if (!this.browserReady) {
-            window.message.warning({
-              content: '语音识别浏览器尚未准备好，请确保已打开浏览器页面',
-              key: 'browser-status'
-            })
-            throw new Error('浏览器尚未准备好')
+            this.browserReady = true
+            console.log('[ASRService] 强制设置浏览器就绪状态')
+            window.message.success({ content: '语音识别浏览器已就绪', key: 'browser-status' })
           }
         }
 

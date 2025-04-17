@@ -37,6 +37,27 @@ export function parseJSON(str: string) {
   }
 }
 
+// 获取模型的唯一ID，确保是字符串格式
+export function getModelUniqId(model: any) {
+  if (!model) return null
+
+  // 如果已经是字符串，直接返回
+  if (typeof model === 'string') return model
+
+  // 如果是对象，转换为JSON字符串
+  if (typeof model === 'object') {
+    if (model.id) {
+      return JSON.stringify({
+        id: model.id,
+        provider: model.provider || ''
+      })
+    }
+    return JSON.stringify(model)
+  }
+
+  return String(model)
+}
+
 export const delay = (seconds: number) => {
   return new Promise((resolve) => {
     setTimeout(() => {

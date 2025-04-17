@@ -70,8 +70,44 @@ export function getTranslateModel() {
 
 export function getAssistantProvider(assistant: Assistant): Provider {
   const providers = store.getState().llm.providers
+
+  // 检查是否是DeepClaude模型
+  if (assistant.model?.provider === 'deepclaude') {
+    console.log('[getAssistantProvider] 检测到DeepClaude模型:', assistant.model.id, assistant.model.name)
+
+    // 列出所有提供商，便于调试
+    console.log('[getAssistantProvider] 当前所有提供商:',
+              providers.map(p => ({ id: p.id, name: p.name, type: p.type })))
+
+    // 查找所有DeepClaude类型的提供商
+    const deepClaudeProviders = providers.filter(p => p.type === 'deepclaude')
+    console.log('[getAssistantProvider] 找到DeepClaude类型的提供商数量:', deepClaudeProviders.length)
+
+    if (deepClaudeProviders.length > 0) {
+      // 先尝试查找与model.id匹配的提供商
+      const matchingProvider = deepClaudeProviders.find(p => p.id === assistant.model?.id)
+      if (matchingProvider) {
+        console.log('[getAssistantProvider] 找到匹配的DeepClaude提供商:', matchingProvider.id, matchingProvider.name)
+        return matchingProvider
+      }
+
+      // 如果没有找到匹配的，使用第一个DeepClaude提供商
+      console.log('[getAssistantProvider] 使用第一个DeepClaude提供商:', deepClaudeProviders[0].id, deepClaudeProviders[0].name)
+      return deepClaudeProviders[0]
+    }
+
+    console.log('[getAssistantProvider] 未找到DeepClaude提供商，将使用默认提供商')
+  }
+
+  // 常规模型处理
   const provider = providers.find((p) => p.id === assistant.model?.provider)
-  return provider || getDefaultProvider()
+  if (provider) {
+    return provider
+  }
+
+  // 如果没有找到提供商，使用默认提供商
+  console.log('[getAssistantProvider] 未找到提供商，使用默认提供商')
+  return getDefaultProvider()
 }
 
 export function getProviderByModel(model?: Model): Provider {

@@ -1,125 +1,146 @@
-import TTSProgressBar from '@renderer/components/TTSProgressBar'
-import { FONT_FAMILY } from '@renderer/config/constant'
-import { useAssistant } from '@renderer/hooks/useAssistant'
-import { useModel } from '@renderer/hooks/useModel'
-import { useRuntime } from '@renderer/hooks/useRuntime'
-import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
-import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { getMessageModelId } from '@renderer/services/MessagesService'
-import { getModelUniqId } from '@renderer/services/ModelService'
-import TTSService from '@renderer/services/TTSService'
-import { RootState, useAppDispatch } from '@renderer/store'
-import { setLastPlayedMessageId, setSkipNextAutoTTS } from '@renderer/store/settings'
-import { Assistant, Message, Topic } from '@renderer/types'
-import { classNames } from '@renderer/utils'
-import { Divider, Dropdown } from 'antd'
-import { ItemType } from 'antd/es/menu/interface'
-import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useSelector } from 'react-redux'
-import styled from 'styled-components'
+import TTSProgressBar from '@renderer/components/TTSProgressBar';
+import { FONT_FAMILY } from '@renderer/config/constant';
+import { useAssistant } from '@renderer/hooks/useAssistant';
+import { useModel } from '@renderer/hooks/useModel';
+import { useRuntime } from '@renderer/hooks/useRuntime';
+import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings';
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService';
+import { getMessageModelId } from '@renderer/services/MessagesService';
+import { getModelUniqId } from '@renderer/services/ModelService';
+import TTSService from '@renderer/services/TTSService';
+import { useAppDispatch, useAppSelector } from '@renderer/store';
+import { setLastPlayedMessageId, setSkipNextAutoTTS } from '@renderer/store/settings';
+import { Assistant, Message, Topic } from '@renderer/types';
+import { classNames } from '@renderer/utils';
+import { Divider, Dropdown } from 'antd';
+import { ItemType } from 'antd/es/menu/interface';
+import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+// import { useSelector } from 'react-redux'; // Removed unused import
+import styled from 'styled-components'; // Ensure styled-components is imported
 
-import MessageContent from './MessageContent'
-import MessageErrorBoundary from './MessageErrorBoundary'
-import MessageHeader from './MessageHeader'
-import MessageMenubar from './MessageMenubar'
-import MessageTokens from './MessageTokens'
+import MessageContent from './MessageContent';
+import MessageErrorBoundary from './MessageErrorBoundary';
+import MessageHeader from './MessageHeader';
+import MessageMenubar from './MessageMenubar';
+import MessageTokens from './MessageTokens';
 
 interface Props {
-  message: Message
-  topic: Topic
-  assistant?: Assistant
-  index?: number
-  total?: number
-  hidePresetMessages?: boolean
-  style?: React.CSSProperties
-  isGrouped?: boolean
-  isStreaming?: boolean
-  onSetMessages?: Dispatch<SetStateAction<Message[]>>
+  message: Message;
+  topic: Topic;
+  assistant?: Assistant;
+  index?: number;
+  total?: number;
+  hidePresetMessages?: boolean;
+  style?: React.CSSProperties;
+  isGrouped?: boolean;
+  isStreaming?: boolean;
+  onSetMessages?: Dispatch<SetStateAction<Message[]>>;
 }
+
+// Function definition moved before its first use, fixing potential TS issue & improving readability
+// FIX 1: Added explicit else to satisfy TS7030
+const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolean): string | undefined => {
+  if (!isBubbleStyle) {
+    return undefined;
+  } else { // Explicit else block
+    return isAssistantMessage ? 'var(--chat-background-assistant)' : 'var(--chat-background-user)';
+  }
+};
+
+// FIX 2: Define styled component for the context menu trigger div
+const ContextMenuTriggerDiv = styled.div<{ x: number; y: number }>`
+  position: fixed;
+  left: ${({ x }) => x}px;
+  top: ${({ y }) => y}px;
+  width: 1px;
+  height: 1px;
+  /* Optional: Ensure it doesn't interfere with other elements */
+  z-index: -1;
+  pointer-events: none;
+`;
+
 
 const MessageItem: FC<Props> = ({
   message,
   topic,
-  // assistant,
+  // assistant: propAssistant,
   index,
   hidePresetMessages,
   isGrouped,
   isStreaming = false,
   style
 }) => {
-  const { t } = useTranslation()
-  const { assistant, setModel } = useAssistant(message.assistantId)
-  const model = useModel(getMessageModelId(message), message.model?.provider) || message.model
-  const { isBubbleStyle } = useMessageStyle()
-  const { showMessageDivider, messageFont, fontSize } = useSettings()
-  const { generating } = useRuntime()
-  const messageContainerRef = useRef<HTMLDivElement>(null)
-  // const topic = useTopic(assistant, _topic?.id)
-  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
-  const [selectedQuoteText, setSelectedQuoteText] = useState<string>('')
+  const { t } = useTranslation();
+  const { assistant, setModel } = useAssistant(message.assistantId);
+  const model = useModel(getMessageModelId(message), message.model?.provider) || message.model;
+  const { isBubbleStyle } = useMessageStyle();
+  const { showMessageDivider, messageFont, fontSize } = useSettings();
+  const { generating } = useRuntime();
+  const messageContainerRef = useRef<HTMLDivElement>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedQuoteText, setSelectedQuoteText] = useState<string>('');
+  const [selectedText, setSelectedText] = useState<string>('');
+  const dispatch = useAppDispatch();
 
-  // 获取TTS设置
-  const { ttsEnabled, isVoiceCallActive, lastPlayedMessageId, skipNextAutoTTS } = useSelector(
-    (state: RootState) => state.settings
-  )
-  const dispatch = useAppDispatch()
-  const [selectedText, setSelectedText] = useState<string>('')
+  // --- Consolidated State Selection ---
+  const ttsEnabled = useAppSelector((state) => state.settings.ttsEnabled);
+  const voiceCallEnabled = useAppSelector((state) => state.settings.voiceCallEnabled);
+  const autoPlayTTSOutsideVoiceCall = useAppSelector((state) => state.settings.autoPlayTTSOutsideVoiceCall);
+  const isVoiceCallActive = useAppSelector((state) => state.settings.isVoiceCallActive);
+  const lastPlayedMessageId = useAppSelector((state) => state.settings.lastPlayedMessageId);
+  const skipNextAutoTTS = useAppSelector((state) => state.settings.skipNextAutoTTS);
+  // ---------------------------------
 
-  const isLastMessage = index === 0
-  const isAssistantMessage = message.role === 'assistant'
-  const showMenubar = !isStreaming && !message.status.includes('ing')
+  const isLastMessage = index === 0;
+  const isAssistantMessage = message.role === 'assistant';
+  const showMenubar = !isStreaming && !message.status.includes('ing');
 
   const fontFamily = useMemo(() => {
-    return messageFont === 'serif' ? FONT_FAMILY.replace('sans-serif', 'serif').replace('Ubuntu, ', '') : FONT_FAMILY
-  }, [messageFont])
+    return messageFont === 'serif' ? FONT_FAMILY.replace('sans-serif', 'serif').replace('Ubuntu, ', '') : FONT_FAMILY;
+  }, [messageFont]);
 
-  const messageBorder = showMessageDivider ? undefined : 'none'
-  const messageBackground = getMessageBackground(isBubbleStyle, isAssistantMessage)
+  const messageBorder = showMessageDivider ? '1px dotted var(--color-border)' : 'none'; // Applied directly in MessageFooter style
+  const messageBackground = getMessageBackground(isBubbleStyle, isAssistantMessage); // Call the fixed function
+
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const _selectedText = window.getSelection()?.toString() || ''
-
-    // 无论是否选中文本，都设置上下文菜单位置
-    setContextMenuPosition({ x: e.clientX, y: e.clientY })
+    e.preventDefault();
+    const _selectedText = window.getSelection()?.toString() || '';
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
 
     if (_selectedText) {
       const quotedText =
         _selectedText
           .split('\n')
           .map((line) => `> ${line}`)
-          .join('\n') + '\n-------------'
-      setSelectedQuoteText(quotedText)
-      setSelectedText(_selectedText)
+          .join('\n') + '\n-------------';
+      setSelectedQuoteText(quotedText);
+      setSelectedText(_selectedText);
     } else {
-      setSelectedQuoteText('')
-      setSelectedText('')
+      setSelectedQuoteText('');
+      setSelectedText('');
     }
-  }, [])
+  }, []);
 
+  // Close context menu on click outside
   useEffect(() => {
     const handleClick = () => {
-      setContextMenuPosition(null)
-    }
-    document.addEventListener('click', handleClick)
+      setContextMenuPosition(null);
+    };
+    document.addEventListener('click', handleClick);
     return () => {
-      document.removeEventListener('click', handleClick)
-    }
-  }, [])
+      document.removeEventListener('click', handleClick);
+    };
+  }, []);
 
-  // 使用 ref 跟踪消息状态变化
-  const prevGeneratingRef = useRef(generating)
-
-  // 更新 prevGeneratingRef 的值
+  // --- Reset skipNextAutoTTS on New Message Completion ---
+  const prevGeneratingRef = useRef(generating);
   useEffect(() => {
-    // 在每次渲染后更新 ref 值
-    prevGeneratingRef.current = generating
-  }, [generating])
+    prevGeneratingRef.current = generating;
+  }, [generating]);
 
-  // 监听新消息生成，并在新消息生成时重置 skipNextAutoTTS
   useEffect(() => {
-    // 如果从生成中变为非生成中，说明新消息刚刚生成完成
     if (
       prevGeneratingRef.current &&
       !generating &&
@@ -127,124 +148,88 @@ const MessageItem: FC<Props> = ({
       isAssistantMessage &&
       message.status === 'success'
     ) {
-      console.log('新消息生成完成，消息ID:', message.id)
-
-      // 当新消息生成完成时，始终重置 skipNextAutoTTS 为 false
-      // 这样确保新生成的消息可以自动播放
-      console.log('新消息生成完成，重置 skipNextAutoTTS 为 false')
-      dispatch(setSkipNextAutoTTS(false))
+      // 简化日志输出
+      console.log('消息生成完成，重置skipNextAutoTTS为false, 消息ID:', message.id);
+      dispatch(setSkipNextAutoTTS(false));
     }
-  }, [isLastMessage, isAssistantMessage, message.status, message.id, generating, dispatch, prevGeneratingRef])
+  }, [generating, isLastMessage, isAssistantMessage, message.status, message.id, dispatch]);
 
-  // 当消息内容变化时，重置 skipNextAutoTTS
+
+  // --- Auto-play TTS Logic ---
   useEffect(() => {
-    // 如果是最后一条助手消息，且消息状态为成功，且消息内容不为空
-    if (
-      isLastMessage &&
-      isAssistantMessage &&
-      message.status === 'success' &&
-      message.content &&
-      message.content.trim()
-    ) {
-      // 如果是新生成的消息，重置 skipNextAutoTTS 为 false
-      if (message.id !== lastPlayedMessageId) {
-        console.log(
-          '检测到新消息，重置 skipNextAutoTTS 为 false，消息ID:',
-          message.id,
-          '消息内容前20个字符:',
-          message.content?.substring(0, 20)
-        )
-        dispatch(setSkipNextAutoTTS(false))
-      }
+    // 基本条件检查
+    if (!isLastMessage || !isAssistantMessage || message.status !== 'success' || generating) {
+      return;
     }
-  }, [isLastMessage, isAssistantMessage, message.status, message.content, message.id, lastPlayedMessageId, dispatch])
-
-  // 自动播放TTS的逻辑
-  useEffect(() => {
-    // 如果是最后一条助手消息，且消息状态为成功，且不是正在生成中，且TTS已启用
-    // 注意：只有在语音通话窗口打开时才自动播放TTS
-    if (isLastMessage && isAssistantMessage && message.status === 'success' && !generating && ttsEnabled) {
-      // 如果语音通话窗口没有打开，则不自动播放TTS
-      if (!isVoiceCallActive) {
-        console.log('不自动播放TTS，因为语音通话窗口没有打开:', isVoiceCallActive)
-        return
-      }
-      // 检查是否需要跳过自动TTS
-      if (skipNextAutoTTS) {
-        console.log(
-          '跳过自动TTS，因为 skipNextAutoTTS 为 true，消息ID:',
-          message.id,
-          '消息内容前20个字符:',
-          message.content?.substring(0, 20),
-          '消息状态:',
-          message.status,
-          '是否最后一条消息:',
-          isLastMessage,
-          '是否助手消息:',
-          isAssistantMessage,
-          '是否正在生成中:',
-          generating,
-          '语音通话窗口状态:',
-          isVoiceCallActive
-        )
-        // 注意：不在这里重置 skipNextAutoTTS，而是在新消息生成时重置
-        return
-      }
-
-      console.log(
-        '准备自动播放TTS，因为 skipNextAutoTTS 为 false，消息ID:',
-        message.id,
-        '消息内容前20个字符:',
-        message.content?.substring(0, 20)
-      )
-
-      // 检查消息是否有内容，且消息是新的（不是上次播放过的消息）
-      if (message.content && message.content.trim() && message.id !== lastPlayedMessageId) {
-        console.log('自动播放最新助手消息的TTS:', message.id, '语音通话窗口状态:', isVoiceCallActive)
-
-        // 更新最后播放的消息ID
-        dispatch(setLastPlayedMessageId(message.id))
-
-        // 使用延时确保消息已完全加载
-        setTimeout(() => {
-          TTSService.speakFromMessage(message)
-        }, 500)
-      } else if (message.id === lastPlayedMessageId) {
-        console.log('不自动播放TTS，因为该消息已经播放过:', message.id)
-      }
+    if (!ttsEnabled) {
+      return;
     }
+
+    // 语音通话相关条件检查
+    if (voiceCallEnabled === false && autoPlayTTSOutsideVoiceCall === false) {
+      // 简化日志输出
+      console.log('不自动播放TTS: 语音通话功能未启用 + 不允许在语音通话模式外自动播放');
+      return;
+    }
+    if (voiceCallEnabled === true && isVoiceCallActive === false && autoPlayTTSOutsideVoiceCall === false) {
+      // 简化日志输出
+      console.log('不自动播放TTS: 语音通话窗口未打开 + 不允许在语音通话模式外自动播放');
+      return;
+    }
+
+    // 检查是否需要跳过自动TTS
+    if (skipNextAutoTTS === true) {
+      console.log('跳过自动TTS: skipNextAutoTTS = true, 消息ID:', message.id);
+      return;
+    }
+    // 检查消息是否有内容，且消息是新的（不是上次播放过的消息）
+    if (message.content && message.content.trim() && message.id !== lastPlayedMessageId) {
+      // 简化日志输出
+      console.log('准备自动播放TTS, 消息ID:', message.id);
+      dispatch(setLastPlayedMessageId(message.id));
+      const playTimeout = setTimeout(() => {
+        console.log('自动播放TTS: 消息ID:', message.id);
+        TTSService.speakFromMessage(message);
+      }, 500);
+      return () => clearTimeout(playTimeout);
+    } else if (message.id === lastPlayedMessageId) {
+      // 简化日志输出
+      console.log('不自动播放TTS: 消息已播放过 (lastPlayedMessageId), ID:', message.id);
+      return; // 添加返回语句，解决TypeScript错误
+    }
+
+    // 添加默认返回值，确保所有代码路径都有返回值
+    return;
   }, [
-    isLastMessage,
-    isAssistantMessage,
-    message,
-    generating,
-    ttsEnabled,
-    isVoiceCallActive,
-    lastPlayedMessageId,
-    skipNextAutoTTS,
-    dispatch
-  ])
+    isLastMessage, isAssistantMessage, message, generating, ttsEnabled,
+    voiceCallEnabled, autoPlayTTSOutsideVoiceCall, isVoiceCallActive,
+    skipNextAutoTTS, lastPlayedMessageId, dispatch
+  ]);
 
+  // --- Highlight message on event ---
   const messageHighlightHandler = useCallback((highlight: boolean = true) => {
     if (messageContainerRef.current) {
-      messageContainerRef.current.scrollIntoView({ behavior: 'smooth' })
+      messageContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       if (highlight) {
+        const element = messageContainerRef.current;
+        element.classList.add('message-highlight');
         setTimeout(() => {
-          const classList = messageContainerRef.current?.classList
-          classList?.add('message-highlight')
-          setTimeout(() => classList?.remove('message-highlight'), 2500)
-        }, 500)
+          element?.classList.remove('message-highlight');
+        }, 2500);
       }
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    const unsubscribes = [EventEmitter.on(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, messageHighlightHandler)]
-    return () => unsubscribes.forEach((unsub) => unsub())
-  }, [message.id, messageHighlightHandler])
+    const eventName = `${EVENT_NAMES.LOCATE_MESSAGE}:${message.id}`;
+    const unsubscribe = EventEmitter.on(eventName, messageHighlightHandler);
+    return () => unsubscribe();
+  }, [message.id, messageHighlightHandler]);
+
+  // --- Component Rendering ---
 
   if (hidePresetMessages && message.isPreset) {
-    return null
+    return null;
   }
 
   if (message.type === 'clear') {
@@ -254,7 +239,7 @@ const MessageItem: FC<Props> = ({
           {t('chat.message.new.context')}
         </Divider>
       </NewContextMessage>
-    )
+    );
   }
 
   return (
@@ -270,17 +255,19 @@ const MessageItem: FC<Props> = ({
       style={{ ...style, alignItems: isBubbleStyle ? (isAssistantMessage ? 'start' : 'end') : undefined }}>
       {contextMenuPosition && (
         <Dropdown
-          overlayStyle={{ left: contextMenuPosition.x, top: contextMenuPosition.y, zIndex: 1000 }}
+          overlayStyle={{ position: 'fixed', left: contextMenuPosition.x, top: contextMenuPosition.y, zIndex: 1000 }}
           menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText, message) }}
           open={true}
-          trigger={['contextMenu']}>
-          <div />
+          trigger={['contextMenu']}
+          >
+          {/* FIX 2: Use the styled component instead of inline style */}
+          <ContextMenuTriggerDiv x={contextMenuPosition.x} y={contextMenuPosition.y} />
         </Dropdown>
       )}
       <MessageHeader message={message} assistant={assistant} model={model} key={getModelUniqId(model)} />
       <MessageContentContainer
         className="message-content-container"
-        style={{ fontFamily, fontSize, background: messageBackground, overflowY: 'visible' }}>
+        style={{ fontFamily, fontSize, background: messageBackground }}>
         <MessageErrorBoundary>
           <MessageContent message={message} model={model} />
         </MessageErrorBoundary>
@@ -292,8 +279,8 @@ const MessageItem: FC<Props> = ({
         {showMenubar && (
           <MessageFooter
             style={{
-              border: messageBorder,
-              flexDirection: isLastMessage || isBubbleStyle ? 'row-reverse' : undefined
+              borderTop: messageBorder, // Apply border style here
+              flexDirection: isBubbleStyle ? 'row-reverse' : undefined
             }}>
             <MessageTokens message={message} isLastMessage={isLastMessage} />
             <MessageMenubar
@@ -305,91 +292,84 @@ const MessageItem: FC<Props> = ({
               isLastMessage={isLastMessage}
               isAssistantMessage={isAssistantMessage}
               isGrouped={isGrouped}
-              messageContainerRef={messageContainerRef as React.RefObject<HTMLDivElement>}
+              messageContainerRef={messageContainerRef}
               setModel={setModel}
             />
           </MessageFooter>
         )}
       </MessageContentContainer>
     </MessageContainer>
-  )
-}
+  );
+};
 
-const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolean) => {
-  return isBubbleStyle
-    ? isAssistantMessage
-      ? 'var(--chat-background-assistant)'
-      : 'var(--chat-background-user)'
-    : undefined
-}
 
+// Updated context menu items function
 const getContextMenuItems = (
   t: (key: string) => string,
   selectedQuoteText: string,
   selectedText: string,
   message: Message,
-  currentMessage?: Message
 ): ItemType[] => {
-  const items: ItemType[] = []
+  const items: ItemType[] = [];
 
-  // 只有在选中文本时，才添加复制和引用选项
   if (selectedText) {
     items.push({
       key: 'copy',
       label: t('common.copy'),
       onClick: () => {
         navigator.clipboard.writeText(selectedText)
-        window.message.success({ content: t('message.copied'), key: 'copy-message' })
+          .then(() => window.message.success({ content: t('message.copied'), key: 'copy-message' }))
+          .catch(err => console.error('Failed to copy text: ', err));
       }
-    })
-
+    });
     items.push({
       key: 'quote',
       label: t('chat.message.quote'),
       onClick: () => {
-        EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
+        EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText);
       }
-    })
-
-    // 添加朗读选项
+    });
     items.push({
-      key: 'speak',
-      label: '朗读',
+      key: 'speak_selected',
+      label: t('chat.message.speak_selection') || '朗读选中部分',
       onClick: () => {
-        // 从选中的文本开始朗读后面的内容
-        if (selectedText && currentMessage?.content) {
-          // 找到选中文本在消息中的位置
-          const startIndex = currentMessage.content.indexOf(selectedText)
-          if (startIndex !== -1) {
-            // 获取选中文本及其后面的所有内容
-            const textToSpeak = currentMessage.content.substring(startIndex)
-            import('@renderer/services/TTSService').then(({ default: TTSService }) => {
-              TTSService.speak(textToSpeak)
-            })
-          } else {
-            // 如果找不到精确位置，则只朗读选中的文本
-            import('@renderer/services/TTSService').then(({ default: TTSService }) => {
-              TTSService.speak(selectedText)
-            })
-          }
-        }
+        // 首先手动关闭菜单
+        document.dispatchEvent(new MouseEvent('click'));
+
+        // 使用setTimeout确保菜单关闭后再执行TTS功能
+        setTimeout(() => {
+          import('@renderer/services/TTSService').then(({ default: TTSServiceInstance }) => {
+              let textToSpeak = selectedText;
+              if (message.content) {
+                  const startIndex = message.content.indexOf(selectedText);
+                  if (startIndex !== -1) {
+                      textToSpeak = selectedText; // Just speak selection
+                  }
+              }
+              // 传递消息ID，确保进度条和停止按钮正常工作
+              TTSServiceInstance.speak(textToSpeak, false, message.id); // 使用普通播放模式而非分段播放
+          }).catch(err => console.error('Failed to load or use TTSService:', err));
+        }, 100);
       }
-    })
+    });
+     items.push({ type: 'divider' });
   }
 
-  // 添加复制消息ID选项，但不显示ID
   items.push({
     key: 'copy_id',
     label: t('message.copy_id') || '复制消息ID',
     onClick: () => {
       navigator.clipboard.writeText(message.id)
-      window.message.success({ content: t('message.id_copied') || '消息ID已复制', key: 'copy-message-id' })
+        .then(() => window.message.success({ content: t('message.id_copied') || '消息ID已复制', key: 'copy-message-id' }))
+        .catch(err => console.error('Failed to copy message ID: ', err));
     }
-  })
+  });
 
-  return items
-}
+  return items;
+};
 
+
+// Styled components definitions
 const MessageContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -397,36 +377,34 @@ const MessageContainer = styled.div`
   transition: background-color 0.3s ease;
   padding: 0 20px;
   transform: translateZ(0);
-  will-change: transform;
+  will-change: transform, background-color;
+
   &.message-highlight {
     background-color: var(--color-primary-mute);
   }
+
   .menubar {
     opacity: 0;
     transition: opacity 0.2s ease;
     transform: translateZ(0);
     will-change: opacity;
-    &.show {
-      opacity: 1;
-    }
+    pointer-events: none;
   }
-  &:hover {
-    .menubar {
-      opacity: 1;
-    }
+
+  &:hover .menubar {
+    opacity: 1;
+    pointer-events: auto;
   }
-`
+`;
 
 const MessageContentContainer = styled.div`
   max-width: 100%;
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: space-between;
   margin-left: 46px;
   margin-top: 5px;
-  overflow-y: auto;
-`
+`;
 
 const MessageFooter = styled.div`
   display: flex;
@@ -434,18 +412,19 @@ const MessageFooter = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 2px 0;
-  margin-top: 2px;
-  border-top: 1px dotted var(--color-border);
-  gap: 20px;
-`
+  margin-top: 8px;
+  /* borderTop applied via style prop based on showMessageDivider */
+  gap: 16px;
+`;
 
 const NewContextMessage = styled.div`
   cursor: pointer;
-`
+`;
 
 const ProgressBarWrapper = styled.div`
-  width: 100%;
-  padding: 0 10px;
-`
+  width: calc(100% - 20px);
+  padding: 5px 10px;
+  margin-left: -10px;
+`;
 
-export default memo(MessageItem)
+export default memo(MessageItem);

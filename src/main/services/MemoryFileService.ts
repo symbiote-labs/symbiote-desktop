@@ -39,6 +39,9 @@ export class MemoryFileService {
             }
           ],
           shortMemories: [],
+          assistantMemories: [],
+          assistantMemoryActive: true,
+          assistantMemoryAnalyzeModel: 'gpt-3.5-turbo',
           analyzeModel: 'gpt-3.5-turbo',
           shortMemoryAnalyzeModel: 'gpt-3.5-turbo',
           historicalContextAnalyzeModel: 'gpt-3.5-turbo',
@@ -77,6 +80,9 @@ export class MemoryFileService {
         const defaultData = {
           memoryLists: [],
           shortMemories: [],
+          assistantMemories: [],
+          assistantMemoryActive: true,
+          assistantMemoryAnalyzeModel: '',
           analyzeModel: '',
           shortMemoryAnalyzeModel: '',
           historicalContextAnalyzeModel: '',

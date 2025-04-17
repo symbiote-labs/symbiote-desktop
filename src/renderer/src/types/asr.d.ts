@@ -1,5 +1,5 @@
 interface ASRServerAPI {
-  startServer: () => Promise<{ success: boolean; pid?: number; error?: string }>
+  startServer: () => Promise<{ success: boolean; pid?: number; port?: number; error?: string }>
   stopServer: (pid: number) => Promise<{ success: boolean; error?: string }>
 }
 

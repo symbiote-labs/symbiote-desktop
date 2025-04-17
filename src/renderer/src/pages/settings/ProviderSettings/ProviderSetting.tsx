@@ -31,6 +31,7 @@ import {
   SettingTitle
 } from '..'
 import ApiCheckPopup from './ApiCheckPopup'
+import GeminiKeyManager from './GeminiKeyManager'
 import GithubCopilotSettings from './GithubCopilotSettings'
 import GPUStackSettings from './GPUStackSettings'
 import HealthCheckPopup from './HealthCheckPopup'
@@ -383,6 +384,11 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
       {provider.id === 'lmstudio' && <LMStudioSettings />}
       {provider.id === 'gpustack' && <GPUStackSettings />}
       {provider.id === 'copilot' && <GithubCopilotSettings provider={provider} setApiKey={setApiKey} />}
+      {provider.id === 'gemini' && <GeminiKeyManager provider={provider} currentApiKey={apiKey} onApiKeyChange={(newApiKey) => {
+        setApiKey(newApiKey)
+        setInputValue(newApiKey)
+        updateProvider({ ...provider, apiKey: newApiKey })
+      }} />}
       <SettingSubtitle style={{ marginBottom: 5 }}>
         <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
           <HStack alignItems="center" gap={5}>

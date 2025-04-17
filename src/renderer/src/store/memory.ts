@@ -51,6 +51,24 @@ export interface ShortMemory {
   freshness?: number // 记忆鲜度评分（0-1），基于创建时间和最后访问时间
 }
 
+// 助手记忆项接口
+export interface AssistantMemory {
+  id: string
+  content: string
+  createdAt: string
+  assistantId: string // 关联的助手ID
+  analyzedMessageIds?: string[] // 记录该记忆是从哪些消息中分析出来的
+  lastMessageId?: string // 分析时的最后一条消息的ID，用于跟踪分析进度
+  vector?: number[] // 记忆的向量表示，用于语义搜索
+  entities?: string[] // 记忆中提取的实体
+  keywords?: string[] // 记忆中提取的关键词
+  importance?: number // 记忆的重要性评分（0-1）
+  accessCount?: number // 记忆被访问的次数
+  lastAccessedAt?: string // 记忆最后被访问的时间
+  decayFactor?: number // 记忆衰减因子（0-1），值越小衰减越快
+  freshness?: number // 记忆鲜度评分（0-1），基于创建时间和最后访问时间
+}
+
 // 分析统计数据接口
 export interface AnalysisStats {
   totalAnalyses: number // 总分析次数
@@ -80,7 +98,7 @@ export interface UserInterest {
 export interface MemoryRecommendation {
   memoryId: string
   relevanceScore: number
-  source: 'long-term' | 'short-term'
+  source: 'long-term' | 'short-term' | 'assistant'
   matchReason?: string
 }
 
@@ -88,13 +106,16 @@ export interface MemoryState {
   memoryLists: MemoryList[] // 记忆列表
   memories: Memory[] // 所有记忆项
   shortMemories: ShortMemory[] // 短记忆项
+  assistantMemories: AssistantMemory[] // 助手记忆项
   currentListId: string | null // 当前选中的记忆列表ID
   isActive: boolean // 记忆功能是否激活
   shortMemoryActive: boolean // 短记忆功能是否激活
+  assistantMemoryActive: boolean // 助手记忆功能是否激活
   autoAnalyze: boolean // 是否自动分析
   filterSensitiveInfo: boolean // 是否过滤敏感信息
   analyzeModel: string | null // 用于长期记忆分析的模型ID
   shortMemoryAnalyzeModel: string | null // 用于短期记忆分析的模型ID
+  assistantMemoryAnalyzeModel: string | null // 用于助手记忆分析的模型ID
   historicalContextAnalyzeModel: string | null // 用于历史对话上下文分析的模型ID
   vectorizeModel: string | null // 用于向量化的模型ID
   lastAnalyzeTime: number | null // 上次分析时间
@@ -144,13 +165,16 @@ const initialState: MemoryState = {
   memoryLists: [defaultList],
   memories: [],
   shortMemories: [], // 初始化空的短记忆数组
+  assistantMemories: [], // 初始化空的助手记忆数组
   currentListId: defaultList.id,
   isActive: true,
   shortMemoryActive: true, // 默认启用短记忆功能
+  assistantMemoryActive: true, // 默认启用助手记忆功能
   autoAnalyze: true,
   filterSensitiveInfo: true, // 默认启用敏感信息过滤
   analyzeModel: 'gpt-3.5-turbo', // 设置默认长期记忆分析模型
   shortMemoryAnalyzeModel: 'gpt-3.5-turbo', // 设置默认短期记忆分析模型
+  assistantMemoryAnalyzeModel: 'gpt-3.5-turbo', // 设置默认助手记忆分析模型
   historicalContextAnalyzeModel: 'gpt-3.5-turbo', // 设置默认历史对话上下文分析模型
   vectorizeModel: 'gpt-3.5-turbo', // 设置默认向量化模型
   lastAnalyzeTime: null,
@@ -302,6 +326,11 @@ const memorySlice = createSlice({
     // 设置短期记忆分析模型
     setShortMemoryAnalyzeModel: (state, action: PayloadAction<string | null>) => {
       state.shortMemoryAnalyzeModel = action.payload
+    },
+
+    // 设置助手记忆分析模型
+    setAssistantMemoryAnalyzeModel: (state, action: PayloadAction<string | null>) => {
+      state.assistantMemoryAnalyzeModel = action.payload
     },
 
     // 设置历史对话上下文分析模型
@@ -482,6 +511,37 @@ const memorySlice = createSlice({
       state.shortMemories.push(newShortMemory)
     },
 
+    // 添加助手记忆
+    addAssistantMemory: (
+      state,
+      action: PayloadAction<{
+        content: string
+        assistantId: string
+        analyzedMessageIds?: string[]
+        lastMessageId?: string
+        importance?: number // 重要性评分
+        keywords?: string[] // 关键词
+      }>
+    ) => {
+      const newAssistantMemory: AssistantMemory = {
+        id: nanoid(),
+        content: action.payload.content,
+        createdAt: new Date().toISOString(),
+        assistantId: action.payload.assistantId,
+        analyzedMessageIds: action.payload.analyzedMessageIds,
+        lastMessageId: action.payload.lastMessageId,
+        importance: action.payload.importance,
+        keywords: action.payload.keywords
+      }
+
+      // 确保 assistantMemories 存在
+      if (!state.assistantMemories) {
+        state.assistantMemories = []
+      }
+
+      state.assistantMemories.push(newAssistantMemory)
+    },
+
     // 删除短记忆
     deleteShortMemory: (state, action: PayloadAction<string>) => {
       // 确保 shortMemories 存在
@@ -555,9 +615,54 @@ const memorySlice = createSlice({
       }
     },
 
+    // 删除助手记忆
+    deleteAssistantMemory: (state, action: PayloadAction<string>) => {
+      // 确保 assistantMemories 存在
+      if (!state.assistantMemories) {
+        state.assistantMemories = []
+        return
+      }
+
+      // 找到要删除的记忆
+      const memoryToDelete = state.assistantMemories.find((memory) => memory.id === action.payload)
+
+      // 如果找到了要删除的记忆，并且它有分析过的消息ID
+      if (memoryToDelete && memoryToDelete.analyzedMessageIds && memoryToDelete.analyzedMessageIds.length > 0) {
+        // 记录日志，方便调试
+        console.log(`[Memory] Deleting assistant memory with ${memoryToDelete.analyzedMessageIds.length} analyzed message IDs`)
+      }
+
+      // 删除记忆
+      state.assistantMemories = state.assistantMemories.filter((memory) => memory.id !== action.payload)
+    },
+
+    // 清空指定助手的记忆
+    clearAssistantMemories: (state, action: PayloadAction<string | undefined>) => {
+      // 确保 assistantMemories 存在
+      if (!state.assistantMemories) {
+        state.assistantMemories = []
+        return
+      }
+
+      const assistantId = action.payload
+
+      if (assistantId) {
+        // 清空指定助手的记忆
+        state.assistantMemories = state.assistantMemories.filter((memory) => memory.assistantId !== assistantId)
+      } else {
+        // 清空所有助手记忆
+        state.assistantMemories = []
+      }
+    },
+
     // 设置短记忆功能是否激活
     setShortMemoryActive: (state, action: PayloadAction<boolean>) => {
       state.shortMemoryActive = action.payload
+    },
+
+    // 设置助手记忆功能是否激活
+    setAssistantMemoryActive: (state, action: PayloadAction<boolean>) => {
+      state.assistantMemoryActive = action.payload
     },
 
     // 自适应分析相关的reducer
@@ -717,6 +822,33 @@ const memorySlice = createSlice({
         })
       }
 
+      // 更新助手记忆优先级
+      if (state.assistantMemories && state.assistantMemories.length > 0) {
+        state.assistantMemories.forEach((memory) => {
+          // 计算时间衰减因子
+          if (state.decayEnabled && memory.lastAccessedAt) {
+            const daysSinceLastAccess = (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
+            const decayFactor = Math.max(0, 1 - daysSinceLastAccess * state.decayRate * 2) // 助手记忆衰减速度介于长期和短期记忆之间
+            memory.decayFactor = decayFactor
+          } else {
+            memory.decayFactor = 1 // 无衰减
+          }
+
+          // 计算鲜度评分
+          if (state.freshnessEnabled) {
+            const daysSinceCreation = (now - new Date(memory.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+            const lastAccessDays = memory.lastAccessedAt
+              ? (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
+              : daysSinceCreation
+
+            // 助手记忆的鲜度评分
+            const creationFreshness = Math.max(0, 1 - daysSinceCreation / 15) // 15天内创建的记忆较新
+            const accessFreshness = Math.max(0, 1 - lastAccessDays / 3) // 3天内访问的记忆较新
+            memory.freshness = creationFreshness * 0.3 + accessFreshness * 0.7 // 加权平均
+          }
+        })
+      }
+
       state.lastPriorityUpdate = now
     },
 
@@ -753,16 +885,37 @@ const memorySlice = createSlice({
           memory.freshness = creationFreshness * 0.2 + accessFreshness * 0.8
         })
       }
+
+      // 更新助手记忆鲜度
+      if (state.assistantMemories && state.assistantMemories.length > 0) {
+        state.assistantMemories.forEach((memory) => {
+          const daysSinceCreation = (now - new Date(memory.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+          const lastAccessDays = memory.lastAccessedAt
+            ? (now - new Date(memory.lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
+            : daysSinceCreation
+
+          const creationFreshness = Math.max(0, 1 - daysSinceCreation / 15)
+          const accessFreshness = Math.max(0, 1 - lastAccessDays / 3)
+          memory.freshness = creationFreshness * 0.3 + accessFreshness * 0.7
+        })
+      }
     },
 
     // 记录记忆访问
-    accessMemory: (state, action: PayloadAction<{ id: string; isShortMemory?: boolean }>) => {
-      const { id, isShortMemory } = action.payload
+    accessMemory: (state, action: PayloadAction<{ id: string; isShortMemory?: boolean; isAssistantMemory?: boolean }>) => {
+      const { id, isShortMemory, isAssistantMemory } = action.payload
       const now = new Date().toISOString()
 
       if (isShortMemory) {
         // 更新短期记忆访问信息
         const memory = state.shortMemories?.find((m) => m.id === id)
+        if (memory) {
+          memory.accessCount = (memory.accessCount || 0) + 1
+          memory.lastAccessedAt = now
+        }
+      } else if (isAssistantMemory) {
+        // 更新助手记忆访问信息
+        const memory = state.assistantMemories?.find((m) => m.id === id)
         if (memory) {
           memory.accessCount = (memory.accessCount || 0) + 1
           memory.lastAccessedAt = now
@@ -821,6 +974,18 @@ const memorySlice = createSlice({
           state.memoryLists = action.payload.memoryLists || state.memoryLists
           state.shortMemories = action.payload.shortMemories || state.shortMemories
 
+          // 助手记忆数据
+          if (action.payload.assistantMemories) {
+            state.assistantMemories = action.payload.assistantMemories
+            console.log('[Memory Reducer] Loaded assistant memories:', action.payload.assistantMemories.length)
+          }
+
+          // 助手记忆功能状态
+          if (action.payload.assistantMemoryActive !== undefined) {
+            state.assistantMemoryActive = action.payload.assistantMemoryActive
+            console.log('[Memory Reducer] Loaded assistant memory active state:', action.payload.assistantMemoryActive)
+          }
+
           // 更新模型选择
           if (action.payload.analyzeModel) {
             state.analyzeModel = action.payload.analyzeModel
@@ -830,6 +995,12 @@ const memorySlice = createSlice({
           if (action.payload.shortMemoryAnalyzeModel) {
             state.shortMemoryAnalyzeModel = action.payload.shortMemoryAnalyzeModel
             console.log('[Memory Reducer] Loaded short memory analyze model:', action.payload.shortMemoryAnalyzeModel)
+          }
+
+          // 助手记忆分析模型
+          if (action.payload.assistantMemoryAnalyzeModel) {
+            state.assistantMemoryAnalyzeModel = action.payload.assistantMemoryAnalyzeModel
+            console.log('[Memory Reducer] Loaded assistant memory analyze model:', action.payload.assistantMemoryAnalyzeModel)
           }
 
           console.log('Short-term memory data loaded into state')
@@ -898,6 +1069,7 @@ export const {
   setFilterSensitiveInfo,
   setAnalyzeModel,
   setShortMemoryAnalyzeModel,
+  setAssistantMemoryAnalyzeModel,
   setHistoricalContextAnalyzeModel,
   setVectorizeModel,
   setAnalyzing,
@@ -914,6 +1086,11 @@ export const {
   deleteShortMemory,
   clearShortMemories,
   setShortMemoryActive,
+  // 助手记忆相关的action
+  addAssistantMemory,
+  deleteAssistantMemory,
+  clearAssistantMemories,
+  setAssistantMemoryActive,
 
   // 自适应分析相关的action
   setAdaptiveAnalysisEnabled,
@@ -998,12 +1175,14 @@ export const saveMemoryData = createAsyncThunk(
         // 模型选择
         analyzeModel: memoryData.analyzeModel || state.analyzeModel,
         shortMemoryAnalyzeModel: memoryData.shortMemoryAnalyzeModel || state.shortMemoryAnalyzeModel,
+        assistantMemoryAnalyzeModel: memoryData.assistantMemoryAnalyzeModel || state.assistantMemoryAnalyzeModel,
         historicalContextAnalyzeModel: memoryData.historicalContextAnalyzeModel || state.historicalContextAnalyzeModel,
         vectorizeModel: memoryData.vectorizeModel || state.vectorizeModel,
 
         // 记忆数据
         memoryLists: memoryData.memoryLists || state.memoryLists,
         shortMemories: memoryData.shortMemories || state.shortMemories,
+        assistantMemories: memoryData.assistantMemories || state.assistantMemories,
         currentListId: memoryData.currentListId || state.currentListId,
 
         // 自适应分析相关
@@ -1173,13 +1352,18 @@ export const saveAllMemorySettings = createAsyncThunk('memory/saveAllSettings', 
       // 基本设置
       isActive: state.isActive,
       shortMemoryActive: state.shortMemoryActive,
+      assistantMemoryActive: state.assistantMemoryActive,
       autoAnalyze: state.autoAnalyze,
 
       // 模型选择
       analyzeModel: state.analyzeModel,
       shortMemoryAnalyzeModel: state.shortMemoryAnalyzeModel,
+      assistantMemoryAnalyzeModel: state.assistantMemoryAnalyzeModel,
       historicalContextAnalyzeModel: state.historicalContextAnalyzeModel,
       vectorizeModel: state.vectorizeModel,
+
+      // 记忆数据
+      assistantMemories: state.assistantMemories,
 
       // 自适应分析相关
       adaptiveAnalysisEnabled: state.adaptiveAnalysisEnabled,

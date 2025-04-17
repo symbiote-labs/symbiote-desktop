@@ -48,15 +48,74 @@ export default class GeminiProvider extends BaseProvider {
   private sdk: GoogleGenerativeAI
   private requestOptions: RequestOptions
   private imageSdk: GoogleGenAI
+  // 存储对话ID到SDK实例的映射
+  private conversationSdks: Map<string, GoogleGenerativeAI> = new Map()
+  // 存储对话ID到图像SDK实例的映射
+  private conversationImageSdks: Map<string, GoogleGenAI> = new Map()
 
   constructor(provider: Provider) {
     super(provider)
-    this.sdk = new GoogleGenerativeAI(this.apiKey)
+    // 获取新的API密钥，实现轮流使用多个密钥
+    const apiKey = this.getApiKey()
+    this.sdk = new GoogleGenerativeAI(apiKey)
     /// this sdk is experimental
-    this.imageSdk = new GoogleGenAI({ apiKey: this.apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
+    this.imageSdk = new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
     this.requestOptions = {
       baseUrl: this.getBaseURL()
     }
+    console.log(`[GeminiProvider] Initialized with API key`)
+  }
+
+  /**
+   * 获取与对话关联的SDK实例
+   * @param conversationId - 对话ID
+   * @returns SDK实例
+   */
+  private getOrCreateSdk(conversationId: string): GoogleGenerativeAI {
+    // 获取新的API密钥，实现轮流使用多个密钥
+    const apiKey = this.getApiKey()
+
+    // 如果没有提供对话ID，创建一个新的SDK实例
+    if (!conversationId) {
+      this.sdk = new GoogleGenerativeAI(apiKey)
+      return this.sdk
+    }
+
+    // 创建新的SDK实例
+    const newSdk = new GoogleGenerativeAI(apiKey)
+
+    // 存储SDK实例，覆盖之前的实例
+    this.conversationSdks.set(conversationId, newSdk)
+
+    console.log(`[GeminiProvider] Created new SDK for conversation ${conversationId} with API key`)
+
+    return newSdk
+  }
+
+  /**
+   * 获取与对话关联的图像SDK实例
+   * @param conversationId - 对话ID
+   * @returns 图像SDK实例
+   */
+  private getOrCreateImageSdk(conversationId: string): GoogleGenAI {
+    // 获取新的API密钥，实现轮流使用多个密钥
+    const apiKey = this.getApiKey()
+
+    // 如果没有提供对话ID，创建一个新的SDK实例
+    if (!conversationId) {
+      this.imageSdk = new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
+      return this.imageSdk
+    }
+
+    // 创建新的SDK实例
+    const newSdk = new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
+
+    // 存储SDK实例，覆盖之前的实例
+    this.conversationImageSdks.set(conversationId, newSdk)
+
+    console.log(`[GeminiProvider] Created new Image SDK for conversation ${conversationId} with API key`)
+
+    return newSdk
   }
 
   public getBaseURL(): string {
@@ -207,6 +266,9 @@ export default class GeminiProvider extends BaseProvider {
    * @param onFilterMessages - The onFilterMessages callback
    */
   public async completions({ messages, assistant, mcpTools, onChunk, onFilterMessages }: CompletionsParams) {
+    // 获取对话ID，用于关联SDK实例
+    const conversationId = assistant.id || ''
+
     if (assistant.enableGenerateImage) {
       await this.generateImageExp({ messages, assistant, onFilterMessages, onChunk })
     } else {
@@ -227,14 +289,23 @@ export default class GeminiProvider extends BaseProvider {
         history.push(await this.getMessageContents(message))
       }
 
-      let systemInstruction = assistant.prompt
+      // 获取当前话题ID
+      const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
 
+      // 应用记忆功能到系统提示词
+      const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
+      const enhancedPrompt = await applyMemoriesToPrompt(assistant.prompt || '', currentTopicId)
+      console.log(
+        '[GeminiProvider.completions] Applied memories to prompt, length difference:',
+        enhancedPrompt.length - (assistant.prompt || '').length
+      )
+
+      // 使用增强后的提示词
+      let systemInstruction = enhancedPrompt
+
+      // 如果有MCP工具，进一步处理
       if (mcpTools && mcpTools.length > 0) {
-        systemInstruction = await buildSystemPrompt(
-          assistant.prompt || '',
-          mcpTools,
-          getActiveServers(store.getState())
-        )
+        systemInstruction = await buildSystemPrompt(enhancedPrompt, mcpTools, getActiveServers(store.getState()))
       }
 
       // const tools = mcpToolsToGeminiTools(mcpTools)
@@ -248,7 +319,10 @@ export default class GeminiProvider extends BaseProvider {
         })
       }
 
-      const geminiModel = this.sdk.getGenerativeModel(
+      // 使用与对话关联的SDK实例
+      const sdk = this.getOrCreateSdk(conversationId)
+
+      const geminiModel = sdk.getGenerativeModel(
         {
           model: model.id,
           ...(isGemmaModel(model) ? {} : { systemInstruction: systemInstruction }),
@@ -383,10 +457,27 @@ export default class GeminiProvider extends BaseProvider {
     const { maxTokens } = getAssistantSettings(assistant)
     const model = assistant.model || defaultModel
 
-    const geminiModel = this.sdk.getGenerativeModel(
+    // 获取对话ID，用于关联SDK实例
+    const conversationId = assistant.id || ''
+
+    // 获取当前话题ID
+    const currentTopicId = message.topicId
+
+    // 应用记忆功能到系统提示词
+    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
+    const enhancedPrompt = await applyMemoriesToPrompt(assistant.prompt || '', currentTopicId)
+    console.log(
+      '[GeminiProvider.translate] Applied memories to prompt, length difference:',
+      enhancedPrompt.length - (assistant.prompt || '').length
+    )
+
+    // 使用与对话关联的SDK实例
+    const sdk = this.getOrCreateSdk(conversationId)
+
+    const geminiModel = sdk.getGenerativeModel(
       {
         model: model.id,
-        ...(isGemmaModel(model) ? {} : { systemInstruction: assistant.prompt }),
+        ...(isGemmaModel(model) ? {} : { systemInstruction: enhancedPrompt }),
         generationConfig: {
           maxOutputTokens: maxTokens,
           temperature: assistant?.settings?.temperature
@@ -396,8 +487,8 @@ export default class GeminiProvider extends BaseProvider {
     )
 
     const content =
-      isGemmaModel(model) && assistant.prompt
-        ? `<start_of_turn>user\n${assistant.prompt}<end_of_turn>\n<start_of_turn>user\n${message.content}<end_of_turn>`
+      isGemmaModel(model) && enhancedPrompt
+        ? `<start_of_turn>user\n${enhancedPrompt}<end_of_turn>\n<start_of_turn>user\n${message.content}<end_of_turn>`
         : message.content
 
     if (!onResponse) {
@@ -438,9 +529,23 @@ export default class GeminiProvider extends BaseProvider {
       return prev + (prev ? '\n' : '') + content
     }, '')
 
+    // 获取原始提示词
+    const originalPrompt = (getStoreSetting('topicNamingPrompt') as string) || i18n.t('prompts.title')
+
+    // 获取当前话题ID
+    const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
+
+    // 应用记忆功能到系统提示词
+    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
+    const enhancedPrompt = await applyMemoriesToPrompt(originalPrompt, currentTopicId)
+    console.log(
+      '[GeminiProvider.summaries] Applied memories to prompt, length difference:',
+      enhancedPrompt.length - originalPrompt.length
+    )
+
     const systemMessage = {
       role: 'system',
-      content: (getStoreSetting('topicNamingPrompt') as string) || i18n.t('prompts.title')
+      content: enhancedPrompt
     }
 
     const userMessage = {
@@ -448,7 +553,13 @@ export default class GeminiProvider extends BaseProvider {
       content: userMessageContent
     }
 
-    const geminiModel = this.sdk.getGenerativeModel(
+    // 获取对话ID，用于关联SDK实例
+    const conversationId = assistant.id || ''
+
+    // 使用与对话关联的SDK实例
+    const sdk = this.getOrCreateSdk(conversationId)
+
+    const geminiModel = sdk.getGenerativeModel(
       {
         model: model.id,
         ...(isGemmaModel(model) ? {} : { systemInstruction: systemMessage.content }),
@@ -459,9 +570,9 @@ export default class GeminiProvider extends BaseProvider {
       this.requestOptions
     )
 
-    const chat = await geminiModel.startChat()
+    const chat = geminiModel.startChat()
     const content = isGemmaModel(model)
-      ? `<start_of_turn>user\n${systemMessage.content}<end_of_turn>\n<start_of_turn>user\n${userMessage.content}<end_of_turn>`
+      ? `<start_of_turn>user\n${enhancedPrompt}<end_of_turn>\n<start_of_turn>user\n${userMessage.content}<end_of_turn>`
       : userMessage.content
 
     const { response } = await chat.sendMessage(content)
@@ -479,11 +590,13 @@ export default class GeminiProvider extends BaseProvider {
   public async generateText({
     prompt,
     content,
-    modelId
+    modelId,
+    conversationId = ''
   }: {
     prompt: string
     content: string
     modelId?: string
+    conversationId?: string
   }): Promise<string> {
     // 使用指定的模型或默认模型
     const model = modelId
@@ -508,7 +621,10 @@ export default class GeminiProvider extends BaseProvider {
 
     const systemMessage = { role: 'system', content: enhancedPrompt }
 
-    const geminiModel = this.sdk.getGenerativeModel(
+    // 使用与对话关联的SDK实例
+    const sdk = this.getOrCreateSdk(conversationId)
+
+    const geminiModel = sdk.getGenerativeModel(
       {
         model: model.id,
         ...(isGemmaModel(model) ? {} : { systemInstruction: systemMessage.content })
@@ -516,7 +632,7 @@ export default class GeminiProvider extends BaseProvider {
       this.requestOptions
     )
 
-    const chat = await geminiModel.startChat()
+    const chat = geminiModel.startChat()
     const messageContent = isGemmaModel(model)
       ? `<start_of_turn>user\n${enhancedPrompt}<end_of_turn>\n<start_of_turn>user\n${content}<end_of_turn>`
       : content
@@ -543,20 +659,34 @@ export default class GeminiProvider extends BaseProvider {
   public async summaryForSearch(messages: Message[], assistant: Assistant): Promise<string> {
     const model = assistant.model || getDefaultModel()
 
-    const systemMessage = {
-      role: 'system',
-      content: assistant.prompt
-    }
+    // 获取当前话题ID
+    const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
+
+    // 应用记忆功能到系统提示词
+    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
+    const enhancedPrompt = await applyMemoriesToPrompt(assistant.prompt || '', currentTopicId)
+    console.log(
+      '[GeminiProvider.summaryForSearch] Applied memories to prompt, length difference:',
+      enhancedPrompt.length - (assistant.prompt || '').length
+    )
+
+    // 不再需要单独的systemMessage变量，因为我们直接使用enhancedPrompt
 
     const userMessage = {
       role: 'user',
       content: messages.map((m) => m.content).join('\n')
     }
 
-    const geminiModel = this.sdk.getGenerativeModel(
+    // 获取对话ID，用于关联SDK实例
+    const conversationId = assistant.id || ''
+
+    // 使用与对话关联的SDK实例
+    const sdk = this.getOrCreateSdk(conversationId)
+
+    const geminiModel = sdk.getGenerativeModel(
       {
         model: model.id,
-        systemInstruction: systemMessage.content,
+        systemInstruction: enhancedPrompt,
         generationConfig: {
           temperature: assistant?.settings?.temperature
         }
@@ -567,7 +697,7 @@ export default class GeminiProvider extends BaseProvider {
       }
     )
 
-    const chat = await geminiModel.startChat()
+    const chat = geminiModel.startChat()
     const { response } = await chat.sendMessage(userMessage.content)
 
     return response.text()
@@ -594,6 +724,9 @@ export default class GeminiProvider extends BaseProvider {
     const model = assistant.model || defaultModel
     const { contextCount, streamOutput, maxTokens } = getAssistantSettings(assistant)
 
+    // 获取对话ID，用于关联SDK实例
+    const conversationId = assistant.id || ''
+
     const userMessages = filterUserRoleStartMessages(filterContextMessages(takeRight(messages, contextCount + 2)))
     onFilterMessages(userMessages)
 
@@ -615,8 +748,11 @@ export default class GeminiProvider extends BaseProvider {
 
     contents = await this.addImageFileToContents(userLastMessage, contents)
 
+    // 使用与对话关联的图像SDK实例
+    const imageSdk = this.getOrCreateImageSdk(conversationId)
+
     if (!streamOutput) {
-      const response = await this.callGeminiGenerateContent(model.id, contents, maxTokens)
+      const response = await this.callGeminiGenerateContent(model.id, contents, maxTokens, imageSdk)
 
       const { isValid, message } = this.isValidGeminiResponse(response)
       if (!isValid) {
@@ -626,7 +762,7 @@ export default class GeminiProvider extends BaseProvider {
       this.processGeminiImageResponse(response, onChunk)
       return
     }
-    const response = await this.callGeminiGenerateContentStream(model.id, contents, maxTokens)
+    const response = await this.callGeminiGenerateContentStream(model.id, contents, maxTokens, imageSdk)
 
     for await (const chunk of response) {
       this.processGeminiImageResponse(chunk, onChunk)
@@ -661,10 +797,17 @@ export default class GeminiProvider extends BaseProvider {
   private async callGeminiGenerateContent(
     modelId: string,
     contents: ContentListUnion,
-    maxTokens?: number
+    maxTokens?: number,
+    sdk?: GoogleGenAI
   ): Promise<GenerateContentResponse> {
     try {
-      return await this.imageSdk.models.generateContent({
+      // 获取新的API密钥，实现轮流使用多个密钥
+      const apiKey = this.getApiKey()
+
+      // 创建新的SDK实例
+      const apiSdk = sdk || new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
+
+      return await apiSdk.models.generateContent({
         model: modelId,
         contents: contents,
         config: {
@@ -682,10 +825,17 @@ export default class GeminiProvider extends BaseProvider {
   private async callGeminiGenerateContentStream(
     modelId: string,
     contents: ContentListUnion,
-    maxTokens?: number
+    maxTokens?: number,
+    sdk?: GoogleGenAI
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
     try {
-      return await this.imageSdk.models.generateContentStream({
+      // 获取新的API密钥，实现轮流使用多个密钥
+      const apiKey = this.getApiKey()
+
+      // 创建新的SDK实例
+      const apiSdk = sdk || new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
+
+      return await apiSdk.models.generateContentStream({
         model: modelId,
         contents: contents,
         config: {
@@ -775,7 +925,11 @@ export default class GeminiProvider extends BaseProvider {
     }
 
     try {
-      const geminiModel = this.sdk.getGenerativeModel({ model: body.model }, this.requestOptions)
+      // 使用新的API密钥创建一个临时SDK实例进行检查
+      const apiKey = this.getApiKey()
+      const tempSdk = new GoogleGenerativeAI(apiKey)
+
+      const geminiModel = tempSdk.getGenerativeModel({ model: body.model }, this.requestOptions)
       const result = await geminiModel.generateContent(body.messages[0].content)
       return {
         valid: !isEmpty(result.response.text()),
@@ -799,7 +953,7 @@ export default class GeminiProvider extends BaseProvider {
       const { data } = await axios.get(api, { params: { key: this.apiKey } })
 
       return data.models.map(
-        (m) =>
+        (m: { name: string; displayName: string; description: string }) =>
           ({
             id: m.name.replace('models/', ''),
             name: m.displayName,
@@ -820,7 +974,11 @@ export default class GeminiProvider extends BaseProvider {
    * @returns The embedding dimensions
    */
   public async getEmbeddingDimensions(model: Model): Promise<number> {
-    const data = await this.sdk.getGenerativeModel({ model: model.id }, this.requestOptions).embedContent('hi')
+    // 使用新的API密钥创建一个临时SDK实例
+    const apiKey = this.getApiKey()
+    const tempSdk = new GoogleGenerativeAI(apiKey)
+
+    const data = await tempSdk.getGenerativeModel({ model: model.id }, this.requestOptions).embedContent('hi')
     return data.embedding.values.length
   }
 }

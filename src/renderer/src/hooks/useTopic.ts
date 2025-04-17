@@ -55,46 +55,84 @@ export async function getTopicById(topicId: string) {
   return { ...topic, messages } as Topic
 }
 
+// 优化自动重命名功能，减少API调用和性能影响
 export const autoRenameTopic = async (assistant: Assistant, topicId: string) => {
+  // 如果该主题正在重命名中，直接返回
   if (renamingTopics.has(topicId)) {
     return
   }
 
+  // Declare variables outside the try block to make them accessible in finally
+  let enableTopicNaming: boolean | undefined
+  let topic: Topic | undefined
+  let messages: any[] = [] // Assuming messages is an array, adjust type if needed
+
   try {
     renamingTopics.add(topicId)
 
-    const topic = await getTopicById(topicId)
-    const enableTopicNaming = getStoreSetting('enableTopicNaming')
+    // 获取主题设置并确保其为布尔值
+    enableTopicNaming = getStoreSetting('enableTopicNaming') === true
 
-    if (isEmpty(topic.messages)) {
+    // 从当前状态中获取主题，避免数据库访问
+    const state = store.getState()
+    const topics = state.assistants.assistants.map((a) => a.topics).flat()
+    topic = topics.find((t) => t.id === topicId)
+
+    // 如果主题不存在或已手动编辑名称，直接返回
+    if (!topic || topic.isNameManuallyEdited) {
       return
     }
 
-    if (topic.isNameManuallyEdited) {
+    // 获取消息
+    messages = state.messages.messagesByTopic[topicId] || []
+    if (isEmpty(messages)) {
       return
     }
 
+    // 如果不启用自动命名，使用第一条消息的前50个字符作为主题名称
     if (!enableTopicNaming) {
-      const topicName = topic.messages[0]?.content.substring(0, 50)
-      if (topicName) {
-        const data = { ...topic, name: topicName } as Topic
-        _setActiveTopic(data)
+      const topicName = messages[0]?.content?.substring(0, 50)
+      // Ensure topic is defined before using it
+      if (topicName && topic) {
+        const data = { ...topic, name: topicName }
+        // Check if _setActiveTopic exists and is a function before calling
+        if (typeof _setActiveTopic === 'function') {
+           _setActiveTopic(data)
+        }
         store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
       }
       return
     }
 
-    if (topic && topic.name === i18n.t('chat.default.topic.name') && topic.messages.length >= 2) {
-      const { fetchMessagesSummary } = await import('@renderer/services/ApiService')
-      const summaryText = await fetchMessagesSummary({ messages: topic.messages, assistant })
-      if (summaryText) {
-        const data = { ...topic, name: summaryText }
-        _setActiveTopic(data)
-        store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
-      }
+    // 只有当主题名称是默认名称且消息数量足够时，才调用API生成摘要
+    if (topic && topic.name === i18n.t('chat.default.topic.name') && messages.length >= 2) {
+      // 延迟加载摘要API，减少切换会话时的卡顿
+      setTimeout(async () => {
+        try {
+          const { fetchMessagesSummary } = await import('@renderer/services/ApiService')
+          const summaryText = await fetchMessagesSummary({ messages, assistant })
+          // Ensure topic is defined before using it
+          if (summaryText && topic) {
+            const data = { ...topic, name: summaryText }
+             // Check if _setActiveTopic exists and is a function before calling
+            if (typeof _setActiveTopic === 'function') {
+               _setActiveTopic(data)
+            }
+            store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
+          }
+        } catch (error) {
+          // 静默处理错误，不影响用户体验
+        } finally {
+          renamingTopics.delete(topicId)
+        }
+      }, 1000) // 延迟1秒执行，避免切换会话时的卡顿
+      return
     }
   } finally {
-    renamingTopics.delete(topicId)
+    // 如果没有进入延迟执行的分支，则在这里清除标记
+    if (!enableTopicNaming || topic?.name !== i18n.t('chat.default.topic.name') || messages.length < 2) {
+      renamingTopics.delete(topicId)
+    }
   }
 }
 

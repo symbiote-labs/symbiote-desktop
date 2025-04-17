@@ -123,6 +123,7 @@ export interface SettingsState {
   ttsCustomVoices: string[]
   ttsCustomModels: string[]
   showTTSProgressBar: boolean // 是否显示TTS进度条
+  autoPlayTTSOutsideVoiceCall: boolean // 是否在语音通话模式之外自动播放TTS
   // 浏览器 TTS配置
   ttsEdgeVoice: string
   // 硅基流动 TTS配置
@@ -266,6 +267,7 @@ export const initialState: SettingsState = {
   ttsEnabled: false,
   ttsServiceType: 'openai', // 默认使用 OpenAI TTS
   ttsApiKey: '',
+  autoPlayTTSOutsideVoiceCall: false, // 默认不在语音通话模式之外自动播放TTS
   ttsApiUrl: 'https://api.openai.com/v1/audio/speech',
   ttsVoice: '',
   ttsModel: '',
@@ -722,6 +724,9 @@ const settingsSlice = createSlice({
     setShowTTSProgressBar: (state, action: PayloadAction<boolean>) => {
       state.showTTSProgressBar = action.payload
     },
+    setAutoPlayTTSOutsideVoiceCall: (state, action: PayloadAction<boolean>) => {
+      state.autoPlayTTSOutsideVoiceCall = action.payload
+    },
     // ASR相关的action
     setAsrEnabled: (state, action: PayloadAction<boolean>) => {
       state.asrEnabled = action.payload
@@ -884,6 +889,7 @@ export const {
   removeTtsCustomModel,
   setTtsFilterOptions,
   setShowTTSProgressBar,
+  setAutoPlayTTSOutsideVoiceCall,
   setAsrEnabled,
   setAsrServiceType,
   setAsrApiKey,

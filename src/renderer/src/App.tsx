@@ -6,6 +6,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 
 import Sidebar from './components/app/Sidebar'
+import DeepClaudeProvider from './components/DeepClaudeProvider'
 import MemoryProvider from './components/MemoryProvider'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
@@ -31,6 +32,7 @@ function App(): React.ReactElement {
             <SyntaxHighlighterProvider>
               <PersistGate loading={null} persistor={persistor}>
                 <MemoryProvider>
+                  <DeepClaudeProvider />
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />

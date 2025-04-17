@@ -1,53 +1,53 @@
-import { SyncOutlined, TranslationOutlined } from '@ant-design/icons'
-import TTSHighlightedText from '@renderer/components/TTSHighlightedText'
-import { isOpenAIWebSearch } from '@renderer/config/models'
-import { getModelUniqId } from '@renderer/services/ModelService'
-import { Message, Model } from '@renderer/types'
-import { getBriefInfo } from '@renderer/utils'
-import { withMessageThought } from '@renderer/utils/formats'
-import { Collapse, Divider, Flex } from 'antd'
-import { clone } from 'lodash'
-import { Search } from 'lucide-react'
-import React, { Fragment, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import BarLoader from 'react-spinners/BarLoader'
-import BeatLoader from 'react-spinners/BeatLoader'
-import styled from 'styled-components'
+import { SyncOutlined, TranslationOutlined } from '@ant-design/icons';
+import TTSHighlightedText from '@renderer/components/TTSHighlightedText';
+import { isOpenAIWebSearch } from '@renderer/config/models';
+import { getModelUniqId } from '@renderer/services/ModelService';
+import { Message, Model } from '@renderer/types';
+import { getBriefInfo } from '@renderer/utils';
+import { withMessageThought } from '@renderer/utils/formats';
+import { Collapse, Divider, Flex } from 'antd';
+import { clone } from 'lodash';
+import { Search } from 'lucide-react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import BarLoader from 'react-spinners/BarLoader';
+import BeatLoader from 'react-spinners/BeatLoader';
+import styled from 'styled-components';
 
-import Markdown from '../Markdown/Markdown'
-import CitationsList from './CitationsList'
-import MessageAttachments from './MessageAttachments'
-import MessageError from './MessageError'
-import MessageImage from './MessageImage'
-import MessageThought from './MessageThought'
-import MessageTools from './MessageTools'
+import Markdown from '../Markdown/Markdown';
+import CitationsList from './CitationsList';
+import MessageAttachments from './MessageAttachments';
+import MessageError from './MessageError';
+import MessageImage from './MessageImage';
+import MessageThought from './MessageThought';
+import MessageTools from './MessageTools';
 
 interface Props {
-  message: Message
-  model?: Model
+  message: Message;
+  model?: Model;
 }
 
 const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
-  const { t } = useTranslation()
-  const message = withMessageThought(clone(_message))
-  const isWebCitation = model && (isOpenAIWebSearch(model) || model.provider === 'openrouter')
-  const [isSegmentedPlayback, setIsSegmentedPlayback] = useState(false)
+  const { t } = useTranslation();
+  const message = withMessageThought(clone(_message));
+  const isWebCitation = model && (isOpenAIWebSearch(model) || model.provider === 'openrouter');
+  const [isSegmentedPlayback, setIsSegmentedPlayback] = useState(false);
 
   // 监听分段播放状态变化
   useEffect(() => {
     const handleSegmentedPlaybackUpdate = (event: CustomEvent) => {
-      const { isSegmentedPlayback } = event.detail
-      setIsSegmentedPlayback(isSegmentedPlayback)
-    }
+      const { isSegmentedPlayback } = event.detail;
+      setIsSegmentedPlayback(isSegmentedPlayback);
+    };
 
     // 添加事件监听器
-    window.addEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener)
+    window.addEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener);
 
     // 组件卸载时移除事件监听器
     return () => {
-      window.removeEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener)
-    }
-  }, [])
+      window.removeEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener);
+    };
+  }, []);
 
   // HTML实体编码辅助函数
   const encodeHTML = (str: string) => {
@@ -58,47 +58,47 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         '>': '&gt;',
         '"': '&quot;',
         "'": '&apos;'
-      }
-      return entities[match]
-    })
-  }
+      };
+      return entities[match];
+    });
+  };
 
   // Format citations for display
   const formattedCitations = useMemo(() => {
-    if (!message.metadata?.citations?.length && !message.metadata?.annotations?.length) return null
+    if (!message.metadata?.citations?.length && !message.metadata?.annotations?.length) return null;
 
-    let citations: any[] = []
+    let citations: any[] = [];
 
     if (model && isOpenAIWebSearch(model)) {
       citations =
         message.metadata.annotations?.map((url, index) => {
-          return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title }
-        }) || []
+          return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title };
+        }) || [];
     } else {
       citations =
         message.metadata?.citations?.map((url, index) => {
           try {
-            const hostname = new URL(url).hostname
-            return { number: index + 1, url, hostname }
+            const hostname = new URL(url).hostname;
+            return { number: index + 1, url, hostname };
           } catch {
-            return { number: index + 1, url, hostname: url }
+            return { number: index + 1, url, hostname: url };
           }
-        }) || []
+        }) || [];
     }
 
     // Deduplicate by URL
-    const urlSet = new Set()
+    const urlSet = new Set();
     return citations
       .filter((citation) => {
-        if (!citation.url || urlSet.has(citation.url)) return false
-        urlSet.add(citation.url)
-        return true
+        if (!citation.url || urlSet.has(citation.url)) return false;
+        urlSet.add(citation.url);
+        return true;
       })
       .map((citation, index) => ({
         ...citation,
         number: index + 1 // Renumber citations sequentially after deduplication
-      }))
-  }, [message.metadata?.citations, message.metadata?.annotations, model])
+      }));
+  }, [message.metadata?.citations, message.metadata?.annotations, model]);
 
   // 获取引用数据
   const citationsData = useMemo(() => {
@@ -107,11 +107,11 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       message?.metadata?.webSearchInfo ||
       message?.metadata?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
       message?.metadata?.annotations?.map((annotation) => annotation.url_citation) ||
-      []
-    const citationsUrls = formattedCitations || []
+      [];
+    const citationsUrls = formattedCitations || [];
 
     // 合并引用数据
-    const data = new Map()
+    const data = new Map();
 
     // 添加webSearch结果
     searchResults.forEach((result) => {
@@ -119,8 +119,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         url: result.url || result.uri || result.link,
         title: result.title || result.hostname,
         content: result.content
-      })
-    })
+      });
+    });
 
     // 添加citations
     citationsUrls.forEach((result) => {
@@ -129,18 +129,18 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
           url: result.url,
           title: result.title || result.hostname || undefined,
           content: result.content || undefined
-        })
+        });
       }
-    })
+    });
 
-    return data
+    return data;
   }, [
     formattedCitations,
     message?.metadata?.annotations,
     message?.metadata?.groundingMetadata?.groundingChunks,
     message?.metadata?.webSearch?.results,
     message?.metadata?.webSearchInfo
-  ])
+  ]);
 
   // Process content to make citation numbers clickable
   const processedContent = useMemo(() => {
@@ -152,35 +152,37 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         message.metadata?.annotations
       )
     ) {
-      return message.content
+      return message.content;
     }
 
-    let content = message.content
+    let content = message.content;
 
-    const searchResultsCitations = message?.metadata?.webSearch?.results?.map((result) => result.url) || []
+    const searchResultsCitations = message?.metadata?.webSearch?.results?.map((result) => result.url) || [];
 
-    const citations = message?.metadata?.citations || searchResultsCitations
+    const citations = message?.metadata?.citations || searchResultsCitations;
 
     // Convert [n] format to superscript numbers and make them clickable
     // Use <sup> tag for superscript and make it a link with citation data
     if (message.metadata?.webSearch) {
       content = content.replace(/\[\[(\d+)\]\]|\[(\d+)\]/g, (match, num1, num2) => {
-        const num = num1 || num2
-        const index = parseInt(num) - 1
+        const num = num1 || num2;
+        const index = parseInt(num) - 1;
         if (index >= 0 && index < citations.length) {
-          const link = citations[index]
-          const citationData = link ? encodeHTML(JSON.stringify(citationsData.get(link) || { url: link })) : null
-          return link ? `[<sup data-citation='${citationData}'>${num}</sup>](${link})` : `<sup>${num}</sup>`
+          const link = citations[index];
+          const citationData = link ? encodeHTML(JSON.stringify(citationsData.get(link) || { url: link })) : null;
+          return link ? `[<sup data-citation='${citationData}'>${num}</sup>](${link})` : `<sup>${num}</sup>`;
         }
-        return match
-      })
+        return match;
+      });
     } else {
-      content = content.replace(/\[<sup>(\d+)<\/sup>\]\(([^)]+)\)/g, (_, num, url) => {
-        const citationData = url ? encodeHTML(JSON.stringify(citationsData.get(url) || { url })) : null
-        return `[<sup data-citation='${citationData}'>${num}</sup>](${url})`
-      })
+      // Handle other citation formats if necessary, potentially adjusting this logic
+      // The original else block seemed specific, ensure it covers necessary cases or adjust
+       content = content.replace(/\[<sup>(\d+)<\/sup>\]\(([^)]+)\)/g, (_, num, url) => {
+         const citationData = url ? encodeHTML(JSON.stringify(citationsData.get(url) || { url })) : null;
+         return `[<sup data-citation='${citationData}'>${num}</sup>](${url})`
+       });
     }
-    return content
+    return content;
   }, [
     message.metadata?.citations,
     message.metadata?.webSearch,
@@ -188,14 +190,14 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     message.metadata?.annotations,
     message.content,
     citationsData
-  ])
+  ]);
 
   if (message.status === 'sending') {
     return (
       <MessageContentLoading>
         <SyncOutlined spin size={24} />
       </MessageContentLoading>
-    )
+    );
   }
 
   if (message.status === 'searching') {
@@ -205,18 +207,23 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         <SearchingText>{t('message.searching')}</SearchingText>
         <BarLoader color="#1677ff" />
       </SearchingContainer>
-    )
+    );
   }
 
   if (message.status === 'error') {
-    return <MessageError message={message} />
+    return <MessageError message={message} />;
   }
 
   if (message.type === '@' && model) {
-    const content = `[@${model.name}](#)  ${getBriefInfo(message.content)}`
-    return <Markdown message={{ ...message, content }} />
+    const content = `[@${model.name}](#)  ${getBriefInfo(message.content)}`;
+    return <Markdown message={{ ...message, content }} />;
   }
-  const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
+
+  // --- MODIFIED LINE BELOW ---
+  // This regex now matches <tool_use ...> OR <XML ...> tags (case-insensitive)
+  // and allows for attributes and whitespace, then removes the entire tag pair and content.
+  const tagsToRemoveRegex = /<(?:tool_use|XML)(?:[^>]*)?>(?:.*?)<\/\s*(?:tool_use|XML)\s*>/gsi;
+
   return (
     <Fragment>
       <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
@@ -248,12 +255,12 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
                     <span
                       className="reference-id"
                       onClick={(e) => {
-                        e.stopPropagation()
-                        navigator.clipboard.writeText(refMsg.id)
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(refMsg.id);
                         window.message.success({
                           content: t('message.id_copied') || '消息ID已复制',
                           key: 'copy-reference-id'
-                        })
+                        });
                       }}>
                       ID: {refMsg.id}
                     </span>
@@ -292,12 +299,12 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
                 <span
                   className="reference-id"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    navigator.clipboard.writeText((message as any).referencedMessage.id)
+                    e.stopPropagation();
+                    navigator.clipboard.writeText((message as any).referencedMessage.id);
                     window.message.success({
                       content: t('message.id_copied') || '消息ID已复制',
                       key: 'copy-reference-id'
-                    })
+                    });
                   }}>
                   ID: {(message as any).referencedMessage.id}
                 </span>
@@ -313,13 +320,16 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         />
       )}
       <div className="message-content-tools">
+        {/* These components display tool/thought info separately at the top */}
         <MessageThought message={message} />
         <MessageTools message={message} />
       </div>
       {isSegmentedPlayback ? (
-        <TTSHighlightedText text={processedContent.replace(toolUseRegex, '')} />
+         // Apply regex replacement here for TTS
+        <TTSHighlightedText text={processedContent.replace(tagsToRemoveRegex, '')} />
       ) : (
-        <Markdown message={{ ...message, content: processedContent.replace(toolUseRegex, '') }} />
+         // Apply regex replacement here for Markdown display
+        <Markdown message={{ ...message, content: processedContent.replace(tagsToRemoveRegex, '') }} />
       )}
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
@@ -330,6 +340,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
           {message.translatedContent === t('translate.processing') ? (
             <BeatLoader color="var(--color-text-2)" size="10" style={{ marginBottom: 15 }} />
           ) : (
+             // Render translated content (assuming it doesn't need tag removal, adjust if needed)
             <Markdown message={{ ...message, content: message.translatedContent }} />
           )}
         </Fragment>
@@ -389,8 +400,10 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       )}
       <MessageAttachments message={message} />
     </Fragment>
-  )
-}
+  );
+};
+
+// Styled components and global styles remain the same...
 
 const MessageContentLoading = styled.div`
   display: flex;
@@ -399,7 +412,7 @@ const MessageContentLoading = styled.div`
   height: 32px;
   margin-top: -5px;
   margin-bottom: 5px;
-`
+`;
 
 const SearchingContainer = styled.div`
   display: flex;
@@ -410,22 +423,22 @@ const SearchingContainer = styled.div`
   border-radius: 10px;
   margin-bottom: 10px;
   gap: 10px;
-`
+`;
 
 const MentionTag = styled.span`
   color: var(--color-link);
-`
+`;
 
 const SearchingText = styled.div`
   font-size: 14px;
   line-height: 1.6;
   text-decoration: none;
   color: var(--color-text-1);
-`
+`;
 
 const SearchEntryPoint = styled.div`
   margin: 10px 2px;
-`
+`;
 
 // 引用消息样式 - 使用全局样式
 const referenceStyles = `
@@ -536,23 +549,29 @@ const referenceStyles = `
       }
     }
   }
-`
+`;
 
 // 将样式添加到文档中
 try {
   if (typeof document !== 'undefined') {
-    const styleElement = document.createElement('style')
-    styleElement.textContent =
-      referenceStyles +
-      `
-      .message-content-tools {
-        margin-top: 20px;
-      }
-    `
-    document.head.appendChild(styleElement)
+    // Check if style already exists to prevent duplicates during HMR
+    let styleElement = document.getElementById('message-content-reference-styles');
+    if (!styleElement) {
+        styleElement = document.createElement('style');
+        styleElement.id = 'message-content-reference-styles';
+        styleElement.textContent =
+          referenceStyles +
+          `
+          .message-content-tools {
+            margin-top: 20px; /* Adjust as needed */
+            margin-bottom: 10px; /* Add space before main content */
+          }
+        `;
+        document.head.appendChild(styleElement);
+    }
   }
 } catch (error) {
-  console.error('Failed to add reference styles:', error)
+  console.error('Failed to add reference styles:', error);
 }
 
-export default React.memo(MessageContent)
+export default React.memo(MessageContent);
