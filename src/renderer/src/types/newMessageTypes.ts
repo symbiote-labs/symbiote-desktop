@@ -1,4 +1,4 @@
-import type { GroundingMetadata } from '@google/generative-ai'
+import type { GroundingMetadata } from '@google/genai'
 import type OpenAI from 'openai'
 
 // import type { Annotation as OpenAIAnnotation } from 'openai/resources/chat/completions' // REMOVED
