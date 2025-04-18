@@ -4,7 +4,7 @@ import 'katex/dist/contrib/mhchem'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
 import { parseJSON } from '@renderer/utils'
 import { escapeBrackets, removeSvgEmptyLines, withGeminiGrounding } from '@renderer/utils/formats'
 import { findCitationInChildren } from '@renderer/utils/markdown'
@@ -28,25 +28,25 @@ const ALLOWED_ELEMENTS =
   /<(style|p|div|span|b|i|strong|em|ul|ol|li|table|tr|td|th|thead|tbody|h[1-6]|blockquote|pre|code|br|hr|svg|path|circle|rect|line|polyline|polygon|text|g|defs|title|desc|tspan|sub|sup)/i
 
 interface Props {
-  message: Message & { content: string }
-  // block: MainTextMessageBlock
+  // message: Message & { content: string }
+  block: MainTextMessageBlock
+  role: Message['role']
 }
 
 const remarkPlugins = [remarkMath, remarkGfm, remarkCjkFriendly]
 const disallowedElements = ['iframe']
-const Markdown: FC<Props> = ({ message }) => {
+const Markdown: FC<Props> = ({ block, role }) => {
   const { t } = useTranslation()
   const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
 
   const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
 
   const messageContent = useMemo(() => {
-    const empty = isEmpty(message.content)
-    const paused = message.status === 'paused'
-    const content = empty && paused ? t('message.chat.completion.paused') : withGeminiGrounding(message)
+    const empty = isEmpty(block.content)
+    const paused = block.status === 'paused'
+    const content = empty && paused ? t('message.chat.completion.paused') : withGeminiGrounding(block)
     return removeSvgEmptyLines(escapeBrackets(content))
-  }, [message, t])
-
+  }, [block, t])
   const rehypePlugins = useMemo(() => {
     const hasElements = ALLOWED_ELEMENTS.test(messageContent)
     return hasElements ? [rehypeRaw, rehypeMath] : [rehypeMath]
@@ -62,7 +62,7 @@ const Markdown: FC<Props> = ({ message }) => {
     return baseComponents
   }, [])
 
-  if (message.role === 'user' && !renderInputMessageAsMarkdown) {
+  if (role === 'user' && !renderInputMessageAsMarkdown) {
     return <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}>{messageContent}</p>
   }
 

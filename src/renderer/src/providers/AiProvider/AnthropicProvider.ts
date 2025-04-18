@@ -249,11 +249,6 @@ export default class AnthropicProvider extends BaseProvider {
         this.sdk.messages
           .stream({ ...body, stream: true }, { signal })
           .on('text', (text) => {
-            // if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
-            //   stream.controller.abort()
-            //   return resolve()
-            // }
-
             if (time_first_token_millsec == 0) {
               time_first_token_millsec = new Date().getTime() - start_time_millsec
             }
@@ -262,21 +257,7 @@ export default class AnthropicProvider extends BaseProvider {
               time_first_content_millsec = new Date().getTime()
             }
 
-            const time_thinking_millsec = time_first_content_millsec
-              ? time_first_content_millsec - start_time_millsec
-              : 0
-
-            const time_completion_millsec = new Date().getTime() - start_time_millsec
-
-            onChunk({
-              text,
-              metrics: {
-                completion_tokens: undefined,
-                time_completion_millsec,
-                time_first_token_millsec,
-                time_thinking_millsec
-              }
-            })
+            onChunk({ text })
           })
           .on('thinking', (thinking) => {
             hasThinkingContent = true
@@ -285,16 +266,10 @@ export default class AnthropicProvider extends BaseProvider {
               time_first_token_millsec = new Date().getTime() - start_time_millsec
             }
 
-            const time_completion_millsec = new Date().getTime() - start_time_millsec
+            // const time_completion_millsec = new Date().getTime() - start_time_millsec
 
             onChunk({
-              reasoning_content: thinking,
-              text: '',
-              metrics: {
-                completion_tokens: undefined,
-                time_completion_millsec,
-                time_first_token_millsec
-              }
+              reasoning_content: thinking
             })
           })
           .on('finalMessage', async (message) => {
@@ -328,7 +303,6 @@ export default class AnthropicProvider extends BaseProvider {
               : 0
 
             onChunk({
-              text: '',
               usage: {
                 prompt_tokens: message.usage.input_tokens,
                 completion_tokens: message.usage.output_tokens,
@@ -339,8 +313,7 @@ export default class AnthropicProvider extends BaseProvider {
                 time_completion_millsec,
                 time_first_token_millsec,
                 time_thinking_millsec
-              },
-              mcpToolResponse: toolResponses
+              }
             })
 
             resolve()

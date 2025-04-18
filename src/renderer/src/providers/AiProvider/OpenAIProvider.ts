@@ -399,7 +399,6 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     const toolResponses: MCPToolResponse[] = []
-    let firstChunk = true
 
     const processToolUses = async (content: string, idx: number) => {
       const toolResults = await parseAndCallTools(
@@ -445,76 +444,108 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     const processStream = async (stream: any, idx: number) => {
+      // Handle non-streaming case (already returns early, no change needed here)
       if (!isSupportStreamOutput()) {
         const time_completion_millsec = new Date().getTime() - start_time_millsec
-        return onChunk({
-          text: stream.choices[0].message?.content || '',
-          usage: stream.usage,
-          metrics: {
-            completion_tokens: stream.usage?.completion_tokens,
-            time_completion_millsec,
-            time_first_token_millsec: 0
-          }
-        })
+        // Calculate final metrics once
+        const finalMetrics = {
+          completion_tokens: stream.usage?.completion_tokens,
+          time_completion_millsec,
+          time_first_token_millsec: 0 // Non-streaming, first token time is not relevant
+        }
+        // Separate onChunk calls for text and usage/metrics
+        if (stream.choices[0].message?.content) {
+          onChunk({ text: stream.choices[0].message.content })
+        }
+        if (stream.usage) {
+          onChunk({ usage: stream.usage, metrics: finalMetrics })
+        }
+        return
       }
 
-      let content = ''
+      let content = '' // Accumulate content for tool processing if needed
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
         }
 
         const delta = chunk.choices[0]?.delta
+        const finishReason = chunk.choices[0]?.finish_reason // Needed for Zhipu check
+
+        // --- Incremental onChunk calls ---
+
+        // 1. Text Content
         if (delta?.content) {
-          content += delta.content
+          content += delta.content // Still accumulate for processToolUses
+          onChunk({ text: delta.content })
         }
 
-        if (delta?.reasoning_content || delta?.reasoning) {
-          hasReasoningContent = true
+        // 2. Reasoning Content
+        const reasoningContent = delta?.reasoning_content || delta?.reasoning
+        if (reasoningContent) {
+          hasReasoningContent = true // Keep track if reasoning occurred
+          onChunk({ reasoning_content: reasoningContent })
         }
 
-        if (time_first_token_millsec == 0) {
+        // 3. Annotations (OpenAI specific)
+        if (delta?.annotations) {
+          onChunk({ annotations: delta.annotations })
+        }
+
+        // 4. Citations (If provided directly in chunk)
+        const citations = (chunk as OpenAI.Chat.Completions.ChatCompletionChunk & { citations?: string[] })?.citations
+        if (citations) {
+          onChunk({ citations: citations })
+        }
+
+        // 5. Web Search Results (Specific Models)
+        let webSearch: any[] | undefined = undefined
+        if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
+          webSearch = chunk.web_search
+        }
+        // Reset firstChunk logic as it's part of the loop now
+        if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
+          webSearch = chunk.search_info.search_results
+        }
+        if (webSearch) {
+          onChunk({ webSearch: webSearch })
+        }
+
+        // 6. Usage (If provided per chunk) - Send immediately
+        if (chunk.usage) {
+          onChunk({ usage: chunk.usage })
+        }
+
+        // 7. Metrics (Calculate and send immediately)
+        if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
         }
-
-        if (time_first_content_millsec == 0 && isReasoningJustDone(delta)) {
+        // Update first content time detection if needed
+        if (time_first_content_millsec === 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }
-
         const time_completion_millsec = new Date().getTime() - start_time_millsec
         const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
 
-        // Extract citations from the raw response if available
-        const citations = (chunk as OpenAI.Chat.Completions.ChatCompletionChunk & { citations?: string[] })?.citations
-
-        const finishReason = chunk.choices[0]?.finish_reason
-
-        let webSearch: any[] | undefined = undefined
-        if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop') {
-          webSearch = chunk?.web_search
-        }
-        if (firstChunk && assistant.enableWebSearch && isHunyuanSearchModel(model)) {
-          webSearch = chunk?.search_info?.search_results
-          firstChunk = true
-        }
         onChunk({
-          text: delta?.content || '',
-          reasoning_content: delta?.reasoning_content || delta?.reasoning || '',
-          usage: chunk.usage,
           metrics: {
-            completion_tokens: chunk.usage?.completion_tokens,
+            // completion_tokens might be available in chunk.usage, handle in usage chunk
             time_completion_millsec,
             time_first_token_millsec,
             time_thinking_millsec
-          },
-          webSearch,
-          annotations: delta?.annotations,
-          citations,
-          mcpToolResponse: toolResponses
+          }
         })
-      }
 
+        // --- End of Incremental onChunk calls ---
+      } // End of for await loop
+
+      // Call processToolUses AFTER the loop finishes processing the main stream content
+      // Note: parseAndCallTools inside processToolUses should handle its own onChunk for tool responses
       await processToolUses(content, idx)
+
+      // TODO: Consider if a final onChunk for cumulative usage/metrics is possible/needed here.
+      // OpenAI stream typically doesn't provide a final summary chunk easily.
+      // We are sending per-chunk usage if available.
     }
 
     const stream = await this.sdk.chat.completions

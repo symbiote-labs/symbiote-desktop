@@ -307,14 +307,16 @@ export function upsertMCPToolResponse(
   onChunk: ({ mcpToolResponse }: ChunkCallbackData) => void
 ) {
   try {
-    for (const ret of results) {
-      if (ret.id === resp.id) {
-        ret.response = resp.response
-        ret.status = resp.status
-        return
+    const index = results.findIndex((ret) => ret.id === resp.id)
+    if (index !== -1) {
+      results[index] = {
+        ...results[index],
+        response: resp.response,
+        status: resp.status
       }
+    } else {
+      results.push(resp)
     }
-    results.push(resp)
   } finally {
     onChunk({
       text: '\n',

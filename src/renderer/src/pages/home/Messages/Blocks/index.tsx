@@ -6,6 +6,7 @@ import type {
   ErrorMessageBlock,
   FileMessageBlock,
   ImageMessageBlock,
+  MainTextMessageBlock,
   Message,
   MessageBlock,
   ThinkingMessageBlock,
@@ -39,8 +40,6 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
 
   // 根据blocks类型处理渲染数据
   const renderedBlocks = blocks.map((blockId) => blockEntities[blockId]).filter(Boolean)
-  console.log('renderedBlocks', renderedBlocks)
-  console.log('renderMessage', message)
   return (
     <>
       {renderedBlocks.map((block) => {
@@ -51,10 +50,10 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
             return (
               <MainTextBlock
                 key={block.id}
-                block={block}
+                block={block as MainTextMessageBlock}
                 model={model}
                 citationsBlock={citationBlock}
-                message={message}
+                role={message.role}
               />
             )
           case MessageBlockType.IMAGE:

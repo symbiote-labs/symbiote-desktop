@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import MessageBlockRenderer from './Blocks'
-import MessageError from './MessageError'
 interface Props {
   message: Message
   model?: Model
@@ -176,9 +175,9 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   //   )
   // }
 
-  if (message.status === 'error') {
-    return <MessageError message={message} />
-  }
+  // if (message.status === 'error') {
+  //   return <MessageError message={message} />
+  // }
 
   // if (message.type === '@' && model) {
   //   const content = `[@${model.name}](#)  ${getBriefInfo(message.content)}`

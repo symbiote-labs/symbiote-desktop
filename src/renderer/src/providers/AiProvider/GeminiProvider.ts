@@ -278,6 +278,7 @@ export default class GeminiProvider extends BaseProvider {
     }
 
     const start_time_millsec = new Date().getTime()
+    let time_first_token_millsec = 0
 
     const { cleanup, abortController } = this.createAbortController(userLastMessage?.id, true)
     const signalProxy = {
@@ -308,21 +309,31 @@ export default class GeminiProvider extends BaseProvider {
           }
         }
       })
-      const time_completion_millsec = new Date().getTime() - start_time_millsec
-      onChunk({
-        text: response.text,
-        usage: {
-          prompt_tokens: response.usageMetadata?.promptTokenCount || 0,
-          completion_tokens: response.usageMetadata?.candidatesTokenCount || 0,
-          total_tokens: response.usageMetadata?.totalTokenCount || 0
-        },
-        metrics: {
-          completion_tokens: response.usageMetadata?.candidatesTokenCount,
-          time_completion_millsec,
-          time_first_token_millsec: 0
-        },
-        search: response.candidates?.[0]?.groundingMetadata
-      })
+      const time_completion_millsec_ns = new Date().getTime() - start_time_millsec
+      const finalMetrics_ns = {
+        completion_tokens: response.usageMetadata?.candidatesTokenCount,
+        time_completion_millsec: time_completion_millsec_ns,
+        time_first_token_millsec: 0
+      }
+      if (response.text) {
+        onChunk({ text: response.text })
+      }
+      const groundingMetadata_ns = response.candidates?.[0]?.groundingMetadata
+      if (groundingMetadata_ns) {
+        onChunk({ search: groundingMetadata_ns })
+      }
+      if (response.usageMetadata) {
+        onChunk({
+          usage: {
+            prompt_tokens: response.usageMetadata.promptTokenCount || 0,
+            completion_tokens: response.usageMetadata.candidatesTokenCount || 0,
+            total_tokens: response.usageMetadata.totalTokenCount || 0
+          },
+          metrics: finalMetrics_ns
+        })
+      } else {
+        onChunk({ metrics: finalMetrics_ns })
+      }
       return
     }
 
@@ -335,7 +346,6 @@ export default class GeminiProvider extends BaseProvider {
         }
       }
     })
-    let time_first_token_millsec = 0
 
     const processToolUses = async (content: string, idx: number) => {
       const toolResults = await parseAndCallTools(
@@ -372,38 +382,71 @@ export default class GeminiProvider extends BaseProvider {
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
-        if (time_first_token_millsec == 0) {
+        // --- Calculate Metrics ---
+        if (time_first_token_millsec == 0 && chunk.text !== undefined) {
+          // Update based on text arrival
           time_first_token_millsec = new Date().getTime() - start_time_millsec
         }
+        const current_time_completion_millsec = new Date().getTime() - start_time_millsec
+        onChunk({
+          metrics: {
+            time_completion_millsec: current_time_completion_millsec,
+            time_first_token_millsec
+          }
+        })
+        // --- End Metrics ---
 
-        const time_completion_millsec = new Date().getTime() - start_time_millsec
+        // --- Incremental onChunk calls ---
 
+        // 1. Text Content
         if (chunk.text !== undefined) {
           content += chunk.text
+          onChunk({ text: chunk.text })
         }
-        await processToolUses(content, idx)
-        const generateImage = this.processGeminiImageResponse(chunk)
 
-        onChunk({
-          text: chunk.text !== undefined ? chunk.text : '',
-          usage: {
-            prompt_tokens: chunk.usageMetadata?.promptTokenCount || 0,
-            completion_tokens: chunk.usageMetadata?.candidatesTokenCount || 0,
-            total_tokens: chunk.usageMetadata?.totalTokenCount || 0
-          },
-          metrics: {
-            completion_tokens: chunk.usageMetadata?.candidatesTokenCount,
-            time_completion_millsec,
-            time_first_token_millsec
-          },
-          search: chunk.candidates?.[0]?.groundingMetadata,
-          mcpToolResponse: toolResponses,
-          generateImage: generateImage
-        })
+        // 2. Usage Data
+        if (chunk.usageMetadata) {
+          onChunk({
+            usage: {
+              prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
+              completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
+              total_tokens: chunk.usageMetadata.totalTokenCount || 0
+            },
+            // Optionally include completion_tokens in metrics here if available
+            metrics: { completion_tokens: chunk.usageMetadata.candidatesTokenCount }
+          })
+        }
+
+        // 3. Grounding/Search Metadata
+        const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
+        if (groundingMetadata) {
+          onChunk({ search: groundingMetadata })
+        }
+
+        // 4. Image Generation
+        const generateImage = this.processGeminiImageResponse(chunk)
+        if (generateImage) {
+          onChunk({ generateImage: generateImage })
+        }
+
+        // --- End Incremental onChunk calls ---
+
+        // Call processToolUses AFTER potentially processing text content in this chunk
+        // This assumes tools might be specified within the text stream
+        // Note: parseAndCallTools inside should handle its own onChunk for tool responses
+        await processToolUses(content, idx)
       }
     }
 
     await processStream(userMessagesStream, 0).finally(cleanup)
+
+    const final_time_completion_millsec = new Date().getTime() - start_time_millsec
+    onChunk({
+      metrics: {
+        time_completion_millsec: final_time_completion_millsec,
+        time_first_token_millsec
+      }
+    })
   }
 
   /**

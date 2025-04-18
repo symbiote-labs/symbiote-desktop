@@ -25,14 +25,14 @@ interface Props {
   citationsBlock?: CitationMessageBlock
   model?: Model
   mentions?: Model[]
-  message: Message
+  role: Message['role']
 }
 
 const MainTextBlock: React.FC<Props> = ({
   block,
   citationsBlock,
   model,
-  message,
+  role,
   // citationsData = new Map(),
   // formattedCitations = [],
   mentions = []
@@ -176,7 +176,7 @@ const MainTextBlock: React.FC<Props> = ({
           ))}
         </Flex>
       )}
-      <Markdown message={{ ...message, content: processedContentForMarkdown } as Message & { content: string }} />
+      <Markdown block={{ ...block, content: processedContentForMarkdown }} role={role} />
     </>
   )
 }

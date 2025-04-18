@@ -1,6 +1,6 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { CitationMessageBlock, Message } from '@renderer/types/newMessageTypes'
+import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 
 import { findImageBlocks, getMessageContent } from './messageUtils/find'
@@ -66,12 +66,12 @@ export function removeSvgEmptyLines(text: string): string {
 
 // Helper function to find the first citation block with grounding metadata
 // Ideally, move this to find.ts later
-const findCitationBlockWithGrounding = (message: Message): CitationMessageBlock | undefined => {
-  if (!message || !message.blocks || message.blocks.length === 0) {
+const findCitationBlockWithGrounding = (block: MainTextMessageBlock): CitationMessageBlock | undefined => {
+  if (!block || !block.blocks || block.blocks.length === 0) {
     return undefined
   }
   const state = store.getState()
-  for (const blockId of message.blocks) {
+  for (const blockId of block.blocks) {
     const block = messageBlocksSelectors.selectById(state, blockId)
     if (block && block.type === MessageBlockType.CITATION) {
       const citation = block
@@ -83,29 +83,30 @@ const findCitationBlockWithGrounding = (message: Message): CitationMessageBlock 
   return undefined
 }
 
-export function withGeminiGrounding(message: Message): string {
-  const citationBlock = findCitationBlockWithGrounding(message)
-  const groundingSupports = citationBlock?.groundingMetadata?.groundingSupports
+export function withGeminiGrounding(block: MainTextMessageBlock): string {
+  // TODO
+  // const citationBlock = findCitationBlockWithGrounding(block)
+  // const groundingSupports = citationBlock?.groundingMetadata?.groundingSupports
 
-  let content = getMessageContent(message)
+  const content = block.content
 
-  if (!groundingSupports || groundingSupports.length === 0) {
-    return content
-  }
+  // if (!groundingSupports || groundingSupports.length === 0) {
+  //   return content
+  // }
 
-  groundingSupports.forEach((support) => {
-    const text = support?.segment?.text
-    const indices = support?.groundingChunkIndices
+  // groundingSupports.forEach((support) => {
+  //   const text = support?.segment?.text
+  //   const indices = support?.groundingChunkIndices
 
-    if (!text || !indices) return
+  //   if (!text || !indices) return
 
-    const nodes = indices.reduce((acc, index) => {
-      acc.push(`<sup>${index + 1}</sup>`)
-      return acc
-    }, [] as string[])
+  //   const nodes = indices.reduce((acc, index) => {
+  //     acc.push(`<sup>${index + 1}</sup>`)
+  //     return acc
+  //   }, [] as string[])
 
-    content = content.replace(text, `${text} ${nodes.join(' ')}`)
-  })
+  //   content = content.replace(text, `${text} ${nodes.join(' ')}`)
+  // })
 
   return content
 }

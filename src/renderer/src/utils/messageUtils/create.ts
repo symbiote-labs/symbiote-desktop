@@ -10,7 +10,7 @@ import type {
   MainTextMessageBlock,
   Message,
   ThinkingMessageBlock,
-  ToolBlock,
+  ToolMessageBlock,
   TranslationMessageBlock,
   WebSearchMessageBlock
 } from '@renderer/types/newMessageTypes'
@@ -37,7 +37,7 @@ export function createBaseMessageBlock<T extends MessageBlockType>(
     messageId,
     type,
     createdAt: now,
-    status: MessageBlockStatus.PENDING,
+    status: MessageBlockStatus.PROCESSING,
     error: undefined,
     ...overrides
   }
@@ -233,8 +233,8 @@ export function createWebSearchMessageBlock(
 export function createToolBlock(
   messageId: string,
   toolId: string,
-  overrides: Partial<Omit<ToolBlock, 'id' | 'messageId' | 'type' | 'toolId'>> = {}
-): ToolBlock {
+  overrides: Partial<Omit<ToolMessageBlock, 'id' | 'messageId' | 'type' | 'toolId'>> = {}
+): ToolMessageBlock {
   let initialStatus = MessageBlockStatus.PROCESSING
   if (overrides.content !== undefined || overrides.error !== undefined) {
     initialStatus = overrides.error ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
@@ -249,9 +249,9 @@ export function createToolBlock(
     metadata: metadata,
     ...baseOnlyOverrides
   }
-
+  console.log('createToolBlock_baseOverrides', baseOverrides.metadata)
   const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.TOOL, baseOverrides)
-
+  console.log('createToolBlock_baseBlock', baseBlock.metadata)
   return {
     ...baseBlock,
     toolId,

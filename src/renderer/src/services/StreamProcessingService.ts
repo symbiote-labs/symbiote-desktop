@@ -49,6 +49,7 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
         callbacks.onThinkingChunk(data.reasoning_content)
       }
       if (data.mcpToolResponse && data.mcpToolResponse.length > 0 && callbacks.onToolCallComplete) {
+        // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
         data.mcpToolResponse.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
       }
       if (data.citations && data.citations.length > 0 && callbacks.onCitationData) {

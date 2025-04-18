@@ -120,8 +120,9 @@ export async function fetchChatCompletion({
     })
     onChunkReceived({ type: 'final', status: 'success' })
   } catch (error: any) {
+    // TODO 判断abort错误
     console.error('Error during AI.completions call:', error)
-    onChunkReceived({ type: 'final', status: 'error', error })
+    // onChunkReceived({ type: 'final', status: 'error', error })
     throw error
   }
 }
