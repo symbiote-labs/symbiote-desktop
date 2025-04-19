@@ -3,8 +3,8 @@ import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import store from '@renderer/store'
 import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
-import type { Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessageTypes'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
+import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import {
   createAssistantMessage,
   createErrorBlock,
@@ -16,8 +16,8 @@ import { getTopicQueue } from '@renderer/utils/queue'
 import { throttle } from 'lodash'
 
 import type { AppDispatch, RootState } from '../index'
-import { updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
-import { newMessagesActions } from '../newMessage'
+import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
+import { newMessagesActions, removeMessage, removeMessages, removeMessagesByAskId } from '../newMessage'
 
 const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]) => {
   try {
@@ -351,7 +351,6 @@ const fetchAndProcessAssistantResponseImpl = async (
 
         // --- Update final message status ---
         const messageUpdates: Partial<Message> = { status }
-        // TODO: Find a way to get the final model used, if needed, and add to messageUpdates
 
         dispatch(
           newMessagesActions.updateMessage({
@@ -530,4 +529,270 @@ export const loadTopicMessagesThunk =
       console.error(`[loadTopicMessagesThunk] Failed to load messages for topic ${topicId}:`, error)
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
     }
+  }
+
+/**
+ * Thunk to delete a single message and its associated blocks.
+ */
+export const deleteSingleMessageThunk =
+  (topicId: string, messageId: string) => async (dispatch: AppDispatch, getState: () => RootState) => {
+    // Get the current state
+    const currentState = getState()
+
+    // Find the message to delete and associated blocks
+    const messageToDelete = currentState.messages.messagesByTopic[topicId]?.find((m) => m.id === messageId)
+    if (!messageToDelete) {
+      console.error(`[deleteSingleMessage] Message ${messageId} not found in topic ${topicId}.`)
+      return
+    }
+
+    // Get IDs of blocks to delete
+    const blockIdsToDelete = messageToDelete.blocks
+
+    try {
+      // Dispatch actions to remove from Redux state
+      dispatch(removeMessage({ topicId, messageId })) // Use the new action
+      dispatch(removeManyBlocks(blockIdsToDelete)) // Use imported action
+
+      // Remove from Dexie DB
+      await db.message_blocks.bulkDelete(blockIdsToDelete)
+      const topic = await db.topics.get(topicId)
+      if (topic) {
+        const updatedMessages = topic.messages.filter((m) => m.id !== messageId)
+        await db.topics.update(topicId, { messages: updatedMessages })
+      }
+    } catch (error) {
+      console.error(`[deleteSingleMessage] Failed to delete message ${messageId}:`, error)
+      // TODO: Consider rollback or adding back to state if DB fails?
+    }
+  }
+
+/**
+ * Thunk to delete a group of messages (user query + assistant responses) based on askId.
+ */
+export const deleteMessageGroupThunk =
+  (topicId: string, askId: string) => async (dispatch: AppDispatch, getState: () => RootState) => {
+    // Get the current state
+    const currentState = getState()
+
+    // Find messages to delete based on askId
+    const messagesToDelete = currentState.messages.messagesByTopic[topicId]?.filter((m) => m.askId === askId)
+
+    if (!messagesToDelete || messagesToDelete.length === 0) {
+      console.warn(`[deleteMessageGroup] No messages found with askId ${askId} in topic ${topicId}.`)
+      return
+    }
+
+    const blockIdsToDelete = messagesToDelete.flatMap((m) => m.blocks)
+
+    try {
+      // Dispatch actions to remove from Redux state
+      dispatch(removeMessagesByAskId({ topicId, askId })) // Use the new action
+      dispatch(removeManyBlocks(blockIdsToDelete)) // Use imported action
+
+      // Remove from Dexie DB
+      await db.message_blocks.bulkDelete(blockIdsToDelete)
+      const topic = await db.topics.get(topicId)
+      if (topic) {
+        const updatedMessages = topic.messages.filter((m) => m.askId !== askId)
+        await db.topics.update(topicId, { messages: updatedMessages })
+      }
+    } catch (error) {
+      console.error(`[deleteMessageGroup] Failed to delete messages with askId ${askId}:`, error)
+      // TODO: Rollback?
+    }
+  }
+
+/**
+ * Thunk to clear all messages and associated blocks for a topic.
+ */
+export const clearTopicMessagesThunk =
+  (topicId: string) => async (dispatch: AppDispatch, getState: () => RootState) => {
+    try {
+      const state = getState()
+      const messagesToClear = state.messages.messagesByTopic[topicId] || []
+      const blockIdsToDeleteSet = new Set<string>()
+
+      messagesToClear.forEach((message) => {
+        message.blocks?.forEach((blockId) => blockIdsToDeleteSet.add(blockId))
+      })
+
+      const blockIdsToDelete = Array.from(blockIdsToDeleteSet)
+
+      // 1. Update Redux State
+      dispatch(newMessagesActions.clearTopicMessages(topicId))
+      if (blockIdsToDelete.length > 0) {
+        dispatch(removeManyBlocks(blockIdsToDelete))
+      }
+
+      // 2. Update Dexie DB
+      // Clear messages array in topic
+      await db.topics.update(topicId, { messages: [] })
+      // Delete blocks from DB
+      if (blockIdsToDelete.length > 0) {
+        await db.message_blocks.bulkDelete(blockIdsToDelete)
+      }
+    } catch (error) {
+      console.error(`[clearTopicMessagesThunk] Failed to clear messages for topic ${topicId}:`, error)
+      // Optionally dispatch an error action
+    }
+  }
+
+/**
+ * Thunk to resend an existing message (usually the last user message).
+ * This involves potentially deleting subsequent messages and re-fetching the assistant response.
+ */
+export const resendMessageThunk =
+  (topic: Topic, messageToResend: Message, assistant: Assistant) =>
+  async (dispatch: AppDispatch, getState: () => RootState) => {
+    console.log(`[resendMessageThunk] Resending message ${messageToResend.id} in topic ${topic.id}`)
+    try {
+      const topicId = topic.id
+      const state = getState()
+      const allMessages = state.messages.messagesByTopic[topicId] || []
+      const resendIndex = allMessages.findIndex((m) => m.id === messageToResend.id)
+
+      if (resendIndex === -1) {
+        console.error(`[resendMessageThunk] Message ${messageToResend.id} not found for resend.`)
+        return
+      }
+
+      // --- Delete subsequent messages and their blocks ---
+      const messagesToDelete = allMessages.slice(resendIndex + 1)
+      const blockIdsToDelete = messagesToDelete.flatMap((m) => m.blocks)
+
+      if (messagesToDelete.length > 0) {
+        console.log(`[resendMessageThunk] Deleting ${messagesToDelete.length} subsequent messages.`)
+        // Update Redux
+        dispatch(newMessagesActions.removeMessages({ topicId, messageIds: messagesToDelete.map((m) => m.id) }))
+        if (blockIdsToDelete.length > 0) {
+          dispatch(removeManyBlocks(blockIdsToDelete))
+        }
+        // Update DB (remove from topic and delete blocks)
+        const dbTopic = await db.topics.get(topicId)
+        if (dbTopic && dbTopic.messages) {
+          const updatedMessages = dbTopic.messages.filter((m: any) => !messagesToDelete.map((m) => m.id).includes(m.id))
+          await db.topics.update(topicId, { messages: updatedMessages })
+        }
+        if (blockIdsToDelete.length > 0) {
+          await db.message_blocks.bulkDelete(blockIdsToDelete)
+        }
+      }
+      // --- End Deletion ---
+
+      // Context includes messages up to (and including) the one being resent
+      const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list
+      const contextMessages = currentMessages.slice(
+        0,
+        currentMessages.findIndex((m) => m.id === messageToResend.id) + 1
+      )
+
+      // Add fetch/process call to the queue for this topic
+      const queue = getTopicQueue(topicId)
+      queue.add(async () => {
+        await fetchAndProcessAssistantResponseImpl(
+          dispatch,
+          getState,
+          topicId,
+          assistant,
+          messageToResend, // The message triggering the response
+          contextMessages, // Context for the LLM call
+          topicId
+        )
+      })
+    } catch (error) {
+      console.error(`[resendMessageThunk] Error resending message ${messageToResend.id}:`, error)
+      // Ensure loading state is potentially reset if error happens before fetch starts
+      dispatch(newMessagesActions.setTopicLoading({ topicId: topic.id, loading: false }))
+    }
+  }
+
+/**
+ * Thunk to resend a user message after its content has been edited.
+ */
+export const resendUserMessageWithEditThunk =
+  (topic: Topic, originalMessage: Message, mainTextBlockId: string, editedContent: string, assistant: Assistant) =>
+  async (dispatch: AppDispatch, getState: () => RootState) => {
+    const topicId = topic.id
+    const messages = getState().messages.messagesByTopic[topicId] || []
+
+    // 1. Find the index of the message being edited/resent
+    const messageIndex = messages.findIndex((m) => m.id === originalMessage.id)
+    if (messageIndex === -1) {
+      console.error(`[resendWithEdit] Message ${originalMessage.id} not found in topic ${topicId}`)
+      return
+    }
+
+    // 2. Identify messages and blocks to remove (subsequent messages)
+    const messagesToRemove = messages.slice(messageIndex + 1)
+    const messageIdsToRemove = messagesToRemove.map((m) => m.id)
+    const blockIdsToRemove = messagesToRemove.flatMap((m) => m.blocks)
+
+    // 3. Prepare the updated user message and block
+    const updatedUserMessage: Message = {
+      ...originalMessage
+      // updatedAt property is intentionally removed based on type definition
+      // other fields remain the same initially
+    }
+    const updatedBlock: MessageBlock = {
+      ...(getState().messageBlocks.entities[mainTextBlockId] as MainTextMessageBlock), // Assert as MainTextMessageBlock
+      content: editedContent,
+      updatedAt: new Date().toISOString(),
+      status: MessageBlockStatus.SUCCESS // Assume edit makes it final
+    }
+
+    // 4. Update State and DB before sending the new request
+    try {
+      // Update user message and its block in Redux
+      dispatch(
+        newMessagesActions.updateMessage({ topicId, messageId: originalMessage.id, updates: updatedUserMessage })
+      )
+      dispatch(upsertOneBlock(updatedBlock))
+
+      // Remove subsequent messages/blocks from Redux
+      if (messageIdsToRemove.length > 0) {
+        dispatch(removeMessages({ topicId, messageIds: messageIdsToRemove })) // Use the new action
+      }
+      if (blockIdsToRemove.length > 0) {
+        dispatch(removeManyBlocks(blockIdsToRemove)) // Use imported action
+      }
+
+      // Update user message and block in Dexie DB
+      await db.message_blocks.put(updatedBlock)
+      // Remove subsequent messages/blocks from Dexie DB
+      if (blockIdsToRemove.length > 0) {
+        await db.message_blocks.bulkDelete(blockIdsToRemove)
+      }
+
+      // Update the topic in DB: remove subsequent messages AND update the edited user message
+      const dbTopic = await db.topics.get(topicId)
+      if (dbTopic) {
+        const finalMessages = dbTopic.messages.filter((m) => !messageIdsToRemove.includes(m.id))
+        const editedMsgIndex = finalMessages.findIndex((m) => m.id === originalMessage.id)
+        if (editedMsgIndex !== -1) {
+          finalMessages[editedMsgIndex] = updatedUserMessage // Replace with the updated message object
+        }
+        await db.topics.update(topicId, { messages: finalMessages }) // Corrected update call
+      } else {
+        console.error(`[resendWithEdit] Topic ${topicId} not found in DB for update.`)
+      }
+    } catch (error) {
+      console.error(`[resendWithEdit] Failed during update/deletion for message ${originalMessage.id}:`, error)
+      // TODO: Handle potential state inconsistency
+      return
+    }
+
+    // 5. Get updated context messages (up to and including the edited user message)
+    const contextMessages = getState().messages.messagesByTopic[topicId]?.slice(0, messageIndex + 1) || []
+
+    // 6. Send New Request
+    await fetchAndProcessAssistantResponseImpl(
+      dispatch,
+      getState,
+      topicId,
+      assistant,
+      updatedUserMessage, // Pass the *updated* user message
+      contextMessages, // Pass context including the updated message
+      topicId // Pass topicId again
+    )
   }

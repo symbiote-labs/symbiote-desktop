@@ -1,6 +1,6 @@
 import { FileType, KnowledgeItem, QuickPhrase, TranslateHistory } from '@renderer/types'
 // Import necessary types for blocks and new message structure
-import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMessageTypes'
+import type { Message as NewMessage, MessageBlock } from '@renderer/types/newMessage'
 import { Dexie, type EntityTable } from 'dexie'
 
 import { upgradeToV5, upgradeToV7 } from './upgrades'

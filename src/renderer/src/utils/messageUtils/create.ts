@@ -12,8 +12,8 @@ import type {
   ThinkingMessageBlock,
   ToolMessageBlock,
   TranslationMessageBlock
-} from '@renderer/types/newMessageTypes'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { v4 as uuidv4 } from 'uuid'
 
 type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>

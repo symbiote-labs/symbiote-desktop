@@ -13,7 +13,7 @@ import type {
   Suggestion,
   Usage
 } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
 
 export interface ChunkCallbackData {

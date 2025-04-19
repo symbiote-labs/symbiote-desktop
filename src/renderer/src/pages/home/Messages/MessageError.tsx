@@ -1,4 +1,4 @@
-import type { ErrorMessageBlock } from '@renderer/types/newMessageTypes'
+import type { ErrorMessageBlock } from '@renderer/types/newMessage'
 import { Alert as AntdAlert } from 'antd'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'

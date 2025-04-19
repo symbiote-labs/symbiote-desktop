@@ -1,6 +1,6 @@
 import { CheckOutlined, ExpandOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type { ToolMessageBlock } from '@renderer/types/newMessageTypes'
+import type { ToolMessageBlock } from '@renderer/types/newMessage'
 import { Collapse, message as antdMessage, Modal, Tooltip } from 'antd'
 import { FC, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

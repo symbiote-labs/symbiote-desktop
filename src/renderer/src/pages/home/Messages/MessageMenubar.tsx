@@ -8,8 +8,9 @@ import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessag
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
 import { RootState } from '@renderer/store'
-import type { Message, Model } from '@renderer/types'
+import type { Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessage'
 import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL, removeTrailingDoubleSpaces } from '@renderer/utils'
 import {
   exportMarkdownToJoplin,
@@ -20,9 +21,9 @@ import {
   messageToMarkdown
 } from '@renderer/utils/export'
 import { withMessageThought } from '@renderer/utils/formats'
+import { findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { Button, Dropdown, Popconfirm, Tooltip } from 'antd'
 import dayjs from 'dayjs'
-import { clone } from 'lodash'
 import {
   AtSign,
   Copy,
@@ -70,18 +71,26 @@ const MessageMenubar: FC<Props> = (props) => {
 
   const exportMenuOptions = useSelector((state: RootState) => state.settings.exportMenuOptions)
 
+  // const processedMessage = useMemo(() => {
+  //   if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
+  //     return withMessageThought(message)
+  //   }
+  //   return message
+  // }, [message])
+
+  const mainTextContent = useMemo(() => {
+    // 只处理助手消息和来自推理模型的消息
+    if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
+      return getMainTextContent(withMessageThought(message))
+    }
+    return getMainTextContent(message)
+  }, [message])
+
   const onCopy = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
-
-      // 只处理助手消息和来自推理模型的消息
-      if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
-        const processedMessage = withMessageThought(clone(message))
-        navigator.clipboard.writeText(removeTrailingDoubleSpaces(processedMessage.content.trimStart()))
-      } else {
-        // 其他情况直接复制原始内容
-        navigator.clipboard.writeText(removeTrailingDoubleSpaces(message.content.trimStart()))
-      }
+      console.log('mainTextContent', mainTextContent)
+      navigator.clipboard.writeText(removeTrailingDoubleSpaces(mainTextContent.trimStart()))
 
       window.message.success({ content: t('message.copied'), key: 'copy-message' })
       setCopied(true)
@@ -122,19 +131,19 @@ const MessageMenubar: FC<Props> = (props) => {
   const onEdit = useCallback(async () => {
     let resendMessage = false
 
-    let textToEdit = message.content
+    let textToEdit = ''
 
+    const imageBlocks = findImageBlocks(message)
     // 如果是包含图片的消息，添加图片的 markdown 格式
-    if (message.metadata?.generateImage?.images) {
-      const imageMarkdown = message.metadata.generateImage.images
-        .map((image, index) => `![image-${index}](${image})`)
-        .join('\n')
+    if (imageBlocks.length > 0) {
+      const imageMarkdown = imageBlocks.map((image, index) => `![image-${index}](${image})`).join('\n')
       textToEdit = `${textToEdit}\n\n${imageMarkdown}`
     }
 
     if (message.role === 'assistant' && message.model && isReasoningModel(message.model)) {
-      const processedMessage = withMessageThought(clone(message))
-      textToEdit = processedMessage.content
+      //   const processedMessage = withMessageThought(clone(message))
+      //   textToEdit = getMainTextContent(processedMessage)
+      textToEdit = mainTextContent
     }
 
     const editedText = await TextEditPopup.show({

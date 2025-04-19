@@ -1,4 +1,4 @@
-import type { FileMessageBlock, Message } from '@renderer/types/newMessageTypes'
+import type { FileMessageBlock, Message } from '@renderer/types/newMessage'
 import React from 'react'
 
 import MessageAttachments from '../MessageAttachments'

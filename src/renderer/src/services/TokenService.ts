@@ -1,5 +1,5 @@
 import { Assistant, FileType, FileTypes, Usage } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import { flatten, takeRight } from 'lodash'
 import { approximateTokenSize } from 'tokenx'
 

@@ -1,4 +1,4 @@
-import type { ImageMessageBlock } from '@renderer/types/newMessageTypes'
+import type { ImageMessageBlock } from '@renderer/types/newMessage'
 import React from 'react'
 
 import MessageImage from '../MessageImage'

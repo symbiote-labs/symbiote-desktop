@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 // Separate type-only imports from value imports
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import {
   MessageBlockStatus // Import as value
-} from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
 
 // Define loading states
 // type LoadingState = 'idle' | 'loading' | 'error' // REMOVED as loadingByTopic is now boolean
@@ -40,6 +40,24 @@ interface UpsertBlockReferencePayload {
   messageId: string
   blockId: string
   status?: MessageBlockStatus
+}
+
+// Payload for removing a single message
+interface RemoveMessagePayload {
+  topicId: string
+  messageId: string
+}
+
+// Payload for removing messages by askId
+interface RemoveMessagesByAskIdPayload {
+  topicId: string
+  askId: string
+}
+
+// Payload for removing multiple messages by ID
+interface RemoveMessagesPayload {
+  topicId: string
+  messageIds: string[]
 }
 
 const messagesSlice = createSlice({
@@ -127,6 +145,31 @@ const messagesSlice = createSlice({
       }
       state.loadingByTopic[topicId] = false // Reset loading state
     },
+    removeMessage(state, action: PayloadAction<RemoveMessagePayload>) {
+      const { topicId, messageId } = action.payload
+      const topicMessages = state.messagesByTopic[topicId]
+      if (topicMessages) {
+        state.messagesByTopic[topicId] = topicMessages.filter((msg) => msg.id !== messageId)
+      }
+    },
+    removeMessagesByAskId(state, action: PayloadAction<RemoveMessagesByAskIdPayload>) {
+      const { topicId, askId } = action.payload
+      const topicMessages = state.messagesByTopic[topicId]
+      if (topicMessages) {
+        // Keep messages that are NOT part of the ask group (user query + assistant response)
+        state.messagesByTopic[topicId] = topicMessages.filter(
+          (msg) => msg.askId !== askId && msg.id !== askId // Also remove the user query which has id === askId
+        )
+      }
+    },
+    removeMessages(state, action: PayloadAction<RemoveMessagesPayload>) {
+      const { topicId, messageIds } = action.payload
+      const topicMessages = state.messagesByTopic[topicId]
+      if (topicMessages) {
+        const messageIdsSet = new Set(messageIds)
+        state.messagesByTopic[topicId] = topicMessages.filter((msg) => !messageIdsSet.has(msg.id))
+      }
+    },
     upsertBlockReference(state, action: PayloadAction<UpsertBlockReferencePayload>) {
       const { messageId, blockId, status } = action.payload
 
@@ -183,6 +226,8 @@ const messagesSlice = createSlice({
 })
 
 // Export the actions for use in thunks, etc.
+export const { addMessage, updateMessage, setTopicLoading, removeMessage, removeMessagesByAskId, removeMessages } =
+  messagesSlice.actions
 export const newMessagesActions = messagesSlice.actions
 
 export default messagesSlice.reducer

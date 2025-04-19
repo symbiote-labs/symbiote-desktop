@@ -10,8 +10,8 @@ import type {
   MessageBlock,
   ThinkingMessageBlock,
   TranslationMessageBlock
-} from '@renderer/types/newMessageTypes'
-import { MessageBlockType } from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
+import { MessageBlockType } from '@renderer/types/newMessage'
 import React from 'react'
 import { useSelector } from 'react-redux'
 

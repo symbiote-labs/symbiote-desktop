@@ -1,4 +1,4 @@
-import type { ThinkingMessageBlock } from '@renderer/types/newMessageTypes'
+import type { ThinkingMessageBlock } from '@renderer/types/newMessage'
 import React from 'react'
 
 import MessageThought from '../MessageThought'

@@ -1,4 +1,4 @@
-import type { CodeMessageBlock } from '@renderer/types/newMessageTypes'
+import type { CodeMessageBlock } from '@renderer/types/newMessage'
 import React from 'react'
 
 import CodeViewer from '../../CodeViewer/CodeViewer'

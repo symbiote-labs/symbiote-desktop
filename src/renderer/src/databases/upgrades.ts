@@ -5,8 +5,8 @@ import type {
   CitationMessageBlock,
   Message as NewMessage,
   MessageBlock
-} from '@renderer/types/newMessageTypes'
-import { MessageBlockStatus } from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
+import { MessageBlockStatus } from '@renderer/types/newMessage'
 import { Transaction } from 'dexie'
 
 import {

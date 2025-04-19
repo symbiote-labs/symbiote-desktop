@@ -10,11 +10,11 @@ import type {
   Suggestion,
   WebSearchResponse
 } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import { delay, isJSON, parseJSON } from '@renderer/utils'
 import { addAbortController, removeAbortController } from '@renderer/utils/abortController'
 import { formatApiHost } from '@renderer/utils/api'
-import { getMessageContent } from '@renderer/utils/messageUtils/find'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isEmpty } from 'lodash'
 import type OpenAI from 'openai'
 
@@ -93,7 +93,7 @@ export default abstract class BaseProvider {
   }
 
   public async getMessageContent(message: Message): Promise<string> {
-    const content = getMessageContent(message)
+    const content = getMainTextContent(message)
     if (isEmpty(content)) {
       return ''
     }
@@ -119,7 +119,7 @@ export default abstract class BaseProvider {
   }
 
   private async getWebSearchReferencesFromCache(message: Message) {
-    const content = getMessageContent(message)
+    const content = getMainTextContent(message)
     if (isEmpty(content)) {
       return []
     }
@@ -144,7 +144,7 @@ export default abstract class BaseProvider {
    * 从缓存中获取知识库引用
    */
   private async getKnowledgeBaseReferencesFromCache(message: Message): Promise<KnowledgeReference[]> {
-    const content = getMessageContent(message)
+    const content = getMainTextContent(message)
     if (isEmpty(content)) {
       return []
     }

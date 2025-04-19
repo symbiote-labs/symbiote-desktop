@@ -1,9 +1,9 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
-import { MessageBlockType } from '@renderer/types/newMessageTypes'
+import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessage'
+import { MessageBlockType } from '@renderer/types/newMessage'
 
-import { findImageBlocks, getMessageContent } from './messageUtils/find'
+import { findImageBlocks, getMainTextContent } from './messageUtils/find'
 
 export function escapeDollarNumber(text: string) {
   let escapedText = ''
@@ -213,7 +213,7 @@ export function withMessageThought(message: Message): Message {
 }
 
 export function withGenerateImage(message: Message): { content: string; images?: string[] } {
-  const originalContent = getMessageContent(message)
+  const originalContent = getMainTextContent(message)
   const imagePattern = new RegExp(`!\\[[^\\]]*\\]\\((.*?)\\s*("(?:.*[^"])")?\\s*\\)`)
   const images: string[] = []
   let processedContent = originalContent

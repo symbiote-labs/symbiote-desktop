@@ -1,7 +1,7 @@
 import store from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { Message } from '@renderer/types/newMessageTypes' // Assuming correct Message type import
-import { MessageBlockType } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage' // Assuming correct Message type import
+import { MessageBlockType } from '@renderer/types/newMessage'
 // May need Block types if refactoring to use them
 // import type { MessageBlock, MainTextMessageBlock } from '@renderer/types/newMessageTypes';
 import { remove } from 'lodash'

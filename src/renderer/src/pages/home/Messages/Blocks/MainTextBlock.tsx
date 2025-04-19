@@ -1,7 +1,7 @@
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import type { Model } from '@renderer/types'
-import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessageTypes'
+import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessage'
 import { Flex } from 'antd'
 import React, { useMemo } from 'react'
 import styled from 'styled-components'

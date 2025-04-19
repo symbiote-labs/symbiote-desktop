@@ -1,7 +1,7 @@
 import { DownOutlined, InfoCircleOutlined, UpOutlined } from '@ant-design/icons'
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import type { Model } from '@renderer/types'
-import type { CitationMessageBlock } from '@renderer/types/newMessageTypes'
+import type { CitationMessageBlock } from '@renderer/types/newMessage'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'

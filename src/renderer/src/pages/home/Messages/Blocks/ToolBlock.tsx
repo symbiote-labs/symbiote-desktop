@@ -1,4 +1,4 @@
-import type { ToolMessageBlock } from '@renderer/types/newMessageTypes'
+import type { ToolMessageBlock } from '@renderer/types/newMessage'
 import React from 'react'
 
 import MessageTools from '../MessageTools'

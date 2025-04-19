@@ -3,7 +3,7 @@ import type OpenAI from 'openai'
 import React from 'react'
 import { BuiltinTheme } from 'shiki'
 
-import type { Message } from './newMessageTypes'
+import type { Message } from './newMessage'
 
 export type Assistant = {
   id: string

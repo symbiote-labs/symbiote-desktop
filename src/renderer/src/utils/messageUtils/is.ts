@@ -8,7 +8,7 @@ import {
   MessageBlockType,
   type ThinkingMessageBlock,
   type TranslationMessageBlock
-} from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
 
 /**
  * Checks if a message block is a Main Text block.

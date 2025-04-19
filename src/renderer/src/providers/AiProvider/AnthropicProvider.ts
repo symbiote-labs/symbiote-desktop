@@ -11,10 +11,10 @@ import {
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
 import { Assistant, FileTypes, MCPToolResponse, Model, Provider, Suggestion } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToAnthropicMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
-import { findFileBlocks, findImageBlocks, getMessageContent } from '@renderer/utils/messageUtils/find'
+import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 import { first, flatten, sum, takeRight } from 'lodash'
 import OpenAI from 'openai'
@@ -57,7 +57,7 @@ export default class AnthropicProvider extends BaseProvider {
     const parts: MessageParam['content'] = [
       {
         type: 'text',
-        text: await this.getMessageContent(message)
+        text: getMainTextContent(message)
       }
     ]
 
@@ -338,7 +338,7 @@ export default class AnthropicProvider extends BaseProvider {
   public async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
-    const content = getMessageContent(message)
+    const content = getMainTextContent(message)
 
     const messagesForApi = [{ role: 'user' as const, content: content }]
 
@@ -384,7 +384,7 @@ export default class AnthropicProvider extends BaseProvider {
       .filter((message) => !message.isPreset)
       .map((message) => ({
         role: message.role,
-        content: getMessageContent(message)
+        content: getMainTextContent(message)
       }))
 
     if (first(userMessages)?.role === 'assistant') {
@@ -428,7 +428,7 @@ export default class AnthropicProvider extends BaseProvider {
     const model = assistant.model || getDefaultModel()
     const systemMessage = { content: assistant.prompt }
 
-    const userMessageContent = messages.map((m) => getMessageContent(m)).join('\n')
+    const userMessageContent = messages.map((m) => getMainTextContent(m)).join('\n')
 
     const userMessage = {
       role: 'user' as const,

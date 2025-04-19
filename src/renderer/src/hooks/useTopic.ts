@@ -5,7 +5,7 @@ import store from '@renderer/store'
 import { updateTopic } from '@renderer/store/assistants'
 import { loadTopicMessagesThunk } from '@renderer/store/thunk/messageThunk'
 import { Assistant, Topic } from '@renderer/types'
-import { findMainTextBlock } from '@renderer/utils/messageUtils/find'
+import { findMainTextBlocks } from '@renderer/utils/messageUtils/find'
 import { find, isEmpty } from 'lodash'
 import { useEffect, useState } from 'react'
 
@@ -77,8 +77,11 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
 
     if (!enableTopicNaming) {
       const message = topic.messages[0]
-      const blocks = findMainTextBlock(message)
-      const topicName = blocks?.content.substring(0, 50)
+      const blocks = findMainTextBlocks(message)
+      const topicName = blocks
+        .map((block) => block.content)
+        .join('\n\n')
+        .substring(0, 50)
       if (topicName) {
         const data = { ...topic, name: topicName } as Topic
         _setActiveTopic(data)

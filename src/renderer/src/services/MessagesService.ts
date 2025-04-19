@@ -7,8 +7,8 @@ import store from '@renderer/store'
 import { messageBlocksSelectors, removeManyBlocks } from '@renderer/store/messageBlock'
 import type { Assistant, FileType, MCPServer, Model, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
-import type { Message, MessageBlock } from '@renderer/types/newMessageTypes'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
+import type { Message, MessageBlock } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { getTitleFromString, uuid } from '@renderer/utils'
 import {
   createAssistantMessage,
@@ -18,7 +18,7 @@ import {
   createMessage,
   resetMessage
 } from '@renderer/utils/messageUtils/create'
-import { getMessageContent } from '@renderer/utils/messageUtils/find'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import dayjs from 'dayjs'
 import { t } from 'i18next'
 import { takeRight } from 'lodash'
@@ -204,7 +204,7 @@ export function resetAssistantMessage(message: Message, model?: Model): Message 
 }
 
 export async function getMessageTitle(message: Message, length = 30): Promise<string> {
-  const content = getMessageContent(message) || ''
+  const content = getMainTextContent(message)
 
   if ((store.getState().settings as any).useTopicNamingForMessageTitle) {
     try {

@@ -1,7 +1,7 @@
 import { SyncOutlined } from '@ant-design/icons'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { Model } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import { withMessageThought } from '@renderer/utils/formats'
 import { Flex } from 'antd'
 import React, { Fragment } from 'react'

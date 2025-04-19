@@ -31,10 +31,10 @@ import {
 } from '@renderer/services/MessagesService'
 import WebSearchService from '@renderer/services/WebSearchService'
 import { Assistant, FileType, FileTypes, MCPToolResponse, Model, Provider, Suggestion } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessageTypes'
+import type { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
-import { findFileBlocks, findImageBlocks, getMessageContent } from '@renderer/utils/messageUtils/find'
+import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 import { MB } from '@shared/config/constant'
 import axios from 'axios'
@@ -496,7 +496,7 @@ export default class GeminiProvider extends BaseProvider {
     const defaultModel = getDefaultModel()
     const { maxTokens } = getAssistantSettings(assistant)
     const model = assistant.model || defaultModel
-    const _content = getMessageContent(message)
+    const _content = getMainTextContent(message)
 
     const content =
       isGemmaModel(model) && assistant.prompt
@@ -558,7 +558,7 @@ export default class GeminiProvider extends BaseProvider {
       .map((message) => ({
         role: message.role,
         // Get content using helper
-        content: getMessageContent(message)
+        content: getMainTextContent(message)
       }))
 
     const userMessageContent = userMessages.reduce((prev, curr) => {
@@ -646,7 +646,7 @@ export default class GeminiProvider extends BaseProvider {
     }
 
     // Get content using helper
-    const userMessageContent = messages.map(getMessageContent).join('\n')
+    const userMessageContent = messages.map(getMainTextContent).join('\n')
 
     const content = isGemmaModel(model)
       ? `<start_of_turn>user\n${systemMessage.content}<end_of_turn>\n<start_of_turn>user\n${userMessageContent}<end_of_turn>`

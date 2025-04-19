@@ -1,5 +1,5 @@
 import { createEntityAdapter, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { MessageBlock } from '@renderer/types/newMessageTypes'
+import type { MessageBlock } from '@renderer/types/newMessage'
 
 import type { RootState } from './index' // 确认 RootState 从 store/index.ts 导出
 

@@ -1,5 +1,5 @@
 import { TranslationOutlined } from '@ant-design/icons'
-import type { MainTextMessageBlock, TranslationMessageBlock } from '@renderer/types/newMessageTypes'
+import type { MainTextMessageBlock, TranslationMessageBlock } from '@renderer/types/newMessage'
 import { Divider } from 'antd'
 import React from 'react'
 import { useTranslation } from 'react-i18next'

@@ -6,26 +6,27 @@ import type {
   ImageMessageBlock,
   MainTextMessageBlock,
   Message
-} from '@renderer/types/newMessageTypes'
-import { MessageBlockType } from '@renderer/types/newMessageTypes'
+} from '@renderer/types/newMessage'
+import { MessageBlockType } from '@renderer/types/newMessage'
 
 /**
- * Finds the MainTextMessageBlock associated with a given message.
+ * Finds all MainTextMessageBlocks associated with a given message, in order.
  * @param message - The message object.
- * @returns The MainTextMessageBlock or undefined if not found.
+ * @returns An array of MainTextMessageBlocks (empty if none found).
  */
-export const findMainTextBlock = (message: Message): MainTextMessageBlock | undefined => {
+export const findMainTextBlocks = (message: Message): MainTextMessageBlock[] => {
   if (!message || !message.blocks || message.blocks.length === 0) {
-    return undefined
+    return []
   }
   const state = store.getState()
+  const textBlocks: MainTextMessageBlock[] = []
   for (const blockId of message.blocks) {
     const block = messageBlocksSelectors.selectById(state, blockId)
     if (block && block.type === MessageBlockType.MAIN_TEXT) {
-      return block as MainTextMessageBlock
+      textBlocks.push(block as MainTextMessageBlock)
     }
   }
-  return undefined
+  return textBlocks
 }
 
 /**
@@ -69,23 +70,24 @@ export const findFileBlocks = (message: Message): FileMessageBlock[] => {
 }
 
 /**
- * Gets the content string from the MainTextMessageBlock of a message.
+ * Gets the concatenated content string from all MainTextMessageBlocks of a message, in order.
  * @param message - The message object.
- * @returns The content string or an empty string if not found.
+ * @returns The concatenated content string or an empty string if no text blocks are found.
  */
-export const getMessageContent = (message: Message): string => {
-  const mainTextBlock = findMainTextBlock(message)
-  return mainTextBlock?.content || ''
+export const getMainTextContent = (message: Message): string => {
+  const textBlocks = findMainTextBlocks(message)
+  return textBlocks.map((block) => block.content).join('\n\n')
 }
 
 /**
- * Gets the knowledgeBaseIds array from the MainTextMessageBlock of a message.
+ * Gets the knowledgeBaseIds array from the *first* MainTextMessageBlock of a message.
+ * Note: Assumes knowledgeBaseIds are only relevant on the first text block, adjust if needed.
  * @param message - The message object.
  * @returns The knowledgeBaseIds array or undefined if not found.
  */
 export const getKnowledgeBaseIds = (message: Message): string[] | undefined => {
-  const mainTextBlock = findMainTextBlock(message)
-  return mainTextBlock?.knowledgeBaseIds
+  const firstTextBlock = findMainTextBlocks(message)
+  return firstTextBlock?.map((block) => block.knowledgeBaseIds)?.flat()
 }
 
 /**

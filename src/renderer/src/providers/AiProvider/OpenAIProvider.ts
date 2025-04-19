@@ -30,11 +30,11 @@ import {
   Provider,
   Suggestion
 } from '@renderer/types'
-import { Message } from '@renderer/types/newMessageTypes'
+import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
 import { mcpToolCallResponseToOpenAIMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
-import { findFileBlocks, findImageBlocks, getMessageContent } from '@renderer/utils/messageUtils/find'
+import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 import { takeRight } from 'lodash'
 import OpenAI, { AzureOpenAI } from 'openai'
@@ -671,7 +671,7 @@ export default class OpenAIProvider extends BaseProvider {
       .filter((message) => !message.isPreset)
       .map((message) => ({
         role: message.role,
-        content: getMessageContent(message)
+        content: getMainTextContent(message)
       }))
 
     const userMessageContent = userMessages.reduce((prev, curr) => {
@@ -721,7 +721,7 @@ export default class OpenAIProvider extends BaseProvider {
       content: assistant.prompt
     }
 
-    const messageContents = messages.map((m) => getMessageContent(m))
+    const messageContents = messages.map((m) => getMainTextContent(m))
     const userMessageContent = messageContents.join('\n')
 
     const userMessage = {
@@ -791,7 +791,7 @@ export default class OpenAIProvider extends BaseProvider {
       .filter((m) => m.role === 'user')
       .map((m) => ({
         role: m.role,
-        content: getMessageContent(m)
+        content: getMainTextContent(m)
       }))
 
     const response: any = await this.sdk.request({

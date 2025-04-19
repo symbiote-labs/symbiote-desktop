@@ -1,12 +1,13 @@
 import { getOpenAIWebSearchParams, isOpenAIWebSearch } from '@renderer/config/models'
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
+import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
 import store from '@renderer/store'
 import { Assistant, KnowledgeReference, MCPTool, Model, Provider, Suggestion, WebSearchResponse } from '@renderer/types'
-import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessageTypes'
+import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
 import { formatMessageError } from '@renderer/utils/error'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
-import { getMessageContent } from '@renderer/utils/messageUtils/find'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
 
 import AiProvider from '../providers/AiProvider'
@@ -23,15 +24,15 @@ import { filterContextMessages, filterMessages, filterUsefulMessages } from './M
 import WebSearchService from './WebSearchService'
 
 // Define a type for the chunk data passed to onChunkReceived
-type ChunkCallbackData = {
-  type?: 'text' | 'reasoning' | 'status' | 'metadata' | 'final'
-  text?: string
-  reasoning_content?: string
-  status?: 'searching' | 'processing' | 'success' | 'error'
-  webSearch?: WebSearchResponse | any[]
-  knowledge?: KnowledgeReference[]
-  error?: any
-}
+// type ChunkCallbackData = {
+//   type?: 'text' | 'reasoning' | 'status' | 'metadata' | 'final'
+//   text?: string
+//   reasoning_content?: string
+//   status?: 'searching' | 'processing' | 'success' | 'error'
+//   webSearch?: WebSearchResponse | any[]
+//   knowledge?: KnowledgeReference[]
+//   error?: any
+// }
 
 export async function fetchChatCompletion({
   messages,
@@ -40,7 +41,9 @@ export async function fetchChatCompletion({
 }: {
   messages: Message[]
   assistant: Assistant
-  onChunkReceived: (chunk: ChunkCallbackData) => void
+  onChunkReceived: (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => void
+  // TODO
+  // onChunkStatus: (status: 'searching' | 'processing' | 'success' | 'error') => void
 }) {
   const provider = getAssistantProvider(assistant)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
@@ -77,7 +80,7 @@ export async function fetchChatCompletion({
       } catch (e: any) {
         console.error('extract error', e)
         // Fallback to using original content if extraction fails
-        const fallbackContent = getMessageContent(lastUserMessage)
+        const fallbackContent = getMainTextContent(lastUserMessage)
         return {
           websearch: {
             question: [fallbackContent || 'search']
@@ -148,6 +151,7 @@ export async function fetchChatCompletion({
     // --- Execute Extraction and Searches ---
     if (assistant.enableWebSearch || hasKnowledgeBase) {
       extractResults = await extract()
+      console.log('extractResults', extractResults)
     }
     // Run searches potentially in parallel
     ;[webSearchResponseFromSearch, knowledgeReferencesFromSearch] = await Promise.all([
