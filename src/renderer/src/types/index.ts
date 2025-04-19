@@ -43,6 +43,7 @@ export type AssistantSettings = {
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort?: 'low' | 'medium' | 'high'
+  thinkingBudget?: number
 }
 
 export type Agent = Omit<Assistant, 'model'> & {
@@ -197,6 +198,8 @@ export interface FileType {
   created_at: string
   count: number
   tokens?: number
+  pdf_page_range?: string
+  pdf_page_count?: number
 }
 
 export enum FileTypes {

@@ -43,4 +43,11 @@ i18n.use(initReactI18next).init({
   }
 })
 
+// 强制重新加载翻译
+export const reloadTranslations = () => {
+  const currentLng = i18n.language
+  i18n.reloadResources(currentLng)
+  console.log('[i18n] Translations reloaded for language:', currentLng)
+}
+
 export default i18n

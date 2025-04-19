@@ -24,6 +24,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
   const [enableMaxTokens, setEnableMaxTokens] = useState(assistant?.settings?.enableMaxTokens ?? false)
   const [maxTokens, setMaxTokens] = useState(assistant?.settings?.maxTokens ?? 0)
   const [reasoningEffort, setReasoningEffort] = useState(assistant?.settings?.reasoning_effort)
+  const [thinkingBudget, setThinkingBudget] = useState(assistant?.settings?.thinkingBudget ?? 8192)
   const [streamOutput, setStreamOutput] = useState(assistant?.settings?.streamOutput ?? true)
   const [defaultModel, setDefaultModel] = useState(assistant?.defaultModel)
   const [topP, setTopP] = useState(assistant?.settings?.topP ?? 1)
@@ -45,6 +46,14 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
 
   const onReasoningEffortChange = (value) => {
     updateAssistantSettings({ reasoning_effort: value })
+  }
+
+  const onThinkingBudgetChange = (value) => {
+    // 确保值是数字，包括0
+    if (value !== null && value !== undefined && !isNaN(value as number)) {
+      console.log('[ThinkingBudget] 更新思考预算值:', value)
+      updateAssistantSettings({ thinkingBudget: value })
+    }
   }
 
   const onContextCountChange = (value) => {
@@ -154,6 +163,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
     setStreamOutput(true)
     setTopP(1)
     setReasoningEffort(undefined)
+    setThinkingBudget(8192)
     setCustomParameters([])
     updateAssistantSettings({
       temperature: DEFAULT_TEMPERATURE,
@@ -163,6 +173,7 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
       streamOutput: true,
       topP: 1,
       reasoning_effort: undefined,
+      thinkingBudget: 8192,
       customParameters: []
     })
   }
@@ -404,6 +415,48 @@ const AssistantModelSettings: FC<Props> = ({ assistant, updateAssistant, updateA
         </Radio.Group>
       </SettingRow>
       <Divider style={{ margin: '10px 0' }} />
+      {assistant?.model?.id?.includes('gemini-2.5') && (
+        <>
+          <Row align="middle">
+            <Label>{t('assistants.settings.thinking_budget')}</Label>
+            <Tooltip title={t('assistants.settings.thinking_budget.tip')}>
+              <QuestionIcon />
+            </Tooltip>
+          </Row>
+          <Row align="middle" gutter={20}>
+            <Col span={20}>
+              <Slider
+                min={0}
+                max={24576}
+                onChange={setThinkingBudget}
+                onChangeComplete={onThinkingBudgetChange}
+                value={typeof thinkingBudget === 'number' ? thinkingBudget : 8192}
+                marks={{ 0: '0', 8192: '8192', 16384: '16K', 24576: '24K' }}
+                step={1024}
+              />
+            </Col>
+            <Col span={4}>
+              <InputNumber
+                min={0}
+                max={24576}
+                step={1024}
+                value={thinkingBudget}
+                changeOnBlur
+                onChange={(value) => {
+                  // 确保值是数字，包括0
+                  if (value !== null && value !== undefined && !isNaN(value as number)) {
+                    console.log('[ThinkingBudget] 输入框更新思考预算值:', value)
+                    setThinkingBudget(value)
+                    setTimeout(() => updateAssistantSettings({ thinkingBudget: value }), 500)
+                  }
+                }}
+                style={{ width: '100%' }}
+              />
+            </Col>
+          </Row>
+          <Divider style={{ margin: '10px 0' }} />
+        </>
+      )}
       <SettingRow style={{ minHeight: 30 }}>
         <Label>{t('models.custom_parameters')}</Label>
         <Button icon={<PlusOutlined />} onClick={onAddCustomParameter}>

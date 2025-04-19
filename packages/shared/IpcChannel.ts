@@ -176,5 +176,14 @@ export enum IpcChannel {
 
   // Long-term Memory File Storage
   LongTermMemory_LoadData = 'long-term-memory:load-data',
-  LongTermMemory_SaveData = 'long-term-memory:save-data'
+  LongTermMemory_SaveData = 'long-term-memory:save-data',
+
+  // Code Executor
+  CodeExecutor_ExecuteJS = 'code-executor:execute-js',
+  CodeExecutor_ExecutePython = 'code-executor:execute-python',
+  CodeExecutor_GetSupportedLanguages = 'code-executor:get-supported-languages',
+
+  // PDF
+  PDF_SplitPDF = 'pdf:split-pdf',
+  PDF_GetPageCount = 'pdf:get-page-count'
 }

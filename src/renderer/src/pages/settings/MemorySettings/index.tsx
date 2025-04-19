@@ -17,7 +17,6 @@ import {
 } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store' // Import store for direct access
-import { getModelUniqId } from '@renderer/utils'
 import {
   addMemory,
   clearMemories,

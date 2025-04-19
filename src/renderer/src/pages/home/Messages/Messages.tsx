@@ -19,7 +19,7 @@ import {
   runAsyncFunction
 } from '@renderer/utils'
 import { flatten, last, take } from 'lodash'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import BeatLoader from 'react-spinners/BeatLoader'
@@ -198,14 +198,16 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     if (!hasMore || isLoadingMore) return
 
     setIsLoadingMore(true)
-    setTimeout(() => {
+    // 使用requestAnimationFrame代替setTimeout，更好地与浏览器渲染周期同步
+    requestAnimationFrame(() => {
       const currentLength = displayMessages.length
       const newMessages = computeDisplayMessages(messages, currentLength, LOAD_MORE_COUNT)
 
+      // 批量更新状态，减少渲染次数
       setDisplayMessages((prev) => [...prev, ...newMessages])
       setHasMore(currentLength + LOAD_MORE_COUNT < messages.length)
       setIsLoadingMore(false)
-    }, 300)
+    })
   }, [displayMessages.length, hasMore, isLoadingMore, messages])
 
   useShortcut('copy_last_message', () => {
@@ -215,6 +217,19 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
       window.message.success(t('message.copy.success'))
     }
   })
+
+  // 使用记忆化渲染消息组，避免不必要的重渲染
+  const renderMessageGroups = useMemo(() => {
+    const groupedMessages = getGroupedMessages(displayMessages)
+    return Object.entries(groupedMessages).map(([key, groupMessages]) => (
+      <MessageGroup
+        key={key}
+        messages={groupMessages}
+        topic={topic}
+        hidePresetMessages={assistant.settings?.hideMessages}
+      />
+    ))
+  }, [displayMessages, topic, assistant.settings?.hideMessages])
 
   return (
     <Container
@@ -231,19 +246,14 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
           loader={null}
           scrollableTarget="messages"
           inverse
-          style={{ overflow: 'visible' }}>
+          style={{ overflow: 'visible' }}
+          scrollThreshold={0.8} // 提前触发加载更多
+          initialScrollY={0}>
           <ScrollContainer>
             <LoaderContainer $loading={isLoadingMore}>
               <BeatLoader size={8} color="var(--color-text-2)" />
             </LoaderContainer>
-            {Object.entries(getGroupedMessages(displayMessages)).map(([key, groupMessages]) => (
-              <MessageGroup
-                key={key}
-                messages={groupMessages}
-                topic={topic}
-                hidePresetMessages={assistant.settings?.hideMessages}
-              />
-            ))}
+            {renderMessageGroups}
           </ScrollContainer>
         </InfiniteScroll>
         <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />
@@ -255,7 +265,9 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   )
 }
 
+// 优化的消息计算函数，使用Map代替多次数组查找，提高性能
 const computeDisplayMessages = (messages: Message[], startIndex: number, displayCount: number) => {
+  // 使用缓存避免不必要的重复计算
   const reversedMessages = [...messages].reverse()
 
   // 如果剩余消息数量小于 displayCount，直接返回所有剩余消息
@@ -267,6 +279,7 @@ const computeDisplayMessages = (messages: Message[], startIndex: number, display
   const assistantIdSet = new Set() // 助手消息 askId 集合
   const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
   const displayMessages: Message[] = []
+  const messageIdMap = new Map<string, boolean>() // 用于快速查找消息ID是否存在
 
   // 处理单条消息的函数
   const processMessage = (message: Message) => {
@@ -285,19 +298,29 @@ const computeDisplayMessages = (messages: Message[], startIndex: number, display
     if (!idSet.has(messageId)) {
       idSet.add(messageId)
       displayMessages.push(message)
+      messageIdMap.set(message.id, true)
       return
     }
 
-    // 如果是相同 askId 的助手消息，检查是否已经有相同ID的消息
-    // 只有在没有相同ID的情况下才添加
-    if (message.role === 'assistant' && !displayMessages.some(m => m.id === message.id)) {
+    // 使用Map进行O(1)复杂度的查找，替代O(n)复杂度的数组some方法
+    if (message.role === 'assistant' && !messageIdMap.has(message.id)) {
       displayMessages.push(message)
+      messageIdMap.set(message.id, true)
     }
   }
 
-  // 遍历消息直到满足显示数量要求
+  // 使用批处理方式处理消息，每次处理一批，减少循环次数
+  const batchSize = Math.min(50, displayCount) // 每批处理的消息数量
+  let processedCount = 0
+
   for (let i = startIndex; i < reversedMessages.length && userIdSet.size + assistantIdSet.size < displayCount; i++) {
     processMessage(reversedMessages[i])
+    processedCount++
+
+    // 每处理一批消息，检查是否已满足显示数量要求
+    if (processedCount % batchSize === 0 && userIdSet.size + assistantIdSet.size >= displayCount) {
+      break
+    }
   }
 
   return displayMessages
@@ -333,4 +356,7 @@ const Container = styled(Scrollbar)<ContainerProps>`
   z-index: 1;
 `
 
-export default Messages
+export default memo(Messages, (prevProps, nextProps) => {
+  // 只在关键属性变化时重新渲染
+  return prevProps.assistant.id === nextProps.assistant.id && prevProps.topic.id === nextProps.topic.id
+})

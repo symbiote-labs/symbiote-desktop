@@ -1,4 +1,4 @@
-import { ExperimentOutlined } from '@ant-design/icons'
+import { ExperimentOutlined, FilePdfOutlined } from '@ant-design/icons'
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import { useSidebarIconShow } from '@renderer/hooks/useSidebarIcon'
 import ModelSettings from '@renderer/pages/settings/ModelSettings/ModelSettings'
@@ -32,6 +32,7 @@ import { McpSettingsNavbar } from './MCPSettings/McpSettingsNavbar'
 import MemorySettings from './MemorySettings'
 import MiniAppSettings from './MiniappSettings/MiniAppSettings'
 import ModelCombinationSettings from './ModelCombinationSettings'
+import PDFSettings from './PDFSettings'
 import ProvidersList from './ProviderSettings'
 import QuickAssistantSettings from './QuickAssistantSettings'
 import QuickPhraseSettings from './QuickPhraseSettings'
@@ -141,6 +142,12 @@ const SettingsPage: FC = () => {
               {t('settings.voice.title')}
             </MenuItem>
           </MenuItemLink>
+          <MenuItemLink to="/settings/pdf">
+            <MenuItem className={isRoute('/settings/pdf')}>
+              <FilePdfOutlined />
+              {t('settings.pdf.title')}
+            </MenuItem>
+          </MenuItemLink>
           <MenuItemLink to="/settings/about">
             <MenuItem className={isRoute('/settings/about')}>
               <Info size={18} />
@@ -164,6 +171,7 @@ const SettingsPage: FC = () => {
             <Route path="quickAssistant" element={<QuickAssistantSettings />} />
             <Route path="data/*" element={<DataSettings />} />
             <Route path="tts" element={<TTSSettings />} />
+            <Route path="pdf" element={<PDFSettings />} />
             <Route path="about" element={<AboutSettings />} />
             <Route path="quickPhrase" element={<QuickPhraseSettings />} />
           </Routes>

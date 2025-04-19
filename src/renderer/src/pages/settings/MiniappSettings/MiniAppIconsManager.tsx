@@ -100,7 +100,7 @@ const MiniAppIconsManager: FC<MiniAppManagerProps> = ({
     return (
       <ProgramItem ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
         <ProgramContent>
-          <AppLogo src={logo} alt={name} />
+          {logo ? <AppLogo src={logo} alt={name} /> : <AppLogoPlaceholder />}
           <span>{name}</span>
         </ProgramContent>
         <CloseButton onClick={() => onMoveMiniApp(program, listType)}>
@@ -242,6 +242,12 @@ const EmptyPlaceholder = styled.div`
   text-align: center;
   padding: 20px;
   font-size: 14px;
+`
+const AppLogoPlaceholder = styled.div`
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background-color: var(--color-background-soft);
 `
 
 export default MiniAppIconsManager

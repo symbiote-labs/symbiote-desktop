@@ -66,6 +66,11 @@ export interface SettingsState {
   gridColumns: number
   gridPopoverTrigger: 'hover' | 'click'
   messageNavigation: 'none' | 'buttons' | 'anchor'
+  // PDF设置
+  pdfSettings: {
+    enablePdfSplitting: boolean // 是否启用PDF分割功能
+    defaultPageRangePrompt: string // 默认页码范围提示文本
+  }
   // webdav 配置 host, user, pass, path
   webdavHost: string
   webdavUser: string
@@ -221,6 +226,11 @@ export const initialState: SettingsState = {
   gridColumns: 2,
   gridPopoverTrigger: 'click',
   messageNavigation: 'none',
+  // PDF设置
+  pdfSettings: {
+    enablePdfSplitting: true, // 默认启用PDF分割功能
+    defaultPageRangePrompt: '输入页码范围，例如：1-5,8,10-15' // 默认页码范围提示文本
+  },
   webdavHost: '',
   webdavUser: '',
   webdavPass: '',
@@ -776,6 +786,19 @@ const settingsSlice = createSlice({
     },
     setEnableBackspaceDeleteModel: (state, action: PayloadAction<boolean>) => {
       state.enableBackspaceDeleteModel = action.payload
+    },
+    // PDF设置相关的action
+    setPdfSettings: (
+      state,
+      action: PayloadAction<{
+        enablePdfSplitting?: boolean
+        defaultPageRangePrompt?: string
+      }>
+    ) => {
+      state.pdfSettings = {
+        ...state.pdfSettings,
+        ...action.payload
+      }
     }
   }
 })
@@ -905,5 +928,8 @@ export const {
   setSkipNextAutoTTS,
   setEnableBackspaceDeleteModel
 } = settingsSlice.actions
+
+// PDF设置相关的action
+export const setPdfSettings = settingsSlice.actions.setPdfSettings
 
 export default settingsSlice.reducer

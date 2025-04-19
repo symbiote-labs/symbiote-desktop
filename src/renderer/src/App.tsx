@@ -8,6 +8,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import Sidebar from './components/app/Sidebar'
 import DeepClaudeProvider from './components/DeepClaudeProvider'
 import MemoryProvider from './components/MemoryProvider'
+import PDFSettingsInitializer from './components/PDFSettingsInitializer'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
 import StyleSheetManager from './context/StyleSheetManager'
@@ -33,6 +34,7 @@ function App(): React.ReactElement {
               <PersistGate loading={null} persistor={persistor}>
                 <MemoryProvider>
                   <DeepClaudeProvider />
+                  <PDFSettingsInitializer />
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />

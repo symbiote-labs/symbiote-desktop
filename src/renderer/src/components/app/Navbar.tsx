@@ -56,6 +56,11 @@ const NavbarCenterContainer = styled.div`
   padding: 0 ${isMac ? '20px' : 0};
   font-weight: bold;
   color: var(--color-text-1);
+
+  /* 确保标题区域的按钮可点击 */
+  & button, & a {
+    -webkit-app-region: no-drag;
+  }
 `
 
 const NavbarRightContainer = styled.div`
@@ -65,4 +70,10 @@ const NavbarRightContainer = styled.div`
   padding: 0 12px;
   padding-right: ${isWindows ? '140px' : 12};
   justify-content: flex-end;
+  -webkit-app-region: no-drag; /* 确保按钮可点击 */
+
+  /* 确保所有子元素都可点击 */
+  & > * {
+    -webkit-app-region: no-drag;
+  }
 `

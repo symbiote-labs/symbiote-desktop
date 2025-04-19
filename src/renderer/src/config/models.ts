@@ -672,6 +672,18 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       provider: 'gemini',
       name: 'Gemini 2.0 Flash',
       group: 'Gemini 2.0'
+    },
+    {
+      id: 'gemini-2.5-flash-preview-04-17',
+      provider: 'gemini',
+      name: 'Gemini 2.5 Flash',
+      group: 'Gemini 2.5'
+    },
+    {
+      id: 'gemini-2.5-pro-preview-03-25',
+      provider: 'gemini',
+      name: 'Gemini 2.5 Pro',
+      group: 'Gemini 2.5'
     }
   ],
   anthropic: [
@@ -2150,7 +2162,9 @@ export const GEMINI_SEARCH_MODELS = [
   'gemini-2.0-pro-exp-02-05',
   'gemini-2.0-pro-exp',
   'gemini-2.5-pro-exp',
-  'gemini-2.5-pro-exp-03-25'
+  'gemini-2.5-pro-exp-03-25',
+  'gemini-2.5-flash-preview-04-17',
+  'gemini-2.5-pro-preview-03-25'
 ]
 
 export function isTextToImageModel(model: Model): boolean {
@@ -2391,6 +2405,20 @@ export function isGemmaModel(model?: Model): boolean {
   }
 
   return model.id.includes('gemma-') || model.group === 'Gemma'
+}
+
+/**
+ * 检查模型是否支持思考预算功能
+ * @param model 模型
+ * @returns 是否支持思考预算
+ */
+export function isSupportedThinkingBudgetModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+
+  // 目前只有Gemini 2.5系列模型支持思考预算
+  return model.id.includes('gemini-2.5')
 }
 
 export function isZhipuModel(model?: Model): boolean {

@@ -22,7 +22,7 @@ import {
   setRecommendationThreshold,
   setShortMemoryActive
 } from '@renderer/store/memory'
-import { FC, ReactNode, useEffect, useRef } from 'react'
+import { FC, ReactNode, useEffect, useMemo, useRef } from 'react'
 
 interface MemoryProviderProps {
   children: ReactNode
@@ -45,12 +45,17 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
 
   // 获取当前对话
   const currentTopic = useAppSelector((state) => state.messages?.currentTopic?.id)
-  const messages = useAppSelector((state) => {
-    if (!currentTopic || !state.messages?.messagesByTopic) {
+
+  // 使用 useMemo 记忆化选择器的结果，避免返回新的数组引用
+  const messagesByTopic = useAppSelector((state) => state.messages?.messagesByTopic)
+
+  // 使用 useMemo 记忆化消息数组
+  const messages = useMemo(() => {
+    if (!currentTopic || !messagesByTopic) {
       return []
     }
-    return state.messages.messagesByTopic[currentTopic] || []
-  })
+    return messagesByTopic[currentTopic] || []
+  }, [currentTopic, messagesByTopic])
 
   // 存储上一次的话题ID
   const previousTopicRef = useRef<string | null>(null)

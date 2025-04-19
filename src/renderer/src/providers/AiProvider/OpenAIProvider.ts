@@ -371,8 +371,14 @@ export default class OpenAIProvider extends BaseProvider {
       const combinedChunks = lastChunk + delta.content
       lastChunk = delta.content
 
-      // 检测思考结束
-      if (combinedChunks.includes('###Response') || delta.content === '</think>') {
+      // 检测思考结束 - 支持多种标签格式
+      if (
+        combinedChunks.includes('###Response') ||
+        delta.content === '</think>' ||
+        delta.content.includes('</think>') ||
+        delta.content === '</thinking>' ||
+        delta.content.includes('</thinking>')
+      ) {
         return true
       }
 
@@ -461,35 +467,107 @@ export default class OpenAIProvider extends BaseProvider {
         })
       }
 
-      let content = ''
+      let content = '' // Accumulates the full, raw content
+      let isCurrentlyThinking = false // Flag to track if we are inside <thinking> tags
+
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
         }
 
         const delta = chunk.choices[0]?.delta
+        let deltaContent = delta?.content || '' // Get delta content for processing
+
+        // Accumulate raw content
         if (delta?.content) {
           content += delta.content
         }
 
+        let textToSend = '' // Content for the main answer part
+        let reasoningToSend = delta?.reasoning_content || delta?.reasoning || '' // Content for the thinking box (includes specific fields + tagged content)
+
+        if (isReasoningModel(model)) {
+          // Process content chunk by chunk, handling tags
+          while (deltaContent.length > 0) {
+            if (isCurrentlyThinking) {
+              // Look for the end tag
+              const endTagThinkIndex = deltaContent.indexOf('</think>')
+              const endTagThinkingIndex = deltaContent.indexOf('</thinking>')
+              let endTagIndex = -1
+              let endTag = ''
+
+              if (endTagThinkIndex !== -1 && (endTagThinkingIndex === -1 || endTagThinkIndex < endTagThinkingIndex)) {
+                endTagIndex = endTagThinkIndex
+                endTag = '</think>'
+              } else if (endTagThinkingIndex !== -1) {
+                endTagIndex = endTagThinkingIndex
+                endTag = '</thinking>'
+              }
+
+              if (endTagIndex !== -1) {
+                // End tag found in this chunk
+                const thinkingPart = deltaContent.substring(0, endTagIndex + endTag.length)
+                reasoningToSend += thinkingPart // Add content up to and including the tag to reasoning
+                deltaContent = deltaContent.substring(endTagIndex + endTag.length) // Remaining content
+                isCurrentlyThinking = false // Exited thinking state
+              } else {
+                // No end tag in this chunk, entire chunk is thinking content
+                reasoningToSend += deltaContent
+                deltaContent = '' // Consumed the chunk
+              }
+            } else {
+              // Not currently thinking, look for the start tag
+              const startTagThinkIndex = deltaContent.indexOf('<think>')
+              const startTagThinkingIndex = deltaContent.indexOf('<thinking>')
+              let startTagIndex = -1
+
+              if (
+                startTagThinkIndex !== -1 &&
+                (startTagThinkingIndex === -1 || startTagThinkIndex < startTagThinkingIndex)
+              ) {
+                startTagIndex = startTagThinkIndex
+              } else if (startTagThinkingIndex !== -1) {
+                startTagIndex = startTagThinkingIndex
+              }
+
+              if (startTagIndex !== -1) {
+                // Start tag found in this chunk
+                const nonThinkingPart = deltaContent.substring(0, startTagIndex)
+                textToSend += nonThinkingPart // Add content before the tag to text
+                // The part from the tag onwards will be handled in the next iteration or as reasoning
+                deltaContent = deltaContent.substring(startTagIndex)
+                isCurrentlyThinking = true // Entered thinking state
+              } else {
+                // No start tag in this chunk, entire chunk is non-thinking content
+                textToSend += deltaContent
+                deltaContent = '' // Consumed the chunk
+              }
+            }
+          }
+        } else {
+          // Non-reasoning models: always assign to textToSend
+          textToSend = delta?.content || '' // Use original delta content directly
+        }
+
+        // --- Timing and other metadata calculation ---
         if (delta?.reasoning_content || delta?.reasoning) {
+          // Keep track if specific reasoning fields were ever present
           hasReasoningContent = true
         }
-
-        if (time_first_token_millsec == 0) {
+        if (time_first_token_millsec == 0 && delta?.content) {
+          // First token with any content
           time_first_token_millsec = new Date().getTime() - start_time_millsec
         }
-
+        // Use the previously modified isReasoningJustDone for timing the end of *initial* reasoning phase
         if (time_first_content_millsec == 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }
-
         const time_completion_millsec = new Date().getTime() - start_time_millsec
         const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
+        // --- End Timing ---
 
         // Extract citations from the raw response if available
         const citations = (chunk as OpenAI.Chat.Completions.ChatCompletionChunk & { citations?: string[] })?.citations
-
         const finishReason = chunk.choices[0]?.finish_reason
 
         let webSearch: any[] | undefined = undefined
@@ -498,26 +576,35 @@ export default class OpenAIProvider extends BaseProvider {
         }
         if (firstChunk && assistant.enableWebSearch && isHunyuanSearchModel(model)) {
           webSearch = chunk?.search_info?.search_results
-          firstChunk = true
+          firstChunk = false // Corrected: set to false after processing first chunk
         }
-        onChunk({
-          text: delta?.content || '',
-          reasoning_content: delta?.reasoning_content || delta?.reasoning || '',
-          usage: chunk.usage,
-          metrics: {
-            completion_tokens: chunk.usage?.completion_tokens,
-            time_completion_millsec,
-            time_first_token_millsec,
-            time_thinking_millsec
-          },
-          webSearch,
-          annotations: delta?.annotations,
-          citations,
-          mcpToolResponse: toolResponses
-        })
-      }
 
-      await processToolUses(content, idx)
+        // 添加日志输出，帮助调试
+        if (reasoningToSend && reasoningToSend.length > 0) {
+          console.log('[OpenAIProvider] 发送思考内容，长度:', reasoningToSend.length)
+        }
+
+        // Call onChunk only if there's something to send (text, reasoning, or metadata)
+        if (textToSend || reasoningToSend || chunk.usage || webSearch || delta?.annotations || citations) {
+          onChunk({
+            text: textToSend, // Only non-thinking content
+            reasoning_content: reasoningToSend, // Thinking content + specific reasoning fields
+            usage: chunk.usage,
+            metrics: {
+              completion_tokens: chunk.usage?.completion_tokens,
+              time_completion_millsec,
+              time_first_token_millsec,
+              time_thinking_millsec
+            },
+            webSearch,
+            annotations: delta?.annotations,
+            citations,
+            mcpToolResponse: toolResponses
+          })
+        }
+      } // End for await loop
+
+      await processToolUses(content, idx) // Process tool uses based on the full accumulated content
     }
 
     const stream = await this.sdk.chat.completions
@@ -614,7 +701,8 @@ export default class OpenAIProvider extends BaseProvider {
       const deltaContent = chunk.choices[0]?.delta?.content || ''
 
       if (isReasoning) {
-        if (deltaContent.includes('<think>')) {
+        // 检测思考开始 - 支持多种标签格式
+        if (deltaContent.includes('<think>') || deltaContent.includes('<thinking>')) {
           isThinking = true
         }
 
@@ -623,7 +711,8 @@ export default class OpenAIProvider extends BaseProvider {
           onResponse?.(text)
         }
 
-        if (deltaContent.includes('</think>')) {
+        // 检测思考结束 - 支持多种标签格式
+        if (deltaContent.includes('</think>') || deltaContent.includes('</thinking>')) {
           isThinking = false
         }
       } else {
@@ -693,9 +782,11 @@ export default class OpenAIProvider extends BaseProvider {
       max_tokens: 1000
     })
 
-    // 针对思考类模型的返回，总结仅截取</think>之后的内容
+    // 针对思考类模型的返回，总结仅截取思考标签之后的内容
     let content = response.choices[0].message?.content || ''
+    // 支持多种思考标签格式
     content = content.replace(/^<think>(.*?)<\/think>/s, '')
+    content = content.replace(/^<thinking>(.*?)<\/thinking>/s, '')
 
     return removeSpecialCharactersForTopicName(content.substring(0, 50))
   }
@@ -732,9 +823,11 @@ export default class OpenAIProvider extends BaseProvider {
       }
     )
 
-    // 针对思考类模型的返回，总结仅截取</think>之后的内容
+    // 针对思考类模型的返回，总结仅截取思考标签之后的内容
     let content = response.choices[0].message?.content || ''
+    // 支持多种思考标签格式
     content = content.replace(/^<think>(.*?)<\/think>/s, '')
+    content = content.replace(/^<thinking>(.*?)<\/thinking>/s, '')
 
     return content
   }

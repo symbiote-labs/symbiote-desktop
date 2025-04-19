@@ -1,5 +1,15 @@
 {
   "translation": {
+    "code": {
+      "execute": "执行代码",
+      "executing": "执行中...",
+      "execution": {
+        "success": "执行成功",
+        "error": "执行错误",
+        "output": "输出",
+        "unsupported_language": "不支持的编程语言"
+      }
+    },
     "voice_call": {
       "title": "语音通话",
       "start": "开始语音通话",
@@ -83,6 +93,8 @@
       "settings.reasoning_effort.medium": "中",
       "settings.reasoning_effort.off": "关",
       "settings.reasoning_effort.tip": "仅支持 OpenAI o-series、Anthropic、Grok 推理模型",
+      "settings.thinking_budget": "思考预算",
+      "settings.thinking_budget.tip": "控制模型在生成最终回答前进行思考所使用的token数量上限（仅支持Gemini 2.5系列模型）",
       "settings.more": "助手设置"
     },
     "auth": {
@@ -283,7 +295,12 @@
       "collapse": "收起",
       "disable_wrap": "取消换行",
       "enable_wrap": "换行",
-      "expand": "展开"
+      "expand": "展开",
+      "edit": "编辑",
+      "done_editing": "完成编辑",
+      "undo": "撤销",
+      "redo": "重做",
+      "search": "查找"
     },
     "common": {
       "add": "添加",
@@ -669,6 +686,8 @@
         "number": "数字",
         "string": "文本"
       },
+      "thinking_budget": "思考预算",
+      "thinking_budget.tip": "控制模型在生成最终回答前进行思考所使用的token数量上限（仅支持Gemini 2.5系列模型）",
       "pinned": "已固定",
       "rerank_model": "重排模型",
       "rerank_model_support_provider": "目前重排序模型仅支持部分服务商 ({{provider}})",
@@ -1682,6 +1701,25 @@
       "privacy": {
         "title": "隐私设置",
         "enable_privacy_mode": "匿名发送错误报告和数据统计"
+      },
+      "pdf": {
+        "title": "PDF设置",
+        "enable_splitting": "启用PDF分割功能",
+        "default_page_range_prompt": "默认页码范围提示文本",
+        "default_page_range_prompt_placeholder": "例如：1-5,8,10-15",
+        "description": "PDF分割功能允许您选择特定页码范围发送给AI，以便更精确地处理PDF文档内容。",
+        "split": "分割PDF",
+        "page_range": "页码范围",
+        "page_range_placeholder": "输入页码范围，例如：1-5,8,10-15",
+        "preview": "预览",
+        "total_pages": "共 {{count}} 页",
+        "cancel": "取消",
+        "confirm": "确认",
+        "invalid_range": "无效的页码范围",
+        "processing": "处理中...",
+        "one_at_a_time": "一次只能处理一个PDF文件，其他PDF文件将被忽略",
+        "error_loading": "加载PDF文件失败",
+        "error_splitting": "分割PDF文件失败"
       },
       "voice": {
         "title": "语音功能",

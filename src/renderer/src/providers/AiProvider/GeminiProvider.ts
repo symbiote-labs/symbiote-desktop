@@ -19,7 +19,7 @@ import {
   TextPart,
   Tool
 } from '@google/generative-ai'
-import { isGemmaModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
+import { isGemmaModel, isSupportedThinkingBudgetModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
@@ -258,6 +258,62 @@ export default class GeminiProvider extends BaseProvider {
   }
 
   /**
+   * Get thinking budget configuration for Gemini 2.5 models
+   * @param assistant - The assistant
+   * @param model - The model
+   * @returns The thinking budget configuration
+   */
+  private getThinkingConfig(assistant: Assistant, model: Model): Record<string, any> {
+    // 只对支持思考预算的模型应用思考预算功能
+    if (!isSupportedThinkingBudgetModel(model)) {
+      console.log('[ThinkingBudget] 模型不支持思考预算:', model.id)
+      return {}
+    }
+
+    console.log('[ThinkingBudget] 模型支持思考预算:', model.id)
+
+    // 从自定义参数中查找thinkingBudget参数
+    const customParams = this.getCustomParameters(assistant) as Record<string, any>
+    if (customParams.thinkingBudget !== undefined || customParams.thinking_budget !== undefined) {
+      // 如果已经在自定义参数中设置了思考预算，直接使用
+      const budget = customParams.thinkingBudget || customParams.thinking_budget
+      console.log('[ThinkingBudget] 使用自定义参数中的思考预算:', budget)
+      return {
+        thinkingConfig: {
+          thinkingBudget: budget
+        }
+      }
+    }
+
+    // 从助手设置中获取思考预算
+    if (assistant?.settings?.thinkingBudget !== undefined) {
+      console.log('[ThinkingBudget] 使用助手设置中的思考预算:', assistant.settings.thinkingBudget)
+
+      // 确保思考预算是一个有效的数字
+      const budget = Number(assistant.settings.thinkingBudget)
+      if (!isNaN(budget) && budget >= 0) {
+        return {
+          thinkingConfig: {
+            thinkingBudget: budget
+          }
+        }
+      } else {
+        console.log('[ThinkingBudget] 助手设置中的思考预算无效，使用默认值')
+      }
+    }
+
+    // 默认思考预算为8192 tokens
+    const defaultThinkingBudget = 8192
+    console.log('[ThinkingBudget] 使用默认思考预算:', defaultThinkingBudget)
+
+    return {
+      thinkingConfig: {
+        thinkingBudget: defaultThinkingBudget
+      }
+    }
+  }
+
+  /**
    * Generate completions
    * @param messages - The messages
    * @param assistant - The assistant
@@ -322,6 +378,13 @@ export default class GeminiProvider extends BaseProvider {
       // 使用与对话关联的SDK实例
       const sdk = this.getOrCreateSdk(conversationId)
 
+      // 打印思考预算值
+      console.log('[completions] 助手设置中的思考预算值:', assistant?.settings?.thinkingBudget)
+
+      // 获取思考预算配置
+      const thinkingConfig = this.getThinkingConfig(assistant, model)
+      console.log('[completions] 思考预算配置:', JSON.stringify(thinkingConfig))
+
       const geminiModel = sdk.getGenerativeModel(
         {
           model: model.id,
@@ -329,6 +392,7 @@ export default class GeminiProvider extends BaseProvider {
           safetySettings: this.getSafetySettings(model.id),
           tools: tools,
           generationConfig: {
+            ...thinkingConfig,
             maxOutputTokens: maxTokens,
             temperature: assistant?.settings?.temperature,
             topP: assistant?.settings?.topP,
@@ -478,6 +542,7 @@ export default class GeminiProvider extends BaseProvider {
       {
         model: model.id,
         ...(isGemmaModel(model) ? {} : { systemInstruction: enhancedPrompt }),
+        ...this.getThinkingConfig(assistant, model),
         generationConfig: {
           maxOutputTokens: maxTokens,
           temperature: assistant?.settings?.temperature
@@ -563,6 +628,7 @@ export default class GeminiProvider extends BaseProvider {
       {
         model: model.id,
         ...(isGemmaModel(model) ? {} : { systemInstruction: systemMessage.content }),
+        ...this.getThinkingConfig(assistant, model),
         generationConfig: {
           temperature: assistant?.settings?.temperature
         }
@@ -627,7 +693,8 @@ export default class GeminiProvider extends BaseProvider {
     const geminiModel = sdk.getGenerativeModel(
       {
         model: model.id,
-        ...(isGemmaModel(model) ? {} : { systemInstruction: systemMessage.content })
+        ...(isGemmaModel(model) ? {} : { systemInstruction: systemMessage.content }),
+        ...this.getThinkingConfig({ model } as Assistant, model)
       },
       this.requestOptions
     )
@@ -687,6 +754,7 @@ export default class GeminiProvider extends BaseProvider {
       {
         model: model.id,
         systemInstruction: enhancedPrompt,
+        ...this.getThinkingConfig(assistant, model),
         generationConfig: {
           temperature: assistant?.settings?.temperature
         }
@@ -751,8 +819,11 @@ export default class GeminiProvider extends BaseProvider {
     // 使用与对话关联的图像SDK实例
     const imageSdk = this.getOrCreateImageSdk(conversationId)
 
+    // 获取思考预算值
+    const thinkingBudget = assistant?.settings?.thinkingBudget
+
     if (!streamOutput) {
-      const response = await this.callGeminiGenerateContent(model.id, contents, maxTokens, imageSdk)
+      const response = await this.callGeminiGenerateContent(model.id, contents, maxTokens, imageSdk, thinkingBudget)
 
       const { isValid, message } = this.isValidGeminiResponse(response)
       if (!isValid) {
@@ -762,7 +833,7 @@ export default class GeminiProvider extends BaseProvider {
       this.processGeminiImageResponse(response, onChunk)
       return
     }
-    const response = await this.callGeminiGenerateContentStream(model.id, contents, maxTokens, imageSdk)
+    const response = await this.callGeminiGenerateContentStream(model.id, contents, maxTokens, imageSdk, thinkingBudget)
 
     for await (const chunk of response) {
       this.processGeminiImageResponse(chunk, onChunk)
@@ -798,7 +869,8 @@ export default class GeminiProvider extends BaseProvider {
     modelId: string,
     contents: ContentListUnion,
     maxTokens?: number,
-    sdk?: GoogleGenAI
+    sdk?: GoogleGenAI,
+    thinkingBudget?: number
   ): Promise<GenerateContentResponse> {
     try {
       // 获取新的API密钥，实现轮流使用多个密钥
@@ -807,14 +879,28 @@ export default class GeminiProvider extends BaseProvider {
       // 创建新的SDK实例
       const apiSdk = sdk || new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
 
+      // 检查是否为支持思考预算的模型
+      const isThinkingBudgetSupported = modelId.includes('gemini-2.5')
+
+      // 使用传入的思考预算值或默认值
+      const budget = thinkingBudget !== undefined ? thinkingBudget : 8192
+      const thinkingConfig = isThinkingBudgetSupported ? { thinkingConfig: { thinkingBudget: budget } } : {}
+      console.log('[API调用] 思考预算配置:', JSON.stringify(thinkingConfig))
+
+      // 构建请求配置
+      const config = {
+        responseModalities: ['Text', 'Image'],
+        responseMimeType: 'text/plain',
+        maxOutputTokens: maxTokens,
+        ...(isThinkingBudgetSupported && budget >= 0 ? { thinkingConfig: { thinkingBudget: budget } } : {})
+      }
+
+      console.log('[API调用] 最终请求配置:', JSON.stringify(config))
+
       return await apiSdk.models.generateContent({
         model: modelId,
         contents: contents,
-        config: {
-          responseModalities: ['Text', 'Image'],
-          responseMimeType: 'text/plain',
-          maxOutputTokens: maxTokens
-        }
+        config: config
       })
     } catch (error) {
       console.error('Gemini API error:', error)
@@ -826,7 +912,8 @@ export default class GeminiProvider extends BaseProvider {
     modelId: string,
     contents: ContentListUnion,
     maxTokens?: number,
-    sdk?: GoogleGenAI
+    sdk?: GoogleGenAI,
+    thinkingBudget?: number
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
     try {
       // 获取新的API密钥，实现轮流使用多个密钥
@@ -835,14 +922,28 @@ export default class GeminiProvider extends BaseProvider {
       // 创建新的SDK实例
       const apiSdk = sdk || new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
 
+      // 检查是否为支持思考预算的模型
+      const isThinkingBudgetSupported = modelId.includes('gemini-2.5')
+
+      // 使用传入的思考预算值或默认值
+      const budget = thinkingBudget !== undefined ? thinkingBudget : 8192
+      const thinkingConfig = isThinkingBudgetSupported ? { thinkingConfig: { thinkingBudget: budget } } : {}
+      console.log('[API流式调用] 思考预算配置:', JSON.stringify(thinkingConfig))
+
+      // 构建请求配置
+      const config = {
+        responseModalities: ['Text', 'Image'],
+        responseMimeType: 'text/plain',
+        maxOutputTokens: maxTokens,
+        ...(isThinkingBudgetSupported && budget >= 0 ? { thinkingConfig: { thinkingBudget: budget } } : {})
+      }
+
+      console.log('[API流式调用] 最终请求配置:', JSON.stringify(config))
+
       return await apiSdk.models.generateContentStream({
         model: modelId,
         contents: contents,
-        config: {
-          responseModalities: ['Text', 'Image'],
-          responseMimeType: 'text/plain',
-          maxOutputTokens: maxTokens
-        }
+        config: config
       })
     } catch (error) {
       console.error('Gemini API error:', error)

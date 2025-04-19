@@ -1,5 +1,15 @@
 {
   "translation": {
+    "code": {
+      "execute": "Execute Code",
+      "executing": "Executing...",
+      "execution": {
+        "success": "Execution Successful",
+        "error": "Execution Error",
+        "output": "Output",
+        "unsupported_language": "Unsupported Programming Language"
+      }
+    },
     "voice_call": {
       "title": "Voice Call",
       "start": "Start Voice Call",
@@ -83,6 +93,8 @@
       "settings.reasoning_effort.medium": "medium",
       "settings.reasoning_effort.off": "off",
       "settings.reasoning_effort.tip": "Only supported by OpenAI o-series, Anthropic, and Grok reasoning models",
+      "settings.thinking_budget": "Thinking Budget",
+      "settings.thinking_budget.tip": "Controls the maximum number of tokens used for thinking before generating the final answer (only supported by Gemini 2.5 series models)",
       "settings.more": "Assistant Settings"
     },
     "auth": {
@@ -282,7 +294,12 @@
       "collapse": "Collapse",
       "disable_wrap": "Unwrap",
       "enable_wrap": "Wrap",
-      "expand": "Expand"
+      "expand": "Expand",
+      "edit": "Edit",
+      "done_editing": "Done Editing",
+      "undo": "Undo",
+      "redo": "Redo",
+      "search": "Search"
     },
     "common": {
       "add": "Add",
@@ -668,6 +685,8 @@
         "number": "Number",
         "string": "Text"
       },
+      "thinking_budget": "Thinking Budget",
+      "thinking_budget.tip": "Controls the maximum number of tokens used for thinking before generating the final answer (only supported by Gemini 2.5 series models)",
       "pinned": "Pinned",
       "rerank_model": "Reordering Model",
       "rerank_model_support_provider": "Currently, the reordering model only supports some providers ({{provider}})",
@@ -1593,6 +1612,25 @@
       "privacy": {
         "title": "Privacy Settings",
         "enable_privacy_mode": "Anonymous reporting of errors and statistics"
+      },
+      "pdf": {
+        "title": "PDF Settings",
+        "enable_splitting": "Enable PDF Splitting",
+        "default_page_range_prompt": "Default Page Range Prompt",
+        "default_page_range_prompt_placeholder": "Example: 1-5,8,10-15",
+        "description": "PDF splitting allows you to select specific page ranges to send to AI for more precise processing of PDF document content.",
+        "split": "Split PDF",
+        "page_range": "Page Range",
+        "page_range_placeholder": "Enter page range, e.g.: 1-5,8,10-15",
+        "total_pages": "Total {{count}} pages",
+        "preview": "Preview",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "invalid_range": "Invalid page range",
+        "processing": "Processing...",
+        "one_at_a_time": "Only one PDF file can be processed at a time, other PDF files will be ignored",
+        "error_loading": "Failed to load PDF file",
+        "error_splitting": "Failed to split PDF file"
       },
       "tts": {
         "title": "Text-to-Speech Settings",

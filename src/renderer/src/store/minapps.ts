@@ -9,7 +9,8 @@ export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'translate',
   'minapp',
   'knowledge',
-  'files'
+  'files',
+  'projects'
 ]
 
 export interface MinAppsState {

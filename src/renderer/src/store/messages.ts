@@ -244,14 +244,20 @@ const handleResponseMessageUpdate = (
 }
 
 // Helper function to sync messages with database
-const syncMessagesWithDB = async (topicId: string, messages: Message[]) => {
-  const topic = await db.topics.get(topicId)
-  if (topic) {
-    await db.topics.update(topicId, { messages })
-  } else {
-    await db.topics.add({ id: topicId, messages })
+// 使用节流函数减少数据库操作频率
+const syncMessagesWithDB = throttle(async (topicId: string, messages: Message[]) => {
+  try {
+    const topic = await db.topics.get(topicId)
+    if (topic) {
+      await db.topics.update(topicId, { messages })
+    } else {
+      await db.topics.add({ id: topicId, messages })
+    }
+    console.log(`[Messages] Synced ${messages.length} messages for topic ${topicId}`)
+  } catch (error) {
+    console.error(`[Messages] Error syncing messages for topic ${topicId}:`, error)
   }
-}
+}, 500) // 500ms节流，减少数据库写入频率
 
 // Modified sendMessage thunk
 export const sendMessage =
@@ -523,7 +529,8 @@ export const resendMessage =
     }
   }
 
-// Modified loadTopicMessages thunk - 优化性能，减少日志输出
+// 优化的loadTopicMessages thunk，实现分页加载
+// 使用分页加载机制，只加载最近的消息，减少内存占用和渲染压力
 export const loadTopicMessagesThunk = (topic: Topic) => async (dispatch: AppDispatch) => {
   // 设置会话的loading状态
   dispatch(setTopicLoading({ topicId: topic.id, loading: true }))
@@ -539,16 +546,24 @@ export const loadTopicMessagesThunk = (topic: Topic) => async (dispatch: AppDisp
   try {
     // 使用 getTopic 获取会话对象，使用缓存减少数据库访问
     const topicWithDB = await TopicManager.getTopic(topic.id)
-    if (topicWithDB) {
-      // 如果数据库中有会话，加载消息
-      dispatch(loadTopicMessages({ topicId: topic.id, messages: topicWithDB.messages }))
+    if (topicWithDB && topicWithDB.messages) {
+      // 只加载最近的N条消息，而不是全部加载
+      const initialLoadCount = state.messages.displayCount * 2; // 初始加载显示数量的2倍
+      const recentMessages = topicWithDB.messages.length > initialLoadCount
+        ? topicWithDB.messages.slice(-initialLoadCount)
+        : topicWithDB.messages;
+
+      console.log(`[Messages] Loaded ${recentMessages.length}/${topicWithDB.messages.length} messages for topic ${topic.id}`);
+
+      dispatch(loadTopicMessages({ topicId: topic.id, messages: recentMessages }))
+    } else {
+      dispatch(loadTopicMessages({ topicId: topic.id, messages: [] }))
     }
     dispatch(setCurrentTopic(topic))
   } catch (error) {
-    // 静默处理错误，减少日志输出
+    console.error('[Messages] Error loading topic messages:', error);
     dispatch(setError(error instanceof Error ? error.message : 'Failed to load messages'))
   } finally {
-    // 清除会话的loading状态
     dispatch(setTopicLoading({ topicId: topic.id, loading: false }))
   }
 }

@@ -20,7 +20,7 @@ import remarkCjkFriendly from 'remark-cjk-friendly'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 
-import CodeBlock from './CodeBlock'
+import EditableCodeBlock from './EditableCodeBlock'
 import ImagePreview from './ImagePreview'
 import Link from './Link'
 
@@ -54,7 +54,7 @@ const Markdown: FC<Props> = ({ message }) => {
   const components = useMemo(() => {
     const baseComponents = {
       a: (props: any) => <Link {...props} citationData={parseJSON(findCitationInChildren(props.children))} />,
-      code: CodeBlock,
+      code: EditableCodeBlock,
       img: ImagePreview,
       pre: (props: any) => <pre style={{ overflow: 'visible' }} {...props} />,
       // 自定义处理think标签

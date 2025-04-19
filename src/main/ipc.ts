@@ -14,6 +14,7 @@ import { titleBarOverlayDark, titleBarOverlayLight } from './config'
 import AppUpdater from './services/AppUpdater'
 import { asrServerService } from './services/ASRServerService'
 import BackupManager from './services/BackupManager'
+import { codeExecutorService } from './services/CodeExecutorService'
 import { configManager } from './services/ConfigManager'
 import CopilotService from './services/CopilotService'
 import { ExportService } from './services/ExportService'
@@ -26,6 +27,7 @@ import { memoryFileService } from './services/MemoryFileService'
 import * as MsTTSService from './services/MsTTSService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
+import { PDFService } from './services/PDFService'
 import { ProxyConfig, proxyManager } from './services/ProxyManager'
 import { searchService } from './services/SearchService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
@@ -342,4 +344,19 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.MsTTS_Synthesize, (_, text: string, voice: string, outputFormat: string) =>
     MsTTSService.synthesize(text, voice, outputFormat)
   )
+
+  // 注册代码执行器IPC处理程序
+  ipcMain.handle(IpcChannel.CodeExecutor_GetSupportedLanguages, async () => {
+    return await codeExecutorService.getSupportedLanguages()
+  })
+  ipcMain.handle(IpcChannel.CodeExecutor_ExecuteJS, async (_, code: string) => {
+    return await codeExecutorService.executeJavaScript(code)
+  })
+  ipcMain.handle(IpcChannel.CodeExecutor_ExecutePython, async (_, code: string) => {
+    return await codeExecutorService.executePython(code)
+  })
+
+  // PDF服务
+  ipcMain.handle(IpcChannel.PDF_SplitPDF, PDFService.splitPDF.bind(PDFService))
+  ipcMain.handle(IpcChannel.PDF_GetPageCount, PDFService.getPDFPageCount.bind(PDFService))
 }

@@ -6,7 +6,7 @@ import { MultiModelMessageStyle } from '@renderer/store/settings'
 import type { Message, Topic } from '@renderer/types'
 import { classNames } from '@renderer/utils'
 import { Popover } from 'antd'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
 
 import MessageGroupMenuBar from './MessageGroupMenuBar'
@@ -145,8 +145,9 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
     }
   }, [messages, setSelectedMessage])
 
-  const renderMessage = useCallback(
-    (message: Message & { index: number }, index: number) => {
+  // 使用useMemo缓存消息渲染结果，减少重复计算
+  const renderedMessages = useMemo(() => {
+    return messages.map((message, index) => {
       const isGridGroupMessage = isGrid && message.role === 'assistant' && isGrouped
       const messageProps = {
         isGrouped,
@@ -197,19 +198,19 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
       }
 
       return messageWrapper
-    },
-    [
-      isGrid,
-      isGrouped,
-      isHorizontal,
-      multiModelMessageStyle,
-      selectedIndex,
-      topic,
-      hidePresetMessages,
-      gridPopoverTrigger,
-      getSelectedMessageId
-    ]
-  )
+    })
+  }, [
+    messages,
+    isGrid,
+    isGrouped,
+    isHorizontal,
+    multiModelMessageStyle,
+    selectedIndex,
+    topic,
+    hidePresetMessages,
+    gridPopoverTrigger,
+    getSelectedMessageId
+  ])
 
   return (
     <GroupContainer
@@ -222,7 +223,7 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         $layout={multiModelMessageStyle}
         $gridColumns={gridColumns}
         className={classNames([isGrouped && 'group-grid-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
-        {messages.map((message, index) => renderMessage(message, index))}
+        {renderedMessages}
       </GridContainer>
       {isGrouped && (
         <MessageGroupMenuBar
@@ -349,4 +350,29 @@ const MessageWrapper = styled(Scrollbar)<MessageWrapperProps>`
   }}
 `
 
-export default memo(MessageGroup)
+// 使用自定义比较函数的memo包装组件，只在关键属性变化时重新渲染
+export default memo(MessageGroup, (prevProps, nextProps) => {
+  // 如果消息数组长度不同，需要重新渲染
+  if (prevProps.messages.length !== nextProps.messages.length) {
+    return false
+  }
+
+  // 检查消息内容是否变化
+  const messagesChanged = prevProps.messages.some((prevMsg, index) => {
+    const nextMsg = nextProps.messages[index]
+    return (
+      prevMsg.id !== nextMsg.id ||
+      prevMsg.content !== nextMsg.content ||
+      prevMsg.status !== nextMsg.status ||
+      prevMsg.foldSelected !== nextMsg.foldSelected ||
+      prevMsg.multiModelMessageStyle !== nextMsg.multiModelMessageStyle
+    )
+  })
+
+  if (messagesChanged) {
+    return false
+  }
+
+  // 检查其他关键属性
+  return prevProps.topic.id === nextProps.topic.id && prevProps.hidePresetMessages === nextProps.hidePresetMessages
+})

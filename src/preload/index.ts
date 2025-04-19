@@ -199,6 +199,15 @@ const api = {
   asrServer: {
     startServer: () => ipcRenderer.invoke(IpcChannel.Asr_StartServer),
     stopServer: (pid: number) => ipcRenderer.invoke(IpcChannel.Asr_StopServer, pid)
+  },
+  pdf: {
+    splitPDF: (file: FileType, pageRange: string) => ipcRenderer.invoke(IpcChannel.PDF_SplitPDF, file, pageRange),
+    getPageCount: (filePath: string) => ipcRenderer.invoke(IpcChannel.PDF_GetPageCount, filePath)
+  },
+  codeExecutor: {
+    getSupportedLanguages: () => ipcRenderer.invoke(IpcChannel.CodeExecutor_GetSupportedLanguages),
+    executeJS: (code: string) => ipcRenderer.invoke(IpcChannel.CodeExecutor_ExecuteJS, code),
+    executePython: (code: string) => ipcRenderer.invoke(IpcChannel.CodeExecutor_ExecutePython, code)
   }
 }
 

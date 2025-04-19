@@ -1,12 +1,4 @@
-import {
-  CodeOutlined as _CodeOutlined,
-  FileSearchOutlined as _FileSearchOutlined,
-  HolderOutlined,
-  PaperClipOutlined as _PaperClipOutlined,
-  PauseCircleOutlined as _PauseCircleOutlined,
-  ThunderboltOutlined as _ThunderboltOutlined,
-  TranslationOutlined as _TranslationOutlined
-} from '@ant-design/icons'
+import { HolderOutlined } from '@ant-design/icons'
 import ASRButton from '@renderer/components/ASRButton'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
 import TranslateButton from '@renderer/components/TranslateButton'
@@ -33,6 +25,7 @@ import WebSearchService from '@renderer/services/WebSearchService'
 import store, { useAppDispatch } from '@renderer/store'
 import { sendMessage as _sendMessage } from '@renderer/store/messages'
 import { setSearching } from '@renderer/store/runtime'
+import { setPdfSettings } from '@renderer/store/settings'
 import { Assistant, FileType, KnowledgeBase, KnowledgeItem, MCPServer, Message, Model, Topic } from '@renderer/types'
 import { classNames, delay, formatFileSize, getFileExtension } from '@renderer/utils'
 import { getFilesFromDropEvent } from '@renderer/utils/input'
@@ -375,7 +368,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     selectedKnowledgeBases,
     text,
     topic,
-    activedMcpServers
+    activedMcpServers,
+    t
   ])
 
   const translate = useCallback(async () => {
@@ -822,9 +816,38 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     e.stopPropagation()
   }
 
+  // 强制初始化PDF设置
+  const forcePdfSettingsInitialization = () => {
+    const { pdfSettings } = store.getState().settings
+    console.log('[Inputbar] Current PDF settings:', pdfSettings)
+
+    // 如果pdfSettings为undefined或缺少enablePdfSplitting属性，则使用默认值初始化
+    if (!pdfSettings || pdfSettings.enablePdfSplitting === undefined) {
+      const defaultPdfSettings = {
+        enablePdfSplitting: true,
+        defaultPageRangePrompt: '输入页码范围，例如：1-5,8,10-15'
+      }
+
+      // 如果pdfSettings存在，则合并现有设置和默认设置
+      const mergedSettings = {
+        ...defaultPdfSettings,
+        ...pdfSettings,
+        // 确保 enablePdfSplitting 存在且为 true
+        enablePdfSplitting: true
+      }
+
+      console.log('[Inputbar] Forcing PDF settings initialization with:', mergedSettings)
+      dispatch(setPdfSettings(mergedSettings))
+      return mergedSettings
+    }
+
+    return pdfSettings
+  }
+
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
+    console.log('[Inputbar] handleDrop called')
 
     const files = await getFilesFromDropEvent(e).catch((err) => {
       Logger.error('[src/renderer/src/pages/home/Inputbar/Inputbar.tsx] handleDrop:', err)
@@ -832,11 +855,50 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     })
 
     if (files) {
-      files.forEach((file) => {
-        if (supportExts.includes(getFileExtension(file.path))) {
-          setFiles((prevFiles) => [...prevFiles, file])
+      console.log('[Inputbar] Files from drop event:', files)
+      // 获取设置中的PDF设置，并强制初始化
+      const pdfSettings = forcePdfSettingsInitialization()
+      console.log('[Inputbar] PDF settings after initialization:', pdfSettings)
+
+      for (const file of files) {
+        const fileExt = getFileExtension(file.path)
+        console.log(`[Inputbar] Processing file: ${file.path} with extension: ${fileExt}`)
+
+        // 如果是PDF文件
+        if (fileExt === '.pdf') {
+          console.log('[Inputbar] PDF file detected, checking if splitting is enabled')
+          console.log('[Inputbar] pdfSettings?.enablePdfSplitting =', pdfSettings?.enablePdfSplitting)
+
+          // 如果启用了PDF分割功能
+          if (pdfSettings?.enablePdfSplitting === true) {
+            console.log('[Inputbar] PDF splitting is enabled, calling handlePdfFile')
+            // 检查attachmentButtonRef.current是否存在
+            if (attachmentButtonRef.current) {
+              console.log('[Inputbar] attachmentButtonRef.current exists, calling handlePdfFile')
+              const handled = attachmentButtonRef.current.handlePdfFile(file)
+              console.log('[Inputbar] handlePdfFile result:', handled)
+              if (handled) {
+                // 如果文件已经被处理，则跳过后面的处理
+                console.log('[Inputbar] File was handled by PDF splitter, skipping normal processing')
+                continue
+              }
+            } else {
+              console.log('[Inputbar] attachmentButtonRef.current is null or undefined')
+            }
+          } else {
+            console.log('[Inputbar] PDF splitting is disabled, processing as normal file')
+          }
         }
-      })
+        // 其他支持的文件类型
+        else if (supportExts.includes(fileExt)) {
+          console.log('[Inputbar] Adding file to files state:', file.path)
+          setFiles((prevFiles) => [...prevFiles, file])
+        } else {
+          console.log('[Inputbar] File not supported or PDF splitting disabled:', file.path)
+        }
+      }
+    } else {
+      console.log('[Inputbar] No files from drop event')
     }
   }
 
