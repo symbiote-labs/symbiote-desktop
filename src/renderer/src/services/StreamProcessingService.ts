@@ -30,16 +30,25 @@ export interface StreamProcessorCallbacks {
 // Function to create a stream processor instance
 export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
   // The returned function processes a single chunk or a final signal
-  return (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => {
+  return (
+    chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any } | null | undefined
+  ) => {
     try {
-      // 1. Handle the manual final signal first
-      if (chunk?.type === 'final' && chunk?.status === 'success') {
-        callbacks.onComplete?.(chunk?.status)
+      // 1. Handle the final signal first (for both success and error)
+      if (chunk && typeof chunk === 'object' && 'type' in chunk && chunk.type === 'final') {
+        // Call onComplete regardless of status, passing both status and error
+        callbacks.onComplete?.(chunk.status, chunk.error)
         return
       }
 
-      // 2. Process the actual ChunkCallbackData
-      const data = chunk as ChunkCallbackData // Cast after checking for 'final'
+      // 2. Process the actual ChunkCallbackData if it's not a final signal
+      // Ensure chunk is not null/undefined and not the 'final' type before proceeding
+      if (!chunk || (typeof chunk === 'object' && 'type' in chunk && chunk.type === 'final')) {
+        return // Do nothing more if it's null, undefined, or the final signal (already handled)
+      }
+
+      // Now, chunk must be ChunkCallbackData
+      const data = chunk as ChunkCallbackData
       console.log('createStreamProcessor', data)
       // Invoke callbacks based on the fields present in the chunk data
       if (data.text && callbacks.onTextChunk) {

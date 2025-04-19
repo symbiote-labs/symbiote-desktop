@@ -5,6 +5,7 @@ import store from '@renderer/store'
 import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { isAbortError } from '@renderer/utils/error'
 import {
   createAssistantMessage,
   createErrorBlock,
@@ -148,6 +149,30 @@ const fetchAndProcessAssistantResponseImpl = async (
     const toolCallIdToBlockIdMap = new Map<string, string>()
 
     // --- Context Message Filtering --- START
+    // --- Helper Function --- START
+    // Helper to manage state transitions when switching block types
+    const handleBlockTransition = (newBlock: MessageBlock, newBlockType: MessageBlockType) => {
+      // 1. Finalize previous text block (if applicable)
+      if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
+        console.log(`[Transition] Marking previous MAIN_TEXT block ${lastBlockId} as SUCCESS.`)
+        dispatch(updateOneBlock({ id: lastBlockId, changes: { status: MessageBlockStatus.SUCCESS } }))
+        // TODO: Consider cancelling throttled update for lastBlockId if throttle library supports it
+        // throttledBlockUpdate.cancel(lastBlockId);
+      }
+
+      // 2. Update trackers to the new block
+      lastBlockId = newBlock.id
+      lastBlockType = newBlockType
+
+      // 3. Reset text accumulator
+      accumulatedContent = ''
+
+      // 4. Add/Update the new block in store and DB (via messageAndBlockUpdate)
+      console.log(`[Transition] Adding/Updating new ${newBlockType} block ${newBlock.id}.`)
+      messageAndBlockUpdate(topicId, assistantMsgId, newBlock) // Centralized call
+    }
+    // --- Helper Function --- END
+
     const allMessagesForTopic = getState().messages.messagesByTopic[topicId] || []
     // Filter messages: include up to the assistant message stub, remove 'ing' statuses
     const assistantMessageIndex = allMessagesForTopic.findIndex((m) => m.id === assistantMsgId)
@@ -170,6 +195,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           })
           lastBlockId = newBlock.id
           lastBlockType = MessageBlockType.MAIN_TEXT
+
           messageAndBlockUpdate(topicId, assistantMsgId, newBlock)
         }
 
@@ -196,13 +222,12 @@ const fetchAndProcessAssistantResponseImpl = async (
             }
           })
 
+          // Handle the entire transition using the helper
+          handleBlockTransition(toolBlock, MessageBlockType.TOOL)
+
           toolCallIdToBlockIdMap.set(toolResponse.id, toolBlock.id) // Store the mapping
-          lastBlockId = toolBlock.id
-          lastBlockType = MessageBlockType.TOOL
-          accumulatedContent = ''
 
           console.log('[Invoking] onToolCallComplete', toolBlock)
-          messageAndBlockUpdate(topicId, assistantMsgId, toolBlock)
           // Optionally save initial invoking state to DB
           // throttledDbUpdate(assistantMsgId, topicId, getState)
         } else if (toolResponse.status === 'done' || toolResponse.status === 'error') {
@@ -244,13 +269,9 @@ const fetchAndProcessAssistantResponseImpl = async (
         // TODO: Implement actual citation block creation
         console.warn('onCitationData received, creating placeholder CitationBlock.', citations)
         // Placeholder: Assume citation block is created and update trackers
-        // const citationBlock = createCitationBlock(...)
-        // lastBlockId = citationBlock.id;
-        // lastBlockType = MessageBlockType.CITATION;
-        // accumulatedContent = '';
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [citationBlock], { status: 'processing' }, getState);
+        // When implemented, call handleBlockTransition:
+        // handleBlockTransition(citationBlock, MessageBlockType.CITATION);
         // throttledDbUpdate(assistantMsgId, topicId, getState);
-        accumulatedContent = ''
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'
@@ -259,28 +280,17 @@ const fetchAndProcessAssistantResponseImpl = async (
           metadata: { generateImageResponse: imageData },
           status: MessageBlockStatus.SUCCESS
         })
-        // Update trackers after adding the image block
-        lastBlockId = imageBlock.id
-        lastBlockType = MessageBlockType.IMAGE
-        accumulatedContent = ''
-
-        messageAndBlockUpdate(topicId, assistantMsgId, imageBlock)
+        // Handle the transition using the helper
+        handleBlockTransition(imageBlock, MessageBlockType.IMAGE)
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onWebSearchGrounding: (groundingMetadata) => {
         // TODO: Implement actual web search block creation
         console.warn('onWebSearchGrounding received, creating placeholder WebSearchBlock.', groundingMetadata)
         // Placeholder: Assume web search block is created and update trackers
-        // const webSearchBlock = createWebSearchBlock(...);
-        // lastBlockId = webSearchBlock.id;
-        // lastBlockType = MessageBlockType.WEB_SEARCH;
-        // accumulatedContent = '';
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [webSearchBlock], { status: 'processing' }, getState);
+        // When implemented, call handleBlockTransition:
+        // handleBlockTransition(webSearchBlock, MessageBlockType.WEB_SEARCH);
         // throttledDbUpdate(assistantMsgId, topicId, getState);
-        accumulatedContent = ''
-
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [imageBlock], { status: 'processing' }, getState)
-        // throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onError: (error) => {
         console.error('Stream processing error:', error)
@@ -308,46 +318,61 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onComplete: async (status: 'error' | 'success', finalError?: any) => {
-        // Log error if stream completed with an error
-        if (status === 'error' && finalError) {
-          console.error('Stream completed with error:', finalError)
+        // --- Handle Abort Error Specifically ---
+        if (status === 'error' && isAbortError(finalError)) {
+          console.log(`[onComplete] Stream aborted for message ${assistantMsgId}. Setting status to paused.`)
+          // Update message status to 'paused'
+          dispatch(
+            newMessagesActions.updateMessage({
+              topicId,
+              messageId: assistantMsgId,
+              updates: { status: 'paused' }
+            })
+          )
+          // Ensure paused state is saved to DB
+          throttledDbUpdate(assistantMsgId, topicId, getState)
+          // Skip further block/message status updates for aborts
+          return
         }
+
+        // Non-abort error logging is handled by onError or the error source directly.
 
         // Get the latest state AFTER all chunks/updates have been processed
         const finalState = getState()
         const finalAssistantMsg = finalState.messages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
 
-        // --- Update final block status ---
-        // Find the ID of the last block that might have been streaming (usually MAIN_TEXT)
-        let lastStreamingBlockId: string | null = null
-        if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
-          // If the very last operation was a text chunk update, that's our candidate
-          lastStreamingBlockId = lastBlockId
-        } else if (finalAssistantMsg?.blocks) {
-          // Otherwise, search backwards through the message's blocks for the last MAIN_TEXT block
-          const lastMainTextBlockId = finalAssistantMsg.blocks
-            .slice()
-            .reverse()
-            .find((blockId) => {
-              const block = finalState.messageBlocks.entities[blockId]
-              return block && block.type === MessageBlockType.MAIN_TEXT
-            })
-          if (lastMainTextBlockId) {
-            lastStreamingBlockId = lastMainTextBlockId
+        // --- Create Error Block if needed for non-abort errors reported via onComplete --- START
+        if (status === 'error' && finalError) {
+          // 有错误就创建错误块
+          const serializableError = {
+            name: finalError.name || 'Error',
+            message: finalError.message || 'Stream completed with an unspecified error',
+            stack: finalError.stack,
+            ...finalError // Spread other potential properties
           }
+          const errorBlock = createErrorBlock(assistantMsgId, serializableError)
+          // Use immediate update
+          messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
         }
+        // --- Create Error Block if needed --- END
 
-        // If we found a potential streaming block, update its status
-        if (lastStreamingBlockId) {
-          const blockToUpdate = finalState.messageBlocks.entities[lastStreamingBlockId]
-          // Only update if it was actually streaming
-          if (blockToUpdate && blockToUpdate.status === MessageBlockStatus.STREAMING) {
-            const blockFinalStatus = status === 'error' ? MessageBlockStatus.ERROR : MessageBlockStatus.SUCCESS
-            // Use direct dispatch for immediate final update
-            dispatch(updateOneBlock({ id: lastStreamingBlockId, changes: { status: blockFinalStatus } }))
+        // --- Update final block status ---
+        // --- Update status of the VERY LAST block if it was streaming MAIN_TEXT on SUCCESS --- START
+        if (status === 'success' && finalAssistantMsg && finalAssistantMsg.blocks.length > 0) {
+          const lastBlockIdFromMsg = finalAssistantMsg.blocks[finalAssistantMsg.blocks.length - 1]
+          const lastBlock = finalState.messageBlocks.entities[lastBlockIdFromMsg]
+
+          // If the last block was MAIN_TEXT and was still streaming, mark it as success
+          if (
+            lastBlock &&
+            lastBlock.type === MessageBlockType.MAIN_TEXT &&
+            lastBlock.status === MessageBlockStatus.STREAMING
+          ) {
+            console.log(`[onComplete] Setting final streaming MAIN_TEXT block ${lastBlock.id} to SUCCESS.`)
+            dispatch(updateOneBlock({ id: lastBlock.id, changes: { status: MessageBlockStatus.SUCCESS } }))
           }
         }
-        // --- End of block status update ---
+        // --- End of final block status update on SUCCESS --- END
 
         // --- Update final message status ---
         const messageUpdates: Partial<Message> = { status }

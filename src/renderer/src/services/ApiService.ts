@@ -162,7 +162,7 @@ export async function fetchChatCompletion({
     // --- Prepare for AI Completion ---
 
     // Update status to processing *after* search phase
-    onChunkReceived({ type: 'status', status: 'processing' })
+    // onChunkReceived({ type: 'status', status: 'processing' })
 
     // Store results temporarily (e.g., using window.keyv like before)
     if (lastUserMessage) {
