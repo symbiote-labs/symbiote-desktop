@@ -1,16 +1,15 @@
 import { createSelector } from '@reduxjs/toolkit'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import store, { type RootState, useAppDispatch, useAppSelector } from '@renderer/store'
+import { deleteMessageAction } from '@renderer/store/legacy_messages'
 import { messageBlocksSelectors, updateOneBlock as updateMessageBlock } from '@renderer/store/messageBlock'
-import { clearTopicMessages as clearTopicMessagesThunk, deleteMessageAction } from '@renderer/store/messages'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { useCallback } from 'react'
-
-import { TopicManager } from './useTopic'
+import { useTranslation } from 'react-i18next'
 
 const findMainTextBlockId = (message: Message): string | undefined => {
   if (!message || !message.blocks) return undefined
@@ -48,6 +47,7 @@ export const selectNewDisplayCount = createSelector(
  */
 export function useMessageOperations(topic: Topic) {
   const dispatch = useAppDispatch()
+  const { t } = useTranslation()
 
   /**
    * 删除单个消息
@@ -79,6 +79,17 @@ export function useMessageOperations(topic: Topic) {
   const editMessage = useCallback(
     async (messageId: string, updates: Partial<Message>) => {
       await dispatch(newMessagesActions.updateMessage({ topicId: topic.id, messageId, updates }))
+      // 如果更新包含内容变更，重新计算 token
+      // TODO: 需要重新计算token
+      // if ('content' in updates) {
+      //   const messages = store.getState().messages.messagesByTopic[topic.id]
+      //   const message = messages?.find((m) => m.id === messageId)
+      //   if (message) {
+      //     const updatedMessage = { ...message, ...updates }
+      //     updates.usage = await estimateMessageUsage(updatedMessage)
+      //   }
+      // }
+      // await dispatch(updateMessageThunk(topic.id, messageId, updates))
     },
     [dispatch, topic.id]
   )
@@ -125,14 +136,14 @@ export function useMessageOperations(topic: Topic) {
 
   /**
    * 清除会话消息
-   * TODO: Needs a new thunk to clear messages from newMessages and associated blocks from messageBlocks
    */
   const clearTopicMessagesAction = useCallback(
     async (_topicId?: string) => {
       const topicId = _topicId || topic.id
       console.warn('[TODO] clearTopicMessagesAction needs update for new stores')
-      await dispatch(clearTopicMessagesThunk(topicId))
-      await TopicManager.clearTopicMessages(topicId)
+      // TODO: 需要更新
+      // await dispatch(clearTopicMessagesThunk(topicId))
+      // await TopicManager.clearTopicMessages(topicId)
     },
     [dispatch, topic.id]
   )
@@ -141,7 +152,7 @@ export function useMessageOperations(topic: Topic) {
    * 创建新的上下文（clear message）
    */
   const createNewContext = useCallback(async () => {
-    EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+    await EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
   }, [])
 
   const displayCount = useAppSelector(selectNewDisplayCount)
@@ -160,6 +171,29 @@ export function useMessageOperations(topic: Topic) {
     }
     dispatch(newMessagesActions.setTopicLoading({ topicId: topic.id, loading: false }))
   }, [topic.id, dispatch])
+
+  // TODO:translateMessage
+  // const translateMessage = useCallback(
+  //   async (messageId: string, language: string) => {
+  //     const messages = store.getState().messages.messagesByTopic[topic.id]
+  //     const message = messages?.find((m) => m.id === messageId)
+  //     if (!message) return
+
+  //     translateText(message.content, language, (text) => {
+  //       setStreamMessageAction({ ...message, translatedContent: text })
+  //     })
+  //       .then(() => {
+  //         commitStreamMessageAction(messageId)
+  //       })
+  //       .catch((error) => {
+  //         console.error('Translation failed:', error)
+  //         window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
+  //         editMessage(messageId, { translatedContent: undefined })
+  //         clearStreamMessageAction(messageId)
+  //       })
+  //   },
+  //   [topic.id, editMessage, t, clearStreamMessageAction, setStreamMessageAction, commitStreamMessageAction]
+  // )
 
   /**
    * 恢复/重发消息

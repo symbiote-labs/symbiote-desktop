@@ -1,8 +1,8 @@
-import type { Message as OldMessage, Topic } from '@renderer/types'
+import type { LegacyMessage as OldMessage, Topic, WebSearchResponse } from '@renderer/types'
 import { FileTypes } from '@renderer/types' // Import FileTypes enum
 import type {
   BaseMessageBlock,
-  CitationBlock,
+  CitationMessageBlock,
   Message as NewMessage,
   MessageBlock
 } from '@renderer/types/newMessageTypes'
@@ -16,9 +16,8 @@ import {
   createImageBlock,
   createMainTextBlock,
   createThinkingBlock,
-  createToolBlock, // Changed
-  createTranslationBlock, // Added
-  createWebSearchMessageBlock
+  createToolBlock,
+  createTranslationBlock
 } from '../utils/messageUtils/create'
 
 export async function upgradeToV5(tx: Transaction): Promise<void> {
@@ -58,27 +57,36 @@ export async function upgradeToV5(tx: Transaction): Promise<void> {
   }
 }
 
-// --- Helper functions for status mapping (Moved from index.ts) ---
+// --- Simplified status mapping functions ---
 function mapOldStatusToBlockStatus(oldStatus: OldMessage['status']): MessageBlockStatus {
-  if (oldStatus === 'success') return MessageBlockStatus.SUCCESS
-  if (oldStatus === 'error') return MessageBlockStatus.ERROR
-  if (oldStatus === 'paused') return MessageBlockStatus.PAUSED
-  if (oldStatus === 'pending') return MessageBlockStatus.PENDING
-  if (oldStatus === 'searching' || oldStatus === 'sending') return MessageBlockStatus.PROCESSING
-  return MessageBlockStatus.PENDING // Default
+  // Handle statuses that need mapping
+  if (oldStatus === 'sending' || oldStatus === 'pending' || oldStatus === 'searching') {
+    return MessageBlockStatus.PROCESSING
+  }
+  // For success, paused, error, the values match MessageBlockStatus
+  if (oldStatus === 'success' || oldStatus === 'paused' || oldStatus === 'error') {
+    // Cast is safe here as the values are identical
+    return oldStatus as MessageBlockStatus
+  }
+  // Default fallback for any unexpected old status
+  return MessageBlockStatus.PROCESSING
 }
 
 function mapOldStatusToNewMessageStatus(oldStatus: OldMessage['status']): NewMessage['status'] {
-  if (oldStatus === 'success') return 'success'
-  if (oldStatus === 'error') return 'error'
-  if (oldStatus === 'paused') return 'paused'
-  if (oldStatus === 'pending' || oldStatus === 'searching' || oldStatus === 'sending') {
-    return 'processing' // Map intermediate states to processing initially
+  // Handle statuses that need mapping
+  if (oldStatus === 'pending' || oldStatus === 'searching') {
+    return 'processing'
   }
-  return 'processing' // Default
+  // For sending, success, paused, error, the values match NewMessage['status']
+  if (oldStatus === 'sending' || oldStatus === 'success' || oldStatus === 'paused' || oldStatus === 'error') {
+    // Cast is safe here as the values are identical
+    return oldStatus as NewMessage['status']
+  }
+  // Default fallback
+  return 'processing'
 }
 
-// --- NEW UPGRADE FUNCTION for Version 7 ---
+// --- UPDATED UPGRADE FUNCTION for Version 7 ---
 export async function upgradeToV7(tx: Transaction): Promise<void> {
   console.log('Starting DB migration to version 7: Normalizing messages and blocks...')
 
@@ -99,43 +107,41 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
 
       for (const oldMessage of oldTopic.messages) {
         const messageBlockIds: string[] = []
-        const citationDataToCreate: Partial<Omit<CitationBlock, keyof BaseMessageBlock | 'type'>> = {}
+        const citationDataToCreate: Partial<Omit<CitationMessageBlock, keyof BaseMessageBlock | 'type'>> = {}
+        let hasCitationData = false
 
         // 1. Main Text Block
         if (oldMessage.content?.trim()) {
           const block = createMainTextBlock(oldMessage.id, oldMessage.content, {
             createdAt: oldMessage.createdAt,
             status: mapOldStatusToBlockStatus(oldMessage.status),
-            // Optionally migrate usage, metrics if needed
-            usage: oldMessage.usage,
-            metrics: oldMessage.metrics,
             knowledgeBaseIds: oldMessage.knowledgeBaseIds
           })
           blocksToCreate.push(block)
           messageBlockIds.push(block.id)
         }
 
-        // 2. Thinking Block (from reasoning_content)
+        // 2. Thinking Block (Status is SUCCESS)
         if (oldMessage.reasoning_content?.trim()) {
           const block = createThinkingBlock(oldMessage.id, oldMessage.reasoning_content, {
             createdAt: oldMessage.createdAt,
-            status: MessageBlockStatus.SUCCESS
+            status: MessageBlockStatus.SUCCESS // Thinking block is complete content
           })
           blocksToCreate.push(block)
           messageBlockIds.push(block.id)
         }
 
-        // 3. Translation Block
+        // 3. Translation Block (Status is SUCCESS)
         if (oldMessage.translatedContent?.trim()) {
           const block = createTranslationBlock(oldMessage.id, oldMessage.translatedContent, 'unknown', {
             createdAt: oldMessage.createdAt,
-            status: MessageBlockStatus.SUCCESS
+            status: MessageBlockStatus.SUCCESS // Translation block is complete content
           })
           blocksToCreate.push(block)
           messageBlockIds.push(block.id)
         }
 
-        // 4. File Blocks (Non-Image) and Image Blocks (from Files)
+        // 4. File Blocks (Non-Image) and Image Blocks (from Files) (Status is SUCCESS)
         if (oldMessage.files?.length) {
           oldMessage.files.forEach((file) => {
             if (file.type === FileTypes.IMAGE) {
@@ -157,7 +163,7 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
           })
         }
 
-        // 5. Image Blocks (from Metadata - AI Generated)
+        // 5. Image Blocks (from Metadata - AI Generated) (Status is SUCCESS)
         if (oldMessage.metadata?.generateImage) {
           const block = createImageBlock(oldMessage.id, {
             metadata: { generateImageResponse: oldMessage.metadata.generateImage },
@@ -168,21 +174,15 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
           messageBlockIds.push(block.id)
         }
 
-        // 6. Web Search Block
-        if (oldMessage.metadata?.webSearch?.results?.length) {
-          const block = createWebSearchMessageBlock(oldMessage.id, oldMessage.metadata.webSearch.results, {
-            query: oldMessage.metadata.webSearch.query,
-            createdAt: oldMessage.createdAt,
-            status: MessageBlockStatus.SUCCESS
-          })
-          blocksToCreate.push(block)
-          messageBlockIds.push(block.id)
-        }
+        // 6. Web Search Block - REMOVED, data moved to citation collection
+        // if (oldMessage.metadata?.webSearch?.results?.length) { ... }
 
-        // 7. Tool Blocks (from mcpTools)
+        // 7. Tool Blocks (Status based on original mcpTool status)
         if (oldMessage.metadata?.mcpTools?.length) {
           oldMessage.metadata.mcpTools.forEach((mcpTool) => {
             const block = createToolBlock(oldMessage.id, mcpTool.id, {
+              // Determine status based on original tool status
+              status: MessageBlockStatus.SUCCESS,
               content: mcpTool.response,
               error:
                 mcpTool.status !== 'done'
@@ -195,57 +195,58 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
             messageBlockIds.push(block.id)
           })
         }
-        let hasCitationData = false
-        // 8. Collect Citation Data (into a single object for the message)
+
+        // 8. Collect Citation and Reference Data (Simplified: Independent checks)
         if (oldMessage.metadata?.groundingMetadata) {
           hasCitationData = true
-          citationDataToCreate.citationType = 'grounding'
           citationDataToCreate.groundingMetadata = oldMessage.metadata.groundingMetadata
-          citationDataToCreate.originalData = oldMessage.metadata.groundingMetadata
-          citationDataToCreate.sourceName = 'Gemini Grounding'
-        } else if (oldMessage.metadata?.citations?.length) {
+        }
+        if (oldMessage.metadata?.annotations?.length) {
           hasCitationData = true
-          citationDataToCreate.citationType = 'citation'
-          citationDataToCreate.citations = oldMessage.metadata.citations
-          citationDataToCreate.originalData = oldMessage.metadata.citations
-          citationDataToCreate.sourceName = 'Citation URLs'
-        } else if (oldMessage.metadata?.annotations?.length) {
-          hasCitationData = true
-          citationDataToCreate.citationType = 'annotation'
           citationDataToCreate.annotations = oldMessage.metadata.annotations
-          citationDataToCreate.originalData = oldMessage.metadata.annotations
-          citationDataToCreate.sourceName = 'OpenAI Annotations'
-        } else if (oldMessage.metadata?.webSearchInfo) {
+        }
+        if (oldMessage.metadata?.citations?.length) {
           hasCitationData = true
-          citationDataToCreate.citationType = 'webSearchInfo'
+          citationDataToCreate.citations = oldMessage.metadata.citations
+        }
+        if (oldMessage.metadata?.webSearch) {
+          hasCitationData = true
+          citationDataToCreate.webSearch = oldMessage.metadata.webSearch as WebSearchResponse
+        }
+        if (oldMessage.metadata?.webSearchInfo) {
+          hasCitationData = true
           citationDataToCreate.webSearchInfo = oldMessage.metadata.webSearchInfo
-          citationDataToCreate.originalData = oldMessage.metadata.webSearchInfo
-          citationDataToCreate.sourceName = 'Web Search Info'
+        }
+        if (oldMessage.metadata?.knowledge?.length) {
+          hasCitationData = true
+          citationDataToCreate.knowledge = oldMessage.metadata.knowledge
         }
 
-        // 9. Create Citation Block (if data was collected)
+        // 9. Create Citation Block (if any citation data was found, no need to set citationType)
         if (hasCitationData) {
           const block = createCitationBlock(
             oldMessage.id,
-            citationDataToCreate as Omit<CitationBlock, keyof BaseMessageBlock | 'type'>,
+            citationDataToCreate as Omit<CitationMessageBlock, keyof BaseMessageBlock | 'type'>,
             {
-              createdAt: oldMessage.createdAt
+              createdAt: oldMessage.createdAt,
+              status: MessageBlockStatus.SUCCESS
             }
           )
           blocksToCreate.push(block)
           messageBlockIds.push(block.id)
         }
 
-        // 10. Error Block
+        // 10. Error Block (Status is ERROR)
         if (oldMessage.error && typeof oldMessage.error === 'object' && Object.keys(oldMessage.error).length > 0) {
           const block = createErrorBlock(oldMessage.id, oldMessage.error, {
-            createdAt: oldMessage.createdAt
+            createdAt: oldMessage.createdAt,
+            status: MessageBlockStatus.ERROR // Error block status is ERROR
           })
           blocksToCreate.push(block)
           messageBlockIds.push(block.id)
         }
 
-        // 11. Create the New Message reference object
+        // 11. Create the New Message reference object (Add usage/metrics assignment)
         const newMessageReference: NewMessage = {
           id: oldMessage.id,
           role: oldMessage.role as NewMessage['role'],
@@ -261,6 +262,8 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
           askId: oldMessage.askId,
           mentions: oldMessage.mentions,
           enabledMCPs: oldMessage.enabledMCPs,
+          usage: oldMessage.usage,
+          metrics: oldMessage.metrics,
           multiModelMessageStyle: oldMessage.multiModelMessageStyle as NewMessage['multiModelMessageStyle'],
           foldSelected: oldMessage.foldSelected,
           blocks: messageBlockIds
@@ -283,5 +286,7 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
     console.log('DB migration to version 7 finished successfully.')
   } catch (error) {
     console.error('Error during DB migration to version 7:', error)
+    // Re-throw or handle error appropriately for Dexie
+    // throw error
   }
 }

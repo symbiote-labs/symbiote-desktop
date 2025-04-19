@@ -1,3 +1,5 @@
+import type { GroundingMetadata } from '@google/genai'
+import type OpenAI from 'openai'
 import React from 'react'
 import { BuiltinTheme } from 'shiki'
 
@@ -47,6 +49,58 @@ export type AssistantSettings = {
 
 export type Agent = Omit<Assistant, 'model'> & {
   group?: string[]
+}
+
+export type LegacyMessage = {
+  id: string
+  assistantId: string
+  role: 'user' | 'assistant'
+  content: string
+  reasoning_content?: string
+  translatedContent?: string
+  topicId: string
+  createdAt: string
+  status: 'sending' | 'pending' | 'searching' | 'success' | 'paused' | 'error'
+  modelId?: string
+  model?: Model
+  files?: FileType[]
+  images?: string[]
+  usage?: Usage
+  metrics?: Metrics
+  knowledgeBaseIds?: string[]
+  type: 'text' | '@' | 'clear'
+  isPreset?: boolean
+  mentions?: Model[]
+  askId?: string
+  useful?: boolean
+  error?: Record<string, any>
+  enabledMCPs?: MCPServer[]
+  metadata?: {
+    // Gemini
+    groundingMetadata?: GroundingMetadata
+    // Perplexity Or Openrouter
+    citations?: string[]
+    // OpenAI
+    annotations?: OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[]
+    // Zhipu or Hunyuan
+    webSearchInfo?: any[]
+    // Web search
+    webSearch?: WebSearchResponse
+    // MCP Tools
+    mcpTools?: MCPToolResponse[]
+    // Generate Image
+    generateImage?: GenerateImageResponse
+    // knowledge
+    knowledge?: KnowledgeReference[]
+  }
+  // 多模型消息样式
+  multiModelMessageStyle?: 'horizontal' | 'vertical' | 'fold' | 'grid'
+  // fold时是否选中
+  foldSelected?: boolean
+}
+
+export type Usage = OpenAI.Completions.CompletionUsage & {
+  thoughts_tokens?: number
 }
 
 export type Metrics = {
@@ -294,6 +348,8 @@ export type WebSearchProvider = {
   apiHost?: string
   engines?: string[]
   url?: string
+  basicAuthUsername?: string
+  basicAuthPassword?: string
   contentLimit?: number
   usingBrowser?: boolean
 }

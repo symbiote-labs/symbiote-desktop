@@ -2,7 +2,6 @@ import type { RootState } from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type { Model } from '@renderer/types'
 import type {
-  CitationMessageBlock,
   ErrorMessageBlock,
   FileMessageBlock,
   ImageMessageBlock,
@@ -10,8 +9,7 @@ import type {
   Message,
   MessageBlock,
   ThinkingMessageBlock,
-  TranslationMessageBlock,
-  WebSearchMessageBlock
+  TranslationMessageBlock
 } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 import React from 'react'
@@ -25,7 +23,6 @@ import MainTextBlock from './MainTextBlock'
 import ThinkingBlock from './ThinkingBlock'
 import ToolBlock from './ToolBlock'
 import TranslationBlock from './TranslationBlock'
-import WebSearchBlock from './WebSearchBlock'
 interface Props {
   blocks: MessageBlock[] | string[] // 可以接收块ID数组或MessageBlock数组
   model?: Model
@@ -43,7 +40,8 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   return (
     <>
       {renderedBlocks.map((block) => {
-        const citationBlock = block.type === MessageBlockType.CITATION ? (block as CitationMessageBlock) : undefined
+        // TODO 引用类型与主文本类型耦合，需要解耦
+        // const citationBlock = block.type === MessageBlockType.CITATION ? (block as CitationMessageBlock) : undefined
         switch (block.type) {
           case MessageBlockType.MAIN_TEXT:
           case MessageBlockType.CODE:
@@ -52,7 +50,7 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
                 key={block.id}
                 block={block as MainTextMessageBlock}
                 model={model}
-                citationsBlock={citationBlock}
+                // citationsBlock={citationBlock}
                 role={message.role}
               />
             )
@@ -64,8 +62,6 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
             return <ToolBlock key={block.id} block={block} />
           case MessageBlockType.CITATION:
             return <CitationBlock key={block.id} block={block} model={model} />
-          case MessageBlockType.WEB_SEARCH:
-            return <WebSearchBlock key={block.id} block={block as WebSearchMessageBlock} />
           case MessageBlockType.ERROR:
             return <ErrorBlock key={block.id} block={block as ErrorMessageBlock} />
           case MessageBlockType.THINKING:

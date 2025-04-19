@@ -1,29 +1,31 @@
 import { DownOutlined, InfoCircleOutlined, UpOutlined } from '@ant-design/icons'
 import { isOpenAIWebSearch } from '@renderer/config/models'
+import type { Model } from '@renderer/types'
+import type { CitationMessageBlock } from '@renderer/types/newMessageTypes'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import CitationsList from '../CitationsList'
 
-export default function CitationBlock({ model, block }) {
+export default function CitationBlock({ model, block }: { model: Model; block: CitationMessageBlock }) {
   const { t } = useTranslation()
   const isWebCitation = model && (isOpenAIWebSearch(model) || model.provider === 'openrouter')
   const [citationsCollapsed, setCitationsCollapsed] = useState(true)
 
   const formattedCitations = useMemo(() => {
-    if (!block.metadata?.citations?.length && !block.metadata?.annotations?.length) return null
+    if (block?.citations?.length && block?.annotations?.length) return null
 
     let citations: any[] = []
 
     if (model && isOpenAIWebSearch(model)) {
       citations =
-        block.metadata.annotations?.map((url, index) => {
+        block.annotations?.map((url, index) => {
           return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title }
         }) || []
     } else {
       citations =
-        block.metadata?.citations?.map((url, index) => {
+        block.citations?.map((url, index) => {
           try {
             const hostname = new URL(url).hostname
             return { number: index + 1, url, hostname }
@@ -45,14 +47,15 @@ export default function CitationBlock({ model, block }) {
         ...citation,
         number: index + 1 // Renumber citations sequentially after deduplication
       }))
-  }, [block.metadata?.citations, block.metadata?.annotations, model])
+  }, [block.citations, block.annotations, model])
 
   const hasCitations = useMemo(() => {
     return !!(
       (formattedCitations && formattedCitations.length > 0) ||
-      (block?.metadata?.webSearch && block.status === 'success') ||
-      (block?.metadata?.webSearchInfo && block.status === 'success') ||
-      (block?.metadata?.groundingMetadata && block.status === 'success')
+      (block?.webSearch && block.status === 'success') ||
+      (block?.webSearchInfo && block.status === 'success') ||
+      (block?.groundingMetadata && block.status === 'success') ||
+      (block?.knowledge && block.status === 'success')
     )
   }, [formattedCitations, block])
 
@@ -70,11 +73,11 @@ export default function CitationBlock({ model, block }) {
 
           {!citationsCollapsed && (
             <CitationsContent>
-              {block?.metadata?.groundingMetadata && block.status === 'success' && (
+              {block?.groundingMetadata && block.status === 'success' && (
                 <>
                   <CitationsList
                     citations={
-                      block.metadata.groundingMetadata?.groundingChunks?.map((chunk, index) => ({
+                      block.groundingMetadata?.groundingChunks?.map((chunk, index) => ({
                         number: index + 1,
                         url: chunk?.web?.uri || '',
                         title: chunk?.web?.title,
@@ -84,8 +87,8 @@ export default function CitationBlock({ model, block }) {
                   />
                   <SearchEntryPoint
                     dangerouslySetInnerHTML={{
-                      __html: block.metadata.groundingMetadata?.searchEntryPoint?.renderedContent
-                        ? block.metadata.groundingMetadata.searchEntryPoint.renderedContent
+                      __html: block.groundingMetadata?.searchEntryPoint?.renderedContent
+                        ? block.groundingMetadata.searchEntryPoint.renderedContent
                             .replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
                             .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
                         : ''
@@ -103,19 +106,28 @@ export default function CitationBlock({ model, block }) {
                   }))}
                 />
               )}
-              {block?.metadata?.webSearch && block.status === 'success' && (
+              {(block?.webSearch || block?.knowledge) && block.status === 'success' && (
                 <CitationsList
-                  citations={block.metadata.webSearch.results.map((result, index) => ({
-                    number: index + 1,
-                    url: result.url,
-                    title: result.title,
-                    showFavicon: true
-                  }))}
+                  citations={[
+                    ...(block.webSearch?.results.map((result, index) => ({
+                      number: index + 1,
+                      url: result.url,
+                      title: result.title,
+                      showFavicon: true
+                    })) || []),
+                    ...(block.knowledge?.map((result, index) => ({
+                      number: (block.webSearch?.results?.length || 0) + index + 1,
+                      url: result.sourceUrl,
+                      title: result.sourceUrl,
+                      showFavicon: true,
+                      type: 'knowledge'
+                    })) || [])
+                  ]}
                 />
               )}
-              {block?.metadata?.webSearchInfo && block.status === 'success' && (
+              {block?.webSearchInfo && block.status === 'success' && (
                 <CitationsList
-                  citations={block.metadata.webSearchInfo.map((result, index) => ({
+                  citations={block.webSearchInfo.map((result, index) => ({
                     number: index + 1,
                     url: result.link || result.url,
                     title: result.title,

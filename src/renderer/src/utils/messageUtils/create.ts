@@ -1,4 +1,4 @@
-import type { Assistant, FileType, Topic, WebSearchResult } from '@renderer/types'
+import type { Assistant, FileType, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
 import type {
   BaseMessageBlock,
@@ -11,8 +11,7 @@ import type {
   Message,
   ThinkingMessageBlock,
   ToolMessageBlock,
-  TranslationMessageBlock,
-  WebSearchMessageBlock
+  TranslationMessageBlock
 } from '@renderer/types/newMessageTypes'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessageTypes'
 import { v4 as uuidv4 } from 'uuid'
@@ -59,8 +58,6 @@ export function createMainTextBlock(
   return {
     ...baseBlock,
     content,
-    usage: overrides.usage,
-    metrics: overrides.metrics,
     knowledgeBaseIds: overrides.knowledgeBaseIds
   }
 }
@@ -203,27 +200,6 @@ export function createErrorBlock(
 }
 
 /**
- * Creates a Web Search Result Block.
- * @param messageId - The ID of the parent message.
- * @param results - The web search results.
- * @param overrides - Optional properties to override the defaults.
- * @returns A WebSearchMessageBlock object.
- */
-export function createWebSearchMessageBlock(
-  messageId: string,
-  results: WebSearchResult[],
-  overrides: Partial<Omit<WebSearchMessageBlock, 'id' | 'messageId' | 'type' | 'results'>> = {}
-): WebSearchMessageBlock {
-  const { query, ...baseOverrides } = overrides
-  const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.WEB_SEARCH, baseOverrides)
-  return {
-    ...baseBlock,
-    results,
-    query: query
-  }
-}
-
-/**
  * Creates a Tool Block.
  * @param messageId - The ID of the parent message.
  * @param toolId - The ID of the tool.
@@ -273,16 +249,10 @@ export function createCitationBlock(
   citationData: Omit<CitationMessageBlock, keyof BaseMessageBlock | 'type'>,
   overrides: Partial<Omit<CitationMessageBlock, 'id' | 'messageId' | 'type' | keyof typeof citationData>> = {}
 ): CitationMessageBlock {
-  const {
-    citationType,
-    originalData,
-    sourceName,
-    groundingMetadata,
-    citations,
-    annotations,
-    webSearchInfo,
-    ...baseOverrides
-  } = { ...citationData, ...overrides }
+  const { groundingMetadata, citations, annotations, webSearch, webSearchInfo, knowledge, ...baseOverrides } = {
+    ...citationData,
+    ...overrides
+  }
 
   const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.CITATION, {
     status: MessageBlockStatus.SUCCESS,
@@ -291,13 +261,12 @@ export function createCitationBlock(
 
   return {
     ...baseBlock,
-    citationType: citationType,
-    originalData: originalData,
-    sourceName: sourceName,
     groundingMetadata: groundingMetadata,
     citations: citations,
     annotations: annotations,
-    webSearchInfo: webSearchInfo
+    webSearch: webSearch,
+    webSearchInfo: webSearchInfo,
+    knowledge: knowledge
   }
 }
 

@@ -5,12 +5,13 @@ import type OpenAI from 'openai'
 import type {
   FileType,
   GenerateImageResponse,
+  KnowledgeReference,
   MCPServer,
   MCPToolResponse,
   Metrics,
   Model,
   Topic,
-  WebSearchResult
+  WebSearchResponse
 } from '.'
 // MessageBlock 类型枚举 - 根据实际API返回特性优化
 export enum MessageBlockType {
@@ -20,13 +21,12 @@ export enum MessageBlockType {
   IMAGE = 'image', // 图片内容
   CODE = 'code', // 代码块
   TOOL = 'tool', // Added unified tool block type
-  WEB_SEARCH = 'web_search', // 网页搜索结果
   FILE = 'file', // 文件内容
   ERROR = 'error', // 错误信息
-  CITATION = 'citation' // 引用类型
+  CITATION = 'citation' // 引用类型 (Now includes web search, grounding, etc.)
 }
 
-// 块状态定义 - 更细粒度地表达处理状态
+// 块状态定义
 export enum MessageBlockStatus {
   //   PENDING = 'pending', // 等待处理
   PROCESSING = 'processing', // 正在处理
@@ -53,8 +53,6 @@ export interface BaseMessageBlock {
 export interface MainTextMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.MAIN_TEXT
   content: string
-  usage?: OpenAI.Completions.CompletionUsage
-  metrics?: Metrics
   knowledgeBaseIds?: string[]
 }
 
@@ -103,24 +101,22 @@ export interface ToolMessageBlock extends BaseMessageBlock {
   }
 }
 
-// Consolidated Citation Block
+// Consolidated and Enhanced Citation Block
 export interface CitationMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.CITATION
-  citationType: 'grounding' | 'citation' | 'annotation' | 'webSearchInfo'
-  originalData: any
-  sourceName?: string
-
+  // Gemini
   groundingMetadata?: GroundingMetadata
+  // Perplexity Or Openrouter
   citations?: string[]
+  // OpenAI
   annotations?: OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[]
-  webSearchInfo?: any
-}
-
-// 网页搜索结果块
-export interface WebSearchMessageBlock extends BaseMessageBlock {
-  type: MessageBlockType.WEB_SEARCH
-  query?: string
-  results: WebSearchResult[]
+  // Web search
+  webSearch?: WebSearchResponse
+  // Zhipu or Hunyuan
+  webSearchInfo?: any[]
+  //   webSearchResults?: WebSearchResult[]
+  // knowledge
+  knowledge?: KnowledgeReference[]
 }
 
 // 文件块
@@ -141,7 +137,6 @@ export type MessageBlock =
   | CodeMessageBlock
   | ImageMessageBlock
   | ToolMessageBlock
-  | WebSearchMessageBlock
   | FileMessageBlock
   | ErrorMessageBlock
   | CitationMessageBlock
@@ -153,7 +148,7 @@ export type Message = {
   assistantId: string
   topicId: string
   createdAt: string
-  // updatedAt?: string
+  //   updatedAt?: string
   status: 'sending' | 'processing' | 'success' | 'paused' | 'error'
 
   // 消息元数据
@@ -165,6 +160,9 @@ export type Message = {
   askId?: string // 关联的问题消息ID
   mentions?: Model[]
   enabledMCPs?: MCPServer[]
+
+  usage?: OpenAI.Completions.CompletionUsage
+  metrics?: Metrics
 
   // UI相关
   multiModelMessageStyle?: 'horizontal' | 'vertical' | 'fold' | 'grid'

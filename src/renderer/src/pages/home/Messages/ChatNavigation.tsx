@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { RootState } from '@renderer/store'
-import { selectCurrentTopicId } from '@renderer/store/messages'
+import { selectCurrentTopicId } from '@renderer/store/legacy_messages'
 import { Button, Drawer, Tooltip } from 'antd'
 import { FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

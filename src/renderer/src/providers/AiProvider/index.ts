@@ -10,7 +10,8 @@ import type {
   Metrics,
   Model,
   Provider,
-  Suggestion
+  Suggestion,
+  Usage
 } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessageTypes'
 import OpenAI from 'openai'
@@ -18,7 +19,7 @@ import OpenAI from 'openai'
 export interface ChunkCallbackData {
   text?: string
   reasoning_content?: string
-  usage?: OpenAI.Completions.CompletionUsage
+  usage?: Usage
   metrics?: Metrics
   // Zhipu web search
   webSearch?: any[]

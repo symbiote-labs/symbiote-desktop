@@ -76,10 +76,10 @@ const MainTextBlock: React.FC<Props> = ({
   // 获取引用数据
   const citationsData = useMemo(() => {
     const searchResults =
-      citationsBlock?.metadata?.webSearch?.results ||
-      citationsBlock?.metadata?.webSearchInfo ||
-      citationsBlock?.metadata?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
-      citationsBlock?.metadata?.annotations?.map((annotation) => annotation.url_citation) ||
+      citationsBlock?.webSearch?.results ||
+      citationsBlock?.webSearchInfo ||
+      citationsBlock?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
+      citationsBlock?.annotations?.map((annotation) => annotation.url_citation) ||
       []
     const citationsUrls = formattedCitations || []
 
@@ -91,6 +91,15 @@ const MainTextBlock: React.FC<Props> = ({
       data.set(result.url || result.uri || result.link, {
         url: result.url || result.uri || result.link,
         title: result.title || result.hostname,
+        content: result.content
+      })
+    })
+
+    const knowledgeResults = citationsBlock?.knowledge
+    knowledgeResults?.forEach((result) => {
+      data.set(result.sourceUrl, {
+        url: result.sourceUrl,
+        title: result.sourceUrl,
         content: result.content
       })
     })
@@ -109,10 +118,11 @@ const MainTextBlock: React.FC<Props> = ({
     return data
   }, [
     formattedCitations,
-    citationsBlock?.metadata?.annotations,
-    citationsBlock?.metadata?.groundingMetadata?.groundingChunks,
-    citationsBlock?.metadata?.webSearch?.results,
-    citationsBlock?.metadata?.webSearchInfo
+    citationsBlock?.annotations,
+    citationsBlock?.groundingMetadata?.groundingChunks,
+    citationsBlock?.webSearch?.results,
+    citationsBlock?.webSearchInfo,
+    citationsBlock?.knowledge
   ])
 
   // Process content to make citation numbers clickable
@@ -124,15 +134,16 @@ const MainTextBlock: React.FC<Props> = ({
       const citationUrls = formattedCitations.map((c) => c.url)
 
       // Logic for Perplexity/OpenRouter style: [1], [2]
-      if (model?.provider === 'openrouter') {
+      if (citationsBlock?.webSearch || citationsBlock?.knowledge) {
         content = content.replace(/\[(\d+)\](?!\()/g, (match, numStr) => {
           const num = parseInt(numStr, 10)
           const index = num - 1
           if (index >= 0 && index < citationUrls.length) {
             const url = citationUrls[index]
+            const isWebLink = url && (url.startsWith('http://') || url.startsWith('https://'))
             const citationInfo = url ? citationsData.get(url) || { url } : null
             const citationJson = url ? encodeHTML(JSON.stringify(citationInfo)) : null
-            return `[<sup data-citation='${citationJson}'>${num}</sup>](${url})`
+            return isWebLink ? `[<sup data-citation='${citationJson}'>${num}</sup>](${url})` : `<sup>${num}</sup>`
           }
           return match
         })
@@ -164,7 +175,7 @@ const MainTextBlock: React.FC<Props> = ({
     content = content.replace(toolUseRegex, '')
 
     return content
-  }, [block.content, formattedCitations, citationsData, model])
+  }, [block.content, formattedCitations, citationsData, citationsBlock?.webSearch, citationsBlock?.knowledge])
 
   return (
     <>

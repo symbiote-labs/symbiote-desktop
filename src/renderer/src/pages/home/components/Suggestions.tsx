@@ -1,7 +1,7 @@
 import { fetchSuggestions } from '@renderer/services/ApiService'
 import { getUserMessage } from '@renderer/services/MessagesService'
 import { useAppDispatch } from '@renderer/store'
-import { sendMessage } from '@renderer/store/messages'
+import { sendMessage } from '@renderer/store/legacy_messages'
 import { Assistant, Message, Suggestion } from '@renderer/types'
 import { last } from 'lodash'
 import { FC, memo, useEffect, useState } from 'react'

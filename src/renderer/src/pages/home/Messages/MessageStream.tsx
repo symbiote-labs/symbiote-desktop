@@ -1,5 +1,5 @@
 import { useAppSelector } from '@renderer/store'
-import { selectStreamMessage } from '@renderer/store/messages'
+import { selectStreamMessage } from '@renderer/store/legacy_messages'
 import { Assistant, Message, Topic } from '@renderer/types'
 import { memo } from 'react'
 import styled from 'styled-components'

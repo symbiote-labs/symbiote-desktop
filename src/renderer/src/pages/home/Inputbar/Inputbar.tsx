@@ -183,7 +183,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       return
     }
 
-    EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
+    await EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
 
     try {
       // Dispatch the sendMessage action with all options
@@ -223,6 +223,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       const { message, blocks } = getUserMessage(baseUserMessage)
 
       currentMessageId.current = message.id
+      // mentions: mentionModels
       console.log('message,blocks', message, blocks)
       dispatch(_sendMessage(message, blocks, assistant, topic.id))
 
@@ -536,7 +537,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       await onPause()
       await delay(1)
     }
-    EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES)
+    await EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES)
   }
 
   const onNewContext = () => {

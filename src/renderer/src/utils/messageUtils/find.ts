@@ -5,8 +5,7 @@ import type {
   FileMessageBlock,
   ImageMessageBlock,
   MainTextMessageBlock,
-  Message,
-  WebSearchMessageBlock
+  Message
 } from '@renderer/types/newMessageTypes'
 import { MessageBlockType } from '@renderer/types/newMessageTypes'
 
@@ -114,7 +113,9 @@ export const findCitationBlocks = (message: Message): CitationMessageBlock[] => 
  * Assumes only one web search block per message.
  * @param message - The message object.
  * @returns The WebSearchMessageBlock or undefined if not found.
+ * @deprecated Web search results are now part of CitationMessageBlock.
  */
+/* // Removed function
 export const findWebSearchBlock = (message: Message): WebSearchMessageBlock | undefined => {
   if (!message || !message.blocks || message.blocks.length === 0) {
     return undefined
@@ -122,11 +123,12 @@ export const findWebSearchBlock = (message: Message): WebSearchMessageBlock | un
   const state = store.getState()
   for (const blockId of message.blocks) {
     const block = messageBlocksSelectors.selectById(state, blockId)
-    if (block && block.type === MessageBlockType.WEB_SEARCH) {
+    if (block && block.type === MessageBlockType.WEB_SEARCH) { // Error here too
       return block as WebSearchMessageBlock
     }
   }
   return undefined
 }
+*/
 
 // You can add more helper functions here to find other block types if needed.
