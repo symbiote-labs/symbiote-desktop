@@ -1,7 +1,7 @@
-import React from 'react'
-import styled from 'styled-components'
-import { useTranslation } from 'react-i18next'
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
 
 export interface ExecutionResultProps {
   success: boolean

@@ -19,7 +19,13 @@ import {
   TextPart,
   Tool
 } from '@google/generative-ai'
-import { isGemmaModel, isSupportedThinkingBudgetModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
+import {
+  isGemmaModel,
+  isGenerateImageModel,
+  isSupportedThinkingBudgetModel,
+  isVisionModel,
+  isWebSearchModel
+} from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
@@ -823,7 +829,14 @@ export default class GeminiProvider extends BaseProvider {
     const thinkingBudget = assistant?.settings?.thinkingBudget
 
     if (!streamOutput) {
-      const response = await this.callGeminiGenerateContent(model.id, contents, maxTokens, imageSdk, thinkingBudget)
+      const response = await this.callGeminiGenerateContent(
+        model.id,
+        contents,
+        maxTokens,
+        imageSdk,
+        thinkingBudget,
+        model
+      )
 
       const { isValid, message } = this.isValidGeminiResponse(response)
       if (!isValid) {
@@ -833,7 +846,14 @@ export default class GeminiProvider extends BaseProvider {
       this.processGeminiImageResponse(response, onChunk)
       return
     }
-    const response = await this.callGeminiGenerateContentStream(model.id, contents, maxTokens, imageSdk, thinkingBudget)
+    const response = await this.callGeminiGenerateContentStream(
+      model.id,
+      contents,
+      maxTokens,
+      imageSdk,
+      thinkingBudget,
+      model
+    )
 
     for await (const chunk of response) {
       this.processGeminiImageResponse(chunk, onChunk)
@@ -870,7 +890,8 @@ export default class GeminiProvider extends BaseProvider {
     contents: ContentListUnion,
     maxTokens?: number,
     sdk?: GoogleGenAI,
-    thinkingBudget?: number
+    thinkingBudget?: number,
+    model?: Model
   ): Promise<GenerateContentResponse> {
     try {
       // 获取新的API密钥，实现轮流使用多个密钥
@@ -889,8 +910,8 @@ export default class GeminiProvider extends BaseProvider {
 
       // 构建请求配置
       const config = {
-        responseModalities: ['Text', 'Image'],
-        responseMimeType: 'text/plain',
+        responseModalities: model && isGenerateImageModel(model) ? ['Text', 'Image'] : undefined,
+        responseMimeType: model && isGenerateImageModel(model) ? 'text/plain' : undefined,
         maxOutputTokens: maxTokens,
         ...(isThinkingBudgetSupported && budget >= 0 ? { thinkingConfig: { thinkingBudget: budget } } : {})
       }
@@ -913,7 +934,8 @@ export default class GeminiProvider extends BaseProvider {
     contents: ContentListUnion,
     maxTokens?: number,
     sdk?: GoogleGenAI,
-    thinkingBudget?: number
+    thinkingBudget?: number,
+    model?: Model
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
     try {
       // 获取新的API密钥，实现轮流使用多个密钥
@@ -932,8 +954,8 @@ export default class GeminiProvider extends BaseProvider {
 
       // 构建请求配置
       const config = {
-        responseModalities: ['Text', 'Image'],
-        responseMimeType: 'text/plain',
+        responseModalities: model && isGenerateImageModel(model) ? ['Text', 'Image'] : undefined,
+        responseMimeType: model && isGenerateImageModel(model) ? 'text/plain' : undefined,
         maxOutputTokens: maxTokens,
         ...(isThinkingBudgetSupported && budget >= 0 ? { thinkingConfig: { thinkingBudget: budget } } : {})
       }

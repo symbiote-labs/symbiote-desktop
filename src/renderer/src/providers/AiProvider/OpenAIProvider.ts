@@ -19,6 +19,7 @@ import {
   filterEmptyMessages,
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
+import { processReqMessages } from '@renderer/services/ModelMessageService'
 import store from '@renderer/store'
 import { getActiveServers } from '@renderer/store/mcp'
 import {
@@ -294,7 +295,7 @@ export default class OpenAIProvider extends BaseProvider {
    * @returns True if the model is an OpenAI reasoning model, false otherwise
    */
   private isOpenAIReasoning(model: Model) {
-    return model.id.startsWith('o1') || model.id.startsWith('o3')
+    return model.id.startsWith('o1') || model.id.startsWith('o3') || model.id.startsWith('o4')
   }
 
   /**
@@ -403,9 +404,16 @@ export default class OpenAIProvider extends BaseProvider {
     const { signal } = abortController
     await this.checkIsCopilot()
 
-    const reqMessages: ChatCompletionMessageParam[] = [systemMessage, ...userMessages].filter(
-      Boolean
-    ) as ChatCompletionMessageParam[]
+    //当 systemMessage 内容为空时不发送 systemMessage
+    let reqMessages: ChatCompletionMessageParam[]
+    if (!systemMessage.content) {
+      reqMessages = [...userMessages]
+    } else {
+      reqMessages = [systemMessage, ...userMessages].filter(Boolean) as ChatCompletionMessageParam[]
+    }
+
+    // 处理连续的相同角色消息，例如 deepseek-reasoner 模型不支持连续的用户或助手消息
+    reqMessages = processReqMessages(model, reqMessages)
 
     const toolResponses: MCPToolResponse[] = []
     let firstChunk = true

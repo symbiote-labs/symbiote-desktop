@@ -629,7 +629,9 @@ const memorySlice = createSlice({
       // 如果找到了要删除的记忆，并且它有分析过的消息ID
       if (memoryToDelete && memoryToDelete.analyzedMessageIds && memoryToDelete.analyzedMessageIds.length > 0) {
         // 记录日志，方便调试
-        console.log(`[Memory] Deleting assistant memory with ${memoryToDelete.analyzedMessageIds.length} analyzed message IDs`)
+        console.log(
+          `[Memory] Deleting assistant memory with ${memoryToDelete.analyzedMessageIds.length} analyzed message IDs`
+        )
       }
 
       // 删除记忆
@@ -902,7 +904,10 @@ const memorySlice = createSlice({
     },
 
     // 记录记忆访问
-    accessMemory: (state, action: PayloadAction<{ id: string; isShortMemory?: boolean; isAssistantMemory?: boolean }>) => {
+    accessMemory: (
+      state,
+      action: PayloadAction<{ id: string; isShortMemory?: boolean; isAssistantMemory?: boolean }>
+    ) => {
       const { id, isShortMemory, isAssistantMemory } = action.payload
       const now = new Date().toISOString()
 
@@ -1000,7 +1005,10 @@ const memorySlice = createSlice({
           // 助手记忆分析模型
           if (action.payload.assistantMemoryAnalyzeModel) {
             state.assistantMemoryAnalyzeModel = action.payload.assistantMemoryAnalyzeModel
-            console.log('[Memory Reducer] Loaded assistant memory analyze model:', action.payload.assistantMemoryAnalyzeModel)
+            console.log(
+              '[Memory Reducer] Loaded assistant memory analyze model:',
+              action.payload.assistantMemoryAnalyzeModel
+            )
           }
 
           console.log('Short-term memory data loaded into state')

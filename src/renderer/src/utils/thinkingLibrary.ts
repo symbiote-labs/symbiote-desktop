@@ -44,8 +44,8 @@ export const DEFAULT_THINKING_LIBRARIES: ThinkingLibrary[] = [
   问题: {question}`
   },
   {
-    id: 'scientific_rigorous', 
-    name: '严谨科学分析', 
+    id: 'scientific_rigorous',
+    name: '严谨科学分析',
     description: '运用系统化的科学方法论，对问题进行深入、严谨的分析、假设检验与评估。', // 更新描述
     category: '专业',
     prompt: `你是一位严谨的科学分析师，遵循科学方法论对问题进行系统性探究。请对以下问题，按照结构化的科学探究过程进行深入思考和分析：
@@ -497,20 +497,25 @@ export function getThinkingLibraries(): ThinkingLibrary[] {
       const parsed = JSON.parse(savedLibraries) as ThinkingLibrary[]
       console.log('[ThinkingLibrary] 解析思考库数量:', parsed.length)
 
-      if (parsed.length < DEFAULT_THINKING_LIBRARIES.length || !parsed.every(lib => DEFAULT_THINKING_LIBRARIES.some(defLib => defLib.id === lib.id))) {
+      if (
+        parsed.length < DEFAULT_THINKING_LIBRARIES.length ||
+        !parsed.every((lib) => DEFAULT_THINKING_LIBRARIES.some((defLib) => defLib.id === lib.id))
+      ) {
         console.log('[ThinkingLibrary] 存储的思考库需要更新，与默认库合并')
 
-        const librariesToMerge = DEFAULT_THINKING_LIBRARIES.map(defaultLib => {
-          const existingLib = parsed.find(lib => lib.id === defaultLib.id);
-          return existingLib || defaultLib;
-        });
+        const librariesToMerge = DEFAULT_THINKING_LIBRARIES.map((defaultLib) => {
+          const existingLib = parsed.find((lib) => lib.id === defaultLib.id)
+          return existingLib || defaultLib
+        })
 
-        const customLibraries = parsed.filter(lib => !DEFAULT_THINKING_LIBRARIES.some(defLib => defLib.id === lib.id));
-        const updatedLibraries = [...librariesToMerge, ...customLibraries];
+        const customLibraries = parsed.filter(
+          (lib) => !DEFAULT_THINKING_LIBRARIES.some((defLib) => defLib.id === lib.id)
+        )
+        const updatedLibraries = [...librariesToMerge, ...customLibraries]
 
-        console.log('[ThinkingLibrary] 更新后思考库数量:', updatedLibraries.length);
-        saveThinkingLibraries(updatedLibraries);
-        return updatedLibraries;
+        console.log('[ThinkingLibrary] 更新后思考库数量:', updatedLibraries.length)
+        saveThinkingLibraries(updatedLibraries)
+        return updatedLibraries
       }
       return parsed
     }
@@ -533,9 +538,9 @@ export function saveThinkingLibraries(libraries: ThinkingLibrary[]): void {
 
     const savedLibraries = localStorage.getItem('thinkingLibraries')
     if (savedLibraries) {
-       console.log('[ThinkingLibrary] 验证保存结果 - 数据已写入localStorage');
+      console.log('[ThinkingLibrary] 验证保存结果 - 数据已写入localStorage')
     } else {
-       console.warn('[ThinkingLibrary] 验证保存结果 - 未在localStorage中找到数据');
+      console.warn('[ThinkingLibrary] 验证保存结果 - 未在localStorage中找到数据')
     }
   } catch (e) {
     console.error('[ThinkingLibrary] 保存思考库失败:', e)
@@ -547,7 +552,7 @@ export function getThinkingLibraryById(id: string | undefined): ThinkingLibrary 
   if (!id) return undefined
 
   const libraries = getThinkingLibraries()
-  return libraries.find(lib => lib.id === id)
+  return libraries.find((lib) => lib.id === id)
 }
 
 // 调试函数：显示思考库数据
@@ -560,7 +565,7 @@ export function debugThinkingLibraries(): void {
       try {
         const parsed = JSON.parse(savedLibraries) as ThinkingLibrary[]
         console.log('[ThinkingLibrary] DEBUG - 解析后的思考库数量:', parsed.length)
-        console.log('[ThinkingLibrary] DEBUG - 思考库列表详情:', JSON.stringify(parsed, null, 2));
+        console.log('[ThinkingLibrary] DEBUG - 思考库列表详情:', JSON.stringify(parsed, null, 2))
       } catch (e) {
         console.error('[ThinkingLibrary] DEBUG - 解析思考库JSON失败:', e)
       }
@@ -582,44 +587,44 @@ export function addThinkingLibrary(library: Omit<ThinkingLibrary, 'id'>): Thinki
   }
 
   console.log('[ThinkingLibrary] 添加前思考库数量:', libraries.length)
-  const updatedLibraries = [...libraries, newLibrary];
+  const updatedLibraries = [...libraries, newLibrary]
   console.log('[ThinkingLibrary] 添加后思考库数量:', updatedLibraries.length)
   saveThinkingLibraries(updatedLibraries)
-  console.log('[ThinkingLibrary] 新增库ID:', newLibrary.id);
+  console.log('[ThinkingLibrary] 新增库ID:', newLibrary.id)
   return newLibrary
 }
 
 // 更新思考库
 export function updateThinkingLibrary(library: ThinkingLibrary): boolean {
-  console.log('[ThinkingLibrary] 更新思考库 ID:', library.id, '名称:', library.name);
+  console.log('[ThinkingLibrary] 更新思考库 ID:', library.id, '名称:', library.name)
   const libraries = getThinkingLibraries()
-  const index = libraries.findIndex(lib => lib.id === library.id)
+  const index = libraries.findIndex((lib) => lib.id === library.id)
 
   if (index !== -1) {
-    const updatedLibraries = [...libraries];
-    updatedLibraries[index] = library;
-    saveThinkingLibraries(updatedLibraries);
-    console.log('[ThinkingLibrary] 思考库更新成功');
-    return true;
+    const updatedLibraries = [...libraries]
+    updatedLibraries[index] = library
+    saveThinkingLibraries(updatedLibraries)
+    console.log('[ThinkingLibrary] 思考库更新成功')
+    return true
   } else {
-    console.warn('[ThinkingLibrary] 更新失败：未找到ID为', library.id, '的思考库');
-    return false;
+    console.warn('[ThinkingLibrary] 更新失败：未找到ID为', library.id, '的思考库')
+    return false
   }
 }
 
 // 删除思考库
 export function deleteThinkingLibrary(id: string): boolean {
-  console.log('[ThinkingLibrary] 删除思考库 ID:', id);
+  console.log('[ThinkingLibrary] 删除思考库 ID:', id)
   const libraries = getThinkingLibraries()
-  const initialLength = libraries.length;
-  const filteredLibraries = libraries.filter(lib => lib.id !== id)
+  const initialLength = libraries.length
+  const filteredLibraries = libraries.filter((lib) => lib.id !== id)
 
   if (filteredLibraries.length < initialLength) {
-    saveThinkingLibraries(filteredLibraries);
-    console.log('[ThinkingLibrary] 思考库删除成功，剩余数量:', filteredLibraries.length);
-    return true;
+    saveThinkingLibraries(filteredLibraries)
+    console.log('[ThinkingLibrary] 思考库删除成功，剩余数量:', filteredLibraries.length)
+    return true
   } else {
-     console.warn('[ThinkingLibrary] 删除失败：未找到ID为', id, '的思考库');
-     return false;
+    console.warn('[ThinkingLibrary] 删除失败：未找到ID为', id, '的思考库')
+    return false
   }
 }

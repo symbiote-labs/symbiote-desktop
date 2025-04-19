@@ -26,19 +26,19 @@ export const analyzeAndAddAssistantMemories = async (assistantId: string, messag
 
   // 获取当前助手的记忆
   const assistantMemories = state.memory?.assistantMemories || []
-  const currentAssistantMemories = assistantMemories.filter(memory => memory.assistantId === assistantId)
+  const currentAssistantMemories = assistantMemories.filter((memory) => memory.assistantId === assistantId)
 
   // 获取已分析过的消息ID
   const analyzedMessageIds = new Set<string>()
-  currentAssistantMemories.forEach(memory => {
+  currentAssistantMemories.forEach((memory) => {
     if (memory.analyzedMessageIds) {
-      memory.analyzedMessageIds.forEach(id => analyzedMessageIds.add(id))
+      memory.analyzedMessageIds.forEach((id) => analyzedMessageIds.add(id))
     }
   })
 
   // 过滤出未分析的消息
-  const newMessages = messages.filter(msg =>
-    msg.id && !analyzedMessageIds.has(msg.id) && msg.content && msg.content.trim() !== ''
+  const newMessages = messages.filter(
+    (msg) => msg.id && !analyzedMessageIds.has(msg.id) && msg.content && msg.content.trim() !== ''
   )
 
   if (newMessages.length === 0) {
@@ -60,7 +60,7 @@ export const analyzeAndAddAssistantMemories = async (assistantId: string, messag
     console.log('[Assistant Memory Analysis] New conversation length:', newConversation.length)
 
     // 构建助手记忆分析提示词
-    let prompt = `
+    const prompt = `
 请分析以下对话内容，提取对助手需要长期记住的重要信息。这些信息将作为助手的记忆，帮助助手在未来的对话中更好地理解用户和提供个性化服务。
 
 请注意以下几点：
@@ -107,9 +107,9 @@ ${newConversation}
     // 先尝试根据供应商和模型ID查找
     let model: any = null
     if (providerId) {
-      const provider = state.llm.providers.find(p => p.id === providerId)
+      const provider = state.llm.providers.find((p) => p.id === providerId)
       if (provider) {
-        const foundModel = provider.models.find(m => m.id === modelId)
+        const foundModel = provider.models.find((m) => m.id === modelId)
         if (foundModel) {
           model = foundModel
         }
@@ -118,9 +118,7 @@ ${newConversation}
 
     // 如果没找到，尝试在所有模型中查找
     if (!model) {
-      const foundModel = state.llm.providers
-        .flatMap((provider) => provider.models)
-        .find((m) => m.id === modelId)
+      const foundModel = state.llm.providers.flatMap((provider) => provider.models).find((m) => m.id === modelId)
       if (foundModel) {
         model = foundModel
       }
@@ -156,37 +154,37 @@ ${newConversation}
         // 如果没有找到JSON数组，尝试按行分割并处理
         memories = result
           .split('\n')
-          .filter(line => line.trim().startsWith('"') || line.trim().startsWith('-'))
-          .map(line => line.trim().replace(/^["'\-\s]+|["'\s]+$/g, ''))
+          .filter((line) => line.trim().startsWith('"') || line.trim().startsWith('-'))
+          .map((line) => line.trim().replace(/^["'\-\s]+|["'\s]+$/g, ''))
       }
     } catch (error) {
       console.error('[Assistant Memory Analysis] Failed to parse memories:', error)
       // 尝试使用正则表达式提取引号中的内容
       const quotedStrings = result.match(/"([^"]*)"/g)
       if (quotedStrings) {
-        memories = quotedStrings.map(str => str.slice(1, -1))
+        memories = quotedStrings.map((str) => str.slice(1, -1))
       } else {
         // 最后尝试按行分割
         memories = result
           .split('\n')
-          .filter(line => line.trim() && !line.includes('```'))
-          .map(line => line.trim().replace(/^["'\-\s]+|["'\s]+$/g, ''))
+          .filter((line) => line.trim() && !line.includes('```'))
+          .map((line) => line.trim().replace(/^["'\-\s]+|["'\s]+$/g, ''))
       }
     }
 
     // 过滤空字符串和已存在的记忆
     memories = memories.filter(
-      memory =>
+      (memory) =>
         memory &&
         memory.trim() !== '' &&
-        !currentAssistantMemories.some(m => m.content.toLowerCase() === memory.toLowerCase())
+        !currentAssistantMemories.some((m) => m.content.toLowerCase() === memory.toLowerCase())
     )
 
     console.log(`[Assistant Memory Analysis] Extracted ${memories.length} new memories`)
 
     // 添加新记忆
     const addedMemories: string[] = []
-    const newMessageIds = newMessages.map(msg => msg.id).filter(Boolean) as string[]
+    const newMessageIds = newMessages.map((msg) => msg.id).filter(Boolean) as string[]
     const lastMessageId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : undefined
 
     for (const memoryContent of memories) {
@@ -240,7 +238,7 @@ export const resetAssistantMemoryAnalyzedMessageIds = async (assistantId: string
     const assistantMemories = state.memory?.assistantMemories || []
 
     // 获取当前助手的记忆
-    const currentAssistantMemories = assistantMemories.filter(memory => memory.assistantId === assistantId)
+    const currentAssistantMemories = assistantMemories.filter((memory) => memory.assistantId === assistantId)
 
     if (currentAssistantMemories.length === 0) {
       console.log(`[Assistant Memory] No memories found for assistant ${assistantId}`)
@@ -248,7 +246,7 @@ export const resetAssistantMemoryAnalyzedMessageIds = async (assistantId: string
     }
 
     // 创建新的助手记忆数组，清除分析标记
-    const updatedMemories = assistantMemories.map(memory => {
+    const updatedMemories = assistantMemories.map((memory) => {
       if (memory.assistantId === assistantId) {
         return {
           ...memory,
@@ -260,14 +258,16 @@ export const resetAssistantMemoryAnalyzedMessageIds = async (assistantId: string
     })
 
     // 保存更新后的记忆
-    await store.dispatch(
-      saveMemoryData({
-        assistantMemories: updatedMemories,
-        assistantMemoryActive: state.memory?.assistantMemoryActive,
-        assistantMemoryAnalyzeModel: state.memory?.assistantMemoryAnalyzeModel,
-        forceOverwrite: true
-      })
-    ).unwrap()
+    await store
+      .dispatch(
+        saveMemoryData({
+          assistantMemories: updatedMemories,
+          assistantMemoryActive: state.memory?.assistantMemoryActive,
+          assistantMemoryAnalyzeModel: state.memory?.assistantMemoryAnalyzeModel,
+          forceOverwrite: true
+        })
+      )
+      .unwrap()
 
     console.log(`[Assistant Memory] Reset analysis markers for assistant ${assistantId}`)
     return true

@@ -160,10 +160,12 @@ ${memoriesToCheck}
         /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*"([^"]+)"\s*-\s*分类:\s*"([^"]+)"\s*(?:-\s*重要性:\s*"([^"]+)")?\s*(?:-\s*关键词:\s*"([^"]+)")?/g
 
       // 新增正则表达式，匹配AI返回的不同格式
-      const alternativeGroupRegex = /-\s*组(\d+)?:\s*(?:\*\*)?["\[]?([\d,\s]+)["\]]?(?:\*\*)?\s*-\s*合并建议:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?\s*-\s*分类:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?/g
+      const alternativeGroupRegex =
+        /-\s*组(\d+)?:\s*(?:\*\*)?["[]?([\d,\s]+)["]?(?:\*\*)?\s*-\s*合并建议:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?\s*-\s*分类:\s*(?:\*\*)?["']?([^"'\n-]+)["']?(?:\*\*)?/g
 
       // 简化的正则表达式，直接匹配组号和方括号内的数字
-      const simpleGroupRegex = /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*(.+?)\s*-\s*分类:\s*(.+?)(?=\s*$|\s*-\s*组|\s*\n)/gm
+      const simpleGroupRegex =
+        /-\s*组(\d+)?:\s*\[([\d,\s]+)\]\s*-\s*合并建议:\s*(.+?)\s*-\s*分类:\s*(.+?)(?=\s*$|\s*-\s*组|\s*\n)/gm
 
       // 尝试所有正则表达式
       const regexesToTry = [simpleGroupRegex, alternativeGroupRegex, originalGroupRegex]
@@ -180,7 +182,7 @@ ${memoriesToCheck}
           found = true
           const groupId = match[1] || String(similarGroups.length + 1)
           // 清理引号和方括号
-          const memoryIndicesStr = match[2].replace(/["'\[\]]/g, '')
+          const memoryIndicesStr = match[2].replace(/["'[\]]/g, '')
           const memoryIndices = memoryIndicesStr.split(',').map((s: string) => s.trim())
           const mergedContent = match[3].trim().replace(/^["']|["']$/g, '') // 移除首尾的引号
           const category = match[4]?.trim().replace(/^["']|["']$/g, '') // 移除首尾的引号
@@ -201,7 +203,7 @@ ${memoriesToCheck}
         }
 
         // 如果找到了匹配项，就不再尝试其他正则表达式
-        if (found) break;
+        if (found) break
       }
 
       // 旧的解析代码已被上面的新代码替代
@@ -223,10 +225,13 @@ ${memoriesToCheck}
       const independentMatch = result.match(regex)
       if (independentMatch && independentMatch[1]) {
         // 处理可能包含引号的情况
-        const cleanedIndependentStr = independentMatch[1].replace(/["'\[\]]/g, '')
+        const cleanedIndependentStr = independentMatch[1].replace(/["'[\]]/g, '')
         const items = cleanedIndependentStr.split(',').map((s: string) => s.trim())
 
-        console.log(`[Memory Deduplication] Found independent memories with regex ${regex.toString().substring(0, 30)}...`, items)
+        console.log(
+          `[Memory Deduplication] Found independent memories with regex ${regex.toString().substring(0, 30)}...`,
+          items
+        )
 
         independentMemories.push(...items)
         independentFound = true
@@ -241,11 +246,11 @@ ${memoriesToCheck}
       if (numberMatches) {
         // 过滤出不在相似组中的数字
         const usedIndices = new Set()
-        similarGroups.forEach(group => {
-          group.memoryIds.forEach(id => usedIndices.add(id))
+        similarGroups.forEach((group) => {
+          group.memoryIds.forEach((id) => usedIndices.add(id))
         })
 
-        const unusedIndices = numberMatches.filter(num => !usedIndices.has(num))
+        const unusedIndices = numberMatches.filter((num) => !usedIndices.has(num))
         if (unusedIndices.length > 0) {
           console.log('[Memory Deduplication] Extracted independent memories from numbers in result:', unusedIndices)
           independentMemories.push(...unusedIndices)
@@ -256,13 +261,14 @@ ${memoriesToCheck}
     // 如果没有解析到相似组和独立记忆项，但结果中包含“组”字样，尝试使用更宽松的正则表达式
     if (similarGroups.length === 0 && independentMemories.length === 0 && result.includes('组')) {
       // 尝试使用更宽松的正则表达式提取组信息
-      const looseGroupRegex = /-\s*组\s*(\d+)?\s*:\s*["\[]?\s*([\d,\s"]+)\s*["\]]?\s*-\s*合并建议\s*:\s*["']?([^"'\n-]+)["']?/g
+      const looseGroupRegex =
+        /-\s*组\s*(\d+)?\s*:\s*["[]?\s*([\d,\s"]+)\s*["]?\s*-\s*合并建议\s*:\s*["']?([^"'\n-]+)["']?/g
 
       let looseMatch: RegExpExecArray | null
       while ((looseMatch = looseGroupRegex.exec(result)) !== null) {
         const groupId = looseMatch[1] || String(similarGroups.length + 1)
         // 清理引号和方括号
-        const memoryIndicesStr = looseMatch[2].replace(/["'\[\]]/g, '')
+        const memoryIndicesStr = looseMatch[2].replace(/["'[\]]/g, '')
         const memoryIndices = memoryIndicesStr.split(',').map((s: string) => s.trim())
         const mergedContent = looseMatch[3].trim()
 

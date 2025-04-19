@@ -1,5 +1,5 @@
-import { Model, Provider } from '@renderer/types'
 import store from '@renderer/store'
+import { Model, Provider } from '@renderer/types'
 
 import AnthropicProvider from './AnthropicProvider'
 import BaseProvider from './BaseProvider'
@@ -34,23 +34,28 @@ export default class ProviderFactory {
           let combination: ModelCombination | undefined = undefined
           if (selectedModelId) {
             // 在provider的models中查找匹配的模型
-            const selectedModel = provider.models.find(m => m.id === selectedModelId)
+            const selectedModel = provider.models.find((m) => m.id === selectedModelId)
             if (selectedModel) {
               // 直接使用模型ID查找对应的组合
               // 在DeepClaude中，模型ID就是组合ID
-              combination = combinations.find(c => c.id === selectedModelId && c.isActive)
+              combination = combinations.find((c) => c.id === selectedModelId && c.isActive)
             }
           }
 
           // 如果没有找到匹配的组合，使用第一个激活的组合
           if (!combination) {
-            combination = combinations.find(c => c.isActive) || undefined
+            combination = combinations.find((c) => c.isActive) || undefined
           }
 
           if (combination) {
-            console.log('[ProviderFactory] 创建DeepClaudeProvider，使用模型组合:', combination.name,
-                      '推理模型:', combination.reasonerModel?.name,
-                      '目标模型:', combination.targetModel?.name)
+            console.log(
+              '[ProviderFactory] 创建DeepClaudeProvider，使用模型组合:',
+              combination.name,
+              '推理模型:',
+              combination.reasonerModel?.name,
+              '目标模型:',
+              combination.targetModel?.name
+            )
 
             // 确保reasonerModel和targetModel是完整的模型对象
             const allProviders = store.getState().llm.providers
@@ -94,10 +99,17 @@ export default class ProviderFactory {
               targetModel: fullTargetModel
             }
 
-            console.log('[ProviderFactory] 创建完整的模型组合:',
-                      fullCombination.id, fullCombination.name,
-                      '推理模型:', fullCombination.reasonerModel.id, fullCombination.reasonerModel.name,
-                      '目标模型:', fullCombination.targetModel.id, fullCombination.targetModel.name)
+            console.log(
+              '[ProviderFactory] 创建完整的模型组合:',
+              fullCombination.id,
+              fullCombination.name,
+              '推理模型:',
+              fullCombination.reasonerModel.id,
+              fullCombination.reasonerModel.name,
+              '目标模型:',
+              fullCombination.targetModel.id,
+              fullCombination.targetModel.name
+            )
 
             return new DeepClaudeProvider(provider, fullCombination)
           }

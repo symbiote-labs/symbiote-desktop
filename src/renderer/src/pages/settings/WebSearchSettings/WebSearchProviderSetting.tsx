@@ -1,11 +1,12 @@
-import { CheckOutlined, ExportOutlined, LoadingOutlined } from '@ant-design/icons'
+import { CheckOutlined, CopyOutlined, ExportOutlined, LoadingOutlined } from '@ant-design/icons'
 import { getWebSearchProviderLogo, WEB_SEARCH_PROVIDER_CONFIG } from '@renderer/config/webSearchProviders'
 import { useWebSearchProvider } from '@renderer/hooks/useWebSearchProviders'
 import { formatApiKeys } from '@renderer/services/ApiService'
 import WebSearchService from '@renderer/services/WebSearchService'
 import { WebSearchProvider } from '@renderer/types'
 import { hasObjectKey } from '@renderer/utils'
-import { Avatar, Button, Divider, Flex, Input } from 'antd'
+import { maskApiKey } from '@renderer/utils/api'
+import { Avatar, Button, Divider, Flex, Input, Typography } from 'antd'
 import Link from 'antd/es/typography/Link'
 import { Info } from 'lucide-react'
 import { FC, useEffect, useState } from 'react'
@@ -154,6 +155,31 @@ const WebSearchProviderSetting: FC<Props> = ({ provider: _provider }) => {
             </SettingHelpLink>
             <SettingHelpText>{t('settings.provider.api_key.tip')}</SettingHelpText>
           </SettingHelpTextRow>
+          {/* 显示API密钥列表 */}
+          {apiKey.includes(',') && (
+            <KeysListContainer>
+              {apiKey
+                .split(',')
+                .map((key) => key.trim())
+                .filter((key) => key !== '')
+                .map((key, index) => (
+                  <KeyItem key={index}>
+                    <Typography.Text>{maskApiKey(key)}</Typography.Text>
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        navigator.clipboard.writeText(key)
+                        window.message.success({
+                          content: t('common.copied'),
+                          duration: 2
+                        })
+                      }}
+                    />
+                  </KeyItem>
+                ))}
+            </KeysListContainer>
+          )}
         </>
       )}
       {hasObjectKey(provider, 'apiHost') && (
@@ -188,6 +214,27 @@ const ProviderName = styled.span`
 `
 const ProviderLogo = styled(Avatar)`
   border: 0.5px solid var(--color-border);
+`
+
+const KeysListContainer = styled.div`
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background-color: var(--color-background-soft);
+`
+
+const KeyItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background-color: var(--color-background);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 `
 
 export default WebSearchProviderSetting

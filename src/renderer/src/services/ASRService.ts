@@ -1,5 +1,6 @@
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
+
 import ASRServerService from './ASRServerService'
 
 /**

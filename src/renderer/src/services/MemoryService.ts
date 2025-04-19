@@ -9,9 +9,9 @@ import store from '@renderer/store' // Import store
 import {
   accessMemory,
   addAnalysisLatency,
+  addAssistantMemory,
   addMemory,
   addShortMemory,
-  addAssistantMemory,
   clearCurrentRecommendations,
   Memory,
   MemoryRecommendation,
@@ -28,8 +28,8 @@ import {
 import { Message } from '@renderer/types' // Import Message type
 import { useCallback, useEffect, useRef } from 'react' // Add useRef back
 
-import { contextualMemoryService } from './ContextualMemoryService' // Import contextual memory service
 import { analyzeAndAddAssistantMemories, resetAssistantMemoryAnalyzedMessageIds } from './AssistantMemoryService' // Import assistant memory service
+import { contextualMemoryService } from './ContextualMemoryService' // Import contextual memory service
 
 // calculateConversationComplexity is unused, removing its definition
 /*
@@ -794,9 +794,12 @@ ${existingMemoriesContent}
   }, [analyzeAndAddMemories])
 
   // 记录记忆访问
-  const recordMemoryAccess = useCallback((memoryId: string, isShortMemory: boolean = false, isAssistantMemory: boolean = false) => {
-    store.dispatch(accessMemory({ id: memoryId, isShortMemory, isAssistantMemory }))
-  }, [])
+  const recordMemoryAccess = useCallback(
+    (memoryId: string, isShortMemory: boolean = false, isAssistantMemory: boolean = false) => {
+      store.dispatch(accessMemory({ id: memoryId, isShortMemory, isAssistantMemory }))
+    },
+    []
+  )
 
   // Effect 来设置/清除定时器，只依赖于启动条件
   useEffect(() => {
@@ -1317,9 +1320,9 @@ ${newConversation}
     // 先尝试根据供应商和模型ID查找
     let model: any = null
     if (providerId) {
-      const provider = store.getState().llm.providers.find(p => p.id === providerId)
+      const provider = store.getState().llm.providers.find((p) => p.id === providerId)
       if (provider) {
-        const foundModel = provider.models.find(m => m.id === modelId)
+        const foundModel = provider.models.find((m) => m.id === modelId)
         if (foundModel) {
           model = foundModel
         }
@@ -1604,7 +1607,7 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
       // 从当前状态中获取话题的助手ID
       const assistants = state.assistants.assistants
       for (const assistant of assistants) {
-        const topic = assistant.topics.find(t => t.id === topicId)
+        const topic = assistant.topics.find((t) => t.id === topicId)
         if (topic) {
           topicAssistantId = assistant.id
           console.log('[Memory] Using topic assistant ID:', topicAssistantId)

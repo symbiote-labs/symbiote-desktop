@@ -35,7 +35,9 @@ const AssistantMemoryManager = () => {
   const assistantMemories = useAppSelector((state) => {
     const allAssistantMemories = state.memory?.assistantMemories || []
     // 只显示选中助手的记忆
-    return selectedAssistantId ? allAssistantMemories.filter((memory) => memory.assistantId === selectedAssistantId) : []
+    return selectedAssistantId
+      ? allAssistantMemories.filter((memory) => memory.assistantId === selectedAssistantId)
+      : []
   })
 
   // 添加助手记忆的状态
@@ -112,8 +114,7 @@ const AssistantMemoryManager = () => {
           onChange={setSelectedAssistantId}
           placeholder={t('settings.memory.selectAssistant') || '选择助手'}
           style={{ width: '100%', marginBottom: 16 }}
-          disabled={!assistantMemoryActive}
-        >
+          disabled={!assistantMemoryActive}>
           {assistants.map((assistant) => (
             <Select.Option key={assistant.id} value={assistant.id}>
               {assistant.name}
@@ -165,7 +166,11 @@ const AssistantMemoryManager = () => {
           />
         ) : (
           <Empty
-            description={!selectedAssistantId ? t('settings.memory.selectAssistantFirst') || '请先选择助手' : t('settings.memory.noAssistantMemories') || '无助手记忆'}
+            description={
+              !selectedAssistantId
+                ? t('settings.memory.selectAssistantFirst') || '请先选择助手'
+                : t('settings.memory.noAssistantMemories') || '无助手记忆'
+            }
           />
         )}
       </div>

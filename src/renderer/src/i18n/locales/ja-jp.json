@@ -335,7 +335,7 @@
       "no_api_key": "APIキーが設定されていません",
       "provider_disabled": "モデルプロバイダーが有効になっていません",
       "render": {
-        "description": "数式のレンダリングに失敗しました。数式の形式が正しいか確認してください",
+        "description": "メッセージの内容のレンダリングに失敗しました。メッセージの内容の形式が正しいか確認してください",
         "title": "レンダリングエラー"
       },
       "user_message_not_found": "元のユーザーメッセージを見つけることができませんでした",
@@ -1363,7 +1363,7 @@
         "subscribe_name": "代替名",
         "subscribe_name.placeholder": "ダウンロードしたフィードに名前がない場合に使用される代替名",
         "subscribe_add_success": "フィードの追加が成功しました！",
-        "subscribe_delete": "フィードの削除",
+        "subscribe_delete": "削除",
         "overwrite": "サービス検索を上書き",
         "overwrite_tooltip": "大規模言語モデルではなく、サービス検索を使用する",
         "apikey": "API キー",

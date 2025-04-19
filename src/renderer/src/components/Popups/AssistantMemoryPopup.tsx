@@ -58,7 +58,9 @@ const PopupContainer: React.FC<Props> = ({ assistantId, resolve }) => {
     createdAt: string
   }
 
-  const assistantMemories = useAppSelector((state) => selectAssistantMemoriesByAssistantId(state, assistantId)) as AssistantMemory[]
+  const assistantMemories = useAppSelector((state) =>
+    selectAssistantMemoriesByAssistantId(state, assistantId)
+  ) as AssistantMemory[]
 
   // 获取分析统计数据
   const totalAnalyses = useAppSelector((state) => state.memory?.analysisStats?.totalAnalyses || 0)
@@ -217,7 +219,13 @@ const PopupContainer: React.FC<Props> = ({ assistantId, resolve }) => {
             )}
           />
         ) : (
-          <Empty description={!assistantId ? t('settings.memory.noCurrentAssistant') || '无当前助手' : t('settings.memory.noAssistantMemories') || '无助手记忆'} />
+          <Empty
+            description={
+              !assistantId
+                ? t('settings.memory.noCurrentAssistant') || '无当前助手'
+                : t('settings.memory.noAssistantMemories') || '无助手记忆'
+            }
+          />
         )}
       </MemoriesList>
     </Modal>

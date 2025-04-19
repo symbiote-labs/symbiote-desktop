@@ -335,7 +335,7 @@
       "no_api_key": "API 金鑰未設定",
       "provider_disabled": "模型供應商未啟用",
       "render": {
-        "description": "渲染公式失敗，請檢查公式格式是否正確",
+        "description": "渲染訊息內容失敗，請檢查訊息內容格式是否正確",
         "title": "渲染錯誤"
       },
       "user_message_not_found": "無法找到原始用戶訊息",
@@ -1362,7 +1362,7 @@
         "subscribe_name": "替代名稱",
         "subscribe_name.placeholder": "當下載的訂閱源沒有名稱時所使用的替代名稱",
         "subscribe_add_success": "訂閱源添加成功!",
-        "subscribe_delete": "刪除訂閱源",
+        "subscribe_delete": "刪除",
         "title": "網路搜尋",
         "overwrite": "覆蓋搜尋服務商",
         "overwrite_tooltip": "強制使用搜尋服務商而不是大語言模型進行搜尋",

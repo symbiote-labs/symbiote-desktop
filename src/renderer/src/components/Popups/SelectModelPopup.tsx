@@ -89,8 +89,7 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model: activeModel, res
 
   // 缓存所有模型列表，只在providers变化时重新计算
   const allModels = useMemo(() => {
-    return providers.flatMap((p) => p.models || [])
-      .filter((m) => !isEmbeddingModel(m) && !isRerankModel(m))
+    return providers.flatMap((p) => p.models || []).filter((m) => !isEmbeddingModel(m) && !isRerankModel(m))
   }, [providers])
 
   // --- Filter Models for Right Column ---
@@ -131,10 +130,13 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model: activeModel, res
     setSelectedProviderId(providerId)
   }, [])
 
-  const handleModelSelect = useCallback((model: Model) => {
-    resolve(model)
-    setOpen(false)
-  }, [resolve, setOpen])
+  const handleModelSelect = useCallback(
+    (model: Model) => {
+      resolve(model)
+      setOpen(false)
+    },
+    [resolve, setOpen]
+  )
 
   const onCancel = useCallback(() => {
     setOpen(false)
@@ -202,14 +204,17 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model: activeModel, res
             ref={inputRef}
             placeholder={t('models.search')}
             value={searchText}
-            onChange={useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-              const value = e.target.value
-              setSearchText(value)
-              // 当搜索时，自动选择"all"供应商，以显示所有匹配的模型
-              if (value.trim() && selectedProviderId !== 'all') {
-                setSelectedProviderId('all')
-              }
-            }, [selectedProviderId, t])}
+            onChange={useCallback(
+              (e: React.ChangeEvent<HTMLInputElement>) => {
+                const value = e.target.value
+                setSearchText(value)
+                // 当搜索时，自动选择"all"供应商，以显示所有匹配的模型
+                if (value.trim() && selectedProviderId !== 'all') {
+                  setSelectedProviderId('all')
+                }
+              },
+              [selectedProviderId, t]
+            )}
             // 移除焦点事件处理
             allowClear
             autoFocus
@@ -266,7 +271,9 @@ const PopupContainer: React.FC<PopupContainerProps> = ({ model: activeModel, res
                       </Tooltip>
                       {/* Show provider only if not in pinned view or if search is active */}
                       {(selectedProviderId !== PINNED_PROVIDER_ID || searchText) && (
-                        <Tooltip title={providers.find((p) => p.id === m.provider)?.name ?? m.provider} mouseEnterDelay={0.5}>
+                        <Tooltip
+                          title={providers.find((p) => p.id === m.provider)?.name ?? m.provider}
+                          mouseEnterDelay={0.5}>
                           <span className="provider-name">
                             | {providers.find((p) => p.id === m.provider)?.name ?? m.provider}
                           </span>
@@ -382,12 +389,14 @@ const ModelListItem = styled.div<{ $selected: boolean }>`
 
   &:hover {
     background-color: var(--color-background-mute);
-    .pin-button, .settings-button {
+    .pin-button,
+    .settings-button {
       opacity: 0.5; // Show buttons on hover
     }
   }
 
-  .pin-button, .settings-button {
+  .pin-button,
+  .settings-button {
     opacity: ${(props) => (props.$selected ? 0.5 : 0)}; // Show if selected or hovered
     transition: opacity 0.2s;
     &:hover {

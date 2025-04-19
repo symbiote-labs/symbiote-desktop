@@ -1,4 +1,4 @@
-import { CheckOutlined, LoadingOutlined } from '@ant-design/icons'
+import { CheckOutlined, CopyOutlined, LoadingOutlined } from '@ant-design/icons'
 import { StreamlineGoodHealthAndWellBeing } from '@renderer/components/Icons/SVGIcon'
 import { HStack } from '@renderer/components/Layout'
 import OAuthButton from '@renderer/components/OAuth/OAuthButton'
@@ -12,9 +12,9 @@ import { checkApi, formatApiKeys } from '@renderer/services/ApiService'
 import { checkModelsHealth, ModelCheckStatus } from '@renderer/services/HealthCheckService'
 import { isProviderSupportAuth, isProviderSupportCharge } from '@renderer/services/ProviderService'
 import { Provider } from '@renderer/types'
-import { formatApiHost } from '@renderer/utils/api'
+import { formatApiHost, maskApiKey } from '@renderer/utils/api'
 import { providerCharge } from '@renderer/utils/oauth'
-import { Button, Divider, Flex, Input, Space, Switch, Tooltip } from 'antd'
+import { Button, Divider, Flex, Input, Space, Switch, Tooltip, Typography } from 'antd'
 import Link from 'antd/es/typography/Link'
 import { debounce, isEmpty } from 'lodash'
 import { Settings, SquareArrowOutUpRight } from 'lucide-react'
@@ -344,6 +344,31 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
           <SettingHelpText>{t('settings.provider.api_key.tip')}</SettingHelpText>
         </SettingHelpTextRow>
       )}
+      {/* 显示API密钥列表 */}
+      {provider.id !== 'gemini' && provider.id !== 'ollama' && provider.id !== 'lmstudio' && provider.id !== 'copilot' && apiKey.includes(',') && (
+        <KeysListContainer>
+          {apiKey
+            .split(',')
+            .map((key) => key.trim())
+            .filter((key) => key !== '')
+            .map((key, index) => (
+              <KeyItem key={index}>
+                <Typography.Text>{maskApiKey(key)}</Typography.Text>
+                <Button
+                  type="text"
+                  icon={<CopyOutlined />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(key)
+                    window.message.success({
+                      content: t('common.copied'),
+                      duration: 2
+                    })
+                  }}
+                />
+              </KeyItem>
+            ))}
+        </KeysListContainer>
+      )}
       <SettingSubtitle>{t('settings.provider.api_host')}</SettingSubtitle>
       <Space.Compact style={{ width: '100%', marginTop: 5 }}>
         <Input
@@ -384,11 +409,17 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
       {provider.id === 'lmstudio' && <LMStudioSettings />}
       {provider.id === 'gpustack' && <GPUStackSettings />}
       {provider.id === 'copilot' && <GithubCopilotSettings provider={provider} setApiKey={setApiKey} />}
-      {provider.id === 'gemini' && <GeminiKeyManager provider={provider} currentApiKey={apiKey} onApiKeyChange={(newApiKey) => {
-        setApiKey(newApiKey)
-        setInputValue(newApiKey)
-        updateProvider({ ...provider, apiKey: newApiKey })
-      }} />}
+      {provider.id === 'gemini' && (
+        <GeminiKeyManager
+          provider={provider}
+          currentApiKey={apiKey}
+          onApiKeyChange={(newApiKey) => {
+            setApiKey(newApiKey)
+            setInputValue(newApiKey)
+            updateProvider({ ...provider, apiKey: newApiKey })
+          }}
+        />
+      )}
       <SettingSubtitle style={{ marginBottom: 5 }}>
         <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
           <HStack alignItems="center" gap={5}>
@@ -416,6 +447,27 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
 const ProviderName = styled.span`
   font-size: 14px;
   font-weight: 500;
+`
+
+const KeysListContainer = styled.div`
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background-color: var(--color-background-soft);
+`
+
+const KeyItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background-color: var(--color-background);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 `
 
 export default ProviderSetting

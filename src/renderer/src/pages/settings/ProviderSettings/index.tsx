@@ -171,9 +171,7 @@ const ProvidersList: FC = () => {
     }
 
     // 系统内置的供应商不允许删除，但以 provider 开头的自动生成供应商或DeepClaude供应商允许删除
-    if (provider.isSystem &&
-        !provider.id.includes('provider') &&
-        provider.type !== 'deepclaude') {
+    if (provider.isSystem && !provider.id.includes('provider') && provider.type !== 'deepclaude') {
       return []
     }
 
@@ -255,7 +253,10 @@ const ProvidersList: FC = () => {
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             style={{ ...provided.draggableProps.style, marginBottom: 5 }}>
-                            <Dropdown menu={{ items: getDropdownMenus(provider) }} trigger={['contextMenu']} destroyPopupOnHide>
+                            <Dropdown
+                              menu={{ items: getDropdownMenus(provider) }}
+                              trigger={['contextMenu']}
+                              destroyPopupOnHide>
                               <ProviderListItem
                                 key={JSON.stringify(provider)}
                                 className={provider.id === selectedProvider?.id ? 'active' : ''}

@@ -96,6 +96,8 @@ export type Message = {
     mcpTools?: MCPToolResponse[]
     // Generate Image
     generateImage?: GenerateImageResponse
+    // Knowledge base results
+    knowledge?: KnowledgeReference[]
   }
   // 多模型消息样式
   multiModelMessageStyle?: 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -341,7 +343,15 @@ export interface TranslateHistory {
   createdAt: string
 }
 
-export type SidebarIcon = 'assistants' | 'agents' | 'paintings' | 'translate' | 'minapp' | 'knowledge' | 'files'
+export type SidebarIcon =
+  | 'assistants'
+  | 'agents'
+  | 'paintings'
+  | 'translate'
+  | 'minapp'
+  | 'knowledge'
+  | 'files'
+  | 'projects'
 
 export type WebSearchProvider = {
   id: string
@@ -384,6 +394,12 @@ export interface MCPServerParameter {
   description: string
 }
 
+export interface MCPConfigSample {
+  command: string
+  args: string[]
+  env?: Record<string, string> | undefined
+}
+
 export interface MCPServer {
   id: string
   name: string
@@ -396,6 +412,7 @@ export interface MCPServer {
   env?: Record<string, string>
   isActive: boolean
   disabledTools?: string[] // List of tool names that are disabled for this server
+  configSample?: MCPConfigSample
   headers?: Record<string, string> // Custom headers to be sent with requests to this server
 }
 

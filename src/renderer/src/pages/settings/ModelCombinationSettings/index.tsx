@@ -1,17 +1,29 @@
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import { useProviders } from '@renderer/hooks/useProvider'
 import { useAppDispatch } from '@renderer/store'
-import { Button, Form, Input, Modal, Select, Switch, Tabs, message } from 'antd'
+import { addProvider, removeProvider } from '@renderer/store/llm'
+import { Model } from '@renderer/types'
+import { uuid } from '@renderer/utils'
+import {
+  checkModelCombinationsInLocalStorage,
+  createDeepClaudeProvider,
+  ThinkingLibrary
+} from '@renderer/utils/createDeepClaudeProvider'
+import {
+  addThinkingLibrary,
+  debugThinkingLibraries,
+  DEFAULT_THINKING_LIBRARIES,
+  getThinkingLibraries,
+  saveThinkingLibraries,
+  updateThinkingLibrary
+} from '@renderer/utils/thinkingLibrary'
+import { Button, Form, Input, message, Modal, Select, Switch, Tabs } from 'antd'
 import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
+
 import { SettingContainer, SettingDivider, SettingGroup, SettingTitle } from '..'
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { useProviders } from '@renderer/hooks/useProvider'
-import { Model } from '@renderer/types'
-import { uuid } from '@renderer/utils'
-import { ThinkingLibrary, createDeepClaudeProvider, checkModelCombinationsInLocalStorage } from '@renderer/utils/createDeepClaudeProvider'
-import { addProvider, removeProvider } from '@renderer/store/llm'
-import { getThinkingLibraries, addThinkingLibrary, updateThinkingLibrary, debugThinkingLibraries, saveThinkingLibraries, DEFAULT_THINKING_LIBRARIES } from '@renderer/utils/thinkingLibrary'
 
 // 模型组合类型
 interface ModelCombination {
@@ -41,8 +53,8 @@ const ModelCombinationSettings: FC = () => {
   const [activeTab, setActiveTab] = useState('combinations')
 
   // 获取所有可用的模型
-  const allModels = providers.flatMap(provider =>
-    provider.models.map(model => ({
+  const allModels = providers.flatMap((provider) =>
+    provider.models.map((model) => ({
       ...model,
       providerName: provider.name
     }))
@@ -51,7 +63,7 @@ const ModelCombinationSettings: FC = () => {
   // 根据ID查找模型
   const findModelById = (id: string): Model | null => {
     for (const provider of providers) {
-      const model = provider.models.find(m => m.id === id)
+      const model = provider.models.find((m) => m.id === id)
       if (model) return model
     }
     return null
@@ -110,41 +122,47 @@ const ModelCombinationSettings: FC = () => {
 
   // 保存模型组合到localStorage
   const saveCombinations = (newCombinations: ModelCombination[]) => {
-    console.log('[ModelCombinationSettings] 保存模型组合:',
-              newCombinations.map(c => ({
-                id: c.id,
-                name: c.name,
-                reasonerModel: {
-                  id: c.reasonerModel?.id,
-                  name: c.reasonerModel?.name,
-                  provider: c.reasonerModel?.provider
-                },
-                targetModel: {
-                  id: c.targetModel?.id,
-                  name: c.targetModel?.name,
-                  provider: c.targetModel?.provider
-                },
-                isActive: c.isActive
-              })))
+    console.log(
+      '[ModelCombinationSettings] 保存模型组合:',
+      newCombinations.map((c) => ({
+        id: c.id,
+        name: c.name,
+        reasonerModel: {
+          id: c.reasonerModel?.id,
+          name: c.reasonerModel?.name,
+          provider: c.reasonerModel?.provider
+        },
+        targetModel: {
+          id: c.targetModel?.id,
+          name: c.targetModel?.name,
+          provider: c.targetModel?.provider
+        },
+        isActive: c.isActive
+      }))
+    )
 
     // 确保模型组合中的模型对象是完整的
-    const combinationsToSave = newCombinations.map(c => ({
+    const combinationsToSave = newCombinations.map((c) => ({
       id: c.id,
       name: c.name,
-      reasonerModel: c.reasonerModel ? {
-        id: c.reasonerModel.id,
-        name: c.reasonerModel.name,
-        provider: c.reasonerModel.provider,
-        group: c.reasonerModel.group,
-        type: c.reasonerModel.type
-      } : null,
-      targetModel: c.targetModel ? {
-        id: c.targetModel.id,
-        name: c.targetModel.name,
-        provider: c.targetModel.provider,
-        group: c.targetModel.group,
-        type: c.targetModel.type
-      } : null,
+      reasonerModel: c.reasonerModel
+        ? {
+            id: c.reasonerModel.id,
+            name: c.reasonerModel.name,
+            provider: c.reasonerModel.provider,
+            group: c.reasonerModel.group,
+            type: c.reasonerModel.type
+          }
+        : null,
+      targetModel: c.targetModel
+        ? {
+            id: c.targetModel.id,
+            name: c.targetModel.name,
+            provider: c.targetModel.provider,
+            group: c.targetModel.group,
+            type: c.targetModel.type
+          }
+        : null,
       isActive: c.isActive
     }))
 
@@ -162,43 +180,47 @@ const ModelCombinationSettings: FC = () => {
     // 使用setTimeout来避免在渲染周期内进行多次状态更新
     setTimeout(() => {
       // 移除所有现有的DeepClaude提供商
-      const existingDeepClaudeProviders = providers.filter(p => p.type === 'deepclaude')
+      const existingDeepClaudeProviders = providers.filter((p) => p.type === 'deepclaude')
       console.log('[ModelCombinationSettings] 移除现有DeepClaude提供商数量:', existingDeepClaudeProviders.length)
-      existingDeepClaudeProviders.forEach(provider => {
+      existingDeepClaudeProviders.forEach((provider) => {
         dispatch(removeProvider(provider))
       })
 
       // 创建并添加新的DeepClaude提供商
-      const activeCombinations = combinations.filter(c => c.isActive && c.reasonerModel && c.targetModel)
+      const activeCombinations = combinations.filter((c) => c.isActive && c.reasonerModel && c.targetModel)
       console.log('[ModelCombinationSettings] 激活的模型组合数量:', activeCombinations.length)
-      console.log('[ModelCombinationSettings] 激活的模型组合详情:',
-                activeCombinations.map(c => ({
-                  id: c.id,
-                  name: c.name,
-                  reasonerModel: {
-                    id: c.reasonerModel?.id,
-                    name: c.reasonerModel?.name,
-                    provider: c.reasonerModel?.provider
-                  },
-                  targetModel: {
-                    id: c.targetModel?.id,
-                    name: c.targetModel?.name,
-                    provider: c.targetModel?.provider
-                  }
-                })))
+      console.log(
+        '[ModelCombinationSettings] 激活的模型组合详情:',
+        activeCombinations.map((c) => ({
+          id: c.id,
+          name: c.name,
+          reasonerModel: {
+            id: c.reasonerModel?.id,
+            name: c.reasonerModel?.name,
+            provider: c.reasonerModel?.provider
+          },
+          targetModel: {
+            id: c.targetModel?.id,
+            name: c.targetModel?.name,
+            provider: c.targetModel?.provider
+          }
+        }))
+      )
 
       if (activeCombinations.length > 0) {
         // 创建一个单一的DeepClaude提供商，包含所有激活的模型组合
         const provider = createDeepClaudeProvider(activeCombinations)
-        console.log('[ModelCombinationSettings] 创建的DeepClaude提供商:',
-                  provider.id, provider.name, provider.type,
-                  provider.models.map(m => ({ id: m.id, name: m.name, provider: m.provider })))
+        console.log(
+          '[ModelCombinationSettings] 创建的DeepClaude提供商:',
+          provider.id,
+          provider.name,
+          provider.type,
+          provider.models.map((m) => ({ id: m.id, name: m.name, provider: m.provider }))
+        )
         dispatch(addProvider(provider))
       }
     }, 0)
   }
-
-
 
   // 添加或编辑模型组合
   const handleAddOrEditCombination = (values: any) => {
@@ -214,7 +236,7 @@ const ModelCombinationSettings: FC = () => {
 
     if (editingCombination) {
       // 编辑现有组合
-      const updatedCombinations = combinations.map(comb =>
+      const updatedCombinations = combinations.map((comb) =>
         comb.id === editingCombination.id
           ? { ...comb, name, reasonerModel, targetModel, isActive: isActive !== false, thinkingLibraryId }
           : comb
@@ -246,7 +268,7 @@ const ModelCombinationSettings: FC = () => {
       title: t('settings.modelCombination.confirmDelete'),
       content: t('settings.modelCombination.confirmDeleteContent'),
       onOk: () => {
-        const updatedCombinations = combinations.filter(comb => comb.id !== id)
+        const updatedCombinations = combinations.filter((comb) => comb.id !== id)
         saveCombinations(updatedCombinations)
         message.success(t('settings.modelCombination.deleteSuccess'))
       }
@@ -268,9 +290,7 @@ const ModelCombinationSettings: FC = () => {
 
   // 切换模型组合的激活状态
   const toggleCombinationActive = (id: string, isActive: boolean) => {
-    const updatedCombinations = combinations.map(comb =>
-      comb.id === id ? { ...comb, isActive } : comb
-    )
+    const updatedCombinations = combinations.map((comb) => (comb.id === id ? { ...comb, isActive } : comb))
     saveCombinations(updatedCombinations)
   }
 
@@ -351,7 +371,7 @@ const ModelCombinationSettings: FC = () => {
           console.log('[ModelCombinationSettings] 当前思考库数量:', currentLibraries.length)
 
           // 直接在内存中过滤要删除的思考库
-          const filteredLibraries = currentLibraries.filter(lib => lib.id !== id)
+          const filteredLibraries = currentLibraries.filter((lib) => lib.id !== id)
           console.log('[ModelCombinationSettings] 过滤后思考库数量:', filteredLibraries.length)
 
           // 保存到localStorage
@@ -395,58 +415,59 @@ const ModelCombinationSettings: FC = () => {
             label: t('settings.modelCombination.title'),
             children: (
               <SettingGroup theme={theme}>
-        <SettingTitle>
-          {t('settings.modelCombination.title')}
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingCombination(null)
-              form.resetFields()
-              setIsModalVisible(true)
-            }}
-          >
-            {t('settings.modelCombination.add')}
-          </Button>
-        </SettingTitle>
-        <SettingDivider />
+                <SettingTitle>
+                  {t('settings.modelCombination.title')}
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setEditingCombination(null)
+                      form.resetFields()
+                      setIsModalVisible(true)
+                    }}>
+                    {t('settings.modelCombination.add')}
+                  </Button>
+                </SettingTitle>
+                <SettingDivider />
 
-        {combinations.length === 0 ? (
-          <EmptyState>{t('settings.modelCombination.empty')}</EmptyState>
-        ) : (
-          <CombinationList>
-            {combinations.map(combination => (
-              <CombinationItem key={combination.id}>
-                <CombinationInfo>
-                  <CombinationName>{combination.name}</CombinationName>
-                  <CombinationDetail>
-                    {t('settings.modelCombination.reasoner')}: {combination.reasonerModel?.name || t('settings.modelCombination.notSelected')}
-                  </CombinationDetail>
-                  <CombinationDetail>
-                    {t('settings.modelCombination.target')}: {combination.targetModel?.name || t('settings.modelCombination.notSelected')}
-                  </CombinationDetail>
-                </CombinationInfo>
-                <CombinationActions>
-                  <Switch
-                    checked={combination.isActive}
-                    onChange={(checked) => toggleCombinationActive(combination.id, checked)}
-                  />
-                  <Button
-                    icon={<EditOutlined />}
-                    type="text"
-                    onClick={() => handleEditCombination(combination)}
-                  />
-                  <Button
-                    icon={<DeleteOutlined />}
-                    type="text"
-                    danger
-                    onClick={() => handleDeleteCombination(combination.id)}
-                  />
-                </CombinationActions>
-              </CombinationItem>
-            ))}
-          </CombinationList>
-        )}
+                {combinations.length === 0 ? (
+                  <EmptyState>{t('settings.modelCombination.empty')}</EmptyState>
+                ) : (
+                  <CombinationList>
+                    {combinations.map((combination) => (
+                      <CombinationItem key={combination.id}>
+                        <CombinationInfo>
+                          <CombinationName>{combination.name}</CombinationName>
+                          <CombinationDetail>
+                            {t('settings.modelCombination.reasoner')}:{' '}
+                            {combination.reasonerModel?.name || t('settings.modelCombination.notSelected')}
+                          </CombinationDetail>
+                          <CombinationDetail>
+                            {t('settings.modelCombination.target')}:{' '}
+                            {combination.targetModel?.name || t('settings.modelCombination.notSelected')}
+                          </CombinationDetail>
+                        </CombinationInfo>
+                        <CombinationActions>
+                          <Switch
+                            checked={combination.isActive}
+                            onChange={(checked) => toggleCombinationActive(combination.id, checked)}
+                          />
+                          <Button
+                            icon={<EditOutlined />}
+                            type="text"
+                            onClick={() => handleEditCombination(combination)}
+                          />
+                          <Button
+                            icon={<DeleteOutlined />}
+                            type="text"
+                            danger
+                            onClick={() => handleDeleteCombination(combination.id)}
+                          />
+                        </CombinationActions>
+                      </CombinationItem>
+                    ))}
+                  </CombinationList>
+                )}
               </SettingGroup>
             )
           },
@@ -465,8 +486,7 @@ const ModelCombinationSettings: FC = () => {
                         setEditingLibrary(null)
                         libraryForm.resetFields()
                         setIsLibraryModalVisible(true)
-                      }}
-                    >
+                      }}>
                       {t('settings.thinkingLibrary.add')}
                     </Button>
                     <Button
@@ -493,8 +513,7 @@ const ModelCombinationSettings: FC = () => {
                             }
                           }
                         })
-                      }}
-                    >
+                      }}>
                       重置
                     </Button>
                     <Button
@@ -502,8 +521,7 @@ const ModelCombinationSettings: FC = () => {
                         // 调用调试函数，在控制台显示思考库数据
                         debugThinkingLibraries()
                         message.info('思考库调试信息已输出到控制台，请按F12查看')
-                      }}
-                    >
+                      }}>
                       调试
                     </Button>
                     <Button
@@ -520,8 +538,10 @@ const ModelCombinationSettings: FC = () => {
                               console.log('[ModelCombinationSettings] 当前思考库数量:', currentLibraries.length)
 
                               // 获取默认思考库中缺失的思考库
-                              const existingIds = new Set(currentLibraries.map(lib => lib.id))
-                              const missingLibraries = DEFAULT_THINKING_LIBRARIES.filter((lib: ThinkingLibrary) => !existingIds.has(lib.id))
+                              const existingIds = new Set(currentLibraries.map((lib) => lib.id))
+                              const missingLibraries = DEFAULT_THINKING_LIBRARIES.filter(
+                                (lib: ThinkingLibrary) => !existingIds.has(lib.id)
+                              )
                               console.log('[ModelCombinationSettings] 缺失的默认思考库数量:', missingLibraries.length)
 
                               if (missingLibraries.length > 0) {
@@ -548,8 +568,7 @@ const ModelCombinationSettings: FC = () => {
                             }
                           }
                         })
-                      }}
-                    >
+                      }}>
                       更新
                     </Button>
                   </ButtonGroup>
@@ -560,7 +579,7 @@ const ModelCombinationSettings: FC = () => {
                   <EmptyState>{t('settings.thinkingLibrary.empty')}</EmptyState>
                 ) : (
                   <CombinationList>
-                    {thinkingLibraries.map(library => (
+                    {thinkingLibraries.map((library) => (
                       <CombinationItem key={library.id}>
                         <CombinationInfo>
                           <CombinationName>{library.name}</CombinationName>
@@ -572,11 +591,7 @@ const ModelCombinationSettings: FC = () => {
                           </CombinationDetail>
                         </CombinationInfo>
                         <CombinationActions>
-                          <Button
-                            icon={<EditOutlined />}
-                            type="text"
-                            onClick={() => handleEditLibrary(library)}
-                          />
+                          <Button icon={<EditOutlined />} type="text" onClick={() => handleEditLibrary(library)} />
                           <Button
                             icon={<DeleteOutlined />}
                             type="text"
@@ -596,47 +611,29 @@ const ModelCombinationSettings: FC = () => {
 
       {/* 添加/编辑模型组合的模态框 */}
       <Modal
-        title={editingCombination
-          ? t('settings.modelCombination.editTitle')
-          : t('settings.modelCombination.addTitle')
-        }
+        title={editingCombination ? t('settings.modelCombination.editTitle') : t('settings.modelCombination.addTitle')}
         open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false)
           setEditingCombination(null)
           form.resetFields()
         }}
-        footer={null}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleAddOrEditCombination}
-        >
+        footer={null}>
+        <Form form={form} layout="vertical" onFinish={handleAddOrEditCombination}>
           <Form.Item
             name="name"
             label={t('settings.modelCombination.name')}
-            rules={[{ required: true, message: t('settings.modelCombination.nameRequired') }]}
-          >
+            rules={[{ required: true, message: t('settings.modelCombination.nameRequired') }]}>
             <Input placeholder={t('settings.modelCombination.namePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="reasonerModelId"
             label={t('settings.modelCombination.reasonerModel')}
-            rules={[{ required: true, message: t('settings.modelCombination.reasonerModelRequired') }]}
-          >
-            <Select
-              placeholder={t('settings.modelCombination.selectModel')}
-              showSearch
-              optionFilterProp="label"
-            >
-              {allModels.map(model => (
-                <Select.Option
-                  key={model.id}
-                  value={model.id}
-                  label={`${model.name} (${model.providerName})`}
-                >
+            rules={[{ required: true, message: t('settings.modelCombination.reasonerModelRequired') }]}>
+            <Select placeholder={t('settings.modelCombination.selectModel')} showSearch optionFilterProp="label">
+              {allModels.map((model) => (
+                <Select.Option key={model.id} value={model.id} label={`${model.name} (${model.providerName})`}>
                   {model.name} ({model.providerName})
                 </Select.Option>
               ))}
@@ -646,50 +643,27 @@ const ModelCombinationSettings: FC = () => {
           <Form.Item
             name="targetModelId"
             label={t('settings.modelCombination.targetModel')}
-            rules={[{ required: true, message: t('settings.modelCombination.targetModelRequired') }]}
-          >
-            <Select
-              placeholder={t('settings.modelCombination.selectModel')}
-              showSearch
-              optionFilterProp="label"
-            >
-              {allModels.map(model => (
-                <Select.Option
-                  key={model.id}
-                  value={model.id}
-                  label={`${model.name} (${model.providerName})`}
-                >
+            rules={[{ required: true, message: t('settings.modelCombination.targetModelRequired') }]}>
+            <Select placeholder={t('settings.modelCombination.selectModel')} showSearch optionFilterProp="label">
+              {allModels.map((model) => (
+                <Select.Option key={model.id} value={model.id} label={`${model.name} (${model.providerName})`}>
                   {model.name} ({model.providerName})
                 </Select.Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="thinkingLibraryId"
-            label="思考库"
-          >
-            <Select
-              placeholder="选择思考库（可选）"
-              allowClear
-            >
-              {thinkingLibraries.map(library => (
-                <Select.Option
-                  key={library.id}
-                  value={library.id}
-                  label={`${library.name} (${library.category})`}
-                >
+          <Form.Item name="thinkingLibraryId" label="思考库">
+            <Select placeholder="选择思考库（可选）" allowClear>
+              {thinkingLibraries.map((library) => (
+                <Select.Option key={library.id} value={library.id} label={`${library.name} (${library.category})`}>
                   {library.name} ({library.category})
                 </Select.Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="isActive"
-            valuePropName="checked"
-            initialValue={true}
-          >
+          <Form.Item name="isActive" valuePropName="checked" initialValue={true}>
             <Switch checkedChildren={t('common.enabled')} unCheckedChildren={t('common.disabled')} />
           </Form.Item>
 
@@ -703,59 +677,41 @@ const ModelCombinationSettings: FC = () => {
 
       {/* 添加/编辑思考库的模态框 */}
       <Modal
-        title={editingLibrary
-          ? t('settings.thinkingLibrary.editTitle')
-          : t('settings.thinkingLibrary.addTitle')
-        }
+        title={editingLibrary ? t('settings.thinkingLibrary.editTitle') : t('settings.thinkingLibrary.addTitle')}
         open={isLibraryModalVisible}
         onCancel={() => {
           setIsLibraryModalVisible(false)
           setEditingLibrary(null)
           libraryForm.resetFields()
         }}
-        footer={null}
-      >
-        <Form
-          form={libraryForm}
-          layout="vertical"
-          onFinish={handleAddOrEditLibrary}
-        >
+        footer={null}>
+        <Form form={libraryForm} layout="vertical" onFinish={handleAddOrEditLibrary}>
           <Form.Item
             name="name"
             label={t('settings.thinkingLibrary.name')}
-            rules={[{ required: true, message: t('settings.thinkingLibrary.nameRequired') }]}
-          >
+            rules={[{ required: true, message: t('settings.thinkingLibrary.nameRequired') }]}>
             <Input placeholder={t('settings.thinkingLibrary.namePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="description"
             label={t('settings.thinkingLibrary.description')}
-            rules={[{ required: true, message: t('settings.thinkingLibrary.descriptionRequired') }]}
-          >
-            <Input.TextArea
-              placeholder={t('settings.thinkingLibrary.descriptionPlaceholder')}
-              rows={2}
-            />
+            rules={[{ required: true, message: t('settings.thinkingLibrary.descriptionRequired') }]}>
+            <Input.TextArea placeholder={t('settings.thinkingLibrary.descriptionPlaceholder')} rows={2} />
           </Form.Item>
 
           <Form.Item
             name="category"
             label={t('settings.thinkingLibrary.category')}
-            rules={[{ required: true, message: t('settings.thinkingLibrary.categoryRequired') }]}
-          >
+            rules={[{ required: true, message: t('settings.thinkingLibrary.categoryRequired') }]}>
             <Input placeholder={t('settings.thinkingLibrary.categoryPlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="prompt"
             label={t('settings.thinkingLibrary.prompt')}
-            rules={[{ required: true, message: t('settings.thinkingLibrary.promptRequired') }]}
-          >
-            <Input.TextArea
-              placeholder={t('settings.thinkingLibrary.promptPlaceholder')}
-              rows={10}
-            />
+            rules={[{ required: true, message: t('settings.thinkingLibrary.promptRequired') }]}>
+            <Input.TextArea placeholder={t('settings.thinkingLibrary.promptPlaceholder')} rows={10} />
           </Form.Item>
 
           <Form.Item>

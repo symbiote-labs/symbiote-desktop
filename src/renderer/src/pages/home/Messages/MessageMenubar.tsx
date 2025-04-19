@@ -1,4 +1,4 @@
-import { CheckOutlined, EditOutlined, QuestionCircleOutlined, SyncOutlined, BookOutlined } from '@ant-design/icons'
+import { BookOutlined, CheckOutlined, EditOutlined, QuestionCircleOutlined, SyncOutlined } from '@ant-design/icons'
 import AssistantMemoryPopup from '@renderer/components/AssistantMemoryPopup'
 import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup'
 import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'

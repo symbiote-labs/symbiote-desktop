@@ -1,4 +1,4 @@
-import { EditOutlined, ExportOutlined } from '@ant-design/icons'
+import { EditOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import { NavbarRight } from '@renderer/components/app/Navbar'
 import { HStack } from '@renderer/components/Layout'
 import { isWindows } from '@renderer/config/constant'
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 
 import EditMcpJsonPopup from './EditMcpJsonPopup'
+import ImportMcpServerPopup from './ImportMcpServerPopup'
 import InstallNpxUv from './InstallNpxUv'
 
 export const McpSettingsNavbar = () => {
@@ -26,6 +27,15 @@ export const McpSettingsNavbar = () => {
           className="nodrag"
           style={{ fontSize: 13, height: 28, borderRadius: 20 }}>
           {t('settings.mcp.searchNpx')}
+        </Button>
+        <Button
+          size="small"
+          type="text"
+          onClick={() => ImportMcpServerPopup.show()}
+          icon={<ImportOutlined />}
+          className="nodrag"
+          style={{ fontSize: 13, height: 28, borderRadius: 20 }}>
+          {t('settings.mcp.importServer')}
         </Button>
         <Button
           size="small"

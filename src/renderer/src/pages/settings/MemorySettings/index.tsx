@@ -691,7 +691,10 @@ const MemorySettings: FC = () => {
                   <SettingDivider />
 
                   <SettingTitle>{t('settings.memory.assistantMemorySettings') || '助手记忆设置'}</SettingTitle>
-                  <SettingHelpText>{t('settings.memory.assistantMemoryDescription') || '助手记忆是与特定助手关联的记忆，可以帮助助手记住重要信息。'}</SettingHelpText>
+                  <SettingHelpText>
+                    {t('settings.memory.assistantMemoryDescription') ||
+                      '助手记忆是与特定助手关联的记忆，可以帮助助手记住重要信息。'}
+                  </SettingHelpText>
                   <SettingDivider />
 
                   {/* 助手记忆设置 */}

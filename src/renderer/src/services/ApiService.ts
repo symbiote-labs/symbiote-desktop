@@ -330,7 +330,7 @@ export async function fetchChatCompletion({
         }
       }
     }
-    // console.log('message', message)
+    // console.log('message', message) // 注释掉以避免日志过多
   } catch (error: any) {
     if (isAbortError(error)) {
       message.status = 'paused'

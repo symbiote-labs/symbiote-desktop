@@ -97,7 +97,7 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
         const data = { ...topic, name: topicName }
         // Check if _setActiveTopic exists and is a function before calling
         if (typeof _setActiveTopic === 'function') {
-           _setActiveTopic(data)
+          _setActiveTopic(data)
         }
         store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
       }
@@ -114,9 +114,9 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
           // Ensure topic is defined before using it
           if (summaryText && topic) {
             const data = { ...topic, name: summaryText }
-             // Check if _setActiveTopic exists and is a function before calling
+            // Check if _setActiveTopic exists and is a function before calling
             if (typeof _setActiveTopic === 'function') {
-               _setActiveTopic(data)
+              _setActiveTopic(data)
             }
             store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
           }

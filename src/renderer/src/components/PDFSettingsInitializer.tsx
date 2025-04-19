@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
+import { useSettings } from '@renderer/hooks/useSettings'
 import store from '@renderer/store'
 import { setPdfSettings } from '@renderer/store/settings'
-import { useSettings } from '@renderer/hooks/useSettings'
+import { useEffect } from 'react'
+import { useDispatch } from 'react-redux'
 
 /**
  * 用于在应用启动时初始化PDF设置
@@ -41,10 +41,12 @@ const PDFSettingsInitializer = () => {
       // 如果设置仍然不正确，再次强制设置
       if (!state.settings.pdfSettings?.enablePdfSplitting) {
         console.log('[PDFSettingsInitializer] Settings still incorrect, forcing again')
-        dispatch(setPdfSettings({
-          ...state.settings.pdfSettings,
-          enablePdfSplitting: true
-        }))
+        dispatch(
+          setPdfSettings({
+            ...state.settings.pdfSettings,
+            enablePdfSplitting: true
+          })
+        )
       }
     }, 1000)
 

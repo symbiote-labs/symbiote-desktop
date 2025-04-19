@@ -1,4 +1,4 @@
-import { SidebarIcon } from '@renderer/types'
+import { SidebarIcon } from '@renderer/store/settings'
 
 import { useSettings } from './useSettings'
 

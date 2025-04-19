@@ -83,15 +83,13 @@ const messagesSlice = createSlice({
         // 为了兼容多模型新发消息,一次性添加多个助手消息
         // 不是什么好主意,不符合语义
         // 检查每条消息是否已存在，避免重复添加
-        const messagesToAdd = messages.filter(msg =>
-          !currentMessages.some(existing => existing.id === msg.id)
-        )
+        const messagesToAdd = messages.filter((msg) => !currentMessages.some((existing) => existing.id === msg.id))
         if (messagesToAdd.length > 0) {
           state.messagesByTopic[topicId].push(...messagesToAdd)
         }
       } else {
         // 添加单条消息，先检查是否已存在
-        if (!currentMessages.some(existing => existing.id === messages.id)) {
+        if (!currentMessages.some((existing) => existing.id === messages.id)) {
           state.messagesByTopic[topicId].push(messages)
         }
       }
@@ -111,8 +109,8 @@ const messagesSlice = createSlice({
 
       // 要插入的消息，先过滤掉已存在的消息
       const messagesToInsert = Array.isArray(messages) ? messages : [messages]
-      const uniqueMessagesToInsert = messagesToInsert.filter(msg =>
-        !messagesList.some(existing => existing.id === msg.id)
+      const uniqueMessagesToInsert = messagesToInsert.filter(
+        (msg) => !messagesList.some((existing) => existing.id === msg.id)
       )
 
       // 如果没有新消息需要插入，直接返回
@@ -192,9 +190,7 @@ const messagesSlice = createSlice({
       } else {
         // 检查是否有重复的消息（相同的askId和内容）
         const duplicateMessage = state.messagesByTopic[topicId].find(
-          (m) => m.role === 'assistant' &&
-                m.askId === streamMessage.askId &&
-                m.content === streamMessage.content
+          (m) => m.role === 'assistant' && m.askId === streamMessage.askId && m.content === streamMessage.content
         )
 
         // 只有在没有重复消息的情况下才添加新消息
@@ -548,12 +544,15 @@ export const loadTopicMessagesThunk = (topic: Topic) => async (dispatch: AppDisp
     const topicWithDB = await TopicManager.getTopic(topic.id)
     if (topicWithDB && topicWithDB.messages) {
       // 只加载最近的N条消息，而不是全部加载
-      const initialLoadCount = state.messages.displayCount * 2; // 初始加载显示数量的2倍
-      const recentMessages = topicWithDB.messages.length > initialLoadCount
-        ? topicWithDB.messages.slice(-initialLoadCount)
-        : topicWithDB.messages;
+      const initialLoadCount = state.messages.displayCount * 2 // 初始加载显示数量的2倍
+      const recentMessages =
+        topicWithDB.messages.length > initialLoadCount
+          ? topicWithDB.messages.slice(-initialLoadCount)
+          : topicWithDB.messages
 
-      console.log(`[Messages] Loaded ${recentMessages.length}/${topicWithDB.messages.length} messages for topic ${topic.id}`);
+      console.log(
+        `[Messages] Loaded ${recentMessages.length}/${topicWithDB.messages.length} messages for topic ${topic.id}`
+      )
 
       dispatch(loadTopicMessages({ topicId: topic.id, messages: recentMessages }))
     } else {
@@ -561,7 +560,7 @@ export const loadTopicMessagesThunk = (topic: Topic) => async (dispatch: AppDisp
     }
     dispatch(setCurrentTopic(topic))
   } catch (error) {
-    console.error('[Messages] Error loading topic messages:', error);
+    console.error('[Messages] Error loading topic messages:', error)
     dispatch(setError(error instanceof Error ? error.message : 'Failed to load messages'))
   } finally {
     dispatch(setTopicLoading({ topicId: topic.id, loading: false }))

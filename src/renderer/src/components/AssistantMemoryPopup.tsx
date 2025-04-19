@@ -1,11 +1,11 @@
+import { DeleteOutlined } from '@ant-design/icons'
 import { addAssistantMemoryItem } from '@renderer/services/MemoryService'
 import store, { useAppDispatch, useAppSelector } from '@renderer/store'
 import { deleteAssistantMemory } from '@renderer/store/memory'
 import { Button, Empty, Input, List, Modal, Tooltip, Typography } from 'antd'
-import { DeleteOutlined } from '@ant-design/icons'
 import { useCallback, useState } from 'react'
-import { Provider } from 'react-redux'
 import { useTranslation } from 'react-i18next'
+import { Provider } from 'react-redux'
 import styled from 'styled-components'
 
 const { Text } = Typography

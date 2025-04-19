@@ -1,5 +1,5 @@
+import { openSearchPanel, search } from '@codemirror/search'
 import { Extension } from '@codemirror/state'
-import { search, openSearchPanel } from '@codemirror/search'
 import { EditorView } from '@codemirror/view'
 
 // 创建中文搜索面板

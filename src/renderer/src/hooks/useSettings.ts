@@ -15,7 +15,8 @@ import {
   setTrayOnClose,
   setWindowStyle
 } from '@renderer/store/settings'
-import { SidebarIcon, ThemeMode, TranslateLanguageVarious } from '@renderer/types'
+import { SidebarIcon } from '@renderer/store/settings'
+import { ThemeMode, TranslateLanguageVarious } from '@renderer/types'
 
 export function useSettings() {
   const settings = useAppSelector((state) => state.settings)

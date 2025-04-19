@@ -50,9 +50,9 @@ const MessageStream: React.FC<MessageStreamProps> = ({
 
   // 使用useMemo缓存计算结果
   const { isStreaming, message } = useMemo(() => {
-    const isStreaming = !!(streamMessage && streamMessage.id === _message.id);
-    const message = isStreaming ? streamMessage : regularMessage;
-    return { isStreaming, message };
+    const isStreaming = !!(streamMessage && streamMessage.id === _message.id)
+    const message = isStreaming ? streamMessage : regularMessage
+    return { isStreaming, message }
   }, [streamMessage, regularMessage, _message.id])
   return (
     <MessageStreamContainer>
@@ -78,5 +78,5 @@ export default memo(MessageStream, (prevProps, nextProps) => {
     prevProps.message.content === nextProps.message.content &&
     prevProps.message.status === nextProps.message.status &&
     prevProps.topic.id === nextProps.topic.id
-  );
+  )
 })

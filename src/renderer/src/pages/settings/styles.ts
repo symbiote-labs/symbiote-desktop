@@ -1,5 +1,5 @@
-import styled from 'styled-components'
 import { ThemeMode } from '@renderer/types'
+import styled from 'styled-components'
 
 export const SettingContainer = styled.div<{ theme: ThemeMode }>`
   padding: 20px;

@@ -38,7 +38,10 @@ export function useSystemAgents() {
         }
 
         // 处理Uint8Array类型（二进制数据）
-        if (fileContent instanceof Uint8Array || Object.prototype.toString.call(fileContent) === '[object Uint8Array]') {
+        if (
+          fileContent instanceof Uint8Array ||
+          Object.prototype.toString.call(fileContent) === '[object Uint8Array]'
+        ) {
           console.log('文件内容是Uint8Array类型，转换为字符串')
           // 将Uint8Array转换为字符串
           const decoder = new TextDecoder('utf-8')

@@ -1,12 +1,11 @@
 import { spawn } from 'child_process'
+// 如果将来需要使用这些工具函数，可以取消注释
+// import { getBinaryPath, isBinaryExists } from '@main/utils/process'
+import log from 'electron-log'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-
-// 如果将来需要使用这些工具函数，可以取消注释
-// import { getBinaryPath, isBinaryExists } from '@main/utils/process'
-import log from 'electron-log'
 
 // 支持的语言类型
 export enum CodeLanguage {

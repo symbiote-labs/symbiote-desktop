@@ -33,6 +33,7 @@ declare global {
       clearCache: () => Promise<{ success: boolean; error?: string }>
       system: {
         getDeviceType: () => Promise<'mac' | 'windows' | 'linux'>
+        getHostname: () => Promise<string>
       }
       zip: {
         compress: (text: string) => Promise<Buffer>
@@ -207,11 +208,11 @@ declare global {
         deleteShortMemoryById: (id: string) => Promise<boolean>
         loadLongTermData: () => Promise<any>
         saveLongTermData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
-      },
+      }
       asrServer: {
         startServer: () => Promise<{ success: boolean; pid?: number; port?: number; error?: string }>
         stopServer: (pid: number) => Promise<{ success: boolean; error?: string }>
-      },
+      }
       pdf: {
         splitPDF: (file: FileType, pageRange: string) => Promise<FileType>
       }

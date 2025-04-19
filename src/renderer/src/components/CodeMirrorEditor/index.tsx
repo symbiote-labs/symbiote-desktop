@@ -1,34 +1,33 @@
-import { EditorState } from '@codemirror/state'
-import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
-import { defaultKeymap, history, historyKeymap, undo, redo, indentWithTab } from '@codemirror/commands'
-import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
-import { tags } from '@lezer/highlight'
-import { javascript } from '@codemirror/lang-javascript'
-import { python } from '@codemirror/lang-python'
-import { html } from '@codemirror/lang-html'
-import { css } from '@codemirror/lang-css'
-import { json } from '@codemirror/lang-json'
-import { markdown } from '@codemirror/lang-markdown'
-import { cpp } from '@codemirror/lang-cpp'
-import { java } from '@codemirror/lang-java'
-import { php } from '@codemirror/lang-php'
-import { rust } from '@codemirror/lang-rust'
-import { sql } from '@codemirror/lang-sql'
-import { xml } from '@codemirror/lang-xml'
-import { vue } from '@codemirror/lang-vue'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { autocompletion } from '@codemirror/autocomplete'
-import { searchKeymap } from '@codemirror/search'
-import { createChineseSearchPanel, openChineseSearchPanel } from './ChineseSearchPanel'
-import { useTheme } from '@renderer/context/ThemeProvider'
-import { ThemeMode } from '@renderer/types'
-import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react'
-import styled from 'styled-components'
-
 import './styles.css'
 import './ChineseSearchPanel.css'
 
+import { autocompletion } from '@codemirror/autocomplete'
+import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
+import { cpp } from '@codemirror/lang-cpp'
+import { css } from '@codemirror/lang-css'
+import { html } from '@codemirror/lang-html'
+import { java } from '@codemirror/lang-java'
+import { javascript } from '@codemirror/lang-javascript'
+import { json } from '@codemirror/lang-json'
+import { markdown } from '@codemirror/lang-markdown'
+import { php } from '@codemirror/lang-php'
+import { python } from '@codemirror/lang-python'
+import { rust } from '@codemirror/lang-rust'
+import { sql } from '@codemirror/lang-sql'
+import { vue } from '@codemirror/lang-vue'
+import { xml } from '@codemirror/lang-xml'
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { searchKeymap } from '@codemirror/search'
+import { EditorState } from '@codemirror/state'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
+import { tags } from '@lezer/highlight'
+import { useTheme } from '@renderer/context/ThemeProvider'
+import { ThemeMode } from '@renderer/types'
+import { useEffect, useImperativeHandle, useMemo, useRef } from 'react'
+import styled from 'styled-components'
 
+import { createChineseSearchPanel, openChineseSearchPanel } from './ChineseSearchPanel'
 
 // 自定义语法高亮样式
 const lightThemeHighlightStyle = HighlightStyle.define([
@@ -54,7 +53,7 @@ const lightThemeHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: '#800000', fontWeight: 'bold' },
   { tag: tags.link, color: '#0000ff', textDecoration: 'underline' },
   { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.strong, fontWeight: 'bold' },
+  { tag: tags.strong, fontWeight: 'bold' }
 ])
 
 // 暗色主题语法高亮样式
@@ -81,7 +80,7 @@ const darkThemeHighlightStyle = HighlightStyle.define([
   { tag: tags.heading, color: '#569cd6', fontWeight: 'bold' },
   { tag: tags.link, color: '#569cd6', textDecoration: 'underline' },
   { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.strong, fontWeight: 'bold' },
+  { tag: tags.strong, fontWeight: 'bold' }
 ])
 
 export interface CodeMirrorEditorRef {
@@ -149,18 +148,16 @@ const getLanguageExtension = (language: string) => {
   }
 }
 
-const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>((
-  {
-    code,
-    language,
-    onChange,
-    readOnly = false,
-    showLineNumbers = true,
-    fontSize = 14,
-    height = 'auto'
-  },
-  ref
-) => {
+const CodeMirrorEditor = ({
+  ref,
+  code,
+  language,
+  onChange,
+  readOnly = false,
+  showLineNumbers = true,
+  fontSize = 14,
+  height = 'auto'
+}: CodeMirrorEditorProps & { ref?: React.RefObject<CodeMirrorEditorRef | null> }) => {
   const editorRef = useRef<HTMLDivElement>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const { theme } = useTheme()
@@ -223,13 +220,11 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
     const languageExtension = getLanguageExtension(language)
 
     // 监听编辑器所有更新
-    const updateListener = EditorView.updateListener.of(update => {
+    const updateListener = EditorView.updateListener.of((update) => {
       // 当文档变化时更新内部状态
       if (update.docChanged) {
         // 检查是否是撤销/重做操作
-        const isUndoRedo = update.transactions.some(tr =>
-          tr.isUserEvent('undo') || tr.isUserEvent('redo')
-        )
+        const isUndoRedo = update.transactions.some((tr) => tr.isUserEvent('undo') || tr.isUserEvent('redo'))
 
         // 记录所有文档变化，但只在撤销/重做时触发 onChange
         if (isUndoRedo && onChange) {
@@ -247,9 +242,9 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
         ...historyKeymap,
         ...searchKeymap,
         indentWithTab,
-        { key: "Mod-z", run: undo },
-        { key: "Mod-y", run: redo },
-        { key: "Mod-Shift-z", run: redo }
+        { key: 'Mod-z', run: undo },
+        { key: 'Mod-y', run: redo },
+        { key: 'Mod-Shift-z', run: redo }
       ]),
       syntaxHighlighting(highlightStyle),
       languageExtension,
@@ -298,7 +293,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
   }, [code, language, onChange, readOnly, showLineNumbers, theme, fontSize, height])
 
   return <EditorContainer ref={editorRef} />
-});
+}
 
 const EditorContainer = styled.div`
   width: 100%;

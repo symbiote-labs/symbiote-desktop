@@ -82,6 +82,8 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
       window.message.success(t('settings.mcp.jsonSaveSuccess'))
       setJsonError('')
       setOpen(false)
+      resolve({})
+      TopView.hide(TopViewKey)
     } catch (error: any) {
       console.error('Failed to save JSON config:', error)
       setJsonError(error.message || t('settings.mcp.jsonSaveError'))
@@ -93,6 +95,8 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
 
   const onCancel = () => {
     setOpen(false)
+    resolve({})
+    TopView.hide(TopViewKey)
   }
 
   const onClose = () => {

@@ -65,7 +65,7 @@ const PopupContainer: React.FC<Props> = ({ title, resolve }) => {
       centered>
       <Form
         form={form}
-        labelCol={{ flex: '110px' }}
+        labelCol={{ flex: '80px' }}
         labelAlign="left"
         colon={false}
         style={{ marginTop: 25 }}
@@ -90,7 +90,7 @@ const PopupContainer: React.FC<Props> = ({ title, resolve }) => {
         </Form.Item>
         <Form.Item label=" ">
           <Button type="primary" htmlType="submit">
-            {t('settings.websearch.subscribe_add')}
+            {t('common.add')}
           </Button>
         </Form.Item>
       </Form>

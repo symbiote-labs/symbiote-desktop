@@ -27,8 +27,10 @@ export function checkModelCombinationsInLocalStorage() {
     }
 
     const combinations = JSON.parse(savedCombinations)
-    console.log('[checkModelCombinationsInLocalStorage] localStorage中的模型组合数据:',
-                JSON.stringify(combinations, null, 2))
+    console.log(
+      '[checkModelCombinationsInLocalStorage] localStorage中的模型组合数据:',
+      JSON.stringify(combinations, null, 2)
+    )
   } catch (e) {
     console.error('[checkModelCombinationsInLocalStorage] 解析localStorage中的模型组合数据失败:', e)
   }
@@ -41,10 +43,18 @@ export function checkModelCombinationsInLocalStorage() {
  */
 // 创建模型对象，用于添加到DeepClaude提供商中
 export function createDeepClaudeModel(combination: ModelCombination): Model {
-  console.log('[createDeepClaudeModel] 创建DeepClaude模型，组合ID:', combination.id,
-            '组合名称:', combination.name,
-            '推理模型:', combination.reasonerModel?.id, combination.reasonerModel?.name,
-            '目标模型:', combination.targetModel?.id, combination.targetModel?.name)
+  console.log(
+    '[createDeepClaudeModel] 创建DeepClaude模型，组合ID:',
+    combination.id,
+    '组合名称:',
+    combination.name,
+    '推理模型:',
+    combination.reasonerModel?.id,
+    combination.reasonerModel?.name,
+    '目标模型:',
+    combination.targetModel?.id,
+    combination.targetModel?.name
+  )
 
   // 使用组合ID作为模型ID
   console.log('[createDeepClaudeModel] 使用组合ID作为模型ID:', combination.id)
@@ -80,9 +90,12 @@ export function createDeepClaudeProvider(combinations: ModelCombination[]): Prov
     isSystem: false
   }
 
-  console.log('[createDeepClaudeProvider] 创建的提供商详情:',
-            { id: provider.id, name: provider.name, type: provider.type,
-              models: provider.models.map(m => ({ id: m.id, name: m.name, provider: m.provider })) })
+  console.log('[createDeepClaudeProvider] 创建的提供商详情:', {
+    id: provider.id,
+    name: provider.name,
+    type: provider.type,
+    models: provider.models.map((m) => ({ id: m.id, name: m.name, provider: m.provider }))
+  })
 
   return provider
 }
@@ -100,23 +113,25 @@ export function getActiveModelCombinations(): ModelCombination[] {
     }
 
     const combinations = JSON.parse(savedCombinations) as ModelCombination[]
-    const activeCombinations = combinations.filter(c => c.isActive)
+    const activeCombinations = combinations.filter((c) => c.isActive)
     console.log('[getActiveModelCombinations] 找到激活的模型组合数量:', activeCombinations.length)
-    console.log('[getActiveModelCombinations] 激活的模型组合详情:',
-              activeCombinations.map(c => ({
-                id: c.id,
-                name: c.name,
-                reasonerModel: {
-                  id: c.reasonerModel?.id,
-                  name: c.reasonerModel?.name,
-                  provider: c.reasonerModel?.provider
-                },
-                targetModel: {
-                  id: c.targetModel?.id,
-                  name: c.targetModel?.name,
-                  provider: c.targetModel?.provider
-                }
-              })))
+    console.log(
+      '[getActiveModelCombinations] 激活的模型组合详情:',
+      activeCombinations.map((c) => ({
+        id: c.id,
+        name: c.name,
+        reasonerModel: {
+          id: c.reasonerModel?.id,
+          name: c.reasonerModel?.name,
+          provider: c.reasonerModel?.provider
+        },
+        targetModel: {
+          id: c.targetModel?.id,
+          name: c.targetModel?.name,
+          provider: c.targetModel?.provider
+        }
+      }))
+    )
     return activeCombinations
   } catch (e) {
     console.error('[getActiveModelCombinations] Failed to parse model combinations:', e)
@@ -138,6 +153,11 @@ export function createAllDeepClaudeProviders(): Provider[] {
 
   // 创建一个单一的DeepClaude提供商
   const provider = createDeepClaudeProvider(activeCombinations)
-  console.log('[createAllDeepClaudeProviders] 创建的DeepClaude提供商:', provider.id, provider.name, provider.models.length)
+  console.log(
+    '[createAllDeepClaudeProviders] 创建的DeepClaude提供商:',
+    provider.id,
+    provider.name,
+    provider.models.length
+  )
   return [provider]
 }

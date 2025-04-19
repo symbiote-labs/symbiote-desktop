@@ -1,17 +1,18 @@
+import { ApiOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons'
+import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
+import { HStack, VStack } from '@renderer/components/Layout'
+import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useProviders } from '@renderer/hooks/useProvider'
-import { FC, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import styled from 'styled-components'
-import { Button, Divider, Form, Input, Switch, Tooltip, message } from 'antd'
-import { InfoCircleOutlined, PlusOutlined, ApiOutlined } from '@ant-design/icons'
-import { HStack, VStack } from '@renderer/components/Layout'
-import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
-import SelectModelPopup from '@renderer/components/Popups/SelectModelPopup'
-import ModelAvatar from '@renderer/components/Avatar/ModelAvatar'
 import { Model } from '@renderer/types'
 // 不再需要 useAppDispatch
 import { createAllDeepClaudeProviders } from '@renderer/utils/createDeepClaudeProvider'
+import { Button, Divider, Form, Input, message, Switch, Tooltip } from 'antd'
+import { FC, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
+
+import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
 
 interface ModelCombination {
   id: string
@@ -29,9 +30,9 @@ const DeepClaudeSettings: FC = () => {
   // 本地状态
   const [combinations, setCombinations] = useState<ModelCombination[]>([])
   const [newCombination, setNewCombination] = useState<{
-    name: string;
-    reasonerModel: string;
-    targetModel: string;
+    name: string
+    reasonerModel: string
+    targetModel: string
   }>({
     name: '',
     reasonerModel: '',
@@ -41,9 +42,9 @@ const DeepClaudeSettings: FC = () => {
   // 编辑状态
   const [editingCombination, setEditingCombination] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<{
-    name: string;
-    reasonerModel: string;
-    targetModel: string;
+    name: string
+    reasonerModel: string
+    targetModel: string
   }>({
     name: '',
     reasonerModel: '',
@@ -51,8 +52,8 @@ const DeepClaudeSettings: FC = () => {
   })
 
   // 获取所有可用的模型
-  const allModels = providers.flatMap(provider =>
-    provider.models.map(model => ({
+  const allModels = providers.flatMap((provider) =>
+    provider.models.map((model) => ({
       ...model,
       providerName: provider.name,
       providerId: provider.id
@@ -60,21 +61,25 @@ const DeepClaudeSettings: FC = () => {
   )
 
   // 推荐的推理模型
-  const recommendedReasonerModels = allModels.filter(model => {
+  const recommendedReasonerModels = allModels.filter((model) => {
     // 推荐 DeepSeek 模型作为推理模型
-    return model.name.toLowerCase().includes('deepseek') ||
-           model.name.toLowerCase().includes('deep-seek') ||
-           model.name.toLowerCase().includes('yi') ||
-           model.name.toLowerCase().includes('qwen') ||
-           model.name.toLowerCase().includes('glm')
+    return (
+      model.name.toLowerCase().includes('deepseek') ||
+      model.name.toLowerCase().includes('deep-seek') ||
+      model.name.toLowerCase().includes('yi') ||
+      model.name.toLowerCase().includes('qwen') ||
+      model.name.toLowerCase().includes('glm')
+    )
   })
 
   // 推荐的目标模型
-  const recommendedTargetModels = allModels.filter(model => {
+  const recommendedTargetModels = allModels.filter((model) => {
     // 推荐 Claude 和 Gemini 模型作为目标模型
-    return model.name.toLowerCase().includes('claude') ||
-           model.name.toLowerCase().includes('gemini') ||
-           model.name.toLowerCase().includes('gpt')
+    return (
+      model.name.toLowerCase().includes('claude') ||
+      model.name.toLowerCase().includes('gemini') ||
+      model.name.toLowerCase().includes('gpt')
+    )
   })
 
   // 创建提供商
@@ -132,7 +137,7 @@ const DeepClaudeSettings: FC = () => {
 
   // 开始编辑组合
   const startEditCombination = (id: string) => {
-    const combination = combinations.find(c => c.id === id)
+    const combination = combinations.find((c) => c.id === id)
     if (!combination) return
 
     setEditingCombination(id)
@@ -149,7 +154,7 @@ const DeepClaudeSettings: FC = () => {
       return
     }
 
-    const newCombinations = combinations.map(c =>
+    const newCombinations = combinations.map((c) =>
       c.id === editingCombination
         ? {
             ...c,
@@ -178,28 +183,26 @@ const DeepClaudeSettings: FC = () => {
 
   // 删除组合
   const deleteCombination = (id: string) => {
-    const newCombinations = combinations.filter(c => c.id !== id)
+    const newCombinations = combinations.filter((c) => c.id !== id)
     setCombinations(newCombinations)
   }
 
   // 更新组合状态
   const updateCombinationStatus = (id: string, enabled: boolean) => {
-    const newCombinations = combinations.map(c =>
-      c.id === id ? { ...c, enabled } : c
-    )
+    const newCombinations = combinations.map((c) => (c.id === id ? { ...c, enabled } : c))
     setCombinations(newCombinations)
   }
 
   // 获取模型名称
   const getModelFullName = (modelId: string) => {
-    const model = allModels.find(m => m.id === modelId)
+    const model = allModels.find((m) => m.id === modelId)
     if (!model) return modelId
     return `${model.name} (${model.providerName})`
   }
 
   // 获取模型对象
   const getModelById = (modelId: string): Model | undefined => {
-    return allModels.find(m => m.id === modelId)
+    return allModels.find((m) => m.id === modelId)
   }
 
   // 选择推理模型
@@ -306,7 +309,7 @@ const DeepClaudeSettings: FC = () => {
               <SettingRowTitle>{t('settings.deepclaude.combinations')}</SettingRowTitle>
             </SettingRow>
 
-            {combinations.map(combination => (
+            {combinations.map((combination) => (
               <CombinationItem key={combination.id}>
                 <VStack gap={10}>
                   <HStack justifyContent="space-between" alignItems="center">
@@ -327,26 +330,13 @@ const DeepClaudeSettings: FC = () => {
                     </ModelInfo>
                   </HStack>
                   <HStack justifyContent="flex-end" gap={8}>
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<ApiOutlined />}
-                      onClick={() => createProvider()}
-                    >
+                    <Button type="primary" size="small" icon={<ApiOutlined />} onClick={() => createProvider()}>
                       {t('settings.deepclaude.create_provider')}
                     </Button>
-                    <Button
-                      type="default"
-                      size="small"
-                      onClick={() => startEditCombination(combination.id)}
-                    >
+                    <Button type="default" size="small" onClick={() => startEditCombination(combination.id)}>
                       {t('common.edit')}
                     </Button>
-                    <Button
-                      danger
-                      size="small"
-                      onClick={() => deleteCombination(combination.id)}
-                    >
+                    <Button danger size="small" onClick={() => deleteCombination(combination.id)}>
                       {t('common.delete')}
                     </Button>
                   </HStack>
@@ -360,11 +350,7 @@ const DeepClaudeSettings: FC = () => {
 
         {combinations.length > 0 && (
           <HStack justifyContent="flex-end" style={{ marginBottom: '20px' }}>
-            <Button
-              type="primary"
-              icon={<ApiOutlined />}
-              onClick={createAllProviders}
-            >
+            <Button type="primary" icon={<ApiOutlined />} onClick={createAllProviders}>
               {t('settings.deepclaude.create_all_providers')}
             </Button>
           </HStack>
@@ -381,7 +367,7 @@ const DeepClaudeSettings: FC = () => {
               <Form.Item label={t('settings.deepclaude.combination_name')}>
                 <Input
                   value={editForm.name}
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   placeholder={t('settings.deepclaude.combination_name_placeholder')}
                 />
               </Form.Item>
@@ -391,7 +377,7 @@ const DeepClaudeSettings: FC = () => {
                   model={getModelById(editForm.reasonerModel)}
                   onClick={selectEditReasonerModel}
                   placeholder={t('settings.deepclaude.select_reasoner_placeholder')}
-                  recommended={recommendedReasonerModels.some(m => m.id === editForm.reasonerModel) ? '★' : ''}
+                  recommended={recommendedReasonerModels.some((m) => m.id === editForm.reasonerModel) ? '★' : ''}
                 />
               </Form.Item>
               <ModelTip>{t('settings.deepclaude.reasoner_tip')}</ModelTip>
@@ -401,7 +387,7 @@ const DeepClaudeSettings: FC = () => {
                   model={getModelById(editForm.targetModel)}
                   onClick={selectEditTargetModel}
                   placeholder={t('settings.deepclaude.select_target_placeholder')}
-                  recommended={recommendedTargetModels.some(m => m.id === editForm.targetModel) ? '★' : ''}
+                  recommended={recommendedTargetModels.some((m) => m.id === editForm.targetModel) ? '★' : ''}
                 />
               </Form.Item>
               <ModelTip>{t('settings.deepclaude.target_tip')}</ModelTip>
@@ -411,13 +397,10 @@ const DeepClaudeSettings: FC = () => {
                   <Button
                     type="primary"
                     onClick={saveEditCombination}
-                    disabled={!editForm.name || !editForm.reasonerModel || !editForm.targetModel}
-                  >
+                    disabled={!editForm.name || !editForm.reasonerModel || !editForm.targetModel}>
                     {t('common.save')}
                   </Button>
-                  <Button onClick={cancelEdit}>
-                    {t('common.cancel')}
-                  </Button>
+                  <Button onClick={cancelEdit}>{t('common.cancel')}</Button>
                 </HStack>
               </Form.Item>
             </Form>
@@ -437,7 +420,7 @@ const DeepClaudeSettings: FC = () => {
               <Form.Item label={t('settings.deepclaude.combination_name')}>
                 <Input
                   value={newCombination.name}
-                  onChange={(e) => setNewCombination({...newCombination, name: e.target.value})}
+                  onChange={(e) => setNewCombination({ ...newCombination, name: e.target.value })}
                   placeholder={t('settings.deepclaude.combination_name_placeholder')}
                 />
               </Form.Item>
@@ -447,7 +430,7 @@ const DeepClaudeSettings: FC = () => {
                   model={getModelById(newCombination.reasonerModel)}
                   onClick={selectReasonerModel}
                   placeholder={t('settings.deepclaude.select_reasoner_placeholder')}
-                  recommended={recommendedReasonerModels.some(m => m.id === newCombination.reasonerModel) ? '★' : ''}
+                  recommended={recommendedReasonerModels.some((m) => m.id === newCombination.reasonerModel) ? '★' : ''}
                 />
               </Form.Item>
               <ModelTip>{t('settings.deepclaude.reasoner_tip')}</ModelTip>
@@ -457,7 +440,7 @@ const DeepClaudeSettings: FC = () => {
                   model={getModelById(newCombination.targetModel)}
                   onClick={selectTargetModel}
                   placeholder={t('settings.deepclaude.select_target_placeholder')}
-                  recommended={recommendedTargetModels.some(m => m.id === newCombination.targetModel) ? '★' : ''}
+                  recommended={recommendedTargetModels.some((m) => m.id === newCombination.targetModel) ? '★' : ''}
                 />
               </Form.Item>
               <ModelTip>{t('settings.deepclaude.target_tip')}</ModelTip>
@@ -467,8 +450,7 @@ const DeepClaudeSettings: FC = () => {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={addCombination}
-                  disabled={!newCombination.name || !newCombination.reasonerModel || !newCombination.targetModel}
-                >
+                  disabled={!newCombination.name || !newCombination.reasonerModel || !newCombination.targetModel}>
                   {t('settings.deepclaude.add')}
                 </Button>
               </Form.Item>
@@ -510,10 +492,10 @@ const ModelTip = styled.div`
 `
 
 interface ModelSelectButtonProps {
-  model?: Model;
-  onClick: () => void;
-  placeholder: string;
-  recommended?: string;
+  model?: Model
+  onClick: () => void
+  placeholder: string
+  recommended?: string
 }
 
 const ModelSelectButton: FC<ModelSelectButtonProps> = ({ model, onClick, placeholder, recommended }) => {

@@ -9,16 +9,19 @@ interface Props {
 
 interface State {
   hasError: boolean
-  errorMessage?: string
+  error?: Error
 }
 
-const ErrorFallback = ({ fallback }: { fallback?: React.ReactNode }) => {
+const ErrorFallback = ({ fallback, error }: { fallback?: React.ReactNode; error?: Error }) => {
   const { t } = useTranslation()
-  return (
-    fallback || (
-      <Alert message={t('error.render.title')} description={t('error.render.description')} type="error" showIcon />
-    )
-  )
+
+  // 如果有详细错误信息，添加到描述中
+  const errorDescription =
+    process.env.NODE_ENV !== 'production' && error
+      ? `${t('error.render.description')}: ${error.message}`
+      : t('error.render.description')
+
+  return fallback || <Alert message={t('error.render.title')} description={errorDescription} type="error" showIcon />
 }
 
 class MessageErrorBoundary extends React.Component<Props, State> {
@@ -28,21 +31,7 @@ class MessageErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error) {
-    // 检查是否是特定错误
-    let errorMessage: string | undefined = undefined
-
-    if (error.message === 'rememberInstructions is not defined') {
-      errorMessage = '消息加载时发生错误'
-    } else if (error.message === 'network error') {
-      errorMessage = '网络连接错误，请检查您的网络连接并重试'
-    } else if (
-      typeof error.message === 'string' &&
-      (error.message.includes('network') || error.message.includes('timeout') || error.message.includes('connection'))
-    ) {
-      errorMessage = '网络连接问题'
-    }
-
-    return { hasError: true, errorMessage }
+    return { hasError: true, error }
   }
   // 正确缩进 componentDidCatch
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -65,11 +54,7 @@ class MessageErrorBoundary extends React.Component<Props, State> {
   // 正确缩进 render
   render() {
     if (this.state.hasError) {
-      // 如果有特定错误消息，显示自定义错误
-      if (this.state.errorMessage) {
-        return <Alert message="渲染错误" description={this.state.errorMessage} type="error" showIcon />
-      }
-      return <ErrorFallback fallback={this.props.fallback} />
+      return <ErrorFallback fallback={this.props.fallback} error={this.state.error} />
     }
     return this.props.children
   }

@@ -7,7 +7,7 @@
 const http = require('http')
 const path = require('path')
 const fs = require('fs')
-const net = require('net')
+// const net = require('net')
 const crypto = require('crypto')
 
 // 输出环境信息
@@ -114,23 +114,24 @@ const clients = {
 }
 
 // 处理WebSocket连接
-server.on('upgrade', (request, socket, head) => {
+server.on('upgrade', (request, socket) => {
   try {
     console.log('[WebSocket] Connection upgrade request received')
 
     // 解析WebSocket密钥
     const key = request.headers['sec-websocket-key']
-    const acceptKey = crypto.createHash('sha1')
+    const acceptKey = crypto
+      .createHash('sha1')
       .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', 'binary')
       .digest('base64')
 
     // 发送WebSocket握手响应
     socket.write(
       'HTTP/1.1 101 Switching Protocols\r\n' +
-      'Upgrade: websocket\r\n' +
-      'Connection: Upgrade\r\n' +
-      `Sec-WebSocket-Accept: ${acceptKey}\r\n` +
-      '\r\n'
+        'Upgrade: websocket\r\n' +
+        'Connection: Upgrade\r\n' +
+        `Sec-WebSocket-Accept: ${acceptKey}\r\n` +
+        '\r\n'
     )
 
     console.log('[WebSocket] Handshake successful')
@@ -157,10 +158,8 @@ function handleWebSocketConnection(socket) {
         // 检查是否有完整的帧
         const firstByte = buffer[0]
         const secondByte = buffer[1]
-        const isFinalFrame = Boolean((firstByte >>> 7) & 0x1)
-        const [opCode, maskFlag, payloadLength] = [
-          firstByte & 0xF, (secondByte >>> 7) & 0x1, secondByte & 0x7F
-        ]
+        // const isFinalFrame = Boolean((firstByte >>> 7) & 0x1)
+        const [opCode, maskFlag, payloadLength] = [firstByte & 0xf, (secondByte >>> 7) & 0x1, secondByte & 0x7f]
 
         // 处理不同的负载长度
         let payloadStartIndex = 2
@@ -265,7 +264,7 @@ function sendWebSocketFrame(socket, data, opCode = 0x1) {
 
 // 发送Pong响应
 function sendPong(socket) {
-  const pongFrame = Buffer.from([0x8A, 0x00])
+  const pongFrame = Buffer.from([0x8a, 0x00])
   socket.write(pongFrame)
 }
 
@@ -351,11 +350,11 @@ async function findAvailablePort(startPort) {
     port++
   }
 
-  throw new Error(`Could not find an available port between ${startPort} and ${maxPort-1}`)
+  throw new Error(`Could not find an available port between ${startPort} and ${maxPort - 1}`)
 }
 
 // 尝试启动服务器
-(async () => {
+;(async () => {
   try {
     // 默认端口
     const defaultPort = 34515

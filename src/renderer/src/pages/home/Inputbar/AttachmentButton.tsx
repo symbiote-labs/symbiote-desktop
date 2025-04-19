@@ -1,3 +1,4 @@
+import PDFSplitter from '@renderer/components/PDFSplitter'
 import { isVisionModel } from '@renderer/config/models'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { setPdfSettings } from '@renderer/store/settings'
@@ -8,7 +9,6 @@ import { Paperclip } from 'lucide-react'
 import { FC, useCallback, useImperativeHandle, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
-import PDFSplitter from '@renderer/components/PDFSplitter'
 
 export interface AttachmentButtonRef {
   openQuickPanel: () => void
@@ -54,41 +54,47 @@ const AttachmentButton: FC<Props> = ({ ref, model, files, setFiles, ToolbarButto
     return pdfSettings
   }, [dispatch, pdfSettings])
 
-  const handlePdfFile = useCallback((file: FileType) => {
-    console.log('[AttachmentButton] handlePdfFile called with file:', file)
+  const handlePdfFile = useCallback(
+    (file: FileType) => {
+      console.log('[AttachmentButton] handlePdfFile called with file:', file)
 
-    // 强制初始化PDF设置
-    const settings = forcePdfSettingsInitialization()
-    console.log('[AttachmentButton] PDF settings after initialization:', settings)
+      // 强制初始化PDF设置
+      const settings = forcePdfSettingsInitialization()
+      console.log('[AttachmentButton] PDF settings after initialization:', settings)
 
-    if (settings.enablePdfSplitting && file.ext.toLowerCase() === '.pdf') {
-      console.log('[AttachmentButton] PDF splitting enabled, showing splitter dialog')
-      setSelectedPdfFile(file)
-      setPdfSplitterVisible(true)
-      return true // 返回true表示我们已经处理了这个文件
-    }
-    console.log('[AttachmentButton] PDF splitting disabled or not a PDF file, returning false')
-    return false // 返回false表示这个文件需要正常处理
-  }, [forcePdfSettingsInitialization])
+      if (settings.enablePdfSplitting && file.ext.toLowerCase() === '.pdf') {
+        console.log('[AttachmentButton] PDF splitting enabled, showing splitter dialog')
+        setSelectedPdfFile(file)
+        setPdfSplitterVisible(true)
+        return true // 返回true表示我们已经处理了这个文件
+      }
+      console.log('[AttachmentButton] PDF splitting disabled or not a PDF file, returning false')
+      return false // 返回false表示这个文件需要正常处理
+    },
+    [forcePdfSettingsInitialization]
+  )
 
-  const handlePdfSplitterConfirm = useCallback(async (file: FileType, pageRange: string) => {
-    console.log('[AttachmentButton] handlePdfSplitterConfirm called with file:', file, 'pageRange:', pageRange)
-    try {
-      // 调用主进程的PDF分割功能
-      console.log('[AttachmentButton] Calling window.api.pdf.splitPDF')
-      const newFile = await window.api.pdf.splitPDF(file, pageRange)
-      console.log('[AttachmentButton] PDF split successful, new file:', newFile)
-      setFiles([...files, newFile])
-      setPdfSplitterVisible(false)
-      setSelectedPdfFile(null)
-    } catch (error) {
-      console.error('[AttachmentButton] Error splitting PDF:', error)
-      window.message.error({
-        content: t('pdf.error_splitting'),
-        key: 'pdf-error-splitting'
-      })
-    }
-  }, [files, setFiles, t])
+  const handlePdfSplitterConfirm = useCallback(
+    async (file: FileType, pageRange: string) => {
+      console.log('[AttachmentButton] handlePdfSplitterConfirm called with file:', file, 'pageRange:', pageRange)
+      try {
+        // 调用主进程的PDF分割功能
+        console.log('[AttachmentButton] Calling window.api.pdf.splitPDF')
+        const newFile = await window.api.pdf.splitPDF(file, pageRange)
+        console.log('[AttachmentButton] PDF split successful, new file:', newFile)
+        setFiles([...files, newFile])
+        setPdfSplitterVisible(false)
+        setSelectedPdfFile(null)
+      } catch (error) {
+        console.error('[AttachmentButton] Error splitting PDF:', error)
+        window.message.error({
+          content: t('pdf.error_splitting'),
+          key: 'pdf-error-splitting'
+        })
+      }
+    },
+    [files, setFiles, t]
+  )
 
   const onSelectFile = useCallback(async () => {
     // 强制初始化PDF设置
@@ -107,8 +113,8 @@ const AttachmentButton: FC<Props> = ({ ref, model, files, setFiles, ToolbarButto
 
     if (_files) {
       // 检查是否有PDF文件需要特殊处理
-      const pdfFiles = _files.filter(file => file.ext.toLowerCase() === '.pdf')
-      const nonPdfFiles = _files.filter(file => file.ext.toLowerCase() !== '.pdf')
+      const pdfFiles = _files.filter((file) => file.ext.toLowerCase() === '.pdf')
+      const nonPdfFiles = _files.filter((file) => file.ext.toLowerCase() !== '.pdf')
 
       // 添加非PDF文件
       if (nonPdfFiles.length > 0) {

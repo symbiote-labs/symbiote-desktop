@@ -59,6 +59,8 @@ const MCPSettings: FC = () => {
     }
   }, [mcpServers, selectedMcpServer])
 
+  // 这些函数已移至顶部工具栏，不再需要
+
   const McpServersList = useCallback(
     () => (
       <GridContainer>
@@ -265,5 +267,7 @@ const BackButton = styled.div`
     background-color: var(--color-bg-2);
   }
 `
+
+// 这些样式组件已不再需要，因为按钮已移至顶部工具栏
 
 export default MCPSettings
