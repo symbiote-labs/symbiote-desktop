@@ -140,7 +140,7 @@ export function useMessageOperations(topic: Topic) {
    * 创建新的上下文（clear message）
    */
   const createNewContext = useCallback(async () => {
-    await EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
+    EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
   }, [])
 
   const displayCount = useAppSelector(selectNewDisplayCount)

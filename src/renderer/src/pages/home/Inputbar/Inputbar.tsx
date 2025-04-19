@@ -183,7 +183,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       return
     }
 
-    await EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
+    EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
 
     try {
       // Dispatch the sendMessage action with all options
@@ -537,7 +537,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       await onPause()
       await delay(1)
     }
-    await EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES)
+    EventEmitter.emit(EVENT_NAMES.CLEAR_MESSAGES)
   }
 
   const onNewContext = () => {
