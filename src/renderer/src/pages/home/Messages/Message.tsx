@@ -54,7 +54,7 @@ const MessageItem: FC<Props> = ({
   const { showMessageDivider, messageFont, fontSize } = useSettings()
   const { generating } = useRuntime()
   const messageContainerRef = useRef<HTMLDivElement>(null)
-  // const topic = useTopic(assistant, _topic?.id)
+
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
   const [selectedQuoteText, setSelectedQuoteText] = useState<string>('')
 

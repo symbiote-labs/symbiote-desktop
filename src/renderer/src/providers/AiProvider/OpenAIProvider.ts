@@ -19,6 +19,7 @@ import {
   filterEmptyMessages,
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
+import { processReqMessages } from '@renderer/services/ModelMessageService'
 import store from '@renderer/store'
 import {
   Assistant,
@@ -45,7 +46,7 @@ import {
 import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
 
-type ReasoningEffort = 'high' | 'medium' | 'low'
+type ReasoningEffort = 'low' | 'medium' | 'high'
 
 export default class OpenAIProvider extends BaseProvider {
   private sdk: OpenAI
@@ -293,7 +294,7 @@ export default class OpenAIProvider extends BaseProvider {
    * @returns True if the model is an OpenAI reasoning model, false otherwise
    */
   private isOpenAIReasoning(model: Model) {
-    return model.id.startsWith('o1') || model.id.startsWith('o3')
+    return model.id.startsWith('o1') || model.id.startsWith('o3') || model.id.startsWith('o4')
   }
 
   /**
@@ -332,12 +333,7 @@ export default class OpenAIProvider extends BaseProvider {
       userMessages.push(await this.getMessageParam(message, model))
     }
 
-    const isOpenAIReasoning = this.isOpenAIReasoning(model)
-
     const isSupportStreamOutput = () => {
-      if (isOpenAIReasoning) {
-        return false
-      }
       return streamOutput
     }
 
@@ -378,13 +374,18 @@ export default class OpenAIProvider extends BaseProvider {
     let time_first_content_millsec = 0
     const start_time_millsec = new Date().getTime()
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
+
     const { abortController, cleanup, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
     await this.checkIsCopilot()
 
-    const reqMessages: ChatCompletionMessageParam[] = [systemMessage, ...userMessages].filter(
-      Boolean
-    ) as ChatCompletionMessageParam[]
+    //当 systemMessage 内容为空时不发送 systemMessage
+    let reqMessages: ChatCompletionMessageParam[]
+    if (!systemMessage.content) {
+      reqMessages = [...userMessages]
+    } else {
+      reqMessages = [systemMessage, ...userMessages].filter(Boolean) as ChatCompletionMessageParam[]
+    }
 
     const toolResponses: MCPToolResponse[] = []
     let firstChunk = true
@@ -505,6 +506,9 @@ export default class OpenAIProvider extends BaseProvider {
       await processToolUses(content, idx)
     }
 
+    // console.log('[before] reqMessages', reqMessages)
+    reqMessages = processReqMessages(model, reqMessages)
+    // console.log('[after] reqMessages', reqMessages)
     const stream = await this.sdk.chat.completions
       // @ts-ignore key is not typed
       .create(

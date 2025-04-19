@@ -324,6 +324,11 @@ const McpSettings: React.FC<Props> = ({ server }) => {
   }
 
   const onToggleActive = async (active: boolean) => {
+    if (isFormChanged && active) {
+      await onSave()
+      return
+    }
+
     await form.validateFields()
     setLoadingServer(server.id)
     const oldActiveState = server.isActive
