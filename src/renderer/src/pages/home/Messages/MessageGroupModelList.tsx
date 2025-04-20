@@ -6,7 +6,7 @@ import { useAppDispatch } from '@renderer/store'
 import { setFoldDisplayMode } from '@renderer/store/settings'
 import { Message, Model } from '@renderer/types'
 import { Avatar, Segmented as AntdSegmented, Tooltip } from 'antd'
-import { FC } from 'react'
+import { FC, memo, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -24,11 +24,59 @@ const MessageGroupModelList: FC<MessageGroupModelListProps> = ({ messages, selec
   const { foldDisplayMode } = useSettings()
   const isCompact = foldDisplayMode === 'compact'
 
+  // 使用 useCallback 记忆化显示模式切换函数，避免不必要的重新创建
+  const handleDisplayModeToggle = useCallback(() => {
+    dispatch(setFoldDisplayMode(isCompact ? 'expanded' : 'compact'))
+  }, [dispatch, isCompact])
+
+  // 使用 useCallback 记忆化选择消息函数，避免不必要的重新创建
+  const handleSegmentedChange = useCallback(
+    (value: unknown) => {
+      const messageId = value as string
+      const message = messages.find((message) => message.id === messageId) as Message
+      setSelectedMessage(message)
+    },
+    [messages, setSelectedMessage]
+  )
+
+  // 使用 useCallback 记忆化头像点击函数，避免不必要的重新创建
+  const handleAvatarClick = useCallback(
+    (message: Message) => {
+      setSelectedMessage(message)
+    },
+    [setSelectedMessage]
+  )
+
+  // 使用 useMemo 记忆化紧凑模式的头像列表，避免不必要的重新计算
+  const compactModeAvatars = useMemo(() => {
+    return messages.map((message, index) => (
+      <Tooltip key={index} title={message.model?.name} placement="top" mouseEnterDelay={0.2}>
+        <AvatarWrapper
+          className="avatar-wrapper"
+          isSelected={message.id === selectMessageId}
+          onClick={() => handleAvatarClick(message)}>
+          <ModelAvatar model={message.model as Model} size={28} />
+        </AvatarWrapper>
+      </Tooltip>
+    ))
+  }, [messages, selectMessageId, handleAvatarClick])
+
+  // 使用 useMemo 记忆化展开模式的选项数组，避免不必要的重新计算
+  const expandedModeOptions = useMemo(() => {
+    return messages.map((message) => ({
+      label: (
+        <SegmentedLabel>
+          <ModelAvatar model={message.model as Model} size={20} />
+          <ModelName>{message.model?.name}</ModelName>
+        </SegmentedLabel>
+      ),
+      value: message.id
+    }))
+  }, [messages])
+
   return (
     <ModelsWrapper>
-      <DisplayModeToggle
-        displayMode={foldDisplayMode}
-        onClick={() => dispatch(setFoldDisplayMode(isCompact ? 'expanded' : 'compact'))}>
+      <DisplayModeToggle displayMode={foldDisplayMode} onClick={handleDisplayModeToggle}>
         <Tooltip
           title={
             foldDisplayMode === 'compact'
@@ -43,37 +91,13 @@ const MessageGroupModelList: FC<MessageGroupModelListProps> = ({ messages, selec
       <ModelsContainer $displayMode={foldDisplayMode}>
         {foldDisplayMode === 'compact' ? (
           /* Compact style display */
-          <Avatar.Group className="avatar-group">
-            {messages.map((message, index) => (
-              <Tooltip key={index} title={message.model?.name} placement="top" mouseEnterDelay={0.2}>
-                <AvatarWrapper
-                  className="avatar-wrapper"
-                  isSelected={message.id === selectMessageId}
-                  onClick={() => {
-                    setSelectedMessage(message)
-                  }}>
-                  <ModelAvatar model={message.model as Model} size={28} />
-                </AvatarWrapper>
-              </Tooltip>
-            ))}
-          </Avatar.Group>
+          <Avatar.Group className="avatar-group">{compactModeAvatars}</Avatar.Group>
         ) : (
           /* Expanded style display */
           <Segmented
             value={selectMessageId}
-            onChange={(value) => {
-              const message = messages.find((message) => message.id === value) as Message
-              setSelectedMessage(message)
-            }}
-            options={messages.map((message) => ({
-              label: (
-                <SegmentedLabel>
-                  <ModelAvatar model={message.model as Model} size={20} />
-                  <ModelName>{message.model?.name}</ModelName>
-                </SegmentedLabel>
-              ),
-              value: message.id
-            }))}
+            onChange={handleSegmentedChange}
+            options={expandedModeOptions}
             size="small"
           />
         )}
@@ -253,4 +277,5 @@ const ModelName = styled.span`
   font-size: 12px;
 `
 
-export default MessageGroupModelList
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(MessageGroupModelList)

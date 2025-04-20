@@ -105,8 +105,31 @@ class FileManager {
   }
 
   static getFileUrl(file: FileType) {
-    const filesPath = store.getState().runtime.filesPath
-    return 'file://' + filesPath + '/' + file.name
+    try {
+      const filesPath = store.getState().runtime.filesPath
+
+      // 如果文件有完整路径，优先使用
+      if (file.path) {
+        // 使用完整路径生成URL
+        return 'file://' + file.path.replace(/\\/g, '/')
+      }
+
+      // 确保文件名是正确的
+      const fileName = file.name || file.id + file.ext
+
+      // 确保路径格式正确
+      const normalizedPath = filesPath.replace(/\\/g, '/')
+
+      // 构建完整URL
+      const fileUrl = 'file://' + normalizedPath + '/' + fileName
+
+      console.log('生成图片URL:', fileUrl)
+      return fileUrl
+    } catch (error) {
+      console.error('生成文件URL时出错:', error, file)
+      // 返回一个备用URL或空字符串
+      return ''
+    }
   }
 
   static async updateFile(file: FileType) {

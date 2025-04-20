@@ -38,12 +38,27 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
     return messages[0]?.id
   }, [messages])
 
+  // 记录当前选中的消息 ID
+  const selectedMessageIdRef = useRef<string | null>(null)
+
   const setSelectedMessage = useCallback(
     (message: Message) => {
-      messages.forEach(async (m) => {
-        await editMessage(m.id, { foldSelected: m.id === message.id })
-      })
+      // 优化：只更新当前选中的消息和之前选中的消息，而不是所有消息
+      const previousSelectedId = selectedMessageIdRef.current
+      const newSelectedId = message.id
 
+      // 更新引用以跟踪当前选中的消息 ID
+      selectedMessageIdRef.current = newSelectedId
+
+      // 如果有之前选中的消息，将其设置为非选中状态
+      if (previousSelectedId && previousSelectedId !== newSelectedId) {
+        editMessage(previousSelectedId, { foldSelected: false })
+      }
+
+      // 将新选中的消息设置为选中状态
+      editMessage(newSelectedId, { foldSelected: true })
+
+      // 滚动到选中的消息
       setTimeout(() => {
         const messageElement = document.getElementById(`message-${message.id}`)
         if (messageElement) {
@@ -51,7 +66,7 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         }
       }, 200)
     },
-    [editMessage, messages]
+    [editMessage]
   )
 
   const isGrouped = messageLength > 1 && messages.every((m) => m.role === 'assistant')
@@ -76,12 +91,9 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messageLength])
 
-  // 添加对流程图节点点击事件的监听
-  useEffect(() => {
-    // 只在组件挂载和消息数组变化时添加监听器
-    if (!isGrouped || messageLength <= 1) return
-
-    const handleFlowNavigate = (event: CustomEvent) => {
+  // 使用 useMemo 记忆化流程图导航处理函数，减少重新创建
+  const handleFlowNavigate = useMemo(() => {
+    return (event: CustomEvent) => {
       const { messageId } = event.detail
 
       // 查找对应的消息在当前消息组中的索引
@@ -98,6 +110,12 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         }
       }
     }
+  }, [messages, selectedIndex, setSelectedIndex, setSelectedMessage])
+
+  // 添加对流程图节点点击事件的监听
+  useEffect(() => {
+    // 只在组件挂载和消息数组变化时添加监听器
+    if (!isGrouped || messageLength <= 1) return
 
     // 添加事件监听器
     document.addEventListener('flow-navigate-to-message', handleFlowNavigate as EventListener)
@@ -106,17 +124,14 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
     return () => {
       document.removeEventListener('flow-navigate-to-message', handleFlowNavigate as EventListener)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, selectedIndex, isGrouped, messageLength])
+  }, [isGrouped, messageLength, handleFlowNavigate])
 
-  // 添加对LOCATE_MESSAGE事件的监听
-  useEffect(() => {
-    // 为每个消息注册一个定位事件监听器
-    const eventHandlers: { [key: string]: () => void } = {}
+  // 使用 useMemo 创建消息定位处理函数映射，减少重新创建
+  const messageLocateHandlers = useMemo(() => {
+    const handlers: { [key: string]: () => void } = {}
 
     messages.forEach((message) => {
-      const eventName = EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id
-      const handler = () => {
+      handlers[message.id] = () => {
         // 检查消息是否处于可见状态
         const element = document.getElementById(`message-${message.id}`)
         if (element) {
@@ -131,7 +146,19 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
           }
         }
       }
+    })
 
+    return handlers
+  }, [messages, setSelectedMessage])
+
+  // 添加对LOCATE_MESSAGE事件的监听
+  useEffect(() => {
+    // 为每个消息注册一个定位事件监听器
+    const eventHandlers: { [key: string]: () => void } = {}
+
+    // 注册所有消息的事件监听器
+    Object.entries(messageLocateHandlers).forEach(([messageId, handler]) => {
+      const eventName = `${EVENT_NAMES.LOCATE_MESSAGE}:${messageId}`
       eventHandlers[eventName] = handler
       EventEmitter.on(eventName, handler)
     })
@@ -143,7 +170,7 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         EventEmitter.off(eventName, handler)
       })
     }
-  }, [messages, setSelectedMessage])
+  }, [messageLocateHandlers])
 
   // 使用useMemo缓存消息渲染结果，减少重复计算
   const renderedMessages = useMemo(() => {
@@ -229,10 +256,16 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         <MessageGroupMenuBar
           multiModelMessageStyle={multiModelMessageStyle}
           setMultiModelMessageStyle={(style) => {
+            // 优化：使用批量更新消息样式，避免多次调用 editMessage
             setMultiModelMessageStyle(style)
-            messages.forEach((message) => {
-              editMessage(message.id, { multiModelMessageStyle: style })
-            })
+
+            // 如果有批量更新消息的API，可以使用批量 API
+            // 如： editMessagesBatch(messages.map(m => m.id), { multiModelMessageStyle: style })
+
+            // 如果没有批量 API，使用 Promise.all 并行处理所有更新
+            Promise.all(messages.map((message) => editMessage(message.id, { multiModelMessageStyle: style }))).catch(
+              (err) => console.error('Failed to update message styles:', err)
+            )
           }}
           messages={messages}
           selectMessageId={getSelectedMessageId()}

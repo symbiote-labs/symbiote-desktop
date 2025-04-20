@@ -6,7 +6,7 @@ import { useAppDispatch } from '@renderer/store'
 import { setGridColumns, setGridPopoverTrigger } from '@renderer/store/settings'
 import { Col, Row, Select, Slider } from 'antd'
 import { Popover } from 'antd'
-import { FC, useState } from 'react'
+import { FC, memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const MessageGroupSettings: FC = () => {
@@ -56,4 +56,5 @@ const MessageGroupSettings: FC = () => {
   )
 }
 
-export default MessageGroupSettings
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(MessageGroupSettings)

@@ -2,7 +2,7 @@ import { SoundOutlined } from '@ant-design/icons'
 import TTSService from '@renderer/services/TTSService'
 import { Message } from '@renderer/types'
 import { Tooltip } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -11,69 +11,39 @@ interface TTSButtonProps {
   className?: string
 }
 
-interface SegmentedPlaybackState {
-  isSegmentedPlayback: boolean
-  segments: {
-    text: string
-    isLoaded: boolean
-    isLoading: boolean
-  }[]
-  currentSegmentIndex: number
-  isPlaying: boolean
-}
+// 移除未使用的接口
 
 const TTSButton: React.FC<TTSButtonProps> = ({ message, className }) => {
   const { t } = useTranslation()
+  // 只保留必要的状态
   const [isSpeaking, setIsSpeaking] = useState(false)
-  // 分段播放状态
-  const [, setSegmentedPlaybackState] = useState<SegmentedPlaybackState>({
-    isSegmentedPlayback: false,
-    segments: [],
-    currentSegmentIndex: 0,
-    isPlaying: false
-  })
 
-  // 添加TTS状态变化事件监听器
-  useEffect(() => {
-    const handleTTSStateChange = (event: CustomEvent) => {
+  // 使用 useCallback 记忆化事件处理函数，避免不必要的重新创建
+  const handleTTSStateChange = useCallback(
+    (event: CustomEvent) => {
       const { isPlaying } = event.detail
       console.log('TTS按钮检测到TTS状态变化:', isPlaying)
       setIsSpeaking(isPlaying)
-    }
+    },
+    [setIsSpeaking]
+  )
 
+  // 添加TTS状态变化事件监听器
+  useEffect(() => {
     // 添加事件监听器
     window.addEventListener('tts-state-change', handleTTSStateChange as EventListener)
+
+    // 初始化时检查TTS状态
+    const isCurrentlyPlaying = TTSService.isCurrentlyPlaying()
+    setIsSpeaking(isCurrentlyPlaying)
 
     // 组件卸载时移除事件监听器
     return () => {
       window.removeEventListener('tts-state-change', handleTTSStateChange as EventListener)
     }
-  }, [])
+  }, [handleTTSStateChange])
 
-  // 监听分段播放状态变化
-  useEffect(() => {
-    const handleSegmentedPlaybackUpdate = (event: CustomEvent) => {
-      console.log('检测到分段播放状态更新:', event.detail)
-      setSegmentedPlaybackState(event.detail)
-    }
-
-    // 添加事件监听器
-    window.addEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener)
-
-    // 组件卸载时移除事件监听器
-    return () => {
-      window.removeEventListener('tts-segmented-playback-update', handleSegmentedPlaybackUpdate as EventListener)
-    }
-  }, [])
-
-  // 初始化时检查TTS状态
-  useEffect(() => {
-    // 检查当前是否正在播放
-    const isCurrentlyPlaying = TTSService.isCurrentlyPlaying()
-    if (isCurrentlyPlaying !== isSpeaking) {
-      setIsSpeaking(isCurrentlyPlaying)
-    }
-  }, [isSpeaking])
+  // 移除未使用的分段播放状态事件监听器和冗余的初始化检查
 
   const handleTTS = useCallback(async () => {
     if (isSpeaking) {
@@ -139,4 +109,5 @@ const TTSActionButton = styled.div`
   }
 `
 
-export default TTSButton
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(TTSButton)

@@ -1,0 +1,78 @@
+/* 内联工具调用块样式 */
+.inline-tool-block {
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.inline-tool-block:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 工具调用和工具结果之间的分隔 */
+.message-content-container .inline-tool-block + .inline-tool-block {
+  margin-top: -5px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* 工具调用后面紧跟的工具结果 */
+.message-content-container .tool-use-marker + .tool-result-marker {
+  margin-top: -5px;
+}
+
+/* 工具调用标题栏 */
+.inline-tool-block .tool-header {
+  background-color: var(--color-bg-2);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 工具名称 */
+.inline-tool-block .tool-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* 工具状态指示器 */
+.inline-tool-block .status-indicator {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  opacity: 0.85;
+}
+
+/* 工具内容区域 */
+.inline-tool-block .tool-content {
+  padding: 12px;
+}
+
+/* 代码块 */
+.inline-tool-block pre {
+  margin: 0;
+  padding: 8px;
+  background-color: var(--color-bg-2);
+  border-radius: 4px;
+  overflow: auto;
+  font-size: 12px;
+  color: var(--color-text);
+  max-height: 200px;
+}
+
+/* 加载中状态 */
+.inline-tool-block .loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: var(--color-text-2);
+}

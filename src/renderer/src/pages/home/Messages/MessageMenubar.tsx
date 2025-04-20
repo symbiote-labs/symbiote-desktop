@@ -339,25 +339,42 @@ const MessageMenubar: FC<Props> = (props) => {
         ].filter(Boolean)
       }
     ],
-    [message, messageContainerRef, onEdit, onNewBranch, t, topic.name, exportMenuOptions]
+    // 优化依赖项，只包含必要的属性
+    [
+      message.id,
+      message.content,
+      message.createdAt,
+      messageContainerRef,
+      onEdit,
+      onNewBranch,
+      t,
+      topic.name,
+      exportMenuOptions
+    ]
   )
 
-  const onRegenerate = async (e: React.MouseEvent | undefined) => {
-    e?.stopPropagation?.()
-    if (loading) return
-    const selectedModel = isGrouped ? model : assistantModel
-    const _message = resetAssistantMessage(message, selectedModel)
-    editMessage(message.id, { ..._message })
-    resendMessage(_message, assistant)
-  }
+  const onRegenerate = useCallback(
+    async (e: React.MouseEvent | undefined) => {
+      e?.stopPropagation?.()
+      if (loading) return
+      const selectedModel = isGrouped ? model : assistantModel
+      const _message = resetAssistantMessage(message, selectedModel)
+      editMessage(message.id, { ..._message })
+      resendMessage(_message, assistant)
+    },
+    [loading, isGrouped, model, assistantModel, message, editMessage, resendMessage, assistant]
+  )
 
-  const onMentionModel = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (loading) return
-    const selectedModel = await SelectModelPopup.show({ model })
-    if (!selectedModel) return
-    resendMessage(message, { ...assistant, model: selectedModel }, true)
-  }
+  const onMentionModel = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (loading) return
+      const selectedModel = await SelectModelPopup.show({ model })
+      if (!selectedModel) return
+      resendMessage(message, { ...assistant, model: selectedModel }, true)
+    },
+    [loading, model, message, assistant, resendMessage]
+  )
 
   const onUseful = useCallback(
     (e: React.MouseEvent) => {

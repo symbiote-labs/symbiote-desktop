@@ -1,5 +1,5 @@
 import { StyleProvider } from '@ant-design/cssinjs'
-import React, { useEffect, useRef } from 'react'
+import React, { memo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { StyleSheetManager } from 'styled-components'
 
@@ -60,4 +60,5 @@ const ShadowDOMRenderer: React.FC<Props> = ({ children }) => {
   )
 }
 
-export default ShadowDOMRenderer
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(ShadowDOMRenderer)

@@ -2,7 +2,7 @@ import { CheckOutlined } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { Message } from '@renderer/types'
 import { Collapse, message as antdMessage, Tooltip } from 'antd'
-import { FC, useEffect, useMemo, useState } from 'react'
+import { FC, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BarLoader from 'react-spinners/BarLoader'
 import styled from 'styled-components'
@@ -33,18 +33,56 @@ const MessageThought: FC<Props> = ({ message }) => {
     return null
   }
 
-  const copyThought = () => {
+  // 使用 useCallback 记忆化 copyThought 函数，避免不必要的重新创建
+  const copyThought = useCallback(() => {
     if (message.reasoning_content) {
       navigator.clipboard.writeText(message.reasoning_content)
       antdMessage.success({ content: t('message.copied'), key: 'copy-message' })
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
-  }
+  }, [message.reasoning_content, t])
 
   const thinkingTime = message.metrics?.time_thinking_millsec || 0
   const thinkingTimeSeconds = (thinkingTime / 1000).toFixed(1)
   const isPaused = message.status === 'paused'
+
+  // 使用 useMemo 记忆化 Collapse 的 items 数组，避免不必要的重新创建
+  const collapseItems = useMemo(
+    () => [
+      {
+        key: 'thought',
+        label: (
+          <MessageTitleLabel>
+            <TinkingText>
+              {isThinking ? t('chat.thinking') : t('chat.deeply_thought', { secounds: thinkingTimeSeconds })}
+            </TinkingText>
+            {isThinking && !isPaused && <BarLoader color="#9254de" />}
+            {(!isThinking || isPaused) && (
+              <Tooltip title={t('common.copy')} mouseEnterDelay={0.8}>
+                <ActionButton
+                  className="message-action-button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    copyThought()
+                  }}
+                  aria-label={t('common.copy')}>
+                  {!copied && <i className="iconfont icon-copy"></i>}
+                  {copied && <CheckOutlined style={{ color: 'var(--color-primary)' }} />}
+                </ActionButton>
+              </Tooltip>
+            )}
+          </MessageTitleLabel>
+        ),
+        children: (
+          <div style={{ fontFamily, fontSize }}>
+            <Markdown message={{ ...message, content: message.reasoning_content || '' }} />
+          </div>
+        )
+      }
+    ],
+    [isThinking, isPaused, t, thinkingTimeSeconds, copied, copyThought, fontFamily, fontSize, message.reasoning_content]
+  )
 
   return (
     <CollapseContainer
@@ -52,38 +90,7 @@ const MessageThought: FC<Props> = ({ message }) => {
       size="small"
       onChange={() => setActiveKey((key) => (key ? '' : 'thought'))}
       className="message-thought-container"
-      items={[
-        {
-          key: 'thought',
-          label: (
-            <MessageTitleLabel>
-              <TinkingText>
-                {isThinking ? t('chat.thinking') : t('chat.deeply_thought', { secounds: thinkingTimeSeconds })}
-              </TinkingText>
-              {isThinking && !isPaused && <BarLoader color="#9254de" />}
-              {(!isThinking || isPaused) && (
-                <Tooltip title={t('common.copy')} mouseEnterDelay={0.8}>
-                  <ActionButton
-                    className="message-action-button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      copyThought()
-                    }}
-                    aria-label={t('common.copy')}>
-                    {!copied && <i className="iconfont icon-copy"></i>}
-                    {copied && <CheckOutlined style={{ color: 'var(--color-primary)' }} />}
-                  </ActionButton>
-                </Tooltip>
-              )}
-            </MessageTitleLabel>
-          ),
-          children: (
-            <div style={{ fontFamily, fontSize }}>
-              <Markdown message={{ ...message, content: message.reasoning_content }} />
-            </div>
-          )
-        }
-      ]}
+      items={collapseItems}
     />
   )
 }
@@ -132,4 +139,5 @@ const ActionButton = styled.button`
   }
 `
 
-export default MessageThought
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(MessageThought)

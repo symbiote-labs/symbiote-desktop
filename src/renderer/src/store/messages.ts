@@ -663,10 +663,38 @@ export const selectError = (state: RootState): string | null => {
   return messagesState?.error || null
 }
 
-export const selectStreamMessage = (state: RootState, topicId: string, messageId: string): Message | null => {
-  const messagesState = state.messages as MessagesState
-  return messagesState.streamMessagesByTopic[topicId]?.[messageId] || null
-}
+// 使用 createSelector 记忆化流式消息选择器
+// 这样可以避免在 Redux store 状态变化时不必要的重新计算
+export const selectStreamMessage = createSelector(
+  [
+    (state: RootState) => state.messages.streamMessagesByTopic,
+    (_, topicId: string) => topicId,
+    (_, __, messageId: string) => messageId
+  ],
+  (streamMessagesByTopic, topicId, messageId) => streamMessagesByTopic[topicId]?.[messageId] || null
+)
+
+// 使用 createSelector 记忆化常规消息选择器
+export const selectRegularMessage = createSelector(
+  [
+    (state: RootState) => state.messages.messagesByTopic,
+    (_, topicId: string) => topicId,
+    (_, __, messageId: string) => messageId,
+    (_, __, ___, originalMessage: Message) => originalMessage
+  ],
+  (messagesByTopic, topicId, messageId, originalMessage) => {
+    // 如果是用户消息，直接使用原始消息
+    if (originalMessage.role === 'user') {
+      return originalMessage
+    }
+
+    // 对于助手消息，从 store 中查找最新状态
+    const topicMessages = messagesByTopic[topicId]
+    if (!topicMessages) return originalMessage
+
+    return topicMessages.find((m) => m.id === messageId) || originalMessage
+  }
+)
 
 export const {
   setTopicLoading,

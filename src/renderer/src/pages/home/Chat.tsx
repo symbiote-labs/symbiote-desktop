@@ -4,7 +4,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { useShowTopics } from '@renderer/hooks/useStore'
 import { Assistant, Topic } from '@renderer/types'
 import { Flex } from 'antd'
-import { FC } from 'react'
+import { FC, memo, useMemo } from 'react'
 import styled from 'styled-components'
 
 import Inputbar from './Inputbar/Inputbar'
@@ -19,32 +19,55 @@ interface Props {
 }
 
 const Chat: FC<Props> = (props) => {
+  // 使用传入的 assistant 对象，避免重复获取
+  // 如果 useAssistant 提供了额外的功能或状态更新，则保留此调用
   const { assistant } = useAssistant(props.assistant.id)
   const { topicPosition, messageStyle } = useSettings()
   const { showTopics } = useShowTopics()
 
+  // 使用 useMemo 优化渲染，只有当相关依赖变化时才重新创建元素
+  const messagesComponent = useMemo(
+    () => (
+      <Messages
+        key={props.activeTopic.id}
+        assistant={assistant}
+        topic={props.activeTopic}
+        setActiveTopic={props.setActiveTopic}
+      />
+    ),
+    [props.activeTopic.id, assistant, props.setActiveTopic]
+  )
+
+  const inputbarComponent = useMemo(
+    () => (
+      <QuickPanelProvider>
+        <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
+      </QuickPanelProvider>
+    ),
+    [assistant, props.setActiveTopic, props.activeTopic]
+  )
+
+  const tabsComponent = useMemo(() => {
+    if (topicPosition !== 'right' || !showTopics) return null
+
+    return (
+      <Tabs
+        activeAssistant={assistant}
+        activeTopic={props.activeTopic}
+        setActiveAssistant={props.setActiveAssistant}
+        setActiveTopic={props.setActiveTopic}
+        position="right"
+      />
+    )
+  }, [topicPosition, showTopics, assistant, props.activeTopic, props.setActiveAssistant, props.setActiveTopic])
+
   return (
     <Container id="chat" className={messageStyle}>
       <Main id="chat-main" vertical flex={1} justify="space-between">
-        <Messages
-          key={props.activeTopic.id}
-          assistant={assistant}
-          topic={props.activeTopic}
-          setActiveTopic={props.setActiveTopic}
-        />
-        <QuickPanelProvider>
-          <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
-        </QuickPanelProvider>
+        {messagesComponent}
+        {inputbarComponent}
       </Main>
-      {topicPosition === 'right' && showTopics && (
-        <Tabs
-          activeAssistant={assistant}
-          activeTopic={props.activeTopic}
-          setActiveAssistant={props.setActiveAssistant}
-          setActiveTopic={props.setActiveTopic}
-          position="right"
-        />
-      )}
+      {tabsComponent}
     </Container>
   )
 }
@@ -63,4 +86,4 @@ const Main = styled(Flex)`
   transform: translateZ(0);
 `
 
-export default Chat
+export default memo(Chat)

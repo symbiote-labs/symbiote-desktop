@@ -1,7 +1,7 @@
 import { Message } from '@renderer/types'
 import { formatErrorMessage } from '@renderer/utils/error'
 import { Alert as AntdAlert } from 'antd'
-import { FC } from 'react'
+import { FC, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -48,10 +48,12 @@ const MessageError: FC<{ message: Message }> = ({ message }) => {
   )
 }
 
-const MessageErrorInfo: FC<{ message: Message }> = ({ message }) => {
-  const { t } = useTranslation()
+// 将常量提取到组件外部，避免在每次渲染时重新创建
+const HTTP_ERROR_CODES = [400, 401, 403, 404, 429, 500, 502, 503, 504]
 
-  const HTTP_ERROR_CODES = [400, 401, 403, 404, 429, 500, 502, 503, 504]
+// 使用 memo 包装 MessageErrorInfo 组件
+const MessageErrorInfo: FC<{ message: Message }> = memo(({ message }) => {
+  const { t } = useTranslation()
 
   // Add more robust checks: ensure error is an object and status is a number before accessing/including
   if (
@@ -64,7 +66,7 @@ const MessageErrorInfo: FC<{ message: Message }> = ({ message }) => {
   }
 
   return <Alert description={t('error.chat.response')} type="error" />
-}
+})
 
 const Alert = styled(AntdAlert)`
   margin: 15px 0 8px;
@@ -72,4 +74,5 @@ const Alert = styled(AntdAlert)`
   font-size: 12px;
 `
 
-export default MessageError
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(MessageError)

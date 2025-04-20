@@ -109,8 +109,7 @@ export class TTSService {
     }
 
     // 更新最后播放的消息ID
-    const dispatch = store.dispatch
-    dispatch(setLastPlayedMessageId(message.id))
+    store.dispatch(setLastPlayedMessageId(message.id))
     console.log('更新最后播放的消息ID:', message.id)
 
     // 记录当前正在播放的消息ID
@@ -121,7 +120,7 @@ export class TTSService {
     console.log('TTS过滤前文本长度:', message.content.length, '过滤后:', filteredText.length)
 
     // 播放过滤后的文本
-    return this.speak(filteredText, segmented)
+    return this.speak(filteredText, segmented, message.id)
   }
 
   /**
@@ -188,7 +187,6 @@ export class TTSService {
       }
 
       // 获取最新的设置
-      // 强制刷新状态对象，确保获取最新的设置
       const latestSettings = store.getState().settings
       const serviceType = latestSettings.ttsServiceType || 'openai'
       console.log('使用的TTS服务类型:', serviceType)
@@ -202,14 +200,13 @@ export class TTSService {
       if (messageId) {
         this.playingMessageId = messageId
         // 更新最后播放的消息ID
-        const dispatch = store.dispatch
-        dispatch(setLastPlayedMessageId(messageId))
+        store.dispatch(setLastPlayedMessageId(messageId))
         console.log('更新最后播放的消息ID:', messageId)
       }
 
       if (segmented) {
         // 分段播放模式
-        return await this.speakSegmented(text, serviceType, latestSettings)
+        return await this.speakSegmented(text, serviceType, latestSettings, messageId)
       }
 
       console.log('当前TTS设置详情:', {
@@ -398,10 +395,16 @@ export class TTSService {
    * 分段播放模式
    * @param text 要播放的文本
    * @param serviceType TTS服务类型
-   * @param settings 设置
+   * @param settings 应用设置对象
+   * @param messageId 可选的消息ID，用于关联进度条和停止按钮
    * @returns 是否成功播放
    */
-  private async speakSegmented(text: string, serviceType: string, settings: any): Promise<boolean> {
+  private async speakSegmented(
+    text: string,
+    serviceType: string,
+    settings: ReturnType<typeof store.getState>['settings'],
+    messageId?: string
+  ): Promise<boolean> {
     try {
       console.log('开始分段播放模式')
 
@@ -426,6 +429,11 @@ export class TTSService {
 
       // 重置当前段落索引
       this.currentSegmentIndex = 0
+
+      // 如果提供了messageId，则设置playingMessageId
+      if (messageId) {
+        this.playingMessageId = messageId
+      }
 
       // 触发分段播放事件
       this.emitSegmentedPlaybackEvent()
@@ -455,9 +463,13 @@ export class TTSService {
    * 加载段落音频
    * @param index 段落索引
    * @param serviceType TTS服务类型
-   * @param settings 设置
+   * @param settings 应用设置对象
    */
-  private async loadSegmentAudio(index: number, serviceType: string, settings: any): Promise<void> {
+  private async loadSegmentAudio(
+    index: number,
+    serviceType: string,
+    settings: ReturnType<typeof store.getState>['settings']
+  ): Promise<void> {
     if (index < 0 || index >= this.audioSegments.length) {
       return
     }
@@ -625,11 +637,6 @@ export class TTSService {
    * @param duration 总时长（秒）
    * @param progress 进度百分比（0-100）
    */
-  // 记录上次输出日志的进度百分比 - 已禁用日志输出
-  // private lastLoggedProgress: number = -1;
-  // 记录上次日志输出时间，用于节流 - 已禁用日志输出
-  // private lastLogTime: number = 0;
-
   private emitProgressUpdateEvent(currentTime: number, duration: number, progress: number): void {
     // 创建事件数据
     const eventData = {
@@ -639,22 +646,6 @@ export class TTSService {
       duration,
       progress
     }
-
-    // 完全关闭进度更新日志输出
-    // const now = Date.now();
-    // const currentProgressTens = Math.floor(progress / 10);
-    // if ((now - this.lastLogTime >= 500) && // 时间节流
-    //     (currentProgressTens !== Math.floor(this.lastLoggedProgress / 10) ||
-    //     progress === 0 || progress >= 100)) {
-    //   console.log('发送TTS进度更新事件:', {
-    //     messageId: this.playingMessageId ? this.playingMessageId.substring(0, 8) : null,
-    //     progress: Math.round(progress),
-    //     currentTime: Math.round(currentTime),
-    //     duration: Math.round(duration)
-    //   });
-    //   this.lastLoggedProgress = progress;
-    //   this.lastLogTime = now;
-    // }
 
     // 触发事件
     window.dispatchEvent(new CustomEvent('tts-progress-update', { detail: eventData }))

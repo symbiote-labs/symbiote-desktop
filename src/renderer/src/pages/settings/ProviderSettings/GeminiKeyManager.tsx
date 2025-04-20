@@ -32,7 +32,13 @@ const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ currentApiKey, onAp
     const formattedKey = newKey.trim()
     const keys = [...currentKeys, formattedKey]
     const uniqueKeys = [...new Set(keys)]
-    onApiKeyChange(uniqueKeys.join(','))
+    const newApiKey = uniqueKeys.join(',')
+
+    // Only update if the value has actually changed
+    if (newApiKey !== currentApiKey) {
+      onApiKeyChange(newApiKey)
+    }
+
     setNewKey('')
     setIsAddKeyModalVisible(false)
   }
@@ -48,7 +54,13 @@ const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ currentApiKey, onAp
 
     const allKeys = [...currentKeys, ...importedKeys]
     const uniqueKeys = [...new Set(allKeys)]
-    onApiKeyChange(uniqueKeys.join(','))
+    const newApiKey = uniqueKeys.join(',')
+
+    // 只有当值确实发生变化时才更新
+    if (newApiKey !== currentApiKey) {
+      onApiKeyChange(newApiKey)
+    }
+
     setImportText('')
     setIsImportModalVisible(false)
   }
@@ -102,11 +114,7 @@ const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ currentApiKey, onAp
           {currentKeys.map((key, index) => (
             <KeyItem key={index}>
               <Text>{maskApiKey(key)}</Text>
-              <Button
-                type="text"
-                icon={<CopyOutlined />}
-                onClick={() => copyKey(key)}
-              />
+              <Button type="text" icon={<CopyOutlined />} onClick={() => copyKey(key)} />
             </KeyItem>
           ))}
         </KeysListContainer>
@@ -121,7 +129,13 @@ const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ currentApiKey, onAp
         okButtonProps={{ disabled: !newKey.trim() }}>
         <Input.Password
           value={newKey}
-          onChange={(e) => setNewKey(formatApiKeys(e.target.value))}
+          onChange={(e) => setNewKey(e.target.value)}
+          onBlur={(e) => {
+            const formattedValue = formatApiKeys(e.target.value)
+            if (formattedValue !== newKey) {
+              setNewKey(formattedValue)
+            }
+          }}
           placeholder={t('settings.provider.gemini.enter_key')}
           autoFocus
         />
@@ -153,6 +167,18 @@ const GeminiKeyManager: React.FC<GeminiKeyManagerProps> = ({ currentApiKey, onAp
           <Input.TextArea
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
+            onBlur={(e) => {
+              // 处理多行文本格式化
+              const lines = e.target.value.split('\n')
+              const formattedLines = lines.map((line) => {
+                return formatApiKeys(line)
+              })
+              const formattedText = formattedLines.join('\n')
+
+              if (formattedText !== importText) {
+                setImportText(formattedText)
+              }
+            }}
             placeholder={t('settings.provider.gemini.enter_keys')}
             rows={8}
           />

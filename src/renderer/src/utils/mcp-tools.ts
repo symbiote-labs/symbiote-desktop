@@ -367,45 +367,117 @@ export function parseToolUse(content: string, mcpTools: MCPTool[]): MCPToolRespo
   if (!content || !mcpTools || mcpTools.length === 0) {
     return []
   }
-  const toolUsePattern =
+
+  // 支持三种格式的工具调用
+  // 1. 标准格式: <tool_use><name>工具名</name><arguments>参数</arguments></tool_use>
+  const standardToolUsePattern =
     /<tool_use>([\s\S]*?)<name>([\s\S]*?)<\/name>([\s\S]*?)<arguments>([\s\S]*?)<\/arguments>([\s\S]*?)<\/tool_use>/g
+
+  // 2. Roo Code格式: <工具名><参数名>参数值</参数名></工具名>
+  const rooCodeToolUsePattern = new RegExp(`<(${mcpTools.map((tool) => tool.id).join('|')})>([\s\S]*?)<\/\\1>`, 'g')
+
+  // 3. 简化格式: <tool_use>工具ID参数JSON</tool_use>
+  const simplifiedToolUsePattern = /<tool_use>\s*([\w\d]+)\s*([\s\S]*?)\s*<\/tool_use>/g
+
   const tools: MCPToolResponse[] = []
-  let match
   let idx = 0
-  // Find all tool use blocks
-  while ((match = toolUsePattern.exec(content)) !== null) {
-    // const fullMatch = match[0]
+
+  // 处理标准格式
+  let match
+  while ((match = standardToolUsePattern.exec(content)) !== null) {
     const toolName = match[2].trim()
     const toolArgs = match[4].trim()
 
-    // Try to parse the arguments as JSON
+    // 尝试解析参数为JSON
     let parsedArgs
     try {
       parsedArgs = JSON.parse(toolArgs)
     } catch (error) {
-      // If parsing fails, use the string as is
+      // 如果解析失败，使用字符串原样
       parsedArgs = toolArgs
     }
-    // console.log(`Parsed arguments for tool "${toolName}":`, parsedArgs)
+
     const mcpTool = mcpTools.find((tool) => tool.id === toolName)
     if (!mcpTool) {
       console.error(`Tool "${toolName}" not found in MCP tools`)
       continue
     }
 
-    // Add to tools array
+    // 添加到工具数组
     tools.push({
-      id: `${toolName}-${idx++}`, // Unique ID for each tool use
+      id: `${toolName}-${idx++}`, // 每个工具调用的唯一ID
       tool: {
         ...mcpTool,
         inputSchema: parsedArgs
       },
       status: 'pending'
     })
-
-    // Remove the tool use block from the content
-    // content = content.replace(fullMatch, '')
   }
+
+  // 处理Roo Code格式
+  while ((match = rooCodeToolUsePattern.exec(content)) !== null) {
+    const toolName = match[1].trim()
+    const toolContent = match[2].trim()
+
+    // 解析参数
+    const params: Record<string, any> = {}
+    const paramPattern = /<([\w\d_]+)>([\s\S]*?)<\/\1>/g
+    let paramMatch
+
+    while ((paramMatch = paramPattern.exec(toolContent)) !== null) {
+      const paramName = paramMatch[1].trim()
+      const paramValue = paramMatch[2].trim()
+      params[paramName] = paramValue
+    }
+
+    const mcpTool = mcpTools.find((tool) => tool.id === toolName)
+    if (!mcpTool) {
+      console.error(`Tool "${toolName}" not found in MCP tools`)
+      continue
+    }
+
+    // 添加到工具数组
+    tools.push({
+      id: `${toolName}-${idx++}`,
+      tool: {
+        ...mcpTool,
+        inputSchema: { type: 'object', title: 'Input', properties: params }
+      },
+      status: 'pending'
+    })
+  }
+
+  // 处理简化格式
+  while ((match = simplifiedToolUsePattern.exec(content)) !== null) {
+    const toolName = match[1].trim()
+    const toolArgs = match[2].trim()
+
+    // 尝试解析参数为JSON
+    let parsedArgs
+    try {
+      parsedArgs = JSON.parse(toolArgs)
+    } catch (error) {
+      // 如果解析失败，使用字符串原样
+      parsedArgs = toolArgs
+    }
+
+    const mcpTool = mcpTools.find((tool) => tool.id === toolName)
+    if (!mcpTool) {
+      console.error(`Tool "${toolName}" not found in MCP tools`)
+      continue
+    }
+
+    // 添加到工具数组
+    tools.push({
+      id: `${toolName}-${idx++}`,
+      tool: {
+        ...mcpTool,
+        inputSchema: parsedArgs
+      },
+      status: 'pending'
+    })
+  }
+
   return tools
 }
 

@@ -11,7 +11,7 @@ import { updateMessageThunk } from '@renderer/store/messages'
 import type { Message } from '@renderer/types'
 import { isEmoji, removeLeadingEmoji } from '@renderer/utils'
 import { Avatar } from 'antd'
-import { type FC, useCallback, useEffect, useRef, useState } from 'react'
+import { type FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 interface MessageLineProps {
@@ -54,7 +54,7 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
     return () => {
       window.removeEventListener('resize', updateHeight)
     }
-  }, [messages])
+  }, [])
 
   // 函数用于计算根据距离的变化值
   const calculateValueByDistance = useCallback(
@@ -130,6 +130,32 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
     [setSelectedMessage]
   )
 
+  // 使用 useCallback 记忆化 handleMouseMove 函数，避免不必要的重新创建
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (messagesListRef.current) {
+        const containerRect = e.currentTarget.getBoundingClientRect()
+        const listRect = messagesListRef.current.getBoundingClientRect()
+        setMouseY(e.clientY - listRect.top)
+
+        if (listRect.height > containerRect.height) {
+          const mousePositionRatio = (e.clientY - containerRect.top) / containerRect.height
+          const maxOffset = (containerRect.height - listRect.height) / 2 - 20
+          setListOffsetY(-maxOffset + mousePositionRatio * (maxOffset * 2))
+        } else {
+          setListOffsetY(0)
+        }
+      }
+    },
+    [messagesListRef, setMouseY, setListOffsetY]
+  )
+
+  // 使用 useCallback 记忆化 handleMouseLeave 函数，避免不必要的重新创建
+  const handleMouseLeave = useCallback(() => {
+    setMouseY(null)
+    setListOffsetY(0)
+  }, [setMouseY, setListOffsetY])
+
   const scrollToBottom = useCallback(() => {
     const messagesContainer = document.getElementById('messages')
     if (messagesContainer) {
@@ -137,28 +163,93 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
     }
   }, [])
 
+  // 使用 useMemo 记忆化列表渲染结果，避免不必要的重新计算
+  const renderedItems = useMemo(() => {
+    if (messages.length === 0) return null
+
+    // 底部锚点
+    const bottomAnchor = (
+      <MessageItem
+        key="bottom-anchor"
+        ref={(el) => {
+          if (el) messageItemsRef.current.set('bottom-anchor', el)
+          else messageItemsRef.current.delete('bottom-anchor')
+        }}
+        style={{
+          opacity: mouseY ? 0.5 + calculateValueByDistance('bottom-anchor', 1) : 0.6
+        }}
+        onClick={scrollToBottom}>
+        <MessageItemContainer
+          style={{ transform: `scale(${1 + calculateValueByDistance('bottom-anchor', 1)})` }}></MessageItemContainer>
+        <Avatar
+          icon={<DownOutlined style={{ color: theme === 'dark' ? 'var(--color-text)' : 'var(--color-primary)' }} />}
+          size={10 + calculateValueByDistance('bottom-anchor', 20)}
+          style={{
+            backgroundColor: theme === 'dark' ? 'var(--color-background-soft)' : 'var(--color-primary-light)',
+            border: `1px solid ${theme === 'dark' ? 'var(--color-border-soft)' : 'var(--color-primary-soft)'}`,
+            opacity: 0.9
+          }}
+        />
+      </MessageItem>
+    )
+
+    // 消息项列表
+    const messageItems = messages.map((message, index) => {
+      const opacity = 0.5 + calculateValueByDistance(message.id, 1)
+      const scale = 1 + calculateValueByDistance(message.id, 1)
+      const size = 10 + calculateValueByDistance(message.id, 20)
+      const avatarSource = getAvatarSource(isLocalAi, getMessageModelId(message))
+      const username = removeLeadingEmoji(getUserName(message))
+
+      return (
+        <MessageItem
+          key={message.id}
+          ref={(el) => {
+            if (el) messageItemsRef.current.set(message.id, el)
+            else messageItemsRef.current.delete(message.id)
+          }}
+          style={{
+            opacity: mouseY ? opacity : Math.max(0, 0.6 - (0.3 * Math.abs(index - messages.length / 2)) / 5)
+          }}
+          onClick={() => scrollToMessage(message)}>
+          <MessageItemContainer style={{ transform: ` scale(${scale})` }}>
+            <MessageItemTitle>{username}</MessageItemTitle>
+            <MessageItemContent>{message.content.substring(0, 50)}</MessageItemContent>
+          </MessageItemContainer>
+
+          {message.role === 'assistant' ? (
+            <Avatar
+              src={avatarSource}
+              size={size}
+              style={{
+                border: isLocalAi ? '1px solid var(--color-border-soft)' : 'none',
+                filter: theme === 'dark' ? 'invert(0.05)' : undefined
+              }}>
+              A
+            </Avatar>
+          ) : (
+            <>
+              {isEmoji(avatar) ? <EmojiAvatar size={size}>{avatar}</EmojiAvatar> : <Avatar src={avatar} size={size} />}
+            </>
+          )}
+        </MessageItem>
+      )
+    })
+
+    return [bottomAnchor, ...messageItems]
+  }, [
+    messages,
+    mouseY,
+    theme,
+    avatar,
+    isLocalAi,
+    calculateValueByDistance,
+    getUserName,
+    scrollToMessage,
+    scrollToBottom
+  ])
+
   if (messages.length === 0) return null
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (messagesListRef.current) {
-      const containerRect = e.currentTarget.getBoundingClientRect()
-      const listRect = messagesListRef.current.getBoundingClientRect()
-      setMouseY(e.clientY - listRect.top)
-
-      if (listRect.height > containerRect.height) {
-        const mousePositionRatio = (e.clientY - containerRect.top) / containerRect.height
-        const maxOffset = (containerRect.height - listRect.height) / 2 - 20
-        setListOffsetY(-maxOffset + mousePositionRatio * (maxOffset * 2))
-      } else {
-        setListOffsetY(0)
-      }
-    }
-  }
-
-  const handleMouseLeave = () => {
-    setMouseY(null)
-    setListOffsetY(0)
-  }
 
   return (
     <MessageLineContainer
@@ -167,73 +258,7 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
       onMouseLeave={handleMouseLeave}
       $height={containerHeight}>
       <MessagesList ref={messagesListRef} style={{ transform: `translateY(${listOffsetY}px)` }}>
-        <MessageItem
-          key="bottom-anchor"
-          ref={(el) => {
-            if (el) messageItemsRef.current.set('bottom-anchor', el)
-            else messageItemsRef.current.delete('bottom-anchor')
-          }}
-          style={{
-            opacity: mouseY ? 0.5 + calculateValueByDistance('bottom-anchor', 1) : 0.6
-          }}
-          onClick={scrollToBottom}>
-          <MessageItemContainer
-            style={{ transform: `scale(${1 + calculateValueByDistance('bottom-anchor', 1)})` }}></MessageItemContainer>
-          <Avatar
-            icon={<DownOutlined style={{ color: theme === 'dark' ? 'var(--color-text)' : 'var(--color-primary)' }} />}
-            size={10 + calculateValueByDistance('bottom-anchor', 20)}
-            style={{
-              backgroundColor: theme === 'dark' ? 'var(--color-background-soft)' : 'var(--color-primary-light)',
-              border: `1px solid ${theme === 'dark' ? 'var(--color-border-soft)' : 'var(--color-primary-soft)'}`,
-              opacity: 0.9
-            }}
-          />
-        </MessageItem>
-        {messages.map((message, index) => {
-          const opacity = 0.5 + calculateValueByDistance(message.id, 1)
-          const scale = 1 + calculateValueByDistance(message.id, 1)
-          const size = 10 + calculateValueByDistance(message.id, 20)
-          const avatarSource = getAvatarSource(isLocalAi, getMessageModelId(message))
-          const username = removeLeadingEmoji(getUserName(message))
-
-          return (
-            <MessageItem
-              key={message.id}
-              ref={(el) => {
-                if (el) messageItemsRef.current.set(message.id, el)
-                else messageItemsRef.current.delete(message.id)
-              }}
-              style={{
-                opacity: mouseY ? opacity : Math.max(0, 0.6 - (0.3 * Math.abs(index - messages.length / 2)) / 5)
-              }}
-              onClick={() => scrollToMessage(message)}>
-              <MessageItemContainer style={{ transform: ` scale(${scale})` }}>
-                <MessageItemTitle>{username}</MessageItemTitle>
-                <MessageItemContent>{message.content.substring(0, 50)}</MessageItemContent>
-              </MessageItemContainer>
-
-              {message.role === 'assistant' ? (
-                <Avatar
-                  src={avatarSource}
-                  size={size}
-                  style={{
-                    border: isLocalAi ? '1px solid var(--color-border-soft)' : 'none',
-                    filter: theme === 'dark' ? 'invert(0.05)' : undefined
-                  }}>
-                  A
-                </Avatar>
-              ) : (
-                <>
-                  {isEmoji(avatar) ? (
-                    <EmojiAvatar size={size}>{avatar}</EmojiAvatar>
-                  ) : (
-                    <Avatar src={avatar} size={size} />
-                  )}
-                </>
-              )}
-            </MessageItem>
-          )
-        })}
+        {renderedItems}
       </MessagesList>
     </MessageLineContainer>
   )
@@ -321,4 +346,5 @@ const EmojiAvatar = styled.div<{ size: number }>`
   border: 0.5px solid var(--color-border);
 `
 
-export default MessageAnchorLine
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(MessageAnchorLine)

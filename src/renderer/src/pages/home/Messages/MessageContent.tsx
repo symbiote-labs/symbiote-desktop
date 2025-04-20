@@ -20,7 +20,6 @@ import MessageAttachments from './MessageAttachments'
 import MessageError from './MessageError'
 import MessageImage from './MessageImage'
 import MessageThought from './MessageThought'
-import MessageTools from './MessageTools'
 
 interface Props {
   message: Message
@@ -235,7 +234,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
 
   return (
     <Fragment>
-      <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
+      <Flex gap="4px" wrap style={{ marginBottom: '2px' }}>
         {message.mentions?.map((model) => <MentionTag key={getModelUniqId(model)}>{'@' + model.name}</MentionTag>)}
       </Flex>
       {message.referencedMessages && message.referencedMessages.length > 0 && (
@@ -329,25 +328,24 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         />
       )}
       <div className="message-content-tools">
-        {/* These components display tool/thought info separately at the top */}
+        {/* Only display thought info at the top */}
         <MessageThought message={message} />
-        <MessageTools message={message} />
       </div>
       {isSegmentedPlayback ? (
         // Apply regex replacement here for TTS
         <TTSHighlightedText text={processedContent.replace(tagsToRemoveRegex, '')} />
       ) : (
-        // Apply regex replacement here for Markdown display
-        <Markdown message={{ ...message, content: processedContent.replace(tagsToRemoveRegex, '') }} />
+        // Don't remove XML tags, let Markdown component handle them
+        <Markdown message={{ ...message, content: processedContent }} />
       )}
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
         <Fragment>
-          <Divider style={{ margin: 0, marginBottom: 10 }}>
+          <Divider style={{ margin: 0, marginBottom: 5 }}>
             <TranslationOutlined />
           </Divider>
           {message.translatedContent === t('translate.processing') ? (
-            <BeatLoader color="var(--color-text-2)" size="10" style={{ marginBottom: 15 }} />
+            <BeatLoader color="var(--color-text-2)" size="10" style={{ marginBottom: 5 }} />
           ) : (
             // Render translated content (assuming it doesn't need tag removal, adjust if needed)
             <Markdown message={{ ...message, content: message.translatedContent }} />
@@ -428,10 +426,10 @@ const SearchingContainer = styled.div`
   flex-direction: row;
   align-items: center;
   background-color: var(--color-background-mute);
-  padding: 10px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+  gap: 8px;
 `
 
 const MentionTag = styled.span`
@@ -446,15 +444,15 @@ const SearchingText = styled.div`
 `
 
 const SearchEntryPoint = styled.div`
-  margin: 10px 2px;
+  margin: 5px 2px;
 `
 
 // 引用消息样式 - 使用全局样式
 const referenceStyles = `
   .reference-collapse {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     border: 1px solid var(--color-border) !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
     overflow: hidden;
     background-color: var(--color-bg-1) !important;
 
@@ -536,8 +534,8 @@ const referenceStyles = `
     }
 
     .ant-collapse-content-box {
-      padding: 12px !important;
-      padding-top: 8px !important;
+      padding: 8px !important;
+      padding-top: 5px !important;
       padding-bottom: 2px !important;
     }
 
@@ -554,7 +552,7 @@ const referenceStyles = `
       }
 
       .reference-bottom-spacing {
-        height: 10px;
+        height: 5px;
       }
     }
   }
@@ -572,8 +570,8 @@ try {
         referenceStyles +
         `
           .message-content-tools {
-            margin-top: 20px; /* Adjust as needed */
-            margin-bottom: 10px; /* Add space before main content */
+            margin-top: 5px; /* 进一步减少顶部间距 */
+            margin-bottom: 2px; /* 进一步减少底部间距 */
           }
         `
       document.head.appendChild(styleElement)

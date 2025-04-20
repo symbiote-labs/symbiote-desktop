@@ -10,7 +10,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { RootState } from '@renderer/store'
 import { selectCurrentTopicId } from '@renderer/store/messages'
 import { Button, Drawer, Tooltip } from 'antd'
-import { FC, useCallback, useEffect, useRef, useState } from 'react'
+import { FC, memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -77,107 +77,121 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
     setHideTimer(timer)
   }, [])
 
-  const handleChatHistoryClick = () => {
+  // 使用 useCallback 记忆化 handleChatHistoryClick 函数，避免不必要的重新创建
+  const handleChatHistoryClick = useCallback(() => {
     setShowChatHistory(true)
     resetHideTimer()
-  }
+  }, [setShowChatHistory, resetHideTimer])
 
-  const handleDrawerClose = () => {
+  // 使用 useCallback 记忆化 handleDrawerClose 函数，避免不必要的重新创建
+  const handleDrawerClose = useCallback(() => {
     setShowChatHistory(false)
-  }
+  }, [setShowChatHistory])
 
-  const findUserMessages = () => {
+  // 使用 useCallback 记忆化 findUserMessages 函数，避免不必要的重新创建
+  const findUserMessages = useCallback(() => {
     const container = document.getElementById(containerId)
     if (!container) return []
 
     const userMessages = Array.from(container.getElementsByClassName('message-user'))
     return userMessages as HTMLElement[]
-  }
+  }, [containerId])
 
-  const findAssistantMessages = () => {
+  // 使用 useCallback 记忆化 findAssistantMessages 函数，避免不必要的重新创建
+  const findAssistantMessages = useCallback(() => {
     const container = document.getElementById(containerId)
 
     if (!container) return []
 
     const assistantMessages = Array.from(container.getElementsByClassName('message-assistant'))
     return assistantMessages as HTMLElement[]
-  }
+  }, [containerId])
 
-  const scrollToMessage = (element: HTMLElement) => {
+  // 使用 useCallback 记忆化 scrollToMessage 函数，避免不必要的重新创建
+  const scrollToMessage = useCallback((element: HTMLElement) => {
     element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  }, [])
 
-  const scrollToTop = () => {
+  // 使用 useCallback 记忆化 scrollToTop 函数，避免不必要的重新创建
+  const scrollToTop = useCallback(() => {
     const container = document.getElementById(containerId)
     container && container.scrollTo({ top: -container.scrollHeight, behavior: 'smooth' })
-  }
+  }, [containerId])
 
-  const scrollToBottom = () => {
+  // 使用 useCallback 记忆化 scrollToBottom 函数，避免不必要的重新创建
+  const scrollToBottom = useCallback(() => {
     const container = document.getElementById(containerId)
     container && container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
-  }
+  }, [containerId])
 
-  const getCurrentVisibleIndex = (direction: 'up' | 'down') => {
-    const userMessages = findUserMessages()
-    const assistantMessages = findAssistantMessages()
-    const container = document.getElementById(containerId)
+  // 使用 useCallback 记忆化 getCurrentVisibleIndex 函数，避免不必要的重新创建
+  const getCurrentVisibleIndex = useCallback(
+    (direction: 'up' | 'down') => {
+      const userMessages = findUserMessages()
+      const assistantMessages = findAssistantMessages()
+      const container = document.getElementById(containerId)
 
-    if (!container) return -1
+      if (!container) return -1
 
-    const containerRect = container.getBoundingClientRect()
-    const visibleThreshold = containerRect.height * 0.1
+      const containerRect = container.getBoundingClientRect()
+      const visibleThreshold = containerRect.height * 0.1
 
-    let visibleIndices: number[] = []
+      let visibleIndices: number[] = []
 
-    for (let i = 0; i < userMessages.length; i++) {
-      const messageRect = userMessages[i].getBoundingClientRect()
-      const visibleHeight =
-        Math.min(messageRect.bottom, containerRect.bottom) - Math.max(messageRect.top, containerRect.top)
-      if (visibleHeight > 0 && visibleHeight >= Math.min(messageRect.height, visibleThreshold)) {
-        visibleIndices.push(i)
+      for (let i = 0; i < userMessages.length; i++) {
+        const messageRect = userMessages[i].getBoundingClientRect()
+        const visibleHeight =
+          Math.min(messageRect.bottom, containerRect.bottom) - Math.max(messageRect.top, containerRect.top)
+        if (visibleHeight > 0 && visibleHeight >= Math.min(messageRect.height, visibleThreshold)) {
+          visibleIndices.push(i)
+        }
       }
-    }
 
-    if (visibleIndices.length > 0) {
-      return direction === 'up' ? Math.max(...visibleIndices) : Math.min(...visibleIndices)
-    }
-
-    visibleIndices = []
-    for (let i = 0; i < assistantMessages.length; i++) {
-      const messageRect = assistantMessages[i].getBoundingClientRect()
-      const visibleHeight =
-        Math.min(messageRect.bottom, containerRect.bottom) - Math.max(messageRect.top, containerRect.top)
-      if (visibleHeight > 0 && visibleHeight >= Math.min(messageRect.height, visibleThreshold)) {
-        visibleIndices.push(i)
+      if (visibleIndices.length > 0) {
+        return direction === 'up' ? Math.max(...visibleIndices) : Math.min(...visibleIndices)
       }
-    }
 
-    if (visibleIndices.length > 0) {
-      const assistantIndex = direction === 'up' ? Math.max(...visibleIndices) : Math.min(...visibleIndices)
-      return assistantIndex < userMessages.length ? assistantIndex : userMessages.length - 1
-    }
+      visibleIndices = []
+      for (let i = 0; i < assistantMessages.length; i++) {
+        const messageRect = assistantMessages[i].getBoundingClientRect()
+        const visibleHeight =
+          Math.min(messageRect.bottom, containerRect.bottom) - Math.max(messageRect.top, containerRect.top)
+        if (visibleHeight > 0 && visibleHeight >= Math.min(messageRect.height, visibleThreshold)) {
+          visibleIndices.push(i)
+        }
+      }
 
-    return -1
-  }
+      if (visibleIndices.length > 0) {
+        const assistantIndex = direction === 'up' ? Math.max(...visibleIndices) : Math.min(...visibleIndices)
+        return assistantIndex < userMessages.length ? assistantIndex : userMessages.length - 1
+      }
 
-  // 修改 handleCloseChatNavigation 函数
-  const handleCloseChatNavigation = () => {
+      return -1
+    },
+    [containerId, findUserMessages, findAssistantMessages]
+  )
+
+  // 使用 useCallback 记忆化 handleCloseChatNavigation 函数，避免不必要的重新创建
+  const handleCloseChatNavigation = useCallback(() => {
     setIsVisible(false)
     // 设置手动关闭状态，1分钟内不响应鼠标靠近事件
     setManuallyClosedUntil(Date.now() + 60000) // 60000毫秒 = 1分钟
-  }
+  }, [setIsVisible, setManuallyClosedUntil])
 
-  const handleScrollToTop = () => {
+  // 使用 useCallback 记忆化 handleScrollToTop 函数，避免不必要的重新创建
+  const handleScrollToTop = useCallback(() => {
     resetHideTimer()
     scrollToTop()
-  }
+  }, [resetHideTimer, scrollToTop])
 
-  const handleScrollToBottom = () => {
+  // 使用 useCallback 记忆化 handleScrollToBottom 函数，避免不必要的重新创建
+  const handleScrollToBottom = useCallback(() => {
     resetHideTimer()
     scrollToBottom()
-  }
+  }, [resetHideTimer, scrollToBottom])
 
-  const handleNextMessage = () => {
+  // 使用 useCallback 记忆化 handleNextMessage 函数，避免不必要的重新创建
+  const handleNextMessage = useCallback(() => {
     resetHideTimer()
     const userMessages = findUserMessages()
     const assistantMessages = findAssistantMessages()
@@ -202,9 +216,10 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
     }
 
     scrollToMessage(userMessages[targetIndex])
-  }
+  }, [resetHideTimer, findUserMessages, findAssistantMessages, scrollToBottom, getCurrentVisibleIndex, scrollToMessage])
 
-  const handlePrevMessage = () => {
+  // 使用 useCallback 记忆化 handlePrevMessage 函数，避免不必要的重新创建
+  const handlePrevMessage = useCallback(() => {
     resetHideTimer()
     const userMessages = findUserMessages()
     const assistantMessages = findAssistantMessages()
@@ -228,7 +243,7 @@ const ChatNavigation: FC<ChatNavigationProps> = ({ containerId }) => {
     }
 
     scrollToMessage(userMessages[targetIndex])
-  }
+  }, [resetHideTimer, findUserMessages, findAssistantMessages, scrollToTop, getCurrentVisibleIndex, scrollToMessage])
 
   // Set up scroll event listener and mouse position tracking
   useEffect(() => {
@@ -441,4 +456,5 @@ const Divider = styled.div`
   margin: 0;
 `
 
-export default ChatNavigation
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(ChatNavigation)

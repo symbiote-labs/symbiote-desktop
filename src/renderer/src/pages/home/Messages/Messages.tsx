@@ -57,15 +57,24 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   }, [messages])
 
   useEffect(() => {
-    const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
-    setDisplayMessages(newDisplayMessages)
-    setHasMore(messages.length > displayCount)
+    // 优化：使用 requestAnimationFrame 来延迟计算，避免阻塞主线程
+    const rafId = requestAnimationFrame(() => {
+      const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
+      setDisplayMessages(newDisplayMessages)
+      setHasMore(messages.length > displayCount)
+    })
+
+    // 清理函数，取消未执行的 requestAnimationFrame
+    return () => cancelAnimationFrame(rafId)
   }, [messages, displayCount])
 
   const maxWidth = useMemo(() => {
+    // 优化：缓存计算结果，减少字符串拼接
     const showRightTopics = showTopics && topicPosition === 'right'
     const minusAssistantsWidth = showAssistants ? '- var(--assistants-width)' : ''
     const minusRightTopicsWidth = showRightTopics ? '- var(--assistants-width)' : ''
+
+    // 使用模板字符串代替多次字符串拼接，提高可读性
     return `calc(100vw - var(--sidebar-width) ${minusAssistantsWidth} ${minusRightTopicsWidth} - 5px)`
   }, [showAssistants, showTopics, topicPosition])
 
@@ -201,14 +210,66 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     // 使用requestAnimationFrame代替setTimeout，更好地与浏览器渲染周期同步
     requestAnimationFrame(() => {
       const currentLength = displayMessages.length
-      const newMessages = computeDisplayMessages(messages, currentLength, LOAD_MORE_COUNT)
+
+      // 优化：只计算新的消息批次，而不是重新计算整个列表
+      // 获取已经反转的消息数组
+      const reversedMessages = [...messages].reverse()
+
+      // 从当前显示的消息数量开始，获取下一批消息
+      const nextBatchMessages = reversedMessages.slice(currentLength, currentLength + LOAD_MORE_COUNT)
+
+      // 对这批新消息应用相同的处理逻辑，确保一致性
+      const processedBatch = processMessageBatch(nextBatchMessages)
 
       // 批量更新状态，减少渲染次数
-      setDisplayMessages((prev) => [...prev, ...newMessages])
+      setDisplayMessages((prev) => [...prev, ...processedBatch])
       setHasMore(currentLength + LOAD_MORE_COUNT < messages.length)
       setIsLoadingMore(false)
     })
   }, [displayMessages.length, hasMore, isLoadingMore, messages])
+
+  // 辅助函数：处理一批消息，应用与computeDisplayMessages相同的逻辑
+  // 但只处理传入的批次，不处理整个消息列表
+  const processMessageBatch = (messageBatch: Message[]) => {
+    const userIdSet = new Set() // 用户消息 id 集合
+    const assistantIdSet = new Set() // 助手消息 askId 集合
+    const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
+    const batchDisplayMessages: Message[] = []
+    const messageIdMap = new Map<string, boolean>() // 用于快速查找消息ID是否存在
+
+    // 处理单条消息的函数
+    const processMessage = (message: Message) => {
+      if (!message) return
+
+      // 跳过已处理的消息ID
+      if (processedIds.has(message.id)) {
+        return
+      }
+
+      processedIds.add(message.id) // 标记此消息ID为已处理
+
+      const idSet = message.role === 'user' ? userIdSet : assistantIdSet
+      const messageId = message.role === 'user' ? message.id : message.askId
+
+      if (!idSet.has(messageId)) {
+        idSet.add(messageId)
+        batchDisplayMessages.push(message)
+        messageIdMap.set(message.id, true)
+        return
+      }
+
+      // 使用Map进行O(1)复杂度的查找，替代O(n)复杂度的数组some方法
+      if (message.role === 'assistant' && !messageIdMap.has(message.id)) {
+        batchDisplayMessages.push(message)
+        messageIdMap.set(message.id, true)
+      }
+    }
+
+    // 处理批次中的每条消息
+    messageBatch.forEach(processMessage)
+
+    return batchDisplayMessages
+  }
 
   useShortcut('copy_last_message', () => {
     const lastMessage = last(messages)
@@ -258,8 +319,15 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
         </InfiniteScroll>
         <Prompt assistant={assistant} key={assistant.prompt} topic={topic} />
       </NarrowLayout>
-      {messageNavigation === 'anchor' && <MessageAnchorLine messages={displayMessages} />}
-      {messageNavigation === 'buttons' && <ChatNavigation containerId="messages" />}
+      {useMemo(() => {
+        if (messageNavigation === 'anchor') {
+          return <MessageAnchorLine messages={displayMessages} />
+        }
+        if (messageNavigation === 'buttons') {
+          return <ChatNavigation containerId="messages" />
+        }
+        return null
+      }, [messageNavigation, displayMessages])}
       <TTSStopButton />
     </Container>
   )

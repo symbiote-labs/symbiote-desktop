@@ -345,30 +345,34 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
         </SettingHelpTextRow>
       )}
       {/* 显示API密钥列表 */}
-      {provider.id !== 'gemini' && provider.id !== 'ollama' && provider.id !== 'lmstudio' && provider.id !== 'copilot' && apiKey.includes(',') && (
-        <KeysListContainer>
-          {apiKey
-            .split(',')
-            .map((key) => key.trim())
-            .filter((key) => key !== '')
-            .map((key, index) => (
-              <KeyItem key={index}>
-                <Typography.Text>{maskApiKey(key)}</Typography.Text>
-                <Button
-                  type="text"
-                  icon={<CopyOutlined />}
-                  onClick={() => {
-                    navigator.clipboard.writeText(key)
-                    window.message.success({
-                      content: t('common.copied'),
-                      duration: 2
-                    })
-                  }}
-                />
-              </KeyItem>
-            ))}
-        </KeysListContainer>
-      )}
+      {provider.id !== 'gemini' &&
+        provider.id !== 'ollama' &&
+        provider.id !== 'lmstudio' &&
+        provider.id !== 'copilot' &&
+        apiKey.includes(',') && (
+          <KeysListContainer>
+            {apiKey
+              .split(',')
+              .map((key) => key.trim())
+              .filter((key) => key !== '')
+              .map((key, index) => (
+                <KeyItem key={index}>
+                  <Typography.Text>{maskApiKey(key)}</Typography.Text>
+                  <Button
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(key)
+                      window.message.success({
+                        content: t('common.copied'),
+                        duration: 2
+                      })
+                    }}
+                  />
+                </KeyItem>
+              ))}
+          </KeysListContainer>
+        )}
       <SettingSubtitle>{t('settings.provider.api_host')}</SettingSubtitle>
       <Space.Compact style={{ width: '100%', marginTop: 5 }}>
         <Input

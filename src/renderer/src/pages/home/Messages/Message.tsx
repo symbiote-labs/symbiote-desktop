@@ -16,6 +16,7 @@ import { Divider, Dropdown } from 'antd'
 import { ItemType } from 'antd/es/menu/interface'
 import { Dispatch, FC, memo, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { shallowEqual } from 'react-redux'
 // import { useSelector } from 'react-redux'; // Removed unused import
 import styled from 'styled-components' // Ensure styled-components is imported
 
@@ -81,16 +82,23 @@ const MessageItem: FC<Props> = ({
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null)
   const [selectedQuoteText, setSelectedQuoteText] = useState<string>('')
   const [selectedText, setSelectedText] = useState<string>('')
+
+  // 使用记忆化的上下文菜单项生成函数
+  const getContextMenuItems = useContextMenuItems(t, message)
   const dispatch = useAppDispatch()
   const playTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // --- Consolidated State Selection ---
-  const ttsEnabled = useAppSelector((state) => state.settings.ttsEnabled)
-  const voiceCallEnabled = useAppSelector((state) => state.settings.voiceCallEnabled)
-  const autoPlayTTSOutsideVoiceCall = useAppSelector((state) => state.settings.autoPlayTTSOutsideVoiceCall)
-  const isVoiceCallActive = useAppSelector((state) => state.settings.isVoiceCallActive)
-  const lastPlayedMessageId = useAppSelector((state) => state.settings.lastPlayedMessageId)
-  const skipNextAutoTTS = useAppSelector((state) => state.settings.skipNextAutoTTS)
+  // --- Consolidated State Selection with shallowEqual for performance ---
+  const { ttsEnabled, voiceCallEnabled, isVoiceCallActive, lastPlayedMessageId, skipNextAutoTTS } = useAppSelector(
+    (state) => ({
+      ttsEnabled: state.settings.ttsEnabled,
+      voiceCallEnabled: state.settings.voiceCallEnabled,
+      isVoiceCallActive: state.settings.isVoiceCallActive,
+      lastPlayedMessageId: state.settings.lastPlayedMessageId,
+      skipNextAutoTTS: state.settings.skipNextAutoTTS
+    }),
+    shallowEqual
+  ) // 使用 shallowEqual 比较函数避免不必要的重渲染
   // ---------------------------------
 
   const isLastMessage = index === 0
@@ -98,6 +106,7 @@ const MessageItem: FC<Props> = ({
   const showMenubar = !isStreaming && !message.status.includes('ing')
 
   const fontFamily = useMemo(() => {
+    // 优化：简化字符串操作，减少每次渲染时的计算开销
     return messageFont === 'serif' ? FONT_FAMILY.replace('sans-serif', 'serif').replace('Ubuntu, ', '') : FONT_FAMILY
   }, [messageFont])
 
@@ -154,94 +163,100 @@ const MessageItem: FC<Props> = ({
     }
   }, [generating, isLastMessage, isAssistantMessage, message.status, message.id, dispatch])
 
-  // --- Auto-play TTS Logic ---
-  useEffect(() => {
+  // --- 使用 useMemo 计算是否应该自动播放 TTS ---
+  const shouldAutoPlayTTS = useMemo(() => {
     // 基本条件检查
-    if (!isLastMessage || !isAssistantMessage || message.status !== 'success' || generating) {
-      return
-    }
-    if (!ttsEnabled) {
-      return
-    }
+    if (!isLastMessage) return false // 必须是最后一条消息
+    if (!isAssistantMessage) return false // 必须是助手消息
+    if (message.status !== 'success') return false // 消息状态必须是成功
+    if (generating) return false // 正在生成中时不播放
+    if (!ttsEnabled) return false // TTS功能必须启用
 
     // 语音通话相关条件检查
-    if (voiceCallEnabled === false && autoPlayTTSOutsideVoiceCall === false) {
-      // 简化日志输出
-      console.log('不自动播放TTS: 语音通话功能未启用 + 不允许在语音通话模式外自动播放')
-      return
-    }
-    if (voiceCallEnabled === true && isVoiceCallActive === false && autoPlayTTSOutsideVoiceCall === false) {
-      // 简化日志输出
-      console.log('不自动播放TTS: 语音通话窗口未打开 + 不允许在语音通话模式外自动播放')
-      return
+    if (!voiceCallEnabled || !isVoiceCallActive) {
+      console.log('不自动播放TTS: 语音通话未开启或窗口未激活, ID:', message.id)
+      return false
     }
 
     // 检查是否需要跳过自动TTS
     if (skipNextAutoTTS === true) {
       console.log('跳过自动TTS: skipNextAutoTTS = true, 消息ID:', message.id)
-      return
+      return false
     }
+
     // 检查消息是否有内容，且消息是新的（不是上次播放过的消息）
-    if (message.content && message.content.trim() && message.id !== lastPlayedMessageId) {
-      // 简化日志输出
-      console.log('准备自动播放TTS, 消息ID:', message.id)
-
-      // 先设置状态，防止重复播放
-      const currentMessageId = message.id
-      dispatch(setLastPlayedMessageId(currentMessageId))
-
-      // 只有当没有设置过定时器时才设置
-      if (!playTimeoutRef.current) {
-        playTimeoutRef.current = setTimeout(() => {
-          console.log('自动播放TTS: 消息ID:', currentMessageId)
-          TTSService.speakFromMessage(message)
-          // 清除定时器引用
-          playTimeoutRef.current = null
-        }, 500)
-      }
-
-      // 清理函数
-      return () => {
-        if (playTimeoutRef.current) {
-          clearTimeout(playTimeoutRef.current)
-          playTimeoutRef.current = null
-        }
-      }
-    } else if (message.id === lastPlayedMessageId) {
-      // 简化日志输出
-      console.log('不自动播放TTS: 消息已播放过 (lastPlayedMessageId), ID:', message.id)
-      return // 添加返回语句，解决TypeScript错误
+    if (!message.content || !message.content.trim() || message.id === lastPlayedMessageId) {
+      return false
     }
 
-    // 添加默认返回值，确保所有代码路径都有返回值
-    return
+    // 所有条件都满足，应该自动播放
+    return true
   }, [
     isLastMessage,
     isAssistantMessage,
-    message,
+    message.status,
+    message.content,
+    message.id,
     generating,
     ttsEnabled,
     voiceCallEnabled,
-    autoPlayTTSOutsideVoiceCall,
     isVoiceCallActive,
     skipNextAutoTTS,
-    lastPlayedMessageId,
-    dispatch
+    lastPlayedMessageId
   ])
 
-  // --- Highlight message on event ---
-  const messageHighlightHandler = useCallback((highlight: boolean = true) => {
-    if (messageContainerRef.current) {
-      messageContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      if (highlight) {
-        const element = messageContainerRef.current
-        element.classList.add('message-highlight')
-        setTimeout(() => {
-          element?.classList.remove('message-highlight')
-        }, 2500)
+  // --- 简化后的 TTS 自动播放逻辑 ---
+  useEffect(() => {
+    // 如果不应该自动播放，直接返回
+    if (!shouldAutoPlayTTS) return
+
+    console.log('准备自动播放TTS, 消息ID:', message.id)
+
+    // 只有当没有设置过定时器时才设置
+    if (!playTimeoutRef.current) {
+      const currentMessageId = message.id // 捕获当前消息ID
+
+      playTimeoutRef.current = setTimeout(() => {
+        console.log('自动播放TTS: 消息ID:', currentMessageId)
+        // 在播放前再次检查是否还是当前消息
+        if (currentMessageId === message.id) {
+          TTSService.speakFromMessage(message)
+          dispatch(setLastPlayedMessageId(currentMessageId))
+        } else {
+          console.log('跳过播放TTS: 消息ID不匹配, 计划播放:', currentMessageId, '当前消息:', message.id)
+        }
+
+        // 播放完成后清除定时器引用
+        playTimeoutRef.current = null
+      }, 500)
+    }
+
+    // 清理函数
+    return () => {
+      if (playTimeoutRef.current) {
+        console.log('清理TTS自动播放定时器, 消息ID:', message.id)
+        clearTimeout(playTimeoutRef.current)
+        playTimeoutRef.current = null
       }
     }
-  }, [])
+  }, [shouldAutoPlayTTS, message, dispatch])
+
+  // --- Highlight message on event ---
+  // 使用 useMemo 记忆化消息高亮处理函数，减少重新创建
+  const messageHighlightHandler = useMemo(() => {
+    return (highlight: boolean = true) => {
+      if (messageContainerRef.current) {
+        messageContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        if (highlight) {
+          const element = messageContainerRef.current
+          element.classList.add('message-highlight')
+          setTimeout(() => {
+            element?.classList.remove('message-highlight')
+          }, 2500)
+        }
+      }
+    }
+  }, []) // 空依赖数组，因为函数内部使用的是 ref 的 .current 属性
 
   useEffect(() => {
     const eventName = `${EVENT_NAMES.LOCATE_MESSAGE}:${message.id}`
@@ -279,7 +294,7 @@ const MessageItem: FC<Props> = ({
       {contextMenuPosition && (
         <Dropdown
           overlayStyle={{ position: 'fixed', left: contextMenuPosition.x, top: contextMenuPosition.y, zIndex: 1000 }}
-          menu={{ items: getContextMenuItems(t, selectedQuoteText, selectedText, message) }}
+          menu={{ items: getContextMenuItems(selectedQuoteText, selectedText) }}
           open={true}
           trigger={['contextMenu']}>
           {/* FIX 2: Use the styled component instead of inline style */}
@@ -324,75 +339,74 @@ const MessageItem: FC<Props> = ({
   )
 }
 
-// Updated context menu items function
-const getContextMenuItems = (
-  t: (key: string) => string,
-  selectedQuoteText: string,
-  selectedText: string,
-  message: Message
-): ItemType[] => {
-  const items: ItemType[] = []
+// 使用 hook 封装上下文菜单项生成逻辑，便于在组件内使用
+const useContextMenuItems = (t: (key: string) => string, message: Message) => {
+  return useMemo(() => {
+    return (selectedQuoteText: string, selectedText: string): ItemType[] => {
+      const items: ItemType[] = []
 
-  if (selectedText) {
-    items.push({
-      key: 'copy',
-      label: t('common.copy'),
-      onClick: () => {
-        navigator.clipboard
-          .writeText(selectedText)
-          .then(() => window.message.success({ content: t('message.copied'), key: 'copy-message' }))
-          .catch((err) => console.error('Failed to copy text: ', err))
-      }
-    })
-    items.push({
-      key: 'quote',
-      label: t('chat.message.quote'),
-      onClick: () => {
-        EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
-      }
-    })
-    items.push({
-      key: 'speak_selected',
-      label: t('chat.message.speak_selection') || '朗读选中部分',
-      onClick: () => {
-        // 首先手动关闭菜单
-        document.dispatchEvent(new MouseEvent('click'))
+      if (selectedText) {
+        items.push({
+          key: 'copy',
+          label: t('common.copy'),
+          onClick: () => {
+            navigator.clipboard
+              .writeText(selectedText)
+              .then(() => window.message.success({ content: t('message.copied'), key: 'copy-message' }))
+              .catch((err) => console.error('Failed to copy text: ', err))
+          }
+        })
+        items.push({
+          key: 'quote',
+          label: t('chat.message.quote'),
+          onClick: () => {
+            EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
+          }
+        })
+        items.push({
+          key: 'speak_selected',
+          label: t('chat.message.speak_selection') || '朗读选中部分',
+          onClick: () => {
+            // 首先手动关闭菜单
+            document.dispatchEvent(new MouseEvent('click'))
 
-        // 使用setTimeout确保菜单关闭后再执行TTS功能
-        setTimeout(() => {
-          import('@renderer/services/TTSService')
-            .then(({ default: TTSServiceInstance }) => {
-              let textToSpeak = selectedText
-              if (message.content) {
-                const startIndex = message.content.indexOf(selectedText)
-                if (startIndex !== -1) {
-                  textToSpeak = selectedText // Just speak selection
-                }
-              }
-              // 传递消息ID，确保进度条和停止按钮正常工作
-              TTSServiceInstance.speak(textToSpeak, false, message.id) // 使用普通播放模式而非分段播放
-            })
-            .catch((err) => console.error('Failed to load or use TTSService:', err))
-        }, 100)
+            // 使用setTimeout确保菜单关闭后再执行TTS功能
+            setTimeout(() => {
+              import('@renderer/services/TTSService')
+                .then(({ default: TTSServiceInstance }) => {
+                  let textToSpeak = selectedText
+                  if (message.content) {
+                    const startIndex = message.content.indexOf(selectedText)
+                    if (startIndex !== -1) {
+                      textToSpeak = selectedText // Just speak selection
+                    }
+                  }
+                  // 传递消息ID，确保进度条和停止按钮正常工作
+                  TTSServiceInstance.speak(textToSpeak, false, message.id) // 使用普通播放模式而非分段播放
+                })
+                .catch((err) => console.error('Failed to load or use TTSService:', err))
+            }, 100)
+          }
+        })
+        items.push({ type: 'divider' })
       }
-    })
-    items.push({ type: 'divider' })
-  }
 
-  items.push({
-    key: 'copy_id',
-    label: t('message.copy_id') || '复制消息ID',
-    onClick: () => {
-      navigator.clipboard
-        .writeText(message.id)
-        .then(() =>
-          window.message.success({ content: t('message.id_copied') || '消息ID已复制', key: 'copy-message-id' })
-        )
-        .catch((err) => console.error('Failed to copy message ID: ', err))
+      items.push({
+        key: 'copy_id',
+        label: t('message.copy_id') || '复制消息ID',
+        onClick: () => {
+          navigator.clipboard
+            .writeText(message.id)
+            .then(() =>
+              window.message.success({ content: t('message.id_copied') || '消息ID已复制', key: 'copy-message-id' })
+            )
+            .catch((err) => console.error('Failed to copy message ID: ', err))
+        }
+      })
+
+      return items
     }
-  })
-
-  return items
+  }, [t, message.id, message.content]) // 只依赖 t 和 message 的关键属性
 }
 
 // Styled components definitions

@@ -1,5 +1,5 @@
 import { useAppSelector } from '@renderer/store'
-import { selectStreamMessage } from '@renderer/store/messages'
+import { selectRegularMessage, selectStreamMessage } from '@renderer/store/messages'
 import { Assistant, Message, Topic } from '@renderer/types'
 import { memo, useMemo } from 'react'
 import styled from 'styled-components'
@@ -34,19 +34,8 @@ const MessageStream: React.FC<MessageStreamProps> = ({
   // 获取流式消息，使用选择器减少不必要的重新渲染
   const streamMessage = useAppSelector((state) => selectStreamMessage(state, _message.topicId, _message.id))
 
-  // 获取常规消息，使用选择器减少不必要的重新渲染
-  const regularMessage = useAppSelector((state) => {
-    // 如果是用户消息，直接使用传入的_message
-    if (_message.role === 'user') {
-      return _message
-    }
-
-    // 对于助手消息，从store中查找最新状态
-    const topicMessages = state.messages?.messagesByTopic?.[_message.topicId]
-    if (!topicMessages) return _message
-
-    return topicMessages.find((m) => m.id === _message.id) || _message
-  })
+  // 获取常规消息，使用记忆化选择器减少不必要的重新渲染
+  const regularMessage = useAppSelector((state) => selectRegularMessage(state, _message.topicId, _message.id, _message))
 
   // 使用useMemo缓存计算结果
   const { isStreaming, message } = useMemo(() => {
@@ -70,13 +59,7 @@ const MessageStream: React.FC<MessageStreamProps> = ({
   )
 }
 
-// 使用自定义比较函数的memo包装组件，只在关键属性变化时重新渲染
-export default memo(MessageStream, (prevProps, nextProps) => {
-  // 只在关键属性变化时重新渲染
-  return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.status === nextProps.message.status &&
-    prevProps.topic.id === nextProps.topic.id
-  )
-})
+// 使用 React.memo 包装组件，使用默认的浅层比较
+// 这样可以确保所有属性变化都能触发重新渲染
+// 对于这种组件，默认的浅层比较通常更安全和简单
+export default memo(MessageStream)

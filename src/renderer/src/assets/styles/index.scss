@@ -5,6 +5,7 @@
 @use './animation.scss';
 @import '../fonts/icon-fonts/iconfont.css';
 @import '../fonts/ubuntu/ubuntu.css';
+@import './inline-tool-block.css';
 
 :root {
   --color-white: #ffffff;
@@ -28,6 +29,11 @@
   --color-background-mute: var(--color-black-mute);
   --color-background-opacity: rgba(34, 34, 34, 0.7);
   --inner-glow-opacity: 0.3; // For the glassmorphism effect in the dropdown menu
+
+  /* 添加工具块背景色变量 */
+  --color-bg-1: var(--color-black-soft);
+  --color-bg-2: var(--color-black-mute);
+  --color-bg-3: var(--color-gray-3);
 
   --color-primary: #00b96b;
   --color-primary-soft: #00b96b99;
@@ -100,6 +106,11 @@ body[theme-mode='light'] {
   --color-background-mute: var(--color-white-mute);
   --color-background-opacity: rgba(235, 235, 235, 0.7);
   --inner-glow-opacity: 0.1;
+
+  /* 添加工具块背景色变量 - 亮色主题 */
+  --color-bg-1: var(--color-white);
+  --color-bg-2: var(--color-white-soft);
+  --color-bg-3: var(--color-white-mute);
 
   --color-primary: #00b96b;
   --color-primary-soft: #00b96b99;

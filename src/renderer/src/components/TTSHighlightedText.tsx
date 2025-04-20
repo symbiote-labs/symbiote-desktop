@@ -1,6 +1,6 @@
 import { TextSegmenter } from '@renderer/services/tts/TextSegmenter'
 import TTSService from '@renderer/services/TTSService'
-import React, { useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import styled from 'styled-components'
 
 interface TTSHighlightedTextProps {
@@ -53,26 +53,28 @@ const TTSHighlightedText: React.FC<TTSHighlightedTextProps> = ({ text }) => {
   }, [])
 
   // 处理段落点击
-  const handleSegmentClick = (index: number) => {
+  // 使用 useCallback 记忆化函数，避免不必要的重新创建
+  const handleSegmentClick = useCallback((index: number) => {
     TTSService.playFromSegment(index)
-  }
+  }, [])
 
   if (segments.length === 0) {
     return <div>{text}</div>
   }
 
-  return (
-    <TextContainer>
-      {segments.map((segment, index) => (
-        <TextSegment
-          key={index}
-          className={index === currentSegmentIndex ? 'active' : ''}
-          onClick={() => handleSegmentClick(index)}>
-          {segment}
-        </TextSegment>
-      ))}
-    </TextContainer>
-  )
+  // 使用 useMemo 记忆化列表渲染结果，避免不必要的重新计算
+  const renderedSegments = useMemo(() => {
+    return segments.map((segment, index) => (
+      <TextSegment
+        key={index}
+        className={index === currentSegmentIndex ? 'active' : ''}
+        onClick={() => handleSegmentClick(index)}>
+        {segment}
+      </TextSegment>
+    ))
+  }, [segments, currentSegmentIndex, handleSegmentClick])
+
+  return <TextContainer>{renderedSegments}</TextContainer>
 }
 
 const TextContainer = styled.div`
@@ -93,4 +95,5 @@ const TextSegment = styled.span`
   }
 `
 
-export default TTSHighlightedText
+// 使用 memo 包装组件，避免不必要的重渲染
+export default memo(TTSHighlightedText)
