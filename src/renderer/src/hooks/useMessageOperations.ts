@@ -155,7 +155,7 @@ export function useMessageOperations(topic: Topic) {
     if (!topicMessages) return
 
     // Find messages currently in progress (adjust statuses if needed)
-    const streamingMessages = topicMessages.filter((m) => m.status === 'processing' || m.status === 'sending')
+    const streamingMessages = topicMessages.filter((m) => m.status === 'processing' || m.status === 'pending')
 
     const askIds = [...new Set(streamingMessages?.map((m) => m.askId).filter((id) => !!id) as string[])]
 

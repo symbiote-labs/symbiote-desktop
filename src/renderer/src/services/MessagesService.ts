@@ -8,7 +8,7 @@ import { messageBlocksSelectors, removeManyBlocks } from '@renderer/store/messag
 import type { Assistant, FileType, MCPServer, Model, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { getTitleFromString, uuid } from '@renderer/utils'
 import {
   createAssistantMessage,
@@ -112,7 +112,7 @@ export function getUserMessage({
 }: {
   assistant: Assistant
   topic: Topic
-  type: Message['type']
+  type?: Message['type']
   content?: string
   files?: FileType[]
   knowledgeBaseIds?: string[]
@@ -153,7 +153,6 @@ export function getUserMessage({
     'user',
     topic.id, // topic.id已经是string类型
     assistant.id,
-    type || 'text',
     {
       id: messageId, // 直接传入ID，避免冲突
       modelId: model?.id,
@@ -161,7 +160,8 @@ export function getUserMessage({
       blocks: blockIds,
       // 移除knowledgeBaseIds
       mentions,
-      enabledMCPs
+      enabledMCPs,
+      type
     }
   )
 
@@ -193,7 +193,7 @@ export function resetAssistantMessage(message: Message, model?: Model): Message 
     ...message,
     model: model || message.model,
     modelId: model?.id || message.modelId,
-    status: 'processing',
+    status: AssistantMessageStatus.PENDING,
     useful: undefined,
     askId: undefined,
     mentions: undefined,
@@ -212,7 +212,7 @@ export async function getMessageTitle(message: Message, length = 30): Promise<st
 
       const tempTextBlock = createMainTextBlock(message.id, content, { status: MessageBlockStatus.SUCCESS })
       const tempMessage = resetMessage(message, {
-        status: 'success',
+        status: AssistantMessageStatus.SUCCESS,
         blocks: [tempTextBlock.id]
       })
 

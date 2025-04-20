@@ -6,7 +6,7 @@ import type {
   Message as NewMessage,
   MessageBlock
 } from '@renderer/types/newMessage'
-import { MessageBlockStatus } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus } from '@renderer/types/newMessage'
 import { Transaction } from 'dexie'
 
 import {
@@ -74,16 +74,16 @@ function mapOldStatusToBlockStatus(oldStatus: OldMessage['status']): MessageBloc
 
 function mapOldStatusToNewMessageStatus(oldStatus: OldMessage['status']): NewMessage['status'] {
   // Handle statuses that need mapping
-  if (oldStatus === 'pending' || oldStatus === 'searching') {
-    return 'processing'
+  if (oldStatus === 'pending' || oldStatus === 'sending') {
+    return AssistantMessageStatus.PENDING
   }
   // For sending, success, paused, error, the values match NewMessage['status']
-  if (oldStatus === 'sending' || oldStatus === 'success' || oldStatus === 'paused' || oldStatus === 'error') {
+  if (oldStatus === 'searching' || oldStatus === 'success' || oldStatus === 'paused' || oldStatus === 'error') {
     // Cast is safe here as the values are identical
     return oldStatus as NewMessage['status']
   }
   // Default fallback
-  return 'processing'
+  return AssistantMessageStatus.PROCESSING
 }
 
 // --- UPDATED UPGRADE FUNCTION for Version 7 ---
@@ -256,7 +256,7 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
           status: mapOldStatusToNewMessageStatus(oldMessage.status),
           modelId: oldMessage.modelId,
           model: oldMessage.model,
-          type: oldMessage.type,
+          type: oldMessage.type === 'clear' ? 'clear' : undefined,
           isPreset: oldMessage.isPreset,
           useful: oldMessage.useful,
           askId: oldMessage.askId,

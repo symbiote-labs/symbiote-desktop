@@ -13,6 +13,7 @@ import type {
   ToolMessageBlock,
   TranslationMessageBlock
 } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, UserMessageStatus } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -283,11 +284,7 @@ export function createMessage(
   role: 'user' | 'assistant' | 'system',
   topicId: string,
   assistantId: string,
-  type: 'text' | '@' | 'clear',
-  overrides: PartialBy<
-    Omit<Message, 'role' | 'topicId' | 'assistantId' | 'createdAt' | 'status' | 'type'>,
-    'blocks' | 'id'
-  > = {}
+  overrides: PartialBy<Omit<Message, 'role' | 'topicId' | 'assistantId' | 'createdAt' | 'status'>, 'blocks' | 'id'> = {}
 ): Message {
   const now = new Date().toISOString()
   const messageId = overrides.id || uuidv4()
@@ -307,10 +304,9 @@ export function createMessage(
     role,
     topicId,
     assistantId,
-    type,
     createdAt: now,
-    status: role === 'user' ? 'success' : 'sending',
-    blocks: blocks,
+    status: role === 'user' ? UserMessageStatus.SUCCESS : AssistantMessageStatus.PENDING,
+    blocks,
     ...restOverrides
   }
 }
@@ -339,8 +335,7 @@ export function createAssistantMessage(
     assistantId: assistantId,
     topicId,
     createdAt: now,
-    type: 'text', // Default type
-    status: 'sending', // Initial status
+    status: AssistantMessageStatus.PENDING, // Initial status
     blocks: [], // Initialize with empty block IDs array
     ...overrides
   }
@@ -372,7 +367,7 @@ export function resetMessage(
     // Apply updates or use existing values
     model: updates.model ?? originalMessage.model,
     modelId: updates.modelId ?? originalMessage.modelId,
-    status: updates.status ?? 'processing', // Default reset status to 'processing'
+    status: updates.status ?? AssistantMessageStatus.PENDING, // Default reset status to 'processing'
 
     // Reset mutable/volatile properties
     blocks: updates.blocks ?? [], // Always clear blocks array

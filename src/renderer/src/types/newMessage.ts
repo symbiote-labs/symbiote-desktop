@@ -29,7 +29,7 @@ export enum MessageBlockType {
 // 块状态定义
 export enum MessageBlockStatus {
   //   PENDING = 'pending', // 等待处理
-  PROCESSING = 'processing', // 正在处理
+  PROCESSING = 'processing', // 正在处理 用于tool block需要等待处理的状态
   STREAMING = 'streaming', // 正在流式接收
   SUCCESS = 'success', // 处理成功
   ERROR = 'error', // 处理错误
@@ -141,6 +141,18 @@ export type MessageBlock =
   | ErrorMessageBlock
   | CitationMessageBlock
 
+export enum UserMessageStatus {
+  SUCCESS = 'success'
+}
+
+export enum AssistantMessageStatus {
+  PROCESSING = 'processing',
+  PENDING = 'pending',
+  SEARCHING = 'searching',
+  SUCCESS = 'success',
+  PAUSED = 'paused',
+  ERROR = 'error'
+}
 // Message 核心类型 - 包含元数据和块集合
 export type Message = {
   id: string
@@ -149,12 +161,12 @@ export type Message = {
   topicId: string
   createdAt: string
   //   updatedAt?: string
-  status: 'sending' | 'processing' | 'success' | 'paused' | 'error'
+  status: UserMessageStatus | AssistantMessageStatus
 
   // 消息元数据
   modelId?: string
   model?: Model
-  type: 'text' | '@' | 'clear'
+  type?: 'clear'
   isPreset?: boolean
   useful?: boolean
   askId?: string // 关联的问题消息ID

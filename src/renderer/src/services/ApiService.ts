@@ -4,7 +4,7 @@ import i18n from '@renderer/i18n'
 import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
 import store from '@renderer/store'
 import { Assistant, KnowledgeReference, MCPTool, Model, Provider, Suggestion, WebSearchResponse } from '@renderer/types'
-import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
 import { formatMessageError } from '@renderer/utils/error'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -41,7 +41,7 @@ export async function fetchChatCompletion({
 }: {
   messages: Message[]
   assistant: Assistant
-  onChunkReceived: (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => void
+  onChunkReceived: (chunk: ChunkCallbackData | { type: 'final'; status: AssistantMessageStatus; error?: any }) => void
   // TODO
   // onChunkStatus: (status: 'searching' | 'processing' | 'success' | 'error') => void
 }) {
@@ -65,7 +65,7 @@ export async function fetchChatCompletion({
       if (!assistant.enableWebSearch && !hasKnowledgeBase) return undefined
 
       // Notify UI that extraction/searching is starting
-      onChunkReceived({ type: 'status', status: 'searching' })
+      onChunkReceived({ type: 'status', status: AssistantMessageStatus.SEARCHING })
 
       const summaryAssistant = getDefaultAssistant()
       summaryAssistant.model = assistant.model || getDefaultModel()
@@ -206,11 +206,11 @@ export async function fetchChatCompletion({
     })
 
     // --- Signal Final Success ---
-    onChunkReceived({ type: 'final', status: 'success' })
+    onChunkReceived({ type: 'final', status: AssistantMessageStatus.SUCCESS })
   } catch (error: any) {
     console.error('Error during fetchChatCompletion:', error)
     // Signal Final Error
-    onChunkReceived({ type: 'final', status: 'error', error: formatMessageError(error) })
+    onChunkReceived({ type: 'final', status: AssistantMessageStatus.ERROR, error: formatMessageError(error) })
     // Re-throwing might still be desired depending on upstream error handling
     // throw error;
   }

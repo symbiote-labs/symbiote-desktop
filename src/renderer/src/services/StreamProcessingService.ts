@@ -1,8 +1,8 @@
 import type { GroundingMetadata } from '@google/genai'
 import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
 import { GenerateImageResponse, MCPToolResponse } from '@renderer/types'
+import { AssistantMessageStatus } from '@renderer/types/newMessage'
 import type OpenAI from 'openai'
-
 // Define the structure for the callbacks that the StreamProcessor will invoke
 export interface StreamProcessorCallbacks {
   // Text content chunk received
@@ -24,14 +24,14 @@ export interface StreamProcessorCallbacks {
   // Called when an error occurs during chunk processing
   onError?: (error: any) => void
   // Called when the entire stream processing is signaled as complete (success or failure)
-  onComplete?: (status: 'success' | 'error', finalError?: any) => void
+  onComplete?: (status: AssistantMessageStatus, finalError?: any) => void
 }
 
 // Function to create a stream processor instance
 export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
   // The returned function processes a single chunk or a final signal
   return (
-    chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any } | null | undefined
+    chunk: ChunkCallbackData | { type: 'final'; status: AssistantMessageStatus; error?: any } | null | undefined
   ) => {
     try {
       // 1. Handle the final signal first (for both success and error)

@@ -4,7 +4,7 @@ import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/
 import store from '@renderer/store'
 import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
-import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { isAbortError } from '@renderer/utils/error'
 import {
   createAssistantMessage,
@@ -312,12 +312,12 @@ const fetchAndProcessAssistantResponseImpl = async (
           newMessagesActions.updateMessage({
             topicId,
             messageId: assistantMsgId,
-            updates: { status: 'error' }
+            updates: { status: AssistantMessageStatus.ERROR }
           })
         )
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
-      onComplete: async (status: 'error' | 'success', finalError?: any) => {
+      onComplete: async (status: AssistantMessageStatus, finalError?: any) => {
         // --- Handle Abort Error Specifically ---
         if (status === 'error' && isAbortError(finalError)) {
           console.log(`[onComplete] Stream aborted for message ${assistantMsgId}. Setting status to paused.`)
@@ -326,7 +326,7 @@ const fetchAndProcessAssistantResponseImpl = async (
             newMessagesActions.updateMessage({
               topicId,
               messageId: assistantMsgId,
-              updates: { status: 'paused' }
+              updates: { status: AssistantMessageStatus.PAUSED }
             })
           )
           // Ensure paused state is saved to DB
@@ -414,7 +414,11 @@ const fetchAndProcessAssistantResponseImpl = async (
       messageAndBlockUpdate(topicId, assistantMessage.id, errorBlock)
       // Also update message status directly
       dispatch(
-        newMessagesActions.updateMessage({ topicId, messageId: assistantMessage.id, updates: { status: 'error' } })
+        newMessagesActions.updateMessage({
+          topicId,
+          messageId: assistantMessage.id,
+          updates: { status: AssistantMessageStatus.ERROR }
+        })
       )
       throttledDbUpdate(assistantMessage.id, topicId, getState) // Ensure DB is updated on error
     }

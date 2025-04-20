@@ -23,7 +23,6 @@ import { useAppDispatch } from '@renderer/store'
 import { setSearching } from '@renderer/store/runtime'
 import { sendMessage as _sendMessage } from '@renderer/store/thunk/messageThunk'
 import { Assistant, FileType, KnowledgeBase, KnowledgeItem, MCPServer, Model, Topic } from '@renderer/types'
-import { Message } from '@renderer/types/newMessage'
 import { classNames, delay, formatFileSize, getFileExtension } from '@renderer/utils'
 import { getFilesFromDropEvent } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
@@ -192,14 +191,13 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       const baseUserMessage: {
         assistant: Assistant
         topic: Topic
-        type: Message['type']
         content?: string
         files?: FileType[]
         knowledgeBaseIds?: string[]
         mentions?: Model[]
         enabledMCPs?: MCPServer[]
         usage?: CompletionUsage
-      } = { assistant, topic, type: 'text', content: text }
+      } = { assistant, topic, content: text }
 
       // getUserMessage()
       if (uploadedFiles) {
@@ -219,11 +217,17 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
         baseUserMessage.enabledMCPs = activedMcpServers.filter((server) => enabledMCPs?.some((s) => s.id === server.id))
       }
 
-      baseUserMessage.usage = await estimateMessageUsage(baseUserMessage)
+      const usageParams = {
+        content: text,
+        reasoning_content: '',
+        files: uploadedFiles
+      }
+
+      baseUserMessage.usage = await estimateMessageUsage(usageParams)
+
       const { message, blocks } = getUserMessage(baseUserMessage)
 
       currentMessageId.current = message.id
-      // mentions: mentionModels
       console.log('message,blocks', message, blocks)
       dispatch(_sendMessage(message, blocks, assistant, topic.id))
 
@@ -715,11 +719,11 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   useEffect(() => {
     const _setEstimateTokenCount = debounce(setEstimateTokenCount, 100, { leading: false, trailing: true })
     const unsubscribes = [
-      EventEmitter.on(EVENT_NAMES.EDIT_MESSAGE, (message: Message) => {
-        setText(message.content)
-        textareaRef.current?.focus()
-        setTimeout(() => resizeTextArea(), 0)
-      }),
+      // EventEmitter.on(EVENT_NAMES.EDIT_MESSAGE, (message: Message) => {
+      //   setText(message.content)
+      //   textareaRef.current?.focus()
+      //   setTimeout(() => resizeTextArea(), 0)
+      // }),
       EventEmitter.on(EVENT_NAMES.ESTIMATED_TOKEN_COUNT, ({ tokensCount, contextCount }) => {
         _setEstimateTokenCount(tokensCount)
         setContextCount({ current: contextCount.current, max: contextCount.max }) // 现在contextCount是一个对象而不是单个数值
