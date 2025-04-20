@@ -38,11 +38,20 @@ $$
 }
 
 export function extractTitle(html: string): string | null {
+  // 处理标准闭合的标题标签
   const titleRegex = /<title>(.*?)<\/title>/i
   const match = html.match(titleRegex)
 
-  if (match && match[1]) {
-    return match[1].trim()
+  if (match) {
+    return match[1] ? match[1].trim() : ''
+  }
+
+  // 处理未闭合的标题标签
+  const malformedTitleRegex = /<title>(.*?)($|<(?!\/title))/i
+  const malformedMatch = html.match(malformedTitleRegex)
+
+  if (malformedMatch) {
+    return malformedMatch[1] ? malformedMatch[1].trim() : ''
   }
 
   return null
@@ -205,5 +214,5 @@ export function addImageFileToContents(messages: Message[]) {
     images: imageFiles
   }
 
-  return messages.map((message) => (message.role === 'assistant' ? updatedAssistantMessage : message))
+  return messages.map((message) => (message.id === lastAssistantMessage.id ? updatedAssistantMessage : message))
 }

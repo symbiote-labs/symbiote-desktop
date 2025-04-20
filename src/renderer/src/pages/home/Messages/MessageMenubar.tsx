@@ -12,7 +12,7 @@ import { RootState } from '@renderer/store'
 import type { Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
-import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL, removeTrailingDoubleSpaces } from '@renderer/utils'
+import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL } from '@renderer/utils'
 import {
   exportMarkdownToJoplin,
   exportMarkdownToNotion,
@@ -22,6 +22,7 @@ import {
   messageToMarkdown
 } from '@renderer/utils/export'
 import { withMessageThought } from '@renderer/utils/formats'
+import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import { findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { Button, Dropdown, Popconfirm, Tooltip } from 'antd'
 import dayjs from 'dayjs'

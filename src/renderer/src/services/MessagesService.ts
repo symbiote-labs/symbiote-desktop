@@ -9,7 +9,8 @@ import type { Assistant, FileType, MCPServer, Model, Topic } from '@renderer/typ
 import { FileTypes } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import { getTitleFromString, uuid } from '@renderer/utils'
+import { uuid } from '@renderer/utils'
+import { getTitleFromString } from '@renderer/utils/export'
 import {
   createAssistantMessage,
   createFileBlock,
