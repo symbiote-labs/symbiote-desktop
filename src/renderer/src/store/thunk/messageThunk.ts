@@ -2,11 +2,13 @@ import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import store from '@renderer/store'
-import type { Assistant, MCPToolResponse, Topic } from '@renderer/types'
+import { type Assistant, type MCPToolResponse, type Topic, WebSearchSource } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
 import {
   createAssistantMessage,
+  createCitationBlock,
   createErrorBlock,
   createImageBlock,
   createMainTextBlock,
@@ -175,6 +177,27 @@ const fetchAndProcessAssistantResponseImpl = async (
 
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
+      onTextComplete: (text) => {
+        if (assistant.enableWebSearch && assistant.model?.provider === 'openrouter') {
+          const extractedUrls = extractUrlsFromMarkdown(text)
+          const citationBlock = createCitationBlock(
+            assistantMsgId,
+            {
+              response: {
+                source: WebSearchSource.OPENROUTER,
+                results: extractedUrls
+              }
+            },
+            {
+              status: MessageBlockStatus.SUCCESS
+            }
+          )
+          lastBlockId = citationBlock.id
+          lastBlockType = MessageBlockType.CITATION
+          messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+        }
+        throttledDbUpdate(assistantMsgId, topicId, getState)
+      },
       onToolCallComplete: (toolResponse: MCPToolResponse) => {
         console.log('toolResponse', toolResponse, toolResponse.status)
 
@@ -240,17 +263,22 @@ const fetchAndProcessAssistantResponseImpl = async (
           )
         }
       },
-      onCitationData: (citations) => {
+      onWebSearch: (webSearch) => {
         // TODO: Implement actual citation block creation
-        console.warn('onCitationData received, creating placeholder CitationBlock.', citations)
-        // Placeholder: Assume citation block is created and update trackers
-        // const citationBlock = createCitationBlock(...)
-        // lastBlockId = citationBlock.id;
-        // lastBlockType = MessageBlockType.CITATION;
-        // accumulatedContent = '';
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [citationBlock], { status: 'processing' }, getState);
-        // throttledDbUpdate(assistantMsgId, topicId, getState);
-        accumulatedContent = ''
+        console.warn('onWebSearch received, creating placeholder WebSearchBlock.', webSearch)
+        // 还缺了知识库引用
+        const citationBlock = createCitationBlock(
+          assistantMsgId,
+          {
+            response: webSearch
+          },
+          {
+            status: MessageBlockStatus.SUCCESS
+          }
+        )
+        lastBlockId = citationBlock.id
+        lastBlockType = MessageBlockType.CITATION
+        messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'
@@ -266,21 +294,6 @@ const fetchAndProcessAssistantResponseImpl = async (
 
         messageAndBlockUpdate(topicId, assistantMsgId, imageBlock)
         throttledDbUpdate(assistantMsgId, topicId, getState)
-      },
-      onWebSearchGrounding: (groundingMetadata) => {
-        // TODO: Implement actual web search block creation
-        console.warn('onWebSearchGrounding received, creating placeholder WebSearchBlock.', groundingMetadata)
-        // Placeholder: Assume web search block is created and update trackers
-        // const webSearchBlock = createWebSearchBlock(...);
-        // lastBlockId = webSearchBlock.id;
-        // lastBlockType = MessageBlockType.WEB_SEARCH;
-        // accumulatedContent = '';
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [webSearchBlock], { status: 'processing' }, getState);
-        // throttledDbUpdate(assistantMsgId, topicId, getState);
-        accumulatedContent = ''
-
-        // throttledStateUpdate(dispatch, assistantMsgId, topicId, [imageBlock], { status: 'processing' }, getState)
-        // throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onError: (error) => {
         console.error('Stream processing error:', error)

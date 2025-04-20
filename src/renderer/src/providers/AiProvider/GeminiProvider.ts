@@ -30,8 +30,18 @@ import {
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
 import WebSearchService from '@renderer/services/WebSearchService'
-import { Assistant, FileType, FileTypes, MCPToolResponse, Model, Provider, Suggestion } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessage'
+import {
+  Assistant,
+  FileType,
+  FileTypes,
+  MCPToolResponse,
+  Model,
+  Provider,
+  Suggestion,
+  WebSearchSource
+} from '@renderer/types'
+import { BlockCompleteChunk, WebSearchChunk } from '@renderer/types/chunk'
+import type { Message, Response } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -356,20 +366,26 @@ export default class GeminiProvider extends BaseProvider {
       })
       const time_completion_millsec = new Date().getTime() - start_time_millsec
       onChunk({
-        text: response.text,
-        usage: {
-          prompt_tokens: response.usageMetadata?.promptTokenCount || 0,
-          thoughts_tokens: response.usageMetadata?.thoughtsTokenCount || 0,
-          completion_tokens: response.usageMetadata?.candidatesTokenCount || 0,
-          total_tokens: response.usageMetadata?.totalTokenCount || 0
-        },
-        metrics: {
-          completion_tokens: response.usageMetadata?.candidatesTokenCount,
-          time_completion_millsec,
-          time_first_token_millsec: 0
-        },
-        search: response.candidates?.[0]?.groundingMetadata
-      })
+        type: 'block_complete',
+        response: {
+          text: response.text,
+          usage: {
+            prompt_tokens: response.usageMetadata?.promptTokenCount || 0,
+            thoughts_tokens: response.usageMetadata?.thoughtsTokenCount || 0,
+            completion_tokens: response.usageMetadata?.candidatesTokenCount || 0,
+            total_tokens: response.usageMetadata?.totalTokenCount || 0
+          },
+          metrics: {
+            completion_tokens: response.usageMetadata?.candidatesTokenCount,
+            time_completion_millsec,
+            time_first_token_millsec: 0
+          },
+          webSearch: {
+            results: response.candidates?.[0]?.groundingMetadata,
+            source: 'gemini'
+          }
+        } as Response
+      } as BlockCompleteChunk)
       return
     }
 
@@ -415,6 +431,7 @@ export default class GeminiProvider extends BaseProvider {
 
     const processStream = async (stream: AsyncGenerator<GenerateContentResponse>, idx: number) => {
       let content = ''
+      let chunk_id = 0
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
@@ -422,47 +439,58 @@ export default class GeminiProvider extends BaseProvider {
         if (time_first_token_millsec == 0 && chunk.text !== undefined) {
           // Update based on text arrival
           time_first_token_millsec = new Date().getTime() - start_time_millsec
+          onChunk({
+            type: 'block_created',
+            response: {
+              metrics: {
+                time_first_token_millsec,
+                time_completion_millsec: new Date().getTime() - start_time_millsec
+              }
+            }
+          })
         }
-        const current_time_completion_millsec = new Date().getTime() - start_time_millsec
-        onChunk({
-          metrics: {
-            time_completion_millsec: current_time_completion_millsec,
-            time_first_token_millsec
-          }
-        })
-        // --- End Metrics ---
-
-        // --- Incremental onChunk calls ---
 
         // 1. Text Content
         if (chunk.text !== undefined) {
           content += chunk.text
-          onChunk({ text: chunk.text })
+          onChunk({ type: 'text.delta', text: chunk.text, chunk_id: chunk_id++ })
         }
 
         // 2. Usage Data
         if (chunk.usageMetadata) {
           onChunk({
-            usage: {
-              prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
-              completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
-              total_tokens: chunk.usageMetadata.totalTokenCount || 0
-            },
-            // Optionally include completion_tokens in metrics here if available
-            metrics: { completion_tokens: chunk.usageMetadata.candidatesTokenCount }
+            type: 'block_in_progress',
+            response: {
+              text: content,
+              metrics: {
+                completion_tokens: chunk.usageMetadata.candidatesTokenCount,
+                time_completion_millsec: new Date().getTime() - start_time_millsec
+              },
+              usage: {
+                prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
+                completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
+                total_tokens: chunk.usageMetadata.totalTokenCount || 0
+              }
+            }
           })
         }
 
         // 3. Grounding/Search Metadata
         const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
         if (groundingMetadata) {
-          onChunk({ search: groundingMetadata })
+          onChunk({
+            type: 'web_search',
+            web_search: {
+              results: groundingMetadata,
+              source: WebSearchSource.GEMINI
+            }
+          } as WebSearchChunk)
         }
 
         // 4. Image Generation
         const generateImage = this.processGeminiImageResponse(chunk)
         if (generateImage) {
-          onChunk({ generateImage: generateImage })
+          onChunk({ type: 'image.complete', image: generateImage })
         }
 
         // --- End Incremental onChunk calls ---
@@ -478,9 +506,12 @@ export default class GeminiProvider extends BaseProvider {
 
     const final_time_completion_millsec = new Date().getTime() - start_time_millsec
     onChunk({
-      metrics: {
-        time_completion_millsec: final_time_completion_millsec,
-        time_first_token_millsec
+      type: 'block_complete',
+      response: {
+        metrics: {
+          time_completion_millsec: final_time_completion_millsec,
+          time_first_token_millsec
+        }
       }
     })
   }

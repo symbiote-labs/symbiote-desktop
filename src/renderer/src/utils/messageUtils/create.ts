@@ -249,7 +249,7 @@ export function createCitationBlock(
   citationData: Omit<CitationMessageBlock, keyof BaseMessageBlock | 'type'>,
   overrides: Partial<Omit<CitationMessageBlock, 'id' | 'messageId' | 'type' | keyof typeof citationData>> = {}
 ): CitationMessageBlock {
-  const { groundingMetadata, citations, annotations, webSearch, webSearchInfo, knowledge, ...baseOverrides } = {
+  const { response, knowledge, ...baseOverrides } = {
     ...citationData,
     ...overrides
   }
@@ -261,12 +261,8 @@ export function createCitationBlock(
 
   return {
     ...baseBlock,
-    groundingMetadata: groundingMetadata,
-    citations: citations,
-    annotations: annotations,
-    webSearch: webSearch,
-    webSearchInfo: webSearchInfo,
-    knowledge: knowledge
+    response,
+    knowledge
   }
 }
 

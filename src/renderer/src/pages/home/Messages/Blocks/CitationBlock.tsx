@@ -1,7 +1,9 @@
 import { DownOutlined, InfoCircleOutlined, UpOutlined } from '@ant-design/icons'
-import { isOpenAIWebSearch } from '@renderer/config/models'
+import { GroundingMetadata } from '@google/genai'
 import type { Model } from '@renderer/types'
+import { WebSearchSource } from '@renderer/types'
 import type { CitationMessageBlock } from '@renderer/types/newMessage'
+import OpenAI from 'openai'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -10,29 +12,42 @@ import CitationsList from '../CitationsList'
 
 export default function CitationBlock({ model, block }: { model: Model; block: CitationMessageBlock }) {
   const { t } = useTranslation()
-  const isWebCitation = model && (isOpenAIWebSearch(model) || model.provider === 'openrouter')
+  const isWebCitation = !!block.response
   const [citationsCollapsed, setCitationsCollapsed] = useState(true)
 
   const formattedCitations = useMemo(() => {
-    if (block?.citations?.length && block?.annotations?.length) return null
+    if (block?.knowledge?.length || block?.response?.results) return null
 
     let citations: any[] = []
 
-    if (model && isOpenAIWebSearch(model)) {
-      citations =
-        block.annotations?.map((url, index) => {
-          return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title }
-        }) || []
-    } else {
-      citations =
-        block.citations?.map((url, index) => {
-          try {
-            const hostname = new URL(url).hostname
-            return { number: index + 1, url, hostname }
-          } catch {
-            return { number: index + 1, url, hostname: url }
-          }
-        }) || []
+    switch (block.response?.source) {
+      case WebSearchSource.OPENAI:
+        citations =
+          (block.response?.results as OpenAI.Chat.Completions.ChatCompletionMessage.Annotation.URLCitation[])?.map(
+            (url, index) => {
+              return { number: index + 1, url: url.url, hostname: url.title }
+            }
+          ) || []
+        break
+      case WebSearchSource.OPENROUTER:
+      case WebSearchSource.PERPLEXITY:
+        citations =
+          (block.response?.results as any[])?.map((url, index) => {
+            try {
+              const hostname = new URL(url).hostname
+              return { number: index + 1, url, hostname }
+            } catch {
+              return { number: index + 1, url, hostname: url }
+            }
+          }) || []
+        break
+      case WebSearchSource.ZHIPU:
+      case WebSearchSource.HUNYUAN:
+        citations =
+          (block.response?.results as any[])?.map((result, index) => {
+            return { number: index + 1, url: result.link || result.url, title: result.title }
+          }) || []
+        break
     }
 
     // Deduplicate by URL
@@ -47,16 +62,10 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
         ...citation,
         number: index + 1 // Renumber citations sequentially after deduplication
       }))
-  }, [block.citations, block.annotations, model])
+  }, [block?.knowledge?.length, block.response?.results, model])
 
   const hasCitations = useMemo(() => {
-    return !!(
-      (formattedCitations && formattedCitations.length > 0) ||
-      (block?.webSearch && block.status === 'success') ||
-      (block?.webSearchInfo && block.status === 'success') ||
-      (block?.groundingMetadata && block.status === 'success') ||
-      (block?.knowledge && block.status === 'success')
-    )
+    return !!((formattedCitations && formattedCitations.length > 0) || block?.response?.results)
   }, [formattedCitations, block])
 
   return (
@@ -73,11 +82,11 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
 
           {!citationsCollapsed && (
             <CitationsContent>
-              {block?.groundingMetadata && block.status === 'success' && (
+              {(block?.response?.results as GroundingMetadata) && block.status === 'success' && (
                 <>
                   <CitationsList
                     citations={
-                      block.groundingMetadata?.groundingChunks?.map((chunk, index) => ({
+                      (block?.response?.results as GroundingMetadata)?.groundingChunks?.map((chunk, index) => ({
                         number: index + 1,
                         url: chunk?.web?.uri || '',
                         title: chunk?.web?.title,
@@ -87,8 +96,9 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
                   />
                   <SearchEntryPoint
                     dangerouslySetInnerHTML={{
-                      __html: block.groundingMetadata?.searchEntryPoint?.renderedContent
-                        ? block.groundingMetadata.searchEntryPoint.renderedContent
+                      __html: (block?.response?.results as GroundingMetadata)?.searchEntryPoint?.renderedContent
+                        ? (block?.response?.results as GroundingMetadata)?.searchEntryPoint?.renderedContent ||
+                          ''
                             .replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
                             .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
                         : ''
@@ -106,33 +116,23 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
                   }))}
                 />
               )}
-              {(block?.webSearch || block?.knowledge) && block.status === 'success' && (
+              {(block?.response?.results as any[])?.length > 0 && block.status === 'success' && (
                 <CitationsList
                   citations={[
-                    ...(block.webSearch?.results.map((result, index) => ({
+                    ...((block?.response?.results as any[]).map((result, index) => ({
                       number: index + 1,
-                      url: result.url,
+                      url: result.url || result.link,
                       title: result.title,
                       showFavicon: true
                     })) || []),
                     ...(block.knowledge?.map((result, index) => ({
-                      number: (block.webSearch?.results?.length || 0) + index + 1,
+                      number: ((block?.response?.results as any[]).length || 0) + index + 1,
                       url: result.sourceUrl,
                       title: result.sourceUrl,
                       showFavicon: true,
                       type: 'knowledge'
                     })) || [])
                   ]}
-                />
-              )}
-              {block?.webSearchInfo && block.status === 'success' && (
-                <CitationsList
-                  citations={block.webSearchInfo.map((result, index) => ({
-                    number: index + 1,
-                    url: result.link || result.url,
-                    title: result.title,
-                    showFavicon: true
-                  }))}
                 />
               )}
             </CitationsContent>

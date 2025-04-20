@@ -28,8 +28,10 @@ import {
   MCPToolResponse,
   Model,
   Provider,
-  Suggestion
+  Suggestion,
+  WebSearchSource
 } from '@renderer/types'
+import { WebSearchChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
@@ -457,15 +459,16 @@ export default class OpenAIProvider extends BaseProvider {
         }
         // Separate onChunk calls for text and usage/metrics
         if (stream.choices[0].message?.content) {
-          onChunk({ text: stream.choices[0].message.content })
+          onChunk({ type: 'text.complete', text: stream.choices[0].message.content, chunk_id: 0 })
         }
         if (stream.usage) {
-          onChunk({ usage: stream.usage, metrics: finalMetrics })
+          onChunk({ type: 'block_complete', response: { usage: stream.usage, metrics: finalMetrics } })
         }
         return
       }
 
       let content = '' // Accumulate content for tool processing if needed
+      let chunk_id = 0
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
@@ -479,50 +482,78 @@ export default class OpenAIProvider extends BaseProvider {
         // 1. Text Content
         if (delta?.content) {
           content += delta.content // Still accumulate for processToolUses
-          onChunk({ text: delta.content })
+          onChunk({ type: 'text.delta', text: delta.content, chunk_id: chunk_id++ })
         }
 
         // 2. Reasoning Content
         const reasoningContent = delta?.reasoning_content || delta?.reasoning
         if (reasoningContent) {
           hasReasoningContent = true // Keep track if reasoning occurred
-          onChunk({ reasoning_content: reasoningContent })
+          onChunk({ type: 'thinking.delta', text: reasoningContent, chunk_id: chunk_id++ })
         }
 
-        // 3. Annotations (OpenAI specific)
+        if (!delta?.content && !reasoningContent) {
+          onChunk({ type: 'text.complete', text: content })
+        }
+
+        // 3. Web Search
         if (delta?.annotations) {
-          onChunk({ annotations: delta.annotations })
+          onChunk({
+            type: 'web_search',
+            web_search: {
+              results: delta.annotations,
+              source: WebSearchSource.OPENAI
+            }
+          } as WebSearchChunk)
         }
 
-        // 4. Citations (If provided directly in chunk)
-        const citations = (chunk as OpenAI.Chat.Completions.ChatCompletionChunk & { citations?: string[] })?.citations
-        if (citations) {
-          onChunk({ citations: citations })
+        if (assistant.model?.provider === 'perplexity') {
+          const citations = chunk.citations
+          if (citations) {
+            onChunk({
+              type: 'web_search',
+              web_search: {
+                results: citations,
+                source: WebSearchSource.PERPLEXITY
+              }
+            } as WebSearchChunk)
+          }
         }
-
-        // 5. Web Search Results (Specific Models)
-        let webSearch: any[] | undefined = undefined
         if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
-          webSearch = chunk.web_search
+          onChunk({
+            type: 'web_search',
+            web_search: {
+              results: chunk.web_search,
+              source: WebSearchSource.ZHIPU
+            }
+          } as WebSearchChunk)
         }
-        // Reset firstChunk logic as it's part of the loop now
         if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
-          webSearch = chunk.search_info.search_results
+          onChunk({
+            type: 'web_search',
+            web_search: {
+              results: chunk.search_info.search_results,
+              source: WebSearchSource.HUNYUAN
+            }
+          } as WebSearchChunk)
         }
-        if (webSearch) {
-          onChunk({ webSearch: webSearch })
-        }
-
         // 6. Usage (If provided per chunk) - Send immediately
         if (chunk.usage) {
-          onChunk({ usage: chunk.usage })
+          onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
         }
 
         // 7. Metrics (Calculate and send immediately)
         if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
+          onChunk({
+            type: 'block_created',
+            response: {
+              metrics: {
+                time_first_token_millsec
+              }
+            }
+          })
         }
-        // Update first content time detection if needed
         if (time_first_content_millsec === 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }
@@ -530,11 +561,13 @@ export default class OpenAIProvider extends BaseProvider {
         const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
 
         onChunk({
-          metrics: {
-            // completion_tokens might be available in chunk.usage, handle in usage chunk
-            time_completion_millsec,
-            time_first_token_millsec,
-            time_thinking_millsec
+          type: 'block_complete',
+          response: {
+            metrics: {
+              // completion_tokens might be available in chunk.usage, handle in usage chunk
+              time_completion_millsec,
+              time_thinking_millsec
+            }
           }
         })
 

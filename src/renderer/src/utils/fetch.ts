@@ -1,6 +1,6 @@
 import { Readability } from '@mozilla/readability'
 import { nanoid } from '@reduxjs/toolkit'
-import { WebSearchResult } from '@renderer/types'
+import { WebSearchProviderResult } from '@renderer/types'
 import TurndownService from 'turndown'
 
 const turndownService = new TurndownService()
@@ -24,7 +24,7 @@ export async function fetchWebContents(
   urls: string[],
   format: ResponseFormat = 'markdown',
   usingBrowser: boolean = false
-): Promise<WebSearchResult[]> {
+): Promise<WebSearchProviderResult[]> {
   // parallel using fetchWebContent
   const results = await Promise.allSettled(urls.map((url) => fetchWebContent(url, format, usingBrowser)))
   return results.map((result, index) => {
@@ -44,7 +44,7 @@ export async function fetchWebContent(
   url: string,
   format: ResponseFormat = 'markdown',
   usingBrowser: boolean = false
-): Promise<WebSearchResult> {
+): Promise<WebSearchProviderResult> {
   try {
     // Validate URL before attempting to fetch
     if (!isValidUrl(url)) {

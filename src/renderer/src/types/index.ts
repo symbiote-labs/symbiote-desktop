@@ -354,15 +354,37 @@ export type WebSearchProvider = {
   usingBrowser?: boolean
 }
 
-export type WebSearchResponse = {
-  query?: string
-  results: WebSearchResult[]
-}
-
-export type WebSearchResult = {
+export type WebSearchProviderResult = {
   title: string
   content: string
   url: string
+}
+
+export type WebSearchProviderResponse = {
+  query?: string
+  results: WebSearchProviderResult[]
+}
+
+export type WebSearchResults =
+  | WebSearchProviderResponse
+  | GroundingMetadata
+  | OpenAI.Chat.Completions.ChatCompletionMessage.Annotation.URLCitation[]
+  | any[]
+
+export enum WebSearchSource {
+  WEBSEARCH = 'websearch',
+  OPENAI = 'openai',
+  OPENROUTER = 'openrouter',
+  GEMINI = 'gemini',
+  PERPLEXITY = 'perplexity',
+  QWEN = 'qwen',
+  HUNYUAN = 'hunyuan',
+  ZHIPU = 'zhipu'
+}
+
+export type WebSearchResponse = {
+  results: WebSearchResults
+  source: WebSearchSource
 }
 
 export type KnowledgeReference = {

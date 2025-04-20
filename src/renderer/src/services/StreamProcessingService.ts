@@ -1,24 +1,18 @@
-import type { GroundingMetadata } from '@google/genai'
-import type { ChunkCallbackData } from '@renderer/providers/AiProvider'
-import { GenerateImageResponse, MCPToolResponse } from '@renderer/types'
-import type OpenAI from 'openai'
+import type { GenerateImageResponse, MCPToolResponse, WebSearchResponse } from '@renderer/types'
+import type { Chunk } from '@renderer/types/chunk'
 
 // Define the structure for the callbacks that the StreamProcessor will invoke
 export interface StreamProcessorCallbacks {
   // Text content chunk received
   onTextChunk?: (text: string) => void
+  // Full text content received
+  onTextComplete?: (text: string) => void
   // Thinking/reasoning content chunk received (e.g., from Claude)
   onThinkingChunk?: (text: string) => void
   // A tool call response chunk (from MCP)
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
   // Citation data received (e.g., from Perplexity, OpenRouter)
-  onCitationData?: (citations: string[]) => void
-  // Web search results received (Gemini format)
-  onWebSearchGrounding?: (groundingMetadata: GroundingMetadata) => void
-  // Web search annotations received (OpenAI format)
-  onWebSearchAnnotations?: (annotations: OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[]) => void
-  // Web search info received (Zhipu, Hunyuan format)
-  onWebSearchInfo?: (webSearchData: any[]) => void
+  onWebSearch?: (webSearch: WebSearchResponse) => void
   // Image generation chunk received
   onImageGenerated?: (imageData: GenerateImageResponse) => void
   // Called when an error occurs during chunk processing
@@ -30,42 +24,34 @@ export interface StreamProcessorCallbacks {
 // Function to create a stream processor instance
 export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
   // The returned function processes a single chunk or a final signal
-  return (chunk: ChunkCallbackData | { type: 'final'; status: 'success' | 'error'; error?: any }) => {
+  return (chunk: Chunk) => {
     try {
       // 1. Handle the manual final signal first
-      if (chunk?.type === 'final' && chunk?.status === 'success') {
-        callbacks.onComplete?.(chunk?.status)
+      if (chunk?.type === 'block_complete') {
+        callbacks.onComplete?.('success')
         return
       }
 
       // 2. Process the actual ChunkCallbackData
-      const data = chunk as ChunkCallbackData // Cast after checking for 'final'
+      const data = chunk // Cast after checking for 'final'
       console.log('createStreamProcessor', data)
       // Invoke callbacks based on the fields present in the chunk data
-      if (data.text && callbacks.onTextChunk) {
+      if (data.type === 'text.delta' && callbacks.onTextChunk) {
         callbacks.onTextChunk(data.text)
       }
-      if (data.reasoning_content && callbacks.onThinkingChunk) {
-        callbacks.onThinkingChunk(data.reasoning_content)
+      if (data.type === 'text.complete' && callbacks.onTextComplete) {
+        callbacks.onTextComplete(data.text)
       }
-      if (data.mcpToolResponse && data.mcpToolResponse.length > 0 && callbacks.onToolCallComplete) {
+      if (data.type === 'thinking.delta' && callbacks.onThinkingChunk) {
+        callbacks.onThinkingChunk(data.text)
+      }
+      if (data.type === 'mcp_tool_response' && data.responses.length > 0 && callbacks.onToolCallComplete) {
         // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
-        data.mcpToolResponse.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
+        data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
       }
-      if (data.citations && data.citations.length > 0 && callbacks.onCitationData) {
-        callbacks.onCitationData(data.citations)
-      }
-      if (data.search && callbacks.onWebSearchGrounding) {
-        callbacks.onWebSearchGrounding(data.search)
-      }
-      if (data.annotations && data.annotations.length > 0 && callbacks.onWebSearchAnnotations) {
-        callbacks.onWebSearchAnnotations(data.annotations)
-      }
-      if (data.webSearch && data.webSearch.length > 0 && callbacks.onWebSearchInfo) {
-        callbacks.onWebSearchInfo(data.webSearch)
-      }
-      if (data.generateImage && callbacks.onImageGenerated) {
-        callbacks.onImageGenerated(data.generateImage)
+
+      if (data.type === 'web_search' && callbacks.onWebSearch) {
+        callbacks.onWebSearch(data.web_search)
       }
 
       // Note: Usage and Metrics are usually handled at the end or accumulated differently,

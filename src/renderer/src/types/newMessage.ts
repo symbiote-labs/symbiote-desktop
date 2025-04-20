@@ -1,6 +1,3 @@
-import type { GroundingMetadata } from '@google/genai'
-import type OpenAI from 'openai'
-
 // import type { Annotation as OpenAIAnnotation } from 'openai/resources/chat/completions' // REMOVED
 import type {
   FileType,
@@ -11,8 +8,10 @@ import type {
   Metrics,
   Model,
   Topic,
+  Usage,
   WebSearchResponse
 } from '.'
+
 // MessageBlock 类型枚举 - 根据实际API返回特性优化
 export enum MessageBlockType {
   MAIN_TEXT = 'main_text', // 主要文本内容
@@ -54,6 +53,14 @@ export interface MainTextMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.MAIN_TEXT
   content: string
   knowledgeBaseIds?: string[]
+  // Citation references
+  citationReferences?: {
+    citationBlockId: string
+    positions: {
+      end: number
+      citationId: string
+    }[]
+  }[]
 }
 
 // 思考块 - 模型推理过程
@@ -104,18 +111,7 @@ export interface ToolMessageBlock extends BaseMessageBlock {
 // Consolidated and Enhanced Citation Block
 export interface CitationMessageBlock extends BaseMessageBlock {
   type: MessageBlockType.CITATION
-  // Gemini
-  groundingMetadata?: GroundingMetadata
-  // Perplexity Or Openrouter
-  citations?: string[]
-  // OpenAI
-  annotations?: OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[]
-  // Web search
-  webSearch?: WebSearchResponse
-  // Zhipu or Hunyuan
-  webSearchInfo?: any[]
-  //   webSearchResults?: WebSearchResult[]
-  // knowledge
+  response?: WebSearchResponse
   knowledge?: KnowledgeReference[]
 }
 
@@ -161,7 +157,7 @@ export type Message = {
   mentions?: Model[]
   enabledMCPs?: MCPServer[]
 
-  usage?: OpenAI.Completions.CompletionUsage
+  usage?: Usage
   metrics?: Metrics
 
   // UI相关
@@ -179,3 +175,16 @@ export interface MessagesState {
   displayCount: number
   error: string | null
 }
+
+export interface Response {
+  text?: string
+  reasoning_content?: string
+  usage?: Usage
+  metrics?: Metrics
+  webSearch?: WebSearchResponse
+  mcpToolResponse?: MCPToolResponse[]
+  generateImage?: GenerateImageResponse
+  error?: ResponseError
+}
+
+export type ResponseError = Record<string, any>

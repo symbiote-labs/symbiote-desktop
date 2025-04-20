@@ -3,9 +3,10 @@ import { MessageParam } from '@anthropic-ai/sdk/resources'
 import { Content, FunctionCall, Part } from '@google/genai'
 import store from '@renderer/store'
 import { MCPCallToolResponse, MCPServer, MCPTool, MCPToolResponse } from '@renderer/types'
+import { Chunk } from '@renderer/types/chunk'
 import { ChatCompletionContentPart, ChatCompletionMessageParam, ChatCompletionMessageToolCall } from 'openai/resources'
 
-import { ChunkCallbackData, CompletionsParams } from '../providers/AiProvider'
+import { CompletionsParams } from '../providers/AiProvider'
 
 // const ensureValidSchema = (obj: Record<string, any>) => {
 //   // Filter out unsupported keys for Gemini
@@ -304,7 +305,7 @@ export function geminiFunctionCallToMcpTool(
 export function upsertMCPToolResponse(
   results: MCPToolResponse[],
   resp: MCPToolResponse,
-  onChunk: ({ mcpToolResponse }: ChunkCallbackData) => void
+  onChunk: (chunk: Chunk) => void
 ) {
   try {
     const index = results.findIndex((ret) => ret.id === resp.id)
@@ -319,8 +320,8 @@ export function upsertMCPToolResponse(
     }
   } finally {
     onChunk({
-      text: '\n',
-      mcpToolResponse: results
+      type: 'mcp_tool_response',
+      responses: results
     })
   }
 }
@@ -430,8 +431,8 @@ export async function parseAndCallTools(
     }
 
     onChunk({
-      text: '\n',
-      generateImage: {
+      type: 'image.complete',
+      image: {
         type: 'base64',
         images: images
       }

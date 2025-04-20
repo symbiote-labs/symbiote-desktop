@@ -1,7 +1,7 @@
 import WebSearchEngineProvider from '@renderer/providers/WebSearchProvider'
 import store from '@renderer/store'
 import { setDefaultProvider, WebSearchState } from '@renderer/store/websearch'
-import { WebSearchProvider, WebSearchResponse, WebSearchResult } from '@renderer/types'
+import { WebSearchProvider, WebSearchProviderResponse } from '@renderer/types'
 import { hasObjectKey } from '@renderer/utils'
 import { ExtractResults } from '@renderer/utils/extract'
 import { fetchWebContents } from '@renderer/utils/fetch'
@@ -98,7 +98,7 @@ class WebSearchService {
    * @param query 搜索查询
    * @returns 搜索响应
    */
-  public async search(provider: WebSearchProvider, query: string): Promise<WebSearchResponse> {
+  public async search(provider: WebSearchProvider, query: string): Promise<WebSearchProviderResponse> {
     const websearch = this.getWebSearchState()
     const webSearchEngine = new WebSearchEngineProvider(provider)
 
@@ -136,7 +136,7 @@ class WebSearchService {
   public async processWebsearch(
     webSearchProvider: WebSearchProvider,
     extractResults: ExtractResults
-  ): Promise<WebSearchResponse> {
+  ): Promise<WebSearchProviderResponse> {
     try {
       // 检查 websearch 和 question 是否有效
       if (!extractResults.websearch?.question || extractResults.websearch.question.length === 0) {
@@ -157,7 +157,7 @@ class WebSearchService {
       }
       const searchPromises = questions.map((q) => this.search(webSearchProvider, q))
       const searchResults = await Promise.allSettled(searchPromises)
-      const aggregatedResults: WebSearchResult[] = []
+      const aggregatedResults: any[] = []
 
       searchResults.forEach((result) => {
         if (result.status === 'fulfilled') {

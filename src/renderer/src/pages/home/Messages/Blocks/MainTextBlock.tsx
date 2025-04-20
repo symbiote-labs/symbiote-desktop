@@ -1,4 +1,3 @@
-import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import type { Model } from '@renderer/types'
 import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessage'
@@ -28,154 +27,43 @@ interface Props {
   role: Message['role']
 }
 
-const MainTextBlock: React.FC<Props> = ({
-  block,
-  citationsBlock,
-  model,
-  role,
-  // citationsData = new Map(),
-  // formattedCitations = [],
-  mentions = []
-}) => {
-  const formattedCitations = useMemo(() => {
-    if (!citationsBlock?.citations?.length && !citationsBlock?.annotations?.length) return null
-
-    let citations: any[] = []
-
-    if (model && isOpenAIWebSearch(model)) {
-      citations =
-        citationsBlock?.metadata?.annotations?.map((url, index) => {
-          return { number: index + 1, url: url.url_citation?.url, hostname: url.url_citation.title }
-        }) || []
-    } else {
-      citations =
-        citationsBlock?.metadata?.citations?.map((url, index) => {
-          try {
-            const hostname = new URL(url).hostname
-            return { number: index + 1, url, hostname }
-          } catch {
-            return { number: index + 1, url, hostname: url }
-          }
-        }) || []
-    }
-    console.log('citations', citations)
-    // Deduplicate by URL
-    const urlSet = new Set()
-    return citations
-      .filter((citation) => {
-        if (!citation.url || urlSet.has(citation.url)) return false
-        urlSet.add(citation.url)
-        return true
-      })
-      .map((citation, index) => ({
-        ...citation,
-        number: index + 1 // Renumber citations sequentially after deduplication
-      }))
-  }, [citationsBlock?.citations, citationsBlock?.annotations, model])
-
-  // 获取引用数据
-  const citationsData = useMemo(() => {
-    const searchResults =
-      citationsBlock?.webSearch?.results ||
-      citationsBlock?.webSearchInfo ||
-      citationsBlock?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
-      citationsBlock?.annotations?.map((annotation) => annotation.url_citation) ||
-      []
-    const citationsUrls = formattedCitations || []
-
-    // 合并引用数据
-    const data = new Map()
-
-    // 添加webSearch结果
-    searchResults.forEach((result) => {
-      data.set(result.url || result.uri || result.link, {
-        url: result.url || result.uri || result.link,
-        title: result.title || result.hostname,
-        content: result.content
-      })
-    })
-
-    const knowledgeResults = citationsBlock?.knowledge
-    knowledgeResults?.forEach((result) => {
-      data.set(result.sourceUrl, {
-        url: result.sourceUrl,
-        title: result.sourceUrl,
-        content: result.content
-      })
-    })
-
-    // 添加citations
-    citationsUrls.forEach((result) => {
-      if (!data.has(result.url)) {
-        data.set(result.url, {
-          url: result.url,
-          title: result.title || result.hostname || undefined,
-          content: result.content || undefined
-        })
-      }
-    })
-
-    return data
-  }, [
-    formattedCitations,
-    citationsBlock?.annotations,
-    citationsBlock?.groundingMetadata?.groundingChunks,
-    citationsBlock?.webSearch?.results,
-    citationsBlock?.webSearchInfo,
-    citationsBlock?.knowledge
-  ])
-
-  // Process content to make citation numbers clickable
-  const processedContentForMarkdown = useMemo(() => {
+const MainTextBlock: React.FC<Props> = ({ block, citationsBlock, role, mentions = [] }) => {
+  // 处理引用数据
+  const processedContent = useMemo(() => {
     let content = block.content
-
-    // Only attempt citation processing if we have citation data
-    if (formattedCitations && formattedCitations.length > 0 && citationsData.size > 0) {
-      const citationUrls = formattedCitations.map((c) => c.url)
-
-      // Logic for Perplexity/OpenRouter style: [1], [2]
-      if (citationsBlock?.webSearch || citationsBlock?.knowledge) {
-        content = content.replace(/\[(\d+)\](?!\()/g, (match, numStr) => {
-          const num = parseInt(numStr, 10)
-          const index = num - 1
-          if (index >= 0 && index < citationUrls.length) {
-            const url = citationUrls[index]
-            const isWebLink = url && (url.startsWith('http://') || url.startsWith('https://'))
-            const citationInfo = url ? citationsData.get(url) || { url } : null
-            const citationJson = url ? encodeHTML(JSON.stringify(citationInfo)) : null
-            return isWebLink ? `[<sup data-citation='${citationJson}'>${num}</sup>](${url})` : `<sup>${num}</sup>`
-          }
-          return match
-        })
-      } else {
-        // Generic logic for [[1]], [1], [^1], [<sup>1</sup>](link)
-        // Handle existing markdown links first
-        content = content.replace(/\[<sup>(\d+)<\/sup>\]\(([^)]+)\)/g, (_, num, url) => {
-          const citationInfo = url ? citationsData.get(url) || { url } : null
-          const citationJson = citationInfo ? encodeHTML(JSON.stringify(citationInfo)) : null
-          return `[<sup data-citation='${citationJson}'>${num}</sup>](${url})`
-        })
-        // Handle [[1]] or [1] or [^1]
-        content = content.replace(/\*?\[(\^)?\[(\d+)\]\*?\]/g, (match, caret, numStr) => {
-          const num = parseInt(numStr, 10)
-          const index = num - 1
-          if (index >= 0 && index < citationUrls.length) {
-            const url = citationUrls[index]
-            const citationInfo = url ? citationsData.get(url) || { url } : null
-            const citationJson = citationInfo ? encodeHTML(JSON.stringify(citationInfo)) : null
-            return `[<sup data-citation='${citationJson}'>${num}</sup>](${url})`
-          }
-          // Fallback for simple bracket numbers if no URL found
-          return `[${numStr}]`
-        })
-      }
+    if (!block.citationReferences?.length) {
+      return content
     }
 
-    const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
-    content = content.replace(toolUseRegex, '')
+    // 收集所有需要插入的位置
+    const positions = block.citationReferences
+      .flatMap(({ citationBlockId, positions }) => {
+        if (citationBlockId !== citationsBlock?.id) return []
+        return positions.map((pos) => ({
+          ...pos,
+          citationBlockId
+        }))
+      })
+      .sort((a, b) => b.end - a.end)
+
+    // 从后往前插入引用标记，避免位置偏移
+    positions.forEach(({ end, citationId, citationBlockId }) => {
+      if (!citationsBlock) return
+
+      // 获取引用数据
+      const citationData = {
+        id: citationId,
+        url: citationsBlock.source?.results?.find((r) => r.id === citationId)?.url || '',
+        title: citationsBlock.source?.results?.find((r) => r.id === citationId)?.title || '',
+        content: citationsBlock.source?.results?.find((r) => r.id === citationId)?.content || ''
+      }
+      const citationJson = encodeHTML(JSON.stringify(citationData))
+      content =
+        content.slice(0, end) + `[<sup data-citation='${citationJson}'>${citationId}</sup>]` + content.slice(end)
+    })
 
     return content
-  }, [block.content, formattedCitations, citationsData, citationsBlock?.webSearch, citationsBlock?.knowledge])
+  }, [block.content, block.citationReferences, citationsBlock])
 
   return (
     <>
@@ -187,7 +75,7 @@ const MainTextBlock: React.FC<Props> = ({
           ))}
         </Flex>
       )}
-      <Markdown block={{ ...block, content: processedContentForMarkdown }} role={role} />
+      <Markdown block={{ ...block, content: processedContent }} role={role} />
     </>
   )
 }

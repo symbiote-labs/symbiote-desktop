@@ -228,13 +228,16 @@ export default class AnthropicProvider extends BaseProvider {
       }
 
       return onChunk({
-        text,
-        reasoning_content,
-        usage: message.usage as any,
-        metrics: {
-          completion_tokens: message.usage.output_tokens,
-          time_completion_millsec,
-          time_first_token_millsec: 0
+        type: 'block_complete',
+        response: {
+          text,
+          reasoning_content,
+          usage: message.usage as any,
+          metrics: {
+            completion_tokens: message.usage.output_tokens,
+            time_completion_millsec,
+            time_first_token_millsec: 0
+          }
         }
       })
     }
@@ -257,7 +260,7 @@ export default class AnthropicProvider extends BaseProvider {
               time_first_content_millsec = new Date().getTime()
             }
 
-            onChunk({ text })
+            onChunk({ type: 'text.delta', text, chunk_id: idx })
           })
           .on('thinking', (thinking) => {
             hasThinkingContent = true
@@ -269,7 +272,9 @@ export default class AnthropicProvider extends BaseProvider {
             // const time_completion_millsec = new Date().getTime() - start_time_millsec
 
             onChunk({
-              reasoning_content: thinking
+              type: 'thinking.delta',
+              text: thinking,
+              chunk_id: idx
             })
           })
           .on('finalMessage', async (message) => {
@@ -303,16 +308,19 @@ export default class AnthropicProvider extends BaseProvider {
               : 0
 
             onChunk({
-              usage: {
-                prompt_tokens: message.usage.input_tokens,
-                completion_tokens: message.usage.output_tokens,
-                total_tokens: sum(Object.values(message.usage))
-              },
-              metrics: {
-                completion_tokens: message.usage.output_tokens,
-                time_completion_millsec,
-                time_first_token_millsec,
-                time_thinking_millsec
+              type: 'block_complete',
+              response: {
+                usage: {
+                  prompt_tokens: message.usage.input_tokens,
+                  completion_tokens: message.usage.output_tokens,
+                  total_tokens: sum(Object.values(message.usage))
+                },
+                metrics: {
+                  completion_tokens: message.usage.output_tokens,
+                  time_completion_millsec,
+                  time_first_token_millsec,
+                  time_thinking_millsec
+                }
               }
             })
 

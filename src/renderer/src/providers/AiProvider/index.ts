@@ -1,53 +1,14 @@
-import type { GroundingMetadata } from '@google/genai'
 import BaseProvider from '@renderer/providers/AiProvider/BaseProvider'
 import ProviderFactory from '@renderer/providers/AiProvider/ProviderFactory'
-import type {
-  Assistant,
-  GenerateImageParams,
-  GenerateImageResponse,
-  MCPTool,
-  MCPToolResponse,
-  Metrics,
-  Model,
-  Provider,
-  Suggestion,
-  Usage
-} from '@renderer/types'
+import type { Assistant, GenerateImageParams, MCPTool, Model, Provider, Suggestion } from '@renderer/types'
+import { Chunk } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
-
-export interface ChunkCallbackData {
-  text?: string
-  reasoning_content?: string
-  usage?: Usage
-  metrics?: Metrics
-  // Zhipu web search
-  webSearch?: any[]
-  // Gemini web search
-  search?: GroundingMetadata
-  // Openai web search
-  annotations?: OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[]
-  // Openrouter web search or Knowledge base
-  citations?: string[]
-  mcpToolResponse?: MCPToolResponse[]
-  generateImage?: GenerateImageResponse
-}
 
 export interface CompletionsParams {
   messages: Message[]
   assistant: Assistant
-  onChunk: ({
-    text,
-    reasoning_content,
-    usage,
-    metrics,
-    webSearch,
-    search,
-    annotations,
-    citations,
-    mcpToolResponse,
-    generateImage
-  }: ChunkCallbackData) => void
+  onChunk: (chunk: Chunk) => void
   onFilterMessages: (messages: Message[]) => void
   mcpTools?: MCPTool[]
 }

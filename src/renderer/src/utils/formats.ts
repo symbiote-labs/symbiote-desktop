@@ -1,7 +1,4 @@
-import store from '@renderer/store'
-import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessage'
-import { MessageBlockType } from '@renderer/types/newMessage'
+import type { MainTextMessageBlock, Message } from '@renderer/types/newMessage'
 
 import { findImageBlocks, getMainTextContent } from './messageUtils/find'
 
@@ -62,25 +59,6 @@ export function removeSvgEmptyLines(text: string): string {
       .filter((line) => line.trim() !== '')
       .join('\n')
   })
-}
-
-// Helper function to find the first citation block with grounding metadata
-// Ideally, move this to find.ts later
-const findCitationBlockWithGrounding = (block: MainTextMessageBlock): CitationMessageBlock | undefined => {
-  if (!block || !block.blocks || block.blocks.length === 0) {
-    return undefined
-  }
-  const state = store.getState()
-  for (const blockId of block.blocks) {
-    const block = messageBlocksSelectors.selectById(state, blockId)
-    if (block && block.type === MessageBlockType.CITATION) {
-      const citation = block
-      if (citation.citationType === 'grounding' && citation.groundingMetadata) {
-        return citation
-      }
-    }
-  }
-  return undefined
 }
 
 export function withGeminiGrounding(block: MainTextMessageBlock): string {
@@ -182,34 +160,6 @@ const thinkTagProcessor: ThoughtProcessor = {
 
 export function withMessageThought(message: Message): Message {
   return message
-  // const originalContent = getMessageContent(message).trim()
-
-  // if (message.role !== 'assistant') {
-  //   return message
-  // }
-
-  // const model = message.model
-  // if (!model || !isReasoningModel(model)) return message
-
-  // const isClaude37Sonnet = model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
-  // if (isClaude37Sonnet) {
-  //   const assistant = getAssistantById(message.assistantId)
-  //   if (!assistant?.settings?.reasoning_effort) return message
-  // }
-  // const processors: ThoughtProcessor[] = [glmZeroPreviewProcessor, thinkTagProcessor]
-  // const processor = processors.find((p) => p.canProcess(originalContent, message))
-
-  // if (processor) {
-  //   const { reasoning, content: processedContent } = processor.process(originalContent)
-
-  //   const thinkingBlock = createThinkingBlock(message.id, reasoning, {
-  //     status: MessageBlockStatus.SUCCESS
-  //   })
-
-  //   return { reasoning: reasoning || undefined, content: processedContent }
-  // }
-
-  // return { content: originalContent }
 }
 
 export function withGenerateImage(message: Message): { content: string; images?: string[] } {
