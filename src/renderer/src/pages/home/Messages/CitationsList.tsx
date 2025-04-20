@@ -5,7 +5,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-interface Citation {
+export interface Citation {
   number: number
   url: string
   title?: string

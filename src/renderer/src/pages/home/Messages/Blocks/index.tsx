@@ -40,20 +40,26 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   return (
     <>
       {renderedBlocks.map((block) => {
-        // TODO 引用类型与主文本类型耦合，需要解耦
-        // const citationBlock = block.type === MessageBlockType.CITATION ? (block as CitationMessageBlock) : undefined
         switch (block.type) {
           case MessageBlockType.MAIN_TEXT:
-          case MessageBlockType.CODE:
+          case MessageBlockType.CODE: {
+            const mainTextBlock = block as MainTextMessageBlock
+            // Find the associated citation block ID from the references
+            const citationBlockId = mainTextBlock.citationReferences?.[0]?.citationBlockId
+            // No longer need to retrieve the full citation block here
+            // const citationBlock = citationBlockId ? (blockEntities[citationBlockId] as CitationMessageBlock) : undefined
+
             return (
               <MainTextBlock
                 key={block.id}
-                block={block as MainTextMessageBlock}
+                block={mainTextBlock}
                 model={model}
-                // citationsBlock={citationBlock}
+                // Pass only the ID string
+                citationBlockId={citationBlockId}
                 role={message.role}
               />
             )
+          }
           case MessageBlockType.IMAGE:
             return <ImageBlock key={block.id} block={block as ImageMessageBlock} />
           case MessageBlockType.FILE:
@@ -61,7 +67,7 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
           case MessageBlockType.TOOL:
             return <ToolBlock key={block.id} block={block} />
           case MessageBlockType.CITATION:
-            return <CitationBlock key={block.id} block={block} model={model} />
+            return <CitationBlock key={block.id} block={block} />
           case MessageBlockType.ERROR:
             return <ErrorBlock key={block.id} block={block as ErrorMessageBlock} />
           case MessageBlockType.THINKING:
@@ -71,7 +77,8 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
           case MessageBlockType.TRANSLATION:
             return <TranslationBlock key={block.id} block={block as TranslationMessageBlock} />
           default:
-            console.warn('Unsupported block type in MessageBlockRenderer:', block.type, block)
+            // Cast block to any for console.warn to fix linter error
+            console.warn('Unsupported block type in MessageBlockRenderer:', (block as any).type, block)
             return null
         }
       })}

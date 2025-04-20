@@ -182,6 +182,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       return
     }
 
+    console.log('[DEBUG] Starting to send message')
+
     EventEmitter.emit(EVENT_NAMES.SEND_MESSAGE)
 
     try {
@@ -228,8 +230,10 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       const { message, blocks } = getUserMessage(baseUserMessage)
 
       currentMessageId.current = message.id
-      console.log('message,blocks', message, blocks)
+      console.log('[DEBUG] Created message and blocks:', message, blocks)
+      console.log('[DEBUG] Dispatching _sendMessage')
       dispatch(_sendMessage(message, blocks, assistant, topic.id))
+      console.log('[DEBUG] _sendMessage dispatched')
 
       // Clear input
       setText('')

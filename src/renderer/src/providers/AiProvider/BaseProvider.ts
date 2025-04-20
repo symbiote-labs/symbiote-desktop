@@ -8,6 +8,7 @@ import type {
   Model,
   Provider,
   Suggestion,
+  WebSearchProviderResponse,
   WebSearchResponse
 } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
@@ -88,7 +89,10 @@ export default abstract class BaseProvider {
   public async fakeCompletions({ onChunk }: CompletionsParams) {
     for (let i = 0; i < 100; i++) {
       await delay(0.01)
-      onChunk({ text: i + '\n', usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 } })
+      onChunk({
+        response: { text: i + '\n', usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 } },
+        type: 'block_complete'
+      })
     }
   }
 
@@ -126,7 +130,7 @@ export default abstract class BaseProvider {
     const webSearch: WebSearchResponse = window.keyv.get(`web-search-${message.id}`)
 
     if (webSearch) {
-      return webSearch.results.map(
+      return (webSearch.results as WebSearchProviderResponse).results.map(
         (result, index) =>
           ({
             id: index + 1,

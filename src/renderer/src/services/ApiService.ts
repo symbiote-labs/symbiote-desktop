@@ -49,9 +49,9 @@ type ExternalToolResult = {
 
 async function fetchExternalTool(
   lastUserMessage: Message,
-  lastAnswer: Message,
   assistant: Assistant,
-  onChunkReceived: (chunk: Chunk) => void
+  onChunkReceived: (chunk: Chunk) => void,
+  lastAnswer?: Message
 ): Promise<ExternalToolResult | null> {
   const hasKnowledgeBase = !isEmpty(lastUserMessage?.blocks)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
@@ -206,21 +206,27 @@ export async function fetchChatCompletion({
   // TODO
   // onChunkStatus: (status: 'searching' | 'processing' | 'success' | 'error') => void
 }) {
+  console.log('[DEBUG] fetchChatCompletion started')
   const provider = getAssistantProvider(assistant)
+  console.log('[DEBUG] Got assistant provider:', provider.id)
   const AI = new AiProvider(provider)
 
   const lastUserMessage = findLast(messages, (m) => m.role === 'user')
   const lastAnswer = findLast(messages, (m) => m.role === 'assistant')
-  if (!lastUserMessage || !lastAnswer) return
+  if (!lastUserMessage) {
+    console.error('fetchChatCompletion returning early: Missing lastUserMessage or lastAnswer')
+    return
+  }
   try {
     // NOTE: The search results are NOT added to the messages sent to the AI here.
     // They will be retrieved and used by the messageThunk later to create CitationBlocks.
-    const externalToolResult = await fetchExternalTool(lastUserMessage, lastAnswer, assistant, onChunkReceived)
+    const externalToolResult = await fetchExternalTool(lastUserMessage, assistant, onChunkReceived, lastAnswer)
 
     // Filter messages for context
     const filteredMessages = filterUsefulMessages(filterContextMessages(messages))
 
     // --- Call AI Completions ---
+    console.log('[DEBUG] Calling AI.completions')
     await AI.completions({
       messages: filteredMessages,
       assistant,
@@ -228,6 +234,7 @@ export async function fetchChatCompletion({
       onChunk: onChunkReceived,
       mcpTools: externalToolResult?.mcpTools
     })
+    console.log('[DEBUG] AI.completions call finished')
 
     // --- Signal Final Success ---
     onChunkReceived({ type: 'block_complete' })

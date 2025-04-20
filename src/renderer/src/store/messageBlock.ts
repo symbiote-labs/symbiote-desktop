@@ -1,5 +1,10 @@
-import { createEntityAdapter, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import type { MessageBlock } from '@renderer/types/newMessage'
+import type { GroundingMetadata } from '@google/genai'
+import { createEntityAdapter, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { Citation } from '@renderer/pages/home/Messages/CitationsList'
+import { WebSearchSource } from '@renderer/types'
+import type { CitationMessageBlock, MessageBlock } from '@renderer/types/newMessage'
+import { MessageBlockType } from '@renderer/types/newMessage'
+import type OpenAI from 'openai'
 
 import type { RootState } from './index' // 确认 RootState 从 store/index.ts 导出
 
@@ -67,6 +72,126 @@ export const {
 export const messageBlocksSelectors = messageBlocksAdapter.getSelectors<RootState>(
   (state) => state.messageBlocks // Ensure this matches the key in the root reducer
 )
+
+// --- Selector Integration --- START
+
+// Selector to get the raw block entity by ID
+const selectBlockEntityById = (state: RootState, blockId: string | undefined) =>
+  blockId ? messageBlocksSelectors.selectById(state, blockId) : undefined // Use adapter selector
+
+// --- Centralized Citation Formatting Logic ---
+const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Citation[] => {
+  if (!block) return []
+
+  let formattedCitations: Citation[] = []
+
+  // 1. Handle Gemini Grounding Metadata
+  if (block.response?.source === WebSearchSource.GEMINI) {
+    formattedCitations =
+      (block.response?.results as GroundingMetadata)?.groundingChunks?.map((chunk, index) => ({
+        number: index + 1,
+        url: chunk?.web?.uri || '',
+        title: chunk?.web?.title,
+        showFavicon: false,
+        type: 'websearch'
+      })) || []
+  }
+  // 2. Handle other Web Search Responses (Non-Gemini)
+  else if (block.response) {
+    switch (block.response.source) {
+      case WebSearchSource.OPENAI:
+        formattedCitations =
+          (block.response.results as OpenAI.Chat.Completions.ChatCompletionMessage.Annotation.URLCitation[])?.map(
+            (url, index) => {
+              let hostname: string | undefined
+              try {
+                hostname = url.title ? undefined : new URL(url.url).hostname
+              } catch {
+                // Ignored: hostname calculation failed, leave it undefined
+              }
+              return {
+                number: index + 1,
+                url: url.url,
+                title: url.title,
+                hostname: hostname,
+                showFavicon: true,
+                type: 'websearch'
+              }
+            }
+          ) || []
+        break
+      case WebSearchSource.OPENROUTER:
+      case WebSearchSource.PERPLEXITY:
+        formattedCitations =
+          (block.response.results as any[])?.map((url, index) => {
+            try {
+              const hostname = new URL(url).hostname
+              return {
+                number: index + 1,
+                url,
+                hostname,
+                showFavicon: true,
+                type: 'websearch'
+              }
+            } catch {
+              return {
+                number: index + 1,
+                url,
+                hostname: url,
+                showFavicon: true,
+                type: 'websearch'
+              }
+            }
+          }) || []
+        break
+      case WebSearchSource.ZHIPU:
+      case WebSearchSource.HUNYUAN:
+        formattedCitations =
+          (block.response.results as any[])?.map((result, index) => ({
+            number: index + 1,
+            url: result.link || result.url,
+            title: result.title,
+            showFavicon: true,
+            type: 'websearch'
+          })) || []
+        break
+    }
+  }
+  // 3. Handle Knowledge Base References
+  else if (block.knowledge) {
+    formattedCitations = block.knowledge.map((result, index) => ({
+      number: index + 1,
+      url: result.sourceUrl,
+      title: result.sourceUrl,
+      showFavicon: true,
+      type: 'knowledge'
+    }))
+  }
+
+  // 4. Deduplicate by URL and Renumber Sequentially
+  const urlSet = new Set<string>()
+  return formattedCitations
+    .filter((citation) => {
+      if (!citation.url || urlSet.has(citation.url)) return false
+      urlSet.add(citation.url)
+      return true
+    })
+    .map((citation, index) => ({
+      ...citation,
+      number: index + 1
+    }))
+}
+// --- End of Centralized Logic ---
+
+// Memoized selector that takes a block ID and returns formatted citations
+export const selectFormattedCitationsByBlockId = createSelector([selectBlockEntityById], (blockEntity): Citation[] => {
+  if (blockEntity?.type === MessageBlockType.CITATION) {
+    return formatCitationsFromBlock(blockEntity as CitationMessageBlock)
+  }
+  return []
+})
+
+// --- Selector Integration --- END
 
 export default messageBlocksSlice.reducer
 

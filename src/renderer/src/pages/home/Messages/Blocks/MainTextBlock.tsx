@@ -1,8 +1,11 @@
 import { getModelUniqId } from '@renderer/services/ModelService'
+import type { RootState } from '@renderer/store'
+import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
 import type { Model } from '@renderer/types'
-import type { CitationMessageBlock, MainTextMessageBlock, Message } from '@renderer/types/newMessage'
+import type { MainTextMessageBlock, Message } from '@renderer/types/newMessage'
 import { Flex } from 'antd'
 import React, { useMemo } from 'react'
+import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import Markdown from '../../Markdown/Markdown'
@@ -21,49 +24,51 @@ const encodeHTML = (str: string): string => {
 
 interface Props {
   block: MainTextMessageBlock
-  citationsBlock?: CitationMessageBlock
+  citationBlockId?: string
   model?: Model
   mentions?: Model[]
   role: Message['role']
 }
 
-const MainTextBlock: React.FC<Props> = ({ block, citationsBlock, role, mentions = [] }) => {
-  // 处理引用数据
+const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions = [] }) => {
+  // Use the passed citationBlockId directly in the selector
+  const formattedCitations = useSelector((state: RootState) =>
+    selectFormattedCitationsByBlockId(state, citationBlockId)
+  )
+
   const processedContent = useMemo(() => {
     let content = block.content
-    if (!block.citationReferences?.length) {
+    // Update condition to use citationBlockId
+    if (!block.citationReferences?.length || !citationBlockId || formattedCitations.length === 0) {
       return content
     }
 
-    // 收集所有需要插入的位置
     const positions = block.citationReferences
-      .flatMap(({ citationBlockId, positions }) => {
-        if (citationBlockId !== citationsBlock?.id) return []
-        return positions.map((pos) => ({
-          ...pos,
-          citationBlockId
-        }))
-      })
+      // Update filter condition to use the passed ID
+      .filter((ref) => ref.citationBlockId === citationBlockId)
+      .flatMap(({ positions }) => positions)
       .sort((a, b) => b.end - a.end)
 
-    // 从后往前插入引用标记，避免位置偏移
-    positions.forEach(({ end, citationId, citationBlockId }) => {
-      if (!citationsBlock) return
+    positions.forEach(({ end, citationId }) => {
+      const citationNum = parseInt(citationId, 10)
+      if (isNaN(citationNum)) return
 
-      // 获取引用数据
-      const citationData = {
-        id: citationId,
-        url: citationsBlock.source?.results?.find((r) => r.id === citationId)?.url || '',
-        title: citationsBlock.source?.results?.find((r) => r.id === citationId)?.title || '',
-        content: citationsBlock.source?.results?.find((r) => r.id === citationId)?.content || ''
+      const citationData = formattedCitations.find((c) => c.number === citationNum)
+      if (!citationData) return
+
+      const supData = {
+        id: citationNum,
+        url: citationData.url,
+        title: citationData.title || citationData.hostname || ''
       }
-      const citationJson = encodeHTML(JSON.stringify(citationData))
+      const citationJson = encodeHTML(JSON.stringify(supData))
       content =
-        content.slice(0, end) + `[<sup data-citation='${citationJson}'>${citationId}</sup>]` + content.slice(end)
+        content.slice(0, end) + `[<sup data-citation='${citationJson}'>${citationNum}</sup>]` + content.slice(end)
     })
 
     return content
-  }, [block.content, block.citationReferences, citationsBlock])
+    // Update dependencies to use citationBlockId
+  }, [block.content, block.citationReferences, citationBlockId, formattedCitations])
 
   return (
     <>

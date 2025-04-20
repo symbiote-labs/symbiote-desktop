@@ -24,10 +24,15 @@ import { newMessagesActions, removeMessage, removeMessages, removeMessagesByAskI
 
 const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]) => {
   try {
+    console.log(`[DEBUG] saveMessageAndBlocksToDB started for message ${message.id} with ${blocks.length} blocks`)
     if (blocks.length > 0) {
+      console.log('[DEBUG] Saving blocks to DB')
       await db.message_blocks.bulkPut(blocks)
+      console.log('[DEBUG] Blocks saved to DB')
     }
+    console.log('[DEBUG] Getting topic from DB')
     const topic = await db.topics.get(message.topicId)
+    console.log('[DEBUG] Got topic from DB:', !!topic)
     if (topic) {
       const messageIndex = topic.messages.findIndex((m) => m.id === message.id)
       const updatedMessages = [...topic.messages]
@@ -37,10 +42,13 @@ const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]
       } else {
         updatedMessages.push(message)
       }
+      console.log('[DEBUG] Updating topic in DB')
       await db.topics.update(message.topicId, { messages: updatedMessages })
+      console.log('[DEBUG] Topic updated in DB')
     } else {
       console.error(`[saveMessageAndBlocksToDB] Topic ${message.topicId} not found.`)
     }
+    console.log(`[DEBUG] saveMessageAndBlocksToDB completed for message ${message.id}`)
   } catch (error) {
     console.error(`[saveMessageAndBlocksToDB] Failed to save message ${message.id}:`, error)
   }
@@ -128,19 +136,24 @@ const fetchAndProcessAssistantResponseImpl = async (
   _contextMessages: Message[],
   passedTopicId: Topic['id']
 ) => {
+  console.log('[DEBUG] fetchAndProcessAssistantResponseImpl started')
   let assistantMessage: Message | null = null
   try {
     // 创建助手消息
+    console.log('[DEBUG] Creating assistant message')
     assistantMessage = createAssistantMessage(assistant.id, passedTopicId, {
       askId: userMessage.id,
       model: assistant.model
     })
     const assistantMsgId = assistantMessage.id
     // 将助手消息添加到store
+    console.log('[DEBUG] Adding assistant message to store')
     dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
     // 保存助手消息到DB
+    console.log('[DEBUG] Saving assistant message to DB')
     await saveMessageAndBlocksToDB(assistantMessage, [])
     // 设置会话加载状态
+    console.log('[DEBUG] Setting topic loading state')
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
     let accumulatedContent = ''
@@ -415,13 +428,16 @@ const fetchAndProcessAssistantResponseImpl = async (
       }
     }
 
+    console.log('[DEBUG] Creating stream processor')
     const streamProcessorCallbacks = createStreamProcessor(callbacks)
 
+    console.log('[DEBUG] Calling fetchChatCompletion')
     await fetchChatCompletion({
       messages: messagesForContext,
       assistant: assistant,
       onChunkReceived: streamProcessorCallbacks
     })
+    console.log('[DEBUG] fetchChatCompletion completed')
   } catch (error: any) {
     console.error('Error fetching chat completion:', error)
     if (assistantMessage) {
@@ -464,6 +480,7 @@ const fetchAndProcessAssistantResponseImpl = async (
 export const sendMessage =
   (userMessage: Message, userMessageBlocks: MessageBlock[], assistant: Assistant, topicId: Topic['id']) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
+    console.log('[DEBUG] sendMessage thunk started')
     try {
       if (userMessage.blocks.length === 0) {
         console.warn('sendMessage: No blocks in the provided message.')
@@ -471,20 +488,29 @@ export const sendMessage =
       }
 
       // 更新store和DB
+      console.log('[DEBUG] Updating store with user message')
       dispatch(newMessagesActions.addMessage({ topicId, message: userMessage }))
       if (userMessageBlocks.length > 0) {
+        console.log('[DEBUG] Updating store with message blocks')
         dispatch(upsertManyBlocks(userMessageBlocks))
       }
+      console.log('[DEBUG] Saving message and blocks to DB')
       await saveMessageAndBlocksToDB(userMessage, userMessageBlocks)
+      console.log('[DEBUG] Saved to DB successfully')
 
       // 将获取/处理调用添加到队列
+      console.log('[DEBUG] Getting topic queue')
       const queue = getTopicQueue(topicId)
+      console.log('[DEBUG] Adding task to queue')
       queue.add(async () => {
+        console.log('[DEBUG] Queue task started')
         const currentState = getState()
         const allMessages = currentState.messages.messagesByTopic[topicId] || []
         // 传递原始消息列表直到用户消息
         const contextMessages = allMessages.slice(0, allMessages.findIndex((m) => m.id === userMessage.id) + 1)
+        console.log('[DEBUG] Context messages prepared')
 
+        console.log('[DEBUG] Calling fetchAndProcessAssistantResponseImpl')
         await fetchAndProcessAssistantResponseImpl(
           dispatch,
           getState,
@@ -494,6 +520,7 @@ export const sendMessage =
           contextMessages,
           topicId
         )
+        console.log('[DEBUG] fetchAndProcessAssistantResponseImpl completed')
       })
     } catch (error) {
       console.error('Error in sendMessage thunk:', error)
