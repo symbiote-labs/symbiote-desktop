@@ -4,8 +4,10 @@ import { Model } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
 import { withMessageThought } from '@renderer/utils/formats'
 import { Flex } from 'antd'
+import { Search } from 'lucide-react'
 import React, { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
+import BarLoader from 'react-spinners/BarLoader'
 import styled from 'styled-components'
 
 import MessageBlockRenderer from './Blocks'
@@ -174,7 +176,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   //   citationsData
   // ])
 
-  if (message.status === 'sending') {
+  if (message.status === 'pending') {
     return (
       <MessageContentLoading>
         <SyncOutlined spin size={24} />
@@ -182,16 +184,15 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     )
   }
 
-  // if (message.status === 'searching') {
-  // TODO 放在block内
-  //   return (
-  //     <SearchingContainer>
-  //       <Search size={24} />
-  //       <SearchingText>{t('message.searching')}</SearchingText>
-  //       <BarLoader color="#1677ff" />
-  //     </SearchingContainer>
-  //   )
-  // }
+  if (message.status === 'searching') {
+    return (
+      <SearchingContainer>
+        <Search size={24} />
+        <SearchingText>{t('message.searching')}</SearchingText>
+        <BarLoader color="#1677ff" />
+      </SearchingContainer>
+    )
+  }
 
   // if (message.status === 'error') {
   //   return <MessageError message={message} />

@@ -1,5 +1,6 @@
 import type { GenerateImageResponse, MCPToolResponse, WebSearchResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
+import { AssistantMessageStatus } from '@renderer/types/newMessage'
 
 // Define the structure for the callbacks that the StreamProcessor will invoke
 export interface StreamProcessorCallbacks {
@@ -18,7 +19,7 @@ export interface StreamProcessorCallbacks {
   // Called when an error occurs during chunk processing
   onError?: (error: any) => void
   // Called when the entire stream processing is signaled as complete (success or failure)
-  onComplete?: (status: 'success' | 'error', finalError?: any) => void
+  onComplete?: (status: AssistantMessageStatus, finalError?: any) => void
 }
 
 // Function to create a stream processor instance
@@ -28,7 +29,7 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
     try {
       // 1. Handle the manual final signal first
       if (chunk?.type === 'block_complete') {
-        callbacks.onComplete?.('success')
+        callbacks.onComplete?.(AssistantMessageStatus.SUCCESS)
         return
       }
 

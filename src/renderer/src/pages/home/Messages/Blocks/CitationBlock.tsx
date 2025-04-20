@@ -68,6 +68,10 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
     return !!((formattedCitations && formattedCitations.length > 0) || block?.response?.results)
   }, [formattedCitations, block])
 
+  if (!hasCitations) {
+    return null
+  }
+
   return (
     <>
       {hasCitations && (
@@ -145,28 +149,4 @@ export default function CitationBlock({ model, block }: { model: Model; block: C
 
 const SearchEntryPoint = styled.div`
   margin: 10px 2px;
-`
-const CitationsContainer = styled.div`
-  margin-top: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  overflow: hidden;
-`
-
-const CitationsHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: var(--color-background-mute);
-  cursor: pointer;
-
-  &:hover {
-    background-color: var(--color-border);
-  }
-`
-
-const CitationsContent = styled.div`
-  padding: 10px;
-  background-color: var(--color-background-mute);
 `

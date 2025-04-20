@@ -87,7 +87,7 @@ export const getMainTextContent = (message: Message): string => {
  */
 export const getKnowledgeBaseIds = (message: Message): string[] | undefined => {
   const firstTextBlock = findMainTextBlocks(message)
-  return firstTextBlock?.map((block) => block.knowledgeBaseIds)?.flat()
+  return firstTextBlock?.map((block) => block.knowledgeBaseIds)
 }
 
 /**
