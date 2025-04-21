@@ -7,6 +7,7 @@ import {
   clearTopicMessagesThunk,
   deleteMessageGroupThunk,
   deleteSingleMessageThunk,
+  regenerateAssistantResponseThunk,
   resendMessageThunk,
   resendUserMessageWithEditThunk
 } from '@renderer/store/thunk/messageThunk'
@@ -178,12 +179,28 @@ export function useMessageOperations(topic: Topic) {
     [resendMessage] // Dependency is the resendMessage function itself
   )
 
+  /**
+   * Regenerate an assistant message's response.
+   * Dispatches regenerateAssistantResponseThunk.
+   */
+  const regenerateAssistantMessage = useCallback(
+    async (message: Message, assistant: Assistant) => {
+      if (message.role !== 'assistant') {
+        console.warn('regenerateAssistantMessage should only be called for assistant messages.')
+        return
+      }
+      await dispatch(regenerateAssistantResponseThunk(topic, message, assistant))
+    },
+    [dispatch, topic] // topic object needed by thunk
+  )
+
   return {
     displayCount,
     deleteMessage,
     deleteGroupMessages,
     editMessage,
     resendMessage, // Export renamed function
+    regenerateAssistantMessage, // Export the new function
     resendUserMessageWithEdit,
     createNewContext,
     clearTopicMessages, // Export renamed function

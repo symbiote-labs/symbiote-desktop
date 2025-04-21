@@ -8,7 +8,7 @@ interface Props {
 }
 
 const ImageBlock: React.FC<Props> = ({ block }) => {
-  return block.metadata?.generateImage && <MessageImage message={block} />
+  return <MessageImage block={block} />
 }
 
 export default React.memo(ImageBlock)

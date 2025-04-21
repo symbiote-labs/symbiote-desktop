@@ -1,5 +1,6 @@
 import type { GenerateImageResponse, MCPToolResponse, WebSearchResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
+import type { Response } from '@renderer/types/newMessage'
 import { AssistantMessageStatus } from '@renderer/types/newMessage'
 
 // Define the structure for the callbacks that the StreamProcessor will invoke
@@ -19,7 +20,7 @@ export interface StreamProcessorCallbacks {
   // Called when an error occurs during chunk processing
   onError?: (error: any) => void
   // Called when the entire stream processing is signaled as complete (success or failure)
-  onComplete?: (status: AssistantMessageStatus, finalError?: any) => void
+  onComplete?: (status: AssistantMessageStatus, response?: Response, finalError?: any) => void
 }
 
 // Function to create a stream processor instance
@@ -27,15 +28,19 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
   // The returned function processes a single chunk or a final signal
   return (chunk: Chunk) => {
     try {
+      console.log('createStreamProcessor', chunk)
       // 1. Handle the manual final signal first
       if (chunk?.type === 'block_complete') {
-        callbacks.onComplete?.(AssistantMessageStatus.SUCCESS)
+        if (chunk?.error) {
+          callbacks.onComplete?.(AssistantMessageStatus.ERROR, undefined, chunk?.error)
+        } else {
+          callbacks.onComplete?.(AssistantMessageStatus.SUCCESS, chunk?.response)
+        }
         return
       }
 
       // 2. Process the actual ChunkCallbackData
       const data = chunk // Cast after checking for 'final'
-      console.log('createStreamProcessor', data)
       // Invoke callbacks based on the fields present in the chunk data
       if (data.type === 'text.delta' && callbacks.onTextChunk) {
         callbacks.onTextChunk(data.text)

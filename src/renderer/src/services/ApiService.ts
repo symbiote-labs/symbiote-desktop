@@ -14,7 +14,6 @@ import {
 } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
-import { formatMessageError } from '@renderer/utils/error'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
@@ -239,9 +238,10 @@ export async function fetchChatCompletion({
     // --- Signal Final Success ---
     onChunkReceived({ type: 'block_complete' })
   } catch (error: any) {
-    console.error('Error during fetchChatCompletion:', error)
+    // console.error('Error during fetchChatCompletion:', error)
     // Signal Final Error
-    onChunkReceived({ type: 'error', error: formatMessageError(error) })
+    // onChunkReceived({ type: 'error', error: formatMessageError(error) })
+    onChunkReceived({ type: 'block_complete', error: error })
     // Re-throwing might still be desired depending on upstream error handling
     // throw error;
   }

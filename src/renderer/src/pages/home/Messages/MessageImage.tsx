@@ -13,12 +13,11 @@ import { Image as AntdImage, Space } from 'antd'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
-
 interface Props {
-  message: ImageMessageBlock
+  block: ImageMessageBlock
 }
 
-const MessageImage: FC<Props> = ({ message }) => {
+const MessageImage: FC<Props> = ({ block }) => {
   const { t } = useTranslation()
 
   const onDownload = (imageBase64: string, index: number) => {
@@ -88,9 +87,14 @@ const MessageImage: FC<Props> = ({ message }) => {
     }
   }
 
+  const images = block.metadata?.generateImage?.images.length
+    ? block.metadata?.generateImage?.images
+    : // TODO 加file是否合适？
+      [`file://${block?.file?.path}`]
+
   return (
     <Container style={{ marginBottom: 8 }}>
-      {message.metadata?.generateImage!.images.map((image, index) => (
+      {images.map((image, index) => (
         <Image
           src={image}
           key={`image-${index}`}
@@ -111,7 +115,7 @@ const MessageImage: FC<Props> = ({ message }) => {
                 <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
                 <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
                 <UndoOutlined onClick={onReset} />
-                <CopyOutlined onClick={() => onCopy(message.metadata?.generateImage?.type!, image)} />
+                <CopyOutlined onClick={() => onCopy(block.metadata?.generateImage?.type!, image)} />
                 <DownloadOutlined onClick={() => onDownload(image, index)} />
               </ToobarWrapper>
             )

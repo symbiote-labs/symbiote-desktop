@@ -5,6 +5,7 @@ import store from '@renderer/store'
 import { type Assistant, type MCPToolResponse, type Topic, WebSearchSource } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
+import { Response } from '@renderer/types/newMessage'
 import { isAbortError } from '@renderer/utils/error'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
 import {
@@ -13,7 +14,8 @@ import {
   createErrorBlock,
   createImageBlock,
   createMainTextBlock,
-  createToolBlock
+  createToolBlock,
+  resetMessage
 } from '@renderer/utils/messageUtils/create'
 import { getTopicQueue } from '@renderer/utils/queue'
 import { throttle } from 'lodash'
@@ -132,27 +134,23 @@ const fetchAndProcessAssistantResponseImpl = async (
   getState: () => RootState,
   topicId: string,
   assistant: Assistant,
-  userMessage: Message,
-  _contextMessages: Message[],
-  passedTopicId: Topic['id']
+  userMessage: Message, // The message that triggers the response (sets askId)
+  contextMessages: Message[], // The history for the LLM call
+  assistantMessage: Message // Pass the prepared assistant message (new or reset)
 ) => {
-  console.log('[DEBUG] fetchAndProcessAssistantResponseImpl started')
-  let assistantMessage: Message | null = null
+  console.log('[DEBUG] fetchAndProcessAssistantResponseImpl started for existing message:', assistantMessage.id)
+  const assistantMsgId = assistantMessage.id // Use the passed message ID
   try {
-    // 创建助手消息
-    console.log('[DEBUG] Creating assistant message')
-    assistantMessage = createAssistantMessage(assistant.id, passedTopicId, {
-      askId: userMessage.id,
-      model: assistant.model
-    })
-    const assistantMsgId = assistantMessage.id
-    // 将助手消息添加到store
-    console.log('[DEBUG] Adding assistant message to store')
-    dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-    // 保存助手消息到DB
-    console.log('[DEBUG] Saving assistant message to DB')
-    await saveMessageAndBlocksToDB(assistantMessage, [])
-    // 设置会话加载状态
+    // REMOVED: Assistant message creation, adding to store, and initial DB save are now handled upstream.
+    // assistantMessage = createAssistantMessage(assistant.id, passedTopicId, {
+    //   askId: userMessage.id,
+    //   model: assistant.model
+    // })
+    // const assistantMsgId = assistantMessage.id
+    // dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+    // await saveMessageAndBlocksToDB(assistantMessage, [])
+
+    // Set topic loading state (can remain here or move upstream, keeping here is fine)
     console.log('[DEBUG] Setting topic loading state')
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
@@ -167,20 +165,26 @@ const fetchAndProcessAssistantResponseImpl = async (
     // --- Helper Function --- START
     // Helper to manage state transitions when switching block types
     const handleBlockTransition = (newBlock: MessageBlock, newBlockType: MessageBlockType) => {
-      // 1. Finalize previous text block (if applicable)
-      if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
-        console.log(`[Transition] Marking previous MAIN_TEXT block ${lastBlockId} as SUCCESS.`)
-        dispatch(updateOneBlock({ id: lastBlockId, changes: { status: MessageBlockStatus.SUCCESS } }))
-        // TODO: Consider cancelling throttled update for lastBlockId if throttle library supports it
-        // throttledBlockUpdate.cancel(lastBlockId);
-      }
+      // 1. Finalize previous block (IF NEEDED for non-text types)
+      // Example: If a TOOL block was processing and now text comes, finalize TOOL?
+      // The original logic only finalized MAIN_TEXT. Decide if other types need explicit finalization here.
+      /*
+         if (lastBlockType === MessageBlockType.SOME_OTHER_TYPE && lastBlockId) {
+            // Update status of lastBlockId if it needs finalization
+         }
+       */
+
+      // Removed the logic to mark previous MAIN_TEXT block as SUCCESS here.
+      // It will be handled by onTextComplete.
 
       // 2. Update trackers to the new block
       lastBlockId = newBlock.id
       lastBlockType = newBlockType
 
-      // 3. Reset text accumulator
-      accumulatedContent = ''
+      // 3. Reset text accumulator (if transitioning away from text)
+      if (newBlockType !== MessageBlockType.MAIN_TEXT) {
+        accumulatedContent = '' // Reset if moving away from text accumulation
+      }
 
       // 4. Add/Update the new block in store and DB (via messageAndBlockUpdate)
       console.log(`[Transition] Adding/Updating new ${newBlockType} block ${newBlock.id}.`)
@@ -201,41 +205,70 @@ const fetchAndProcessAssistantResponseImpl = async (
       onTextChunk: (text) => {
         accumulatedContent += text
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
+          // Keep updating the existing block, ensuring status stays STREAMING
           throttledBlockUpdate(lastBlockId, {
-            content: accumulatedContent
+            content: accumulatedContent,
+            status: MessageBlockStatus.STREAMING // Explicitly keep it streaming
           })
         } else {
+          // Create a new block if the type changed or it's the first chunk
           const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
             status: MessageBlockStatus.STREAMING
           })
-          lastBlockId = newBlock.id
-          lastBlockType = MessageBlockType.MAIN_TEXT
-
-          messageAndBlockUpdate(topicId, assistantMsgId, newBlock)
+          // Use handleBlockTransition to manage type switching and potential finalization of previous non-text blocks
+          handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
+          // lastBlockId and lastBlockType are updated inside handleBlockTransition now
         }
 
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
-      onTextComplete: (text) => {
-        if (assistant.enableWebSearch && assistant.model?.provider === 'openrouter') {
-          const extractedUrls = extractUrlsFromMarkdown(text)
-          const citationBlock = createCitationBlock(
-            assistantMsgId,
-            {
-              response: {
-                source: WebSearchSource.OPENROUTER,
-                results: extractedUrls
+      onTextComplete: (finalText) => {
+        // Check if the last block was indeed a text block
+        if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
+          console.log(`[onTextComplete] Marking MAIN_TEXT block ${lastBlockId} as SUCCESS.`)
+          // Mark the block as success and update with the final text
+          dispatch(
+            updateOneBlock({
+              id: lastBlockId,
+              changes: {
+                content: finalText, // Use the complete text from the chunk
+                status: MessageBlockStatus.SUCCESS
               }
-            },
-            {
-              status: MessageBlockStatus.SUCCESS
-            }
+            })
           )
-          lastBlockId = citationBlock.id
-          lastBlockType = MessageBlockType.CITATION
-          messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+          throttledDbUpdate(assistantMsgId, topicId, getState) // Save the completed text block state
+
+          // THEN, check for OpenRouter web search citation logic
+          if (assistant.enableWebSearch && assistant.model?.provider === 'openrouter') {
+            console.log('[onTextComplete] Processing OpenRouter web search citations.')
+            const extractedUrls = extractUrlsFromMarkdown(finalText) // Use finalText here
+            if (extractedUrls.length > 0) {
+              const citationBlock = createCitationBlock(
+                assistantMsgId,
+                {
+                  response: {
+                    source: WebSearchSource.OPENROUTER,
+                    results: extractedUrls
+                  }
+                },
+                {
+                  status: MessageBlockStatus.SUCCESS // Citation block is immediately complete
+                }
+              )
+              // Use handleBlockTransition to add the new citation block and update state
+              handleBlockTransition(citationBlock, MessageBlockType.CITATION)
+              // Ensure the new citation block is also saved
+              throttledDbUpdate(assistantMsgId, topicId, getState)
+            } else {
+              console.log('[onTextComplete] No URLs found for OpenRouter citation.')
+            }
+          }
+        } else {
+          console.warn(
+            `[onTextComplete] Received text.complete but last block was not MAIN_TEXT (was ${lastBlockType}) or lastBlockId is null.`
+          )
+          // Handle the case where OpenRouter citation might still be relevant even if the last block wasn't text? Unlikely but consider.
         }
-        throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onToolCallComplete: (toolResponse: MCPToolResponse) => {
         console.log('toolResponse', toolResponse, toolResponse.status)
@@ -340,7 +373,6 @@ const fetchAndProcessAssistantResponseImpl = async (
           // Add any other relevant serializable properties from the error if needed
         }
         const errorBlock = createErrorBlock(assistantMsgId, serializableError) // Pass the serializable object
-
         // Use immediate update for error block
         messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
 
@@ -354,7 +386,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         )
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
-      onComplete: async (status: AssistantMessageStatus, finalError?: any) => {
+      onComplete: async (status: AssistantMessageStatus, response?: Response, finalError?: any) => {
         // --- Handle Abort Error Specifically ---
         if (status === 'error' && isAbortError(finalError)) {
           console.log(`[onComplete] Stream aborted for message ${assistantMsgId}. Setting status to paused.`)
@@ -368,7 +400,6 @@ const fetchAndProcessAssistantResponseImpl = async (
           )
           // Ensure paused state is saved to DB
           throttledDbUpdate(assistantMsgId, topicId, getState)
-          // Skip further block/message status updates for aborts
           return
         }
 
@@ -384,8 +415,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           const serializableError = {
             name: finalError.name || 'Error',
             message: finalError.message || 'Stream completed with an unspecified error',
-            stack: finalError.stack,
-            ...finalError // Spread other potential properties
+            stack: finalError.stack
           }
           const errorBlock = createErrorBlock(assistantMsgId, serializableError)
           // Use immediate update
@@ -412,7 +442,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         // --- End of final block status update on SUCCESS --- END
 
         // --- Update final message status ---
-        const messageUpdates: Partial<Message> = { status }
+        const messageUpdates: Partial<Message> = { status, metrics: response?.metrics, usage: response?.usage }
 
         dispatch(
           newMessagesActions.updateMessage({
@@ -486,17 +516,28 @@ export const sendMessage =
         console.warn('sendMessage: No blocks in the provided message.')
         return
       }
-
-      // 更新store和DB
+      console.log('sendMessage', userMessage)
+      // 更新store和DB (User Message)
       console.log('[DEBUG] Updating store with user message')
       dispatch(newMessagesActions.addMessage({ topicId, message: userMessage }))
       if (userMessageBlocks.length > 0) {
         console.log('[DEBUG] Updating store with message blocks')
         dispatch(upsertManyBlocks(userMessageBlocks))
       }
-      console.log('[DEBUG] Saving message and blocks to DB')
+      console.log('[DEBUG] Saving user message and blocks to DB')
       await saveMessageAndBlocksToDB(userMessage, userMessageBlocks)
-      console.log('[DEBUG] Saved to DB successfully')
+      console.log('[DEBUG] Saved user message to DB successfully')
+
+      // Create, add, and save the initial Assistant Message stub BEFORE queueing
+      console.log('[DEBUG] Creating assistant message stub')
+      const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+        askId: userMessage.id,
+        model: assistant.model
+      })
+      console.log('[DEBUG] Adding assistant message stub to store')
+      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+      console.log('[DEBUG] Saving assistant message stub to DB')
+      await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
 
       // 将获取/处理调用添加到队列
       console.log('[DEBUG] Getting topic queue')
@@ -518,7 +559,7 @@ export const sendMessage =
           assistant,
           userMessage,
           contextMessages,
-          topicId
+          assistantMessage // Pass the created assistant message stub
         )
         console.log('[DEBUG] fetchAndProcessAssistantResponseImpl completed')
       })
@@ -559,7 +600,7 @@ export const resendMessage =
         assistant,
         messageToResend,
         contextMessages,
-        topicId
+        assistantMessage
       )
     } catch (error) {
       console.error('Error in resendMessage thunk:', error)
@@ -736,22 +777,23 @@ export const resendMessageThunk =
         console.error(`[resendMessageThunk] Message ${messageToResend.id} not found for resend.`)
         return
       }
-
+      console.log('resendIndex', resendIndex, allMessages)
       // --- Delete subsequent messages and their blocks ---
       const messagesToDelete = allMessages.slice(resendIndex + 1)
+      const messageIdsToDelete = messagesToDelete.map((m) => m.id)
       const blockIdsToDelete = messagesToDelete.flatMap((m) => m.blocks)
 
       if (messagesToDelete.length > 0) {
         console.log(`[resendMessageThunk] Deleting ${messagesToDelete.length} subsequent messages.`)
         // Update Redux
-        dispatch(newMessagesActions.removeMessages({ topicId, messageIds: messagesToDelete.map((m) => m.id) }))
+        dispatch(newMessagesActions.removeMessages({ topicId, messageIds: messageIdsToDelete }))
         if (blockIdsToDelete.length > 0) {
           dispatch(removeManyBlocks(blockIdsToDelete))
         }
         // Update DB (remove from topic and delete blocks)
         const dbTopic = await db.topics.get(topicId)
         if (dbTopic && dbTopic.messages) {
-          const updatedMessages = dbTopic.messages.filter((m: any) => !messagesToDelete.map((m) => m.id).includes(m.id))
+          const updatedMessages = dbTopic.messages.filter((m) => !messageIdsToDelete.includes(m.id))
           await db.topics.update(topicId, { messages: updatedMessages })
         }
         if (blockIdsToDelete.length > 0) {
@@ -759,6 +801,17 @@ export const resendMessageThunk =
         }
       }
       // --- End Deletion ---
+
+      // Create, add, and save the new Assistant Message stub BEFORE queueing
+      console.log('[DEBUG] Creating new assistant message stub for resend')
+      const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+        askId: messageToResend.id, // Link to the user message being resent
+        model: assistant.model
+      })
+      console.log('[DEBUG] Adding new assistant message stub to store')
+      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+      console.log('[DEBUG] Saving new assistant message stub to DB')
+      await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
 
       // Context includes messages up to (and including) the one being resent
       const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list
@@ -775,9 +828,9 @@ export const resendMessageThunk =
           getState,
           topicId,
           assistant,
-          messageToResend, // The message triggering the response
+          messageToResend, // The user message triggering the response
           contextMessages, // Context for the LLM call
-          topicId
+          assistantMessage // Pass the newly created assistant message stub
         )
       })
     } catch (error) {
@@ -865,7 +918,18 @@ export const resendUserMessageWithEditThunk =
     // 5. Get updated context messages (up to and including the edited user message)
     const contextMessages = getState().messages.messagesByTopic[topicId]?.slice(0, messageIndex + 1) || []
 
-    // 6. Send New Request
+    // 6. Create, add, and save the new Assistant Message stub BEFORE calling the core logic
+    console.log('[DEBUG] Creating new assistant message stub for edited resend')
+    const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+      askId: updatedUserMessage.id, // Link to the edited user message
+      model: assistant.model
+    })
+    console.log('[DEBUG] Adding new assistant message stub to store')
+    dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+    console.log('[DEBUG] Saving new assistant message stub to DB')
+    await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
+
+    // 7. Send New Request
     await fetchAndProcessAssistantResponseImpl(
       dispatch,
       getState,
@@ -873,6 +937,121 @@ export const resendUserMessageWithEditThunk =
       assistant,
       updatedUserMessage, // Pass the *updated* user message
       contextMessages, // Pass context including the updated message
-      topicId // Pass topicId again
+      assistantMessage // Pass the newly created assistant message stub
     )
+  }
+
+// --- NEW Thunk for regenerating Assistant Response ---
+export const regenerateAssistantResponseThunk =
+  (topic: Topic, assistantMessageToRegenerate: Message, assistant: Assistant) =>
+  async (dispatch: AppDispatch, getState: () => RootState) => {
+    console.log(
+      `[regenerateAssistantResponseThunk] Regenerating response for assistant message ${assistantMessageToRegenerate.id} in topic ${topic.id}`
+    )
+    const topicId = topic.id
+    try {
+      const state = getState()
+      const allMessages = state.messages.messagesByTopic[topicId] || []
+
+      // 1. Find the original user query that this assistant message was responding to
+      const originalUserQuery = allMessages.find((m) => m.id === assistantMessageToRegenerate.askId)
+      if (!originalUserQuery) {
+        console.error(
+          `[regenerateAssistantResponseThunk] Original user query (askId: ${assistantMessageToRegenerate.askId}) not found for assistant message ${assistantMessageToRegenerate.id}. Cannot regenerate.`
+        )
+        return
+      }
+
+      // 2. Find the index of the assistant message to reset
+      const assistantMessageIndex = allMessages.findIndex((m) => m.id === assistantMessageToRegenerate.id)
+      if (assistantMessageIndex === -1) {
+        console.error(
+          `[regenerateAssistantResponseThunk] Assistant message ${assistantMessageToRegenerate.id} not found in topic ${topicId}.`
+        )
+        return
+      }
+
+      // 3. Get the actual message object to reset
+      const messageToReset = allMessages[assistantMessageIndex]
+
+      // 4. Get Block IDs to delete BEFORE resetting the message
+      const blockIdsToDelete = [...messageToReset.blocks]
+
+      // 5. Reset the assistant message using the utility function
+      const resetAssistantMsg = resetMessage(messageToReset, {
+        status: AssistantMessageStatus.PENDING // Or PROCESSING
+      })
+
+      // 6. Update the message in Redux state
+      dispatch(
+        newMessagesActions.updateMessage({
+          topicId,
+          messageId: resetAssistantMsg.id,
+          updates: resetAssistantMsg
+        })
+      )
+
+      // 7. Remove the old blocks from Redux state
+      if (blockIdsToDelete.length > 0) {
+        console.log(`[regenerateAssistantResponseThunk] Removing ${blockIdsToDelete.length} old blocks.`)
+        dispatch(removeManyBlocks(blockIdsToDelete))
+      }
+
+      // 8. Update DB
+      const dbTopic = await db.topics.get(topicId)
+      if (dbTopic && dbTopic.messages) {
+        const messageIndexInDB = dbTopic.messages.findIndex((m) => m.id === resetAssistantMsg.id)
+        if (messageIndexInDB !== -1) {
+          const updatedMessages = [...dbTopic.messages]
+          updatedMessages[messageIndexInDB] = resetAssistantMsg // Replace with reset message
+          await db.topics.update(topicId, { messages: updatedMessages })
+        } else {
+          console.error(
+            `[regenerateAssistantResponseThunk] Assistant message ${resetAssistantMsg.id} not found in DB topic messages.`
+          )
+        }
+        // Delete the old blocks from DB regardless of whether the message was found in topic (safety measure)
+        if (blockIdsToDelete.length > 0) {
+          await db.message_blocks.bulkDelete(blockIdsToDelete)
+        }
+      } else if (blockIdsToDelete.length > 0) {
+        // Fallback: If topic not found, still try to delete blocks from the blocks table
+        console.warn(
+          `[regenerateAssistantResponseThunk] Topic ${topicId} not found in DB, attempting to delete blocks directly.`
+        )
+        await db.message_blocks.bulkDelete(blockIdsToDelete)
+      }
+
+      // 9. Prepare context: Messages up to and including the original user query
+      const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list AFTER the reset
+      const userQueryIndex = currentMessages.findIndex((m) => m.id === originalUserQuery.id)
+      if (userQueryIndex === -1) {
+        console.error(
+          `[regenerateAssistantResponseThunk] Original user query ${originalUserQuery.id} disappeared after reset? Aborting.`
+        )
+        return
+      }
+      const contextMessages = currentMessages.slice(0, userQueryIndex + 1)
+
+      // 10. Add fetch/process call to the queue for this topic
+      const queue = getTopicQueue(topicId)
+      queue.add(async () => {
+        await fetchAndProcessAssistantResponseImpl(
+          dispatch,
+          getState,
+          topicId,
+          assistant,
+          originalUserQuery, // Use the ORIGINAL user query as the trigger for correct askId
+          contextMessages, // Context up to the user query
+          resetAssistantMsg // Pass the RESET assistant message object
+        )
+      })
+    } catch (error) {
+      console.error(
+        `[regenerateAssistantResponseThunk] Error regenerating response for assistant message ${assistantMessageToRegenerate.id}:`,
+        error
+      )
+      // Ensure loading state is potentially reset if error happens before fetch starts
+      dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+    }
   }

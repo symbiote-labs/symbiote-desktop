@@ -189,6 +189,11 @@ export interface BlockCompleteChunk {
    * The type of the chunk
    */
   type: 'block_complete'
+
+  /**
+   * The error
+   */
+  error?: ResponseError
 }
 
 export type Chunk =

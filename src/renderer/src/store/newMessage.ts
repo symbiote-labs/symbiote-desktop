@@ -1,9 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 // Separate type-only imports from value imports
 import type { Message } from '@renderer/types/newMessage'
-import {
-  MessageBlockStatus // Import as value
-} from '@renderer/types/newMessage'
+import { AssistantMessageStatus, MessageBlockStatus, UserMessageStatus } from '@renderer/types/newMessage'
 
 // Define loading states
 // type LoadingState = 'idle' | 'loading' | 'error' // REMOVED as loadingByTopic is now boolean
@@ -202,9 +200,9 @@ const messagesSlice = createSlice({
           message.status !== 'success' &&
           message.status !== 'error'
         ) {
-          message.status = 'processing'
+          message.status = 'processing' as UserMessageStatus | AssistantMessageStatus
         } else if (status === MessageBlockStatus.ERROR) {
-          message.status = 'error'
+          message.status = 'error' as UserMessageStatus | AssistantMessageStatus
         } else if (status === MessageBlockStatus.SUCCESS && message.status === 'processing') {
           // TODO: Check if ALL blocks are success before setting message to success? Might need selector.
           // For now, tentatively set to success if a block succeeds while processing.

@@ -469,6 +469,12 @@ export default class OpenAIProvider extends BaseProvider {
 
       let content = '' // Accumulate content for tool processing if needed
       let chunk_id = 0
+      // Declare variables to accumulate final results
+      let final_time_completion_millsec = 0
+      let final_time_thinking_millsec = 0
+      // Variable to store the last received usage object
+      let lastUsage: OpenAI.CompletionUsage | undefined = undefined
+
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
@@ -537,12 +543,16 @@ export default class OpenAIProvider extends BaseProvider {
             }
           } as WebSearchChunk)
         }
-        // 6. Usage (If provided per chunk) - Send immediately
+        // 6. Usage (If provided per chunk) - Capture the last known usage
+        console.log('chunk', chunk)
         if (chunk.usage) {
-          onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
+          console.log('chunk.usage', chunk.usage)
+          lastUsage = chunk.usage // Update with the latest usage info
+          // Send incremental usage update if needed by UI (optional, keep if useful)
+          // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
         }
 
-        // 7. Metrics (Calculate and send immediately)
+        // 7. Metrics (Calculate and send FIRST token metric, update completion time)
         if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({
@@ -557,19 +567,8 @@ export default class OpenAIProvider extends BaseProvider {
         if (time_first_content_millsec === 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }
-        const time_completion_millsec = new Date().getTime() - start_time_millsec
-        const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
-
-        onChunk({
-          type: 'block_complete',
-          response: {
-            metrics: {
-              // completion_tokens might be available in chunk.usage, handle in usage chunk
-              time_completion_millsec,
-              time_thinking_millsec
-            }
-          }
-        })
+        // Continuously update the completion time
+        final_time_completion_millsec = new Date().getTime() - start_time_millsec
 
         // --- End of Incremental onChunk calls ---
       } // End of for await loop
@@ -577,6 +576,27 @@ export default class OpenAIProvider extends BaseProvider {
       // Call processToolUses AFTER the loop finishes processing the main stream content
       // Note: parseAndCallTools inside processToolUses should handle its own onChunk for tool responses
       await processToolUses(content, idx)
+
+      // Calculate final thinking time
+      final_time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
+
+      // Send the final block_complete chunk with accumulated data
+
+      console.log('usage', lastUsage) // Log the captured usage
+      onChunk({
+        type: 'block_complete',
+        response: {
+          // Use the last captured usage object directly
+          usage: lastUsage,
+          metrics: {
+            // Get completion tokens from the last usage object if available
+            completion_tokens: lastUsage?.completion_tokens,
+            time_completion_millsec: final_time_completion_millsec,
+            time_first_token_millsec: time_first_token_millsec, // Use the recorded first token time
+            time_thinking_millsec: final_time_thinking_millsec
+          }
+        }
+      })
 
       // TODO: Consider if a final onChunk for cumulative usage/metrics is possible/needed here.
       // OpenAI stream typically doesn't provide a final summary chunk easily.
@@ -609,6 +629,7 @@ export default class OpenAIProvider extends BaseProvider {
       )
 
     await processStream(stream, 0).finally(cleanup)
+
     // 捕获signal的错误
     await signalPromise?.promise?.catch((error) => {
       throw error

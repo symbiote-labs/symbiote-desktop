@@ -6,8 +6,7 @@ import { isReasoningModel } from '@renderer/config/models'
 import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
-import { translateText } from '@renderer/services/TranslateService'
+import { getMessageTitle } from '@renderer/services/MessagesService'
 import { RootState } from '@renderer/store'
 import type { Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
@@ -66,8 +65,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
   const assistantModel = assistant?.model
-  const { editMessage, setStreamMessage, deleteMessage, resendMessage, commitStreamMessage, clearStreamMessage } =
-    useMessageOperations(topic)
+  const { editMessage, deleteMessage, resendMessage, regenerateAssistantMessage } = useMessageOperations(topic)
   const loading = useTopicLoading(topic)
 
   const isUserMessage = message.role === 'user'
@@ -197,32 +195,33 @@ const MessageMenubar: FC<Props> = (props) => {
     }
   }, [message, editMessage, handleResendUserMessage, t])
 
+  // TODO 翻译
   const handleTranslate = useCallback(
     async (language: string) => {
       if (isTranslating) return
 
-      editMessage(message.id, { translatedContent: t('translate.processing') })
+      // editMessage(message.id, { translatedContent: t('translate.processing') })
 
       setIsTranslating(true)
 
-      try {
-        await translateText(message.content, language, (text) => {
-          // 使用 setStreamMessage 来更新翻译内容
-          setStreamMessage({ ...message, translatedContent: text })
-        })
+      // try {
+      //   await translateText(message.content, language, (text) => {
+      //     // 使用 setStreamMessage 来更新翻译内容
+      //     setStreamMessage({ ...message, translatedContent: text })
+      //   })
 
-        // 翻译完成后，提交流消息
-        commitStreamMessage(message.id)
-      } catch (error) {
-        console.error('Translation failed:', error)
-        window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
-        editMessage(message.id, { translatedContent: undefined })
-        clearStreamMessage(message.id)
-      } finally {
-        setIsTranslating(false)
-      }
+      //   // 翻译完成后，提交流消息
+      //   commitStreamMessage(message.id)
+      // } catch (error) {
+      //   console.error('Translation failed:', error)
+      //   window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
+      //   editMessage(message.id, { translatedContent: undefined })
+      //   clearStreamMessage(message.id)
+      // } finally {
+      //   setIsTranslating(false)
+      // }
     },
-    [isTranslating, message, editMessage, setStreamMessage, commitStreamMessage, clearStreamMessage, t]
+    [isTranslating, message, editMessage, t]
   )
 
   const dropdownItems = useMemo(
@@ -348,10 +347,13 @@ const MessageMenubar: FC<Props> = (props) => {
   const onRegenerate = async (e: React.MouseEvent | undefined) => {
     e?.stopPropagation?.()
     if (loading) return
-    const selectedModel = isGrouped ? model : assistantModel
-    const _message = resetAssistantMessage(message, selectedModel)
-    editMessage(message.id, { ..._message })
-    resendMessage(_message, assistant)
+    // No need to reset or edit the message anymore
+    // const selectedModel = isGrouped ? model : assistantModel
+    // const _message = resetAssistantMessage(message, selectedModel)
+    // editMessage(message.id, { ..._message }) // REMOVED
+
+    // Call the function from the hook
+    regenerateAssistantMessage(message, assistant)
   }
 
   const onMentionModel = async (e: React.MouseEvent) => {
