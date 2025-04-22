@@ -1,7 +1,6 @@
 import { getOpenAIWebSearchParams, isOpenAIWebSearch } from '@renderer/config/models'
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
-import store from '@renderer/store'
 import {
   Assistant,
   KnowledgeReference,
@@ -13,7 +12,7 @@ import {
   WebSearchSource
 } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
-import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
+import { Message } from '@renderer/types/newMessage'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
 import { findMainTextBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
@@ -52,7 +51,13 @@ async function fetchExternalTool(
   onChunkReceived: (chunk: Chunk) => void,
   lastAnswer?: Message
 ): Promise<ExternalToolResult | null> {
-  const hasKnowledgeBase = !isEmpty(findMainTextBlocks(lastUserMessage).filter((block) => block.knowledgeBaseIds))
+  const mainTextBlocks = findMainTextBlocks(lastUserMessage)
+  // 可能会有重复？
+  const knowledgeBaseIds = mainTextBlocks
+    .map((block) => block.knowledgeBaseIds)
+    .filter(Boolean)
+    .flat()
+  const hasKnowledgeBase = !isEmpty(knowledgeBaseIds)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
   let extractResults: ExtractResults | undefined
@@ -139,10 +144,10 @@ async function fetchExternalTool(
       // Attempt to get knowledgeBaseIds from the main text block
       // NOTE: This assumes knowledgeBaseIds are ONLY on the main text block
       // NOTE: processKnowledgeSearch needs to handle undefined ids gracefully
-      const mainTextBlock = lastUserMessage.blocks
-        ?.map((blockId) => store.getState().messageBlocks.entities[blockId])
-        .find((block) => block?.type === MessageBlockType.MAIN_TEXT) as MainTextMessageBlock | undefined
-      const knowledgeIds = mainTextBlock?.knowledgeBaseIds
+      // const mainTextBlock = mainTextBlocks
+      //   ?.map((blockId) => store.getState().messageBlocks.entities[blockId])
+      //   .find((block) => block?.type === MessageBlockType.MAIN_TEXT) as MainTextMessageBlock | undefined
+      const knowledgeIds = knowledgeBaseIds
 
       return await processKnowledgeSearch(
         extractResults,
