@@ -10,6 +10,7 @@ export interface Citation {
   url: string
   title?: string
   hostname?: string
+  content?: string
   showFavicon?: boolean
   type?: string
 }

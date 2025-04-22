@@ -1,4 +1,4 @@
-import type { GenerateImageResponse, MCPToolResponse, WebSearchResponse } from '@renderer/types'
+import type { GenerateImageResponse, KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import type { Response } from '@renderer/types/newMessage'
 import { AssistantMessageStatus } from '@renderer/types/newMessage'
@@ -15,6 +15,7 @@ export interface StreamProcessorCallbacks {
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
   // Citation data received (e.g., from Perplexity, OpenRouter)
   onWebSearch?: (webSearch: WebSearchResponse) => void
+  onKnowledgeSearch?: (knowledgeSearch: KnowledgeReference[]) => void
   // Image generation chunk received
   onImageGenerated?: (imageData: GenerateImageResponse) => void
   // Called when an error occurs during chunk processing
@@ -55,11 +56,12 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
         // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
         data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
       }
-
-      if (data.type === 'web_search' && callbacks.onWebSearch) {
+      if (data.type === 'web_search_complete' && callbacks.onWebSearch) {
         callbacks.onWebSearch(data.web_search)
       }
-
+      if (data.type === 'knowledge_search_complete' && callbacks.onKnowledgeSearch) {
+        callbacks.onKnowledgeSearch(data.knowledge)
+      }
       // Note: Usage and Metrics are usually handled at the end or accumulated differently,
       // so direct callbacks might not be the best fit here. They are often part of the final message state.
     } catch (error) {

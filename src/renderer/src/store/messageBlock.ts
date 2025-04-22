@@ -1,7 +1,7 @@
 import type { GroundingMetadata } from '@google/genai'
 import { createEntityAdapter, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Citation } from '@renderer/pages/home/Messages/CitationsList'
-import { WebSearchSource } from '@renderer/types'
+import { WebSearchProviderResponse, WebSearchSource } from '@renderer/types'
 import type { CitationMessageBlock, MessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
 import type OpenAI from 'openai'
@@ -107,7 +107,7 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
               try {
                 hostname = url.title ? undefined : new URL(url.url).hostname
               } catch {
-                // Ignored: hostname calculation failed, leave it undefined
+                hostname = url.url
               }
               return {
                 number: index + 1,
@@ -155,6 +155,17 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
             type: 'websearch'
           })) || []
         break
+      case WebSearchSource.WEBSEARCH:
+        formattedCitations =
+          (block.response.results as WebSearchProviderResponse)?.results.map((result, index) => ({
+            number: index + 1,
+            url: result.url,
+            title: result.title,
+            content: result.content,
+            showFavicon: true,
+            type: 'websearch'
+          })) || []
+        break
     }
   }
   // 3. Handle Knowledge Base References
@@ -163,6 +174,7 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
       number: index + 1,
       url: result.sourceUrl,
       title: result.sourceUrl,
+      content: result.content,
       showFavicon: true,
       type: 'knowledge'
     }))

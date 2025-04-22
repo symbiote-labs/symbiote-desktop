@@ -351,6 +351,20 @@ const fetchAndProcessAssistantResponseImpl = async (
         lastBlockType = MessageBlockType.CITATION
         messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
       },
+      onKnowledgeSearch: (knowledgeSearch) => {
+        const citationBlock = createCitationBlock(
+          assistantMsgId,
+          {
+            knowledge: knowledgeSearch
+          },
+          {
+            status: MessageBlockStatus.SUCCESS
+          }
+        )
+        lastBlockId = citationBlock.id
+        lastBlockType = MessageBlockType.CITATION
+        messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+      },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'
         const imageBlock = createImageBlock(assistantMsgId, {

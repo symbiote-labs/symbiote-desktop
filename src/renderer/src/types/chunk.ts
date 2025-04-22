@@ -1,4 +1,4 @@
-import { MCPToolResponse, WebSearchResponse } from '@types'
+import { KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@types'
 
 import { Response, ResponseError } from './newMessage'
 
@@ -120,7 +120,7 @@ export interface WebSearchInProgressChunk {
   type: 'web_search_in_progress'
 }
 
-export interface WebSearchChunk {
+export interface WebSearchCompleteChunk {
   /**
    * The web search response of the chunk
    */
@@ -134,7 +134,26 @@ export interface WebSearchChunk {
   /**
    * The type of the chunk
    */
-  type: 'web_search'
+  type: 'web_search_complete'
+}
+
+export interface KnowledgeSearchInProgressChunk {
+  /**
+   * The type of the chunk
+   */
+  type: 'knowledge_search_in_progress'
+}
+
+export interface KnowledgeSearchCompleteChunk {
+  /**
+   * The knowledge search response of the chunk
+   */
+  knowledge: KnowledgeReference[]
+
+  /**
+   * The type of the chunk
+   */
+  type: 'knowledge_search_complete'
 }
 
 export interface MCPToolResponseChunk {
@@ -209,6 +228,8 @@ export type Chunk =
   | ThinkingDeltaChunk
   | ThinkingCompleteChunk
   | WebSearchInProgressChunk
-  | WebSearchChunk
+  | WebSearchCompleteChunk
+  | KnowledgeSearchInProgressChunk
+  | KnowledgeSearchCompleteChunk
   | MCPToolResponseChunk
   | ErrorChunk

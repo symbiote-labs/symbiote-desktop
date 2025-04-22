@@ -1,3 +1,4 @@
+import type { Citation } from '@renderer/pages/home/Messages/CitationsList'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import type { RootState } from '@renderer/store'
 import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
@@ -43,8 +44,18 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
       return content
     }
 
+    // --- Optimization Start ---
+    const citationMap = formattedCitations.reduce(
+      (acc, citation) => {
+        acc[citation.number] = citation
+        return acc
+      },
+      {} as Record<number, Citation>
+    )
+    // --- Optimization End ---
+
+    // Filter and sort positions only once
     const positions = block.citationReferences
-      // Update filter condition to use the passed ID
       .filter((ref) => ref.citationBlockId === citationBlockId)
       .flatMap(({ positions }) => positions)
       .sort((a, b) => b.end - a.end)
@@ -53,13 +64,18 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
       const citationNum = parseInt(citationId, 10)
       if (isNaN(citationNum)) return
 
-      const citationData = formattedCitations.find((c) => c.number === citationNum)
+      // --- Optimization Start ---
+      // Use the map for O(1) lookup instead of find() O(n)
+      const citationData = citationMap[citationNum]
+      // --- Optimization End ---
+
       if (!citationData) return
 
       const supData = {
         id: citationNum,
         url: citationData.url,
-        title: citationData.title || citationData.hostname || ''
+        title: citationData.title || citationData.hostname || '',
+        content: citationData.content?.substring(0, 200)
       }
       const citationJson = encodeHTML(JSON.stringify(supData))
       content =
@@ -67,7 +83,6 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
     })
 
     return content
-    // Update dependencies to use citationBlockId
   }, [block.content, block.citationReferences, citationBlockId, formattedCitations])
 
   return (

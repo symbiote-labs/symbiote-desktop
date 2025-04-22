@@ -159,6 +159,12 @@ async function fetchExternalTool(
     searchTheWeb(),
     searchKnowledgeBase()
   ])
+  if (webSearchResponseFromSearch) {
+    onChunkReceived({ type: 'web_search_complete', web_search: webSearchResponseFromSearch })
+  }
+  if (knowledgeReferencesFromSearch) {
+    onChunkReceived({ type: 'knowledge_search_complete', knowledge: knowledgeReferencesFromSearch })
+  }
 
   // --- Prepare for AI Completion ---
 

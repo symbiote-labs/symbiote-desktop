@@ -31,7 +31,7 @@ import {
   Suggestion,
   WebSearchSource
 } from '@renderer/types'
-import { WebSearchChunk } from '@renderer/types/chunk'
+import { WebSearchCompleteChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
@@ -508,43 +508,43 @@ export default class OpenAIProvider extends BaseProvider {
         // 3. Web Search
         if (delta?.annotations) {
           onChunk({
-            type: 'web_search',
+            type: 'web_search_complete',
             web_search: {
               results: delta.annotations,
               source: WebSearchSource.OPENAI
             }
-          } as WebSearchChunk)
+          } as WebSearchCompleteChunk)
         }
 
         if (assistant.model?.provider === 'perplexity') {
           const citations = chunk.citations
           if (citations) {
             onChunk({
-              type: 'web_search',
+              type: 'web_search_complete',
               web_search: {
                 results: citations,
                 source: WebSearchSource.PERPLEXITY
               }
-            } as WebSearchChunk)
+            } as WebSearchCompleteChunk)
           }
         }
         if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
           onChunk({
-            type: 'web_search',
+            type: 'web_search_complete',
             web_search: {
               results: chunk.web_search,
               source: WebSearchSource.ZHIPU
             }
-          } as WebSearchChunk)
+          } as WebSearchCompleteChunk)
         }
         if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
           onChunk({
-            type: 'web_search',
+            type: 'web_search_complete',
             web_search: {
               results: chunk.search_info.search_results,
               source: WebSearchSource.HUNYUAN
             }
-          } as WebSearchChunk)
+          } as WebSearchCompleteChunk)
         }
         // 6. Usage (If provided per chunk) - Capture the last known usage
         console.log('chunk', chunk)
@@ -673,7 +673,7 @@ export default class OpenAIProvider extends BaseProvider {
 
     await this.checkIsCopilot()
 
-    console.debug('[translate] reqMessages', model.id, messages)
+    console.debug('[translate] reqMessages', model.id, message)
     // @ts-ignore key is not typed
     const response = await this.sdk.chat.completions.create({
       model: model.id,
