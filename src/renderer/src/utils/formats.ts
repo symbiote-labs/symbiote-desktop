@@ -1,6 +1,6 @@
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import { Citation, Model } from '@renderer/types'
-import type { MainTextMessageBlock, Message } from '@renderer/types/newMessage'
+import type { MainTextMessageBlock, Message, TranslationMessageBlock } from '@renderer/types/newMessage'
 
 import { findImageBlocks, getMainTextContent } from './messageUtils/find'
 
@@ -72,7 +72,7 @@ export function removeSvgEmptyLines(text: string): string {
   })
 }
 
-export function withGeminiGrounding(block: MainTextMessageBlock): string {
+export function withGeminiGrounding(block: MainTextMessageBlock | TranslationMessageBlock): string {
   // TODO
   // const citationBlock = findCitationBlockWithGrounding(block)
   // const groundingSupports = citationBlock?.groundingMetadata?.groundingSupports
