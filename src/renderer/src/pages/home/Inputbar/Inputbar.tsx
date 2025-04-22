@@ -1,4 +1,4 @@
-import { HolderOutlined } from '@ant-design/icons'
+import { FolderOutlined, HolderOutlined } from '@ant-design/icons' // Add FolderOutlined
 import ASRButton from '@renderer/components/ASRButton'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
 import TranslateButton from '@renderer/components/TranslateButton'
@@ -74,12 +74,14 @@ interface Props {
   assistant: Assistant
   setActiveTopic: (topic: Topic) => void
   topic: Topic
+  onToggleWorkspacePanel?: () => void // Add prop for toggling workspace panel
 }
 
 let _text = ''
 let _files: FileType[] = []
 
-const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) => {
+const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic, onToggleWorkspacePanel }) => {
+  // Destructure the new prop
   const [text, setText] = useState(_text)
   // 用于存储语音识别的中间结果，不直接显示在输入框中
   const [, setAsrCurrentText] = useState('')
@@ -1137,6 +1139,51 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     })
   }, [])
 
+  // Add useEffect to listen for SET_CHAT_INPUT event
+  useEffect(() => {
+    const unsubscribe = EventEmitter.on(EVENT_NAMES.SET_CHAT_INPUT, (content: string) => {
+      setText(content) // Update the input text state
+      setTimeout(() => {
+        resizeTextArea() // Adjust textarea height
+        textareaRef.current?.focus() // Focus the textarea
+      }, 0)
+    })
+
+    // Cleanup function to unsubscribe when the component unmounts
+    return () => {
+      unsubscribe()
+    }
+  }, [resizeTextArea]) // Add resizeTextArea to dependency array
+
+  // Add useEffect to listen for SEND_FILE_ATTACHMENT event
+  useEffect(() => {
+    const unsubscribe = EventEmitter.on(EVENT_NAMES.SEND_FILE_ATTACHMENT, (file: FileType) => {
+      // Add file to files array
+      setFiles((prevFiles) => {
+        // Check if file already exists in array
+        const fileExists = prevFiles.some((f) => f.path === file.path)
+        if (fileExists) {
+          return prevFiles // File already exists, don't add it again
+        } else {
+          return [...prevFiles, file] // Add new file to array
+        }
+      })
+
+      // Focus the textarea
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 0)
+
+      // Show success message
+      window.message.success(t('workspace.fileSentAsAttachment'))
+    })
+
+    // Cleanup function to unsubscribe when the component unmounts
+    return () => {
+      unsubscribe()
+    }
+  }, [t]) // Add t to dependency array
+
   useEffect(() => {
     // if assistant knowledge bases are undefined return []
     setSelectedKnowledgeBases(showKnowledgeIcon ? (assistant.knowledge_bases ?? []) : [])
@@ -1292,6 +1339,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
             <MentionModelsInput selectedModels={mentionModels} onRemoveModel={handleRemoveModel} />
           )}
           <Textarea
+            id="chat-input"
             value={text}
             onChange={onChange}
             onKeyDown={handleKeyDown}
@@ -1331,6 +1379,14 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
                   <MessageSquareDiff size={19} />
                 </ToolbarButton>
               </Tooltip>
+              {/* Add Workspace Toggle Button here */}
+              {onToggleWorkspacePanel && (
+                <Tooltip placement="top" title={t('workspace.toggle')} arrow>
+                  <ToolbarButton type="text" onClick={onToggleWorkspacePanel}>
+                    <FolderOutlined />
+                  </ToolbarButton>
+                </Tooltip>
+              )}
               <AttachmentButton
                 ref={attachmentButtonRef}
                 model={model}

@@ -211,6 +211,7 @@ const NpxSearch: FC<{
                           env: record.configSample?.env,
                           isActive: false,
                           type: record.type,
+                          searchKey: record.fullName,
                           configSample: record.configSample
                         }
 

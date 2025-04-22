@@ -58,6 +58,7 @@ import MemoryDeduplicationPanel from './MemoryDeduplicationPanel'
 import MemoryListManager from './MemoryListManager'
 import MemoryMindMap from './MemoryMindMap'
 import PriorityManagementSettings from './PriorityManagementSettings'
+import PromptSettings from './PromptSettings'
 
 const MemorySettings: FC = () => {
   const { t } = useTranslation()
@@ -382,8 +383,8 @@ const MemorySettings: FC = () => {
         return
       }
 
-      // 调用长期记忆分析函数
-      analyzeAndAddMemories(selectedTopicId)
+      // 调用长期记忆分析函数，并指定为手动分析
+      analyzeAndAddMemories(selectedTopicId, true)
     }
   }
 
@@ -676,6 +677,20 @@ const MemorySettings: FC = () => {
           size="large"
           animated={{ inkBar: true, tabPane: true }}
           items={[
+            {
+              key: 'promptSettings',
+              label: (
+                <TabLabelContainer>
+                  <TabDot color="#52c41a">●</TabDot>
+                  {t('settings.memory.promptSettings.title') || '提示词设置'} {/* Use the specific title key */}
+                </TabLabelContainer>
+              ),
+              children: (
+                <TabPaneSettingGroup theme={theme}>
+                  <PromptSettings />
+                </TabPaneSettingGroup>
+              )
+            },
             {
               key: 'assistantMemory',
               label: (

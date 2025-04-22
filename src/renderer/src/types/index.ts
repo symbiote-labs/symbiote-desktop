@@ -74,6 +74,8 @@ export type Message = {
   useful?: boolean
   error?: Record<string, any>
   enabledMCPs?: MCPServer[]
+  // 是否隐藏消息（用于系统消息）
+  isHidden?: boolean
   // 引用消息
   referencedMessages?: {
     id: string
@@ -98,6 +100,15 @@ export type Message = {
     generateImage?: GenerateImageResponse
     // Knowledge base results
     knowledge?: KnowledgeReference[]
+    // 工具调用查询标记
+    isToolResultQuery?: boolean
+    // 工具调用响应标记
+    isToolResultResponse?: boolean
+    // 工具调用结果
+    toolResults?: {
+      toolId: string
+      response: MCPCallToolResponse
+    }[]
   }
   // 多模型消息样式
   multiModelMessageStyle?: 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -414,6 +425,7 @@ export interface MCPServer {
   disabledTools?: string[] // List of tool names that are disabled for this server
   configSample?: MCPConfigSample
   headers?: Record<string, string> // Custom headers to be sent with requests to this server
+  searchKey?: string
 }
 
 export interface MCPToolInputSchema {
@@ -431,6 +443,7 @@ export interface MCPTool {
   name: string
   description?: string
   inputSchema: MCPToolInputSchema
+  toolKey: string // Add descriptive key: serverId-toolName
 }
 
 export interface MCPPromptArguments {
@@ -468,6 +481,7 @@ export interface MCPConfig {
 export interface MCPToolResponse {
   id: string // tool call id, it should be unique
   tool: MCPTool // tool info
+  args?: any // Actual arguments passed to the tool
   status: string // 'invoking' | 'done'
   response?: any
 }

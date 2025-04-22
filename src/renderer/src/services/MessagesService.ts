@@ -195,6 +195,16 @@ export function getGroupedMessages(messages: Message[]): { [key: string]: (Messa
 
     processedIds.add(message.id) // 标记此消息ID为已处理
 
+    // 如果是工具调用相关消息，不进行分组
+    if (message.metadata?.isToolResultQuery || message.metadata?.isToolResultResponse) {
+      const key = 'user' + message.id // 使用消息ID作为唯一键，确保不会被分组
+      if (!groups[key]) {
+        groups[key] = []
+      }
+      groups[key].unshift({ ...message, index })
+      return
+    }
+
     const key = message.askId ? 'assistant' + message.askId : 'user' + message.id
     if (key && !groups[key]) {
       groups[key] = []

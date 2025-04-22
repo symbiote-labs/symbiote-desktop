@@ -16,14 +16,12 @@ import {
   Part,
   RequestOptions,
   SafetySetting,
-  TextPart,
-  Tool
+  TextPart
 } from '@google/generative-ai'
 import {
   isGemmaModel,
   isGenerateImageModel,
   isSupportedThinkingBudgetModel,
-  isVisionModel,
   isWebSearchModel
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
@@ -38,13 +36,19 @@ import {
 import WebSearchService from '@renderer/services/WebSearchService'
 import store from '@renderer/store'
 import { getActiveServers } from '@renderer/store/mcp'
-import { Assistant, FileType, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types'
+import { Assistant, FileType, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types' // Re-add MCPToolResponse
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
-import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
+import {
+  callMCPTool, // Re-add import
+  geminiFunctionCallToMcpTool, // Re-add import
+  mcpToolCallResponseToGeminiFunctionResponsePart, // Re-add import
+  mcpToolsToGeminiTools, // Import for UI updates
+  upsertMCPToolResponse // Re-add import
+} from '@renderer/utils/mcp-tools'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 import { MB } from '@shared/config/constant'
 import axios from 'axios'
-import { flatten, isEmpty, takeRight } from 'lodash'
+import { isEmpty, takeRight } from 'lodash'
 import OpenAI from 'openai'
 
 import { ChunkCallbackData, CompletionsParams } from '.'
@@ -54,10 +58,10 @@ export default class GeminiProvider extends BaseProvider {
   private sdk: GoogleGenerativeAI
   private requestOptions: RequestOptions
   private imageSdk: GoogleGenAI
-  // 存储对话ID到SDK实例的映射
-  private conversationSdks: Map<string, GoogleGenerativeAI> = new Map()
-  // 存储对话ID到图像SDK实例的映射
-  private conversationImageSdks: Map<string, GoogleGenAI> = new Map()
+  // // 存储对话ID到SDK实例的映射 (当前实现未复用，仅写入)
+  // private conversationSdks: Map<string, GoogleGenerativeAI> = new Map()
+  // // 存储对话ID到图像SDK实例的映射 (当前实现未复用，仅写入)
+  // private conversationImageSdks: Map<string, GoogleGenAI> = new Map()
 
   constructor(provider: Provider) {
     super(provider)
@@ -90,10 +94,10 @@ export default class GeminiProvider extends BaseProvider {
     // 创建新的SDK实例
     const newSdk = new GoogleGenerativeAI(apiKey)
 
-    // 存储SDK实例，覆盖之前的实例
-    this.conversationSdks.set(conversationId, newSdk)
+    // // 存储SDK实例，覆盖之前的实例 (当前实现未复用，仅写入)
+    // this.conversationSdks.set(conversationId, newSdk)
 
-    console.log(`[GeminiProvider] Created new SDK for conversation ${conversationId} with API key`)
+    // console.log(`[GeminiProvider] Created new SDK for conversation ${conversationId} with API key`)
 
     return newSdk
   }
@@ -116,10 +120,10 @@ export default class GeminiProvider extends BaseProvider {
     // 创建新的SDK实例
     const newSdk = new GoogleGenAI({ apiKey: apiKey, httpOptions: { baseUrl: this.getBaseURL() } })
 
-    // 存储SDK实例，覆盖之前的实例
-    this.conversationImageSdks.set(conversationId, newSdk)
+    // // 存储SDK实例，覆盖之前的实例 (当前实现未复用，仅写入)
+    // this.conversationImageSdks.set(conversationId, newSdk)
 
-    console.log(`[GeminiProvider] Created new Image SDK for conversation ${conversationId} with API key`)
+    // console.log(`[GeminiProvider] Created new Image SDK for conversation ${conversationId} with API key`)
 
     return newSdk
   }
@@ -370,9 +374,9 @@ export default class GeminiProvider extends BaseProvider {
         systemInstruction = await buildSystemPrompt(enhancedPrompt, mcpTools, getActiveServers(store.getState()))
       }
 
-      // const tools = mcpToolsToGeminiTools(mcpTools)
-      const tools: Tool[] = []
-      const toolResponses: MCPToolResponse[] = []
+      // Format MCP tools for Gemini native function calling
+      const tools = mcpToolsToGeminiTools(mcpTools)
+      const toolResponses: MCPToolResponse[] = [] // Re-add for UI updates
 
       if (!WebSearchService.isOverwriteEnabled() && assistant.enableWebSearch && isWebSearchModel(model)) {
         tools.push({
@@ -396,7 +400,7 @@ export default class GeminiProvider extends BaseProvider {
           model: model.id,
           ...(isGemmaModel(model) ? {} : { systemInstruction: systemInstruction }),
           safetySettings: this.getSafetySettings(model.id),
-          tools: tools,
+          tools: tools, // Pass formatted tools here
           generationConfig: {
             ...thinkingConfig,
             maxOutputTokens: maxTokens,
@@ -459,42 +463,62 @@ export default class GeminiProvider extends BaseProvider {
       const userMessagesStream = await chat.sendMessageStream(messageContents.parts, { signal })
       let time_first_token_millsec = 0
 
-      const processToolUses = async (content: string, idx: number) => {
-        const toolResults = await parseAndCallTools(
-          content,
-          toolResponses,
-          onChunk,
-          idx,
-          mcpToolCallResponseToGeminiMessage,
-          mcpTools,
-          isVisionModel(model)
-        )
-        if (toolResults && toolResults.length > 0) {
-          history.push(messageContents)
-          const newChat = geminiModel.startChat({ history })
-          const newStream = await newChat.sendMessageStream(flatten(toolResults.map((ts) => (ts as Content).parts)), {
-            signal
-          })
-          await processStream(newStream, idx + 1)
-        }
-      }
+      // Remove unused processToolUses function
+      // const processToolUses = async (content: string, idx: number) => { ... }
 
-      const processStream = async (stream: GenerateContentStreamResult, idx: number) => {
-        let content = ''
+      // 添加最大工具调用次数限制，防止无限循环
+      const MAX_TOOL_CALLS = 5
+
+      /**
+       * 处理响应流并递归处理工具调用
+       * @param stream 响应流
+       * @param toolCallCount 当前工具调用计数
+       * @param isFirstCall 是否是第一次调用
+       * @param previousToolResponses 之前的工具调用响应列表，用于添加到历史记录
+       */
+      const processStreamWithToolCalls = async (
+        stream: GenerateContentStreamResult,
+        toolCallCount: number = 0,
+        isFirstCall: boolean = true,
+        previousToolResponses: { functionCall: any; response: any }[] = []
+      ) => {
+        // 检查是否超过最大工具调用次数
+        if (toolCallCount >= MAX_TOOL_CALLS) {
+          console.warn(`[GeminiProvider] 达到最大工具调用次数限制 (${MAX_TOOL_CALLS})，停止处理更多工具调用`)
+          onChunk({
+            text: `\n\n注意：已达到最大工具调用次数限制 (${MAX_TOOL_CALLS})。`
+          })
+          return
+        }
+
+        let aggregatedResponseText = ''
+        let functionCallParts: Part[] = [] // 存储潜在的函数调用
+
+        // 处理流式响应
         for await (const chunk of stream.stream) {
           if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
-          if (time_first_token_millsec == 0) {
+          // 只在第一次调用时更新首个token时间
+          if (isFirstCall && time_first_token_millsec == 0) {
             time_first_token_millsec = new Date().getTime() - start_time_millsec
           }
 
           const time_completion_millsec = new Date().getTime() - start_time_millsec
 
-          content += chunk.text()
-          processToolUses(content, idx)
+          // 聚合文本内容
+          const chunkText = chunk.text()
+          aggregatedResponseText += chunkText
 
+          // 检查块中是否有函数调用
+          const functionCalls = chunk.functionCalls()
+          if (functionCalls && functionCalls.length > 0) {
+            // 存储函数调用部分以供后续处理
+            functionCallParts = [{ functionCall: functionCalls[0] }]
+          }
+
+          // 发送文本块到UI
           onChunk({
-            text: chunk.text(),
+            text: chunkText,
             usage: {
               prompt_tokens: chunk.usageMetadata?.promptTokenCount || 0,
               completion_tokens: chunk.usageMetadata?.candidatesTokenCount || 0,
@@ -506,12 +530,123 @@ export default class GeminiProvider extends BaseProvider {
               time_first_token_millsec
             },
             search: chunk.candidates?.[0]?.groundingMetadata,
-            mcpToolResponse: toolResponses
+            mcpToolResponse: toolResponses // 传递更新的工具响应到UI
           })
+        }
+
+        // --- 处理整个流后 ---
+
+        if (functionCallParts.length > 0) {
+          // 检测到函数调用
+          const functionCall = functionCallParts[0].functionCall
+          if (!functionCall) {
+            console.error('Error: functionCall part exists but functionCall is undefined')
+            return // 或适当处理错误
+          }
+
+          console.log(`[GeminiProvider] 检测到函数调用 #${toolCallCount + 1}:`, functionCall)
+
+          // 将Gemini函数调用转换为MCPTool格式
+          const mcpToolToCall = geminiFunctionCallToMcpTool(mcpTools, functionCall)
+
+          if (mcpToolToCall) {
+            // --- UI更新: 标记工具为调用中 ---
+            const toolCallIdForUI = `${functionCall.name}-${Date.now()}` // 创建用于UI跟踪的唯一ID
+            const actualArgs = functionCall.args || {} // 获取实际参数
+            upsertMCPToolResponse(
+              toolResponses,
+              { id: toolCallIdForUI, tool: mcpToolToCall, args: actualArgs, status: 'invoking' },
+              onChunk
+            )
+
+            // 执行MCP工具
+            const toolResponse = await callMCPTool(mcpToolToCall)
+            console.log('[GeminiProvider] 收到MCP工具响应:', JSON.stringify(toolResponse, null, 2))
+
+            // --- UI更新: 标记工具为完成 ---
+            upsertMCPToolResponse(
+              toolResponses,
+              { id: toolCallIdForUI, tool: mcpToolToCall, args: actualArgs, status: 'done', response: toolResponse },
+              onChunk
+            )
+
+            // 将工具响应格式化为Gemini FunctionResponse Part
+            const functionResponsePart = mcpToolCallResponseToGeminiFunctionResponsePart(
+              functionCall.name,
+              toolResponse
+            )
+            console.log(
+              '[GeminiProvider] 格式化的FunctionResponse Part:',
+              JSON.stringify(functionResponsePart, null, 2)
+            )
+
+            // --- 代理循环: 将结果发送回Gemini ---
+            console.log(`[GeminiProvider] 将工具响应 #${toolCallCount + 1} 发送回Gemini...`)
+
+            // 将工具调用和响应添加到历史记录中
+            const currentToolResponse = {
+              functionCall: functionCall,
+              response: toolResponse
+            }
+
+            // 将当前工具调用添加到历史中
+            const updatedToolResponses = [...previousToolResponses, currentToolResponse]
+
+            // 将工具调用和响应添加到历史中
+            const toolCallMessage: Content = {
+              role: 'user',
+              parts: [
+                {
+                  text: `工具调用结果 (${functionCall.name}):\n${JSON.stringify(
+                    toolResponse.content.map((item) => {
+                      if (item.type === 'text') return item.text
+                      if (item.type === 'image' && item.data) return `[图片数据]`
+                      return JSON.stringify(item)
+                    }),
+                    null,
+                    2
+                  )}`
+                }
+              ]
+            }
+
+            // 将工具调用结果添加到历史中
+            history.push(toolCallMessage)
+
+            // 打印历史记录信息，便于调试
+            console.log(`[GeminiProvider] 工具调用历史记录已更新，当前历史长度: ${history.length}`)
+
+            // 使用更新后的历史记录创建新的聊天实例
+            const updatedChat = geminiModel.startChat({ history })
+
+            // 使用sendMessageStream进行下一次API调用
+            const nextResponseStream = await updatedChat.sendMessageStream([functionResponsePart], { signal })
+
+            // 递归处理下一个响应流，可能包含更多工具调用
+            await processStreamWithToolCalls(nextResponseStream, toolCallCount + 1, false, updatedToolResponses)
+          } else {
+            console.error('[GeminiProvider] 找不到匹配的MCP工具:', functionCall.name)
+            // 处理找不到工具的情况
+            onChunk({ text: `\n\n错误: 找不到工具 ${functionCall.name}。` })
+          }
+        } else {
+          // 没有函数调用，聚合文本是最终响应
+          console.log(
+            `[GeminiProvider] 没有检测到函数调用 (调用计数: ${toolCallCount})。最终响应:`,
+            aggregatedResponseText
+          )
+          // 如果需要，可以在这里调用onChunk一次，传递完整的聚合文本
+          // 但流式处理应该已经发送了所有部分。
         }
       }
 
-      await processStream(userMessagesStream, 0).finally(cleanup)
+      // 使用新的递归函数处理初始流
+      const processStream = async (stream: GenerateContentStreamResult) => {
+        await processStreamWithToolCalls(stream, 0, true, [])
+      }
+
+      // Start processing the initial stream
+      await processStream(userMessagesStream /* Remove unused 0 */).finally(cleanup)
     }
   }
 
@@ -720,7 +855,7 @@ export default class GeminiProvider extends BaseProvider {
    * @returns The suggestions
    */
   public async suggestions(): Promise<Suggestion[]> {
-    return []
+    return [] // Placeholder/Unused interface method? Actual logic in generateImageExp
   }
 
   /**
@@ -782,7 +917,7 @@ export default class GeminiProvider extends BaseProvider {
    * @returns The generated image
    */
   public async generateImage(): Promise<string[]> {
-    return []
+    return [] // Placeholder/Unused interface method?
   }
 
   /**

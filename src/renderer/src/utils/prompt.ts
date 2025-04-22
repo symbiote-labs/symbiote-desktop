@@ -151,6 +151,27 @@ import { applyMemoriesToPrompt } from '@renderer/services/MemoryService'
 import { MCPServer } from '@renderer/types'
 
 import { getRememberedMemories } from './remember-utils'
+// 添加强化工具使用的提示词
+export const GEMINI_TOOL_PROMPT = `
+你有权限使用一系列工具来帮助回答用户的问题。请严格遵守以下指导：
+
+1. 必须主动使用工具：当用户请求信息或操作时，你必须立即主动使用相关工具，而不是等待用户提示。不要先回复“我可以帮你查看”等语句，直接调用工具获取信息。
+
+2. 工具使用场景（必须立即执行）：
+   - 用户询问文件、目录或工作区相关信息时，立即使用 workspace_list_files 工具
+   - 用户要查看文件内容时，立即使用 workspace_read_file 工具
+   - 用户要创建或修改文件时，立即使用 workspace_create_file 或 workspace_write_file 工具
+   - 用户要搜索文件时，立即使用 workspace_search_files 工具
+
+3. 直接调用原则：当用户请求信息时，不要先解释你将要做什么，直接调用工具并展示结果。例如，当用户请求“查看工作区文件”时，直接调用 workspace_list_files 工具。
+
+4. 不要等待用户确认：当用户请求信息时，不要等待用户确认或提示就直接调用工具。用户已经默认同意你使用工具。
+
+5. 连续工具调用：如果需要多个工具才能完成任务，请连续调用工具，不要中断询问用户。
+
+警告：如果你不主动使用工具，而是等待用户提示，将被视为严重错误。用户期望你直接使用工具获取信息，而不是等待他们再次提示。
+`
+
 export const buildSystemPrompt = async (
   userSystemPrompt: string,
   tools: MCPTool[],
@@ -185,16 +206,22 @@ export const buildSystemPrompt = async (
   const enhancedPrompt = appMemoriesPrompt + (mcpMemoriesPrompt ? `\n\n${mcpMemoriesPrompt}` : '')
 
   let finalPrompt: string
+  // When using native function calling (tools are present), the system prompt should only contain
+  // the user's instructions and any relevant memories. The model learns how to call tools
+  // from the 'tools' parameter in the API request, not from XML instructions in the prompt.
   if (tools && tools.length > 0) {
-    console.log('[Prompt] Final prompt with tools:', { promptLength: enhancedPrompt.length })
-    // Break down the chained replace calls to potentially help the parser
-    const availableToolsString = AvailableTools(tools)
-    let tempPrompt = SYSTEM_PROMPT.replace('{{ USER_SYSTEM_PROMPT }}', enhancedPrompt)
-    tempPrompt = tempPrompt.replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples)
-    finalPrompt = tempPrompt.replace('{{ AVAILABLE_TOOLS }}', availableToolsString)
+    console.log('[Prompt] Building prompt for native function calling:', { promptLength: enhancedPrompt.length })
+    // 添加强化工具使用的提示词
+    finalPrompt = GEMINI_TOOL_PROMPT + '\n\n' + enhancedPrompt
+    console.log('[Prompt] Added tool usage enhancement prompt')
   } else {
-    console.log('[Prompt] Final prompt without tools:', { promptLength: enhancedPrompt.length })
-    finalPrompt = enhancedPrompt // Assign enhancedPrompt when no tools are present
+    console.log('[Prompt] Building prompt without tools (or for XML tool use):', {
+      promptLength: enhancedPrompt.length
+    })
+    // If no tools are provided (or if a model doesn't support native calls and relies on XML),
+    // we might still need the old SYSTEM_PROMPT logic. For now, assume no tools means no tool instructions needed.
+    // If XML fallback is needed later, this 'else' block might need to re-introduce SYSTEM_PROMPT.
+    finalPrompt = enhancedPrompt
   }
   // Single return point for the function
   return finalPrompt

@@ -21,6 +21,7 @@ import {
   convertLinksToZhipu,
   extractUrlsFromMarkdown
 } from '@renderer/utils/linkConverter'
+import { executeToolCalls, parseToolUse } from '@renderer/utils/mcp-tools'
 import { cloneDeep, findLast, isEmpty } from 'lodash'
 
 import AiProvider from '../providers/AiProvider'
@@ -113,7 +114,7 @@ export async function fetchChatCompletion({
               }
             } else {
               query = lastMessage.content
-            }
+            } // Corrected brace placement
 
             // 处理搜索结果
             message.metadata = {
@@ -123,12 +124,13 @@ export async function fetchChatCompletion({
 
             window.keyv.set(`web-search-${lastMessage?.id}`, webSearchResponse)
           } catch (error) {
+            // Restoring the catch block for the outer try
             console.error('Web search failed:', error)
           }
-        }
-      }
-    }
-  }
+        } // Closes 'if (lastMessage)'
+      } // Closes 'if (isEmpty(webSearchParams) ...)'
+    } // Closes 'if (WebSearchService.isWebSearchEnabled() ...)'
+  } // Closes searchTheWeb function
 
   try {
     let _messages: Message[] = []
@@ -148,6 +150,11 @@ export async function fetchChatCompletion({
     // Get MCP tools
     const mcpTools: MCPTool[] = []
     const enabledMCPs = lastUserMessage?.enabledMCPs
+
+    // Store enabledMCPs on the assistant message object so MessageTools can access it for rerun
+    if (enabledMCPs && enabledMCPs.length > 0) {
+      message.enabledMCPs = enabledMCPs // Add this line
+    }
 
     if (enabledMCPs && enabledMCPs.length > 0) {
       for (const mcpServer of enabledMCPs) {
@@ -312,6 +319,56 @@ export async function fetchChatCompletion({
     message.status = 'success'
     message = withGenerateImage(message)
 
+    // 检查消息内容中是否包含工具调用
+    const mcpToolResponses = message.metadata?.mcpTools || []
+    const availableMcpTools = mcpToolResponses.map((tr) => tr.tool)
+    const toolCalls = parseToolUse(message.content, availableMcpTools)
+
+    // 如果有工具调用，创建新的对话响应
+    if (toolCalls && toolCalls.length > 0) {
+      console.log('[MCP] 检测到工具调用，将创建全新的对话响应')
+
+      // 完成当前消息（工具调用消息）
+      message.status = 'success'
+
+      // 确保当前消息有正确的使用量统计
+      if (!message.usage || !message?.usage?.completion_tokens) {
+        message.usage = await estimateMessagesUsage({
+          assistant,
+          messages: [..._messages, message]
+        })
+        // 设置metrics.completion_tokens
+        if (message.metrics && message?.usage?.completion_tokens) {
+          message.metrics = {
+            ...message.metrics,
+            completion_tokens: message.usage.completion_tokens
+          }
+        }
+      }
+
+      // 标记为包含工具调用的消息
+      // 不需要额外标记，已经有 mcpTools 字段
+
+      // 发送第一条完整消息到UI
+      EventEmitter.emit(EVENT_NAMES.RECEIVE_MESSAGE, message)
+      onResponse(message)
+
+      // 执行工具调用
+      const toolResponses = []
+      await executeToolCalls(toolCalls, toolResponses, () => {}, 0)
+
+      // 工具调用已执行，不创建新的消息
+
+      // 重置生成状态
+      store.dispatch(setGenerating(false))
+
+      // 不生成第二条消息，只执行工具调用
+      console.log('[MCP] 工具调用已执行，不生成第二条消息')
+
+      return message
+    }
+
+    // 如果没有工具调用，正常处理消息
     if (!message.usage || !message?.usage?.completion_tokens) {
       message.usage = await estimateMessagesUsage({
         assistant,
@@ -340,7 +397,20 @@ export async function fetchChatCompletion({
     }
   }
 
-  // Emit chat completion event
+  // 如果不是工具调用相关消息，发送消息
+  if (!message.metadata?.isToolResultResponse && !message.metadata?.isToolResultQuery) {
+    // Emit chat completion event
+    EventEmitter.emit(EVENT_NAMES.RECEIVE_MESSAGE, message)
+    onResponse(message)
+  } else {
+    // 如果是工具调用相关消息，只调用回调函数，不发送事件
+    // 因为我们已经在工具调用处理中发送了事件
+    onResponse(message)
+  }
+
+  // Always emit the final message state, including metadata, regardless of tool calls.
+  // The previous condition was likely for the old XML tool flow.
+  // For native function calls, the tool info is in the metadata of this single message.
   EventEmitter.emit(EVENT_NAMES.RECEIVE_MESSAGE, message)
   onResponse(message)
 
@@ -422,17 +492,44 @@ export async function fetchGenerate({
   content: string
   modelId?: string
 }): Promise<string> {
-  // 使用指定的模型或默认模型
-  const model = modelId
-    ? store
-        .getState()
-        .llm.providers.flatMap((provider) => provider.models)
-        .find((m) => m.id === modelId)
-    : getDefaultModel()
+  // 处理JSON格式的模型ID
+  let parsedModelId = modelId
+  let providerId = undefined
 
+  if (typeof modelId === 'string' && modelId.startsWith('{')) {
+    try {
+      const parsedModel = JSON.parse(modelId)
+      parsedModelId = parsedModel.id
+      providerId = parsedModel.provider
+      console.log(`[fetchGenerate] Parsed model ID: ${parsedModelId}, provider: ${providerId}`)
+    } catch (error) {
+      console.error(`[fetchGenerate] Failed to parse model ID: ${modelId}`, error)
+    }
+  }
+
+  // 使用指定的模型或默认模型
+  let model: Model | undefined = undefined
+
+  // 如果有提供商ID，先尝试从该提供商中查找模型
+  if (parsedModelId && providerId) {
+    const provider = store.getState().llm.providers.find((p) => p.id === providerId)
+    if (provider) {
+      model = provider.models.find((m) => m.id === parsedModelId)
+    }
+  }
+
+  // 如果没找到，尝试在所有模型中查找
+  if (!model && parsedModelId) {
+    model = store
+      .getState()
+      .llm.providers.flatMap((provider) => provider.models)
+      .find((m) => m.id === parsedModelId)
+  }
+
+  // 如果仍然没找到，使用默认模型
   if (!model) {
     console.error(`Model ${modelId} not found, using default model`)
-    return ''
+    model = getDefaultModel()
   }
 
   const provider = getProviderByModel(model)
@@ -444,7 +541,13 @@ export async function fetchGenerate({
   const AI = new AiProvider(provider)
 
   try {
-    return await AI.generateText({ prompt, content, modelId })
+    // 使用模型的ID而不是原始的modelId
+    if (model) {
+      return await AI.generateText({ prompt, content, modelId: model.id })
+    } else {
+      console.error('No valid model found')
+      return ''
+    }
   } catch (error: any) {
     console.error('Error generating text:', error)
     return ''

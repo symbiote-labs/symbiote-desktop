@@ -1,5 +1,6 @@
 import { DeleteOutlined, SaveOutlined } from '@ant-design/icons'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
+import MCPDescription from '@renderer/pages/settings/MCPSettings/McpDescription'
 import { MCPPrompt, MCPResource, MCPServer, MCPTool } from '@renderer/types'
 import { Button, Flex, Form, Input, Radio, Switch, Tabs } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
@@ -45,6 +46,21 @@ const PipRegistry: Registry[] = [
 ]
 
 type TabKey = 'settings' | 'tools' | 'prompts' | 'resources'
+
+const parseKeyValueString = (str: string): Record<string, string> => {
+  const result: Record<string, string> = {}
+  str.split('\n').forEach((line) => {
+    if (line.trim()) {
+      const [key, ...value] = line.split('=')
+      const formatValue = value.join('=').trim()
+      const formatKey = key.trim()
+      if (formatKey && formatValue) {
+        result[formatKey] = formatValue
+      }
+    }
+  })
+  return result
+}
 
 const McpSettings: React.FC<Props> = ({ server }) => {
   const { t } = useTranslation()
@@ -211,31 +227,11 @@ const McpSettings: React.FC<Props> = ({ server }) => {
 
       // set env variables
       if (values.env) {
-        const env: Record<string, string> = {}
-        values.env.split('\n').forEach((line) => {
-          if (line.trim()) {
-            const [key, ...chunks] = line.split('=')
-            const value = chunks.join('=')
-            if (key && value) {
-              env[key.trim()] = value.trim()
-            }
-          }
-        })
-        mcpServer.env = env
+        mcpServer.env = parseKeyValueString(values.env)
       }
 
       if (values.headers) {
-        const headers: Record<string, string> = {}
-        values.headers.split('\n').forEach((line) => {
-          if (line.trim()) {
-            const [key, ...chunks] = line.split(':')
-            const value = chunks.join(':')
-            if (key && value) {
-              headers[key.trim()] = value.trim()
-            }
-          }
-        })
-        mcpServer.headers = headers
+        mcpServer.headers = parseKeyValueString(values.headers)
       }
 
       try {
@@ -330,18 +326,57 @@ const McpSettings: React.FC<Props> = ({ server }) => {
 
     try {
       if (active) {
-        const localTools = await window.api.mcp.listTools(server)
+        // 如果是 workspacefile 服务，自动设置 WORKSPACE_PATH 环境变量
+        const serverToActivate = { ...server }
+
+        if (server.name === '@cherry/workspacefile') {
+          // 获取当前工作区路径
+          const currentWorkspace = window.store
+            .getState()
+            .workspace.workspaces.find((w) => w.id === window.store.getState().workspace.currentWorkspaceId)
+
+          // 获取对AI可见的工作区
+          const visibleWorkspaces = window.store.getState().workspace.workspaces.filter((w) => w.visibleToAI !== false)
+
+          // 检查当前工作区是否对AI可见
+          if (!currentWorkspace || !visibleWorkspaces.some((w) => w.id === currentWorkspace.id)) {
+            throw new Error('当前工作区对AI不可见，请在工作区设置中启用AI可见性')
+          }
+
+          if (currentWorkspace && currentWorkspace.path) {
+            // 设置 WORKSPACE_PATH 环境变量
+            // Remove redundant || {}
+            const env = { ...serverToActivate.env }
+            env.WORKSPACE_PATH = currentWorkspace.path
+            serverToActivate.env = env
+
+            // 更新表单中的环境变量显示
+            const envText = Object.entries(env)
+              .map(([key, value]) => `${key}=${value}`)
+              .join('\n')
+            form.setFieldValue('env', envText)
+
+            console.log(`[MCP] Setting WORKSPACE_PATH to ${currentWorkspace.path} for @cherry/workspacefile`)
+          } else {
+            throw new Error('未找到当前工作区，请先设置工作区')
+          }
+        }
+
+        const localTools = await window.api.mcp.listTools(serverToActivate)
         setTools(localTools)
 
-        const localPrompts = await window.api.mcp.listPrompts(server)
+        const localPrompts = await window.api.mcp.listPrompts(serverToActivate)
         setPrompts(localPrompts)
 
-        const localResources = await window.api.mcp.listResources(server)
+        const localResources = await window.api.mcp.listResources(serverToActivate)
         setResources(localResources)
+
+        // 更新服务器配置
+        updateMCPServer({ ...serverToActivate, isActive: active })
       } else {
         await window.api.mcp.stopServer(server)
+        updateMCPServer({ ...server, isActive: active })
       }
-      updateMCPServer({ ...server, isActive: active })
     } catch (error: any) {
       window.modal.error({
         title: t('settings.mcp.startError'),
@@ -516,6 +551,14 @@ const McpSettings: React.FC<Props> = ({ server }) => {
       )
     }
   ]
+
+  if (server.searchKey) {
+    tabs.push({
+      key: 'description',
+      label: t('settings.mcp.tabs.description'),
+      children: <MCPDescription searchKey={server.searchKey} />
+    })
+  }
 
   if (server.isActive) {
     tabs.push(

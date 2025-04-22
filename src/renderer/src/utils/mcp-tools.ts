@@ -219,7 +219,9 @@ export function openAIToolsToMcpTool(
     serverName: tool.serverName,
     name: tool.name,
     description: tool.description,
-    inputSchema: args
+    inputSchema: args,
+    // Add the missing toolKey property
+    toolKey: `${tool.serverId}-${tool.name}`
   }
 }
 
@@ -296,7 +298,7 @@ export function mcpToolsToGeminiTools(mcpTools: MCPTool[] | undefined): geminiTo
             ? Object.fromEntries(
                 Object.entries(properties).map(([key, value]) => [key, ensureValidSchema(value as Record<string, any>)])
               )
-            : { _empty: { type: SchemaType.STRING } as SimpleStringSchema }
+            : {} // Return empty object if no properties, instead of _empty placeholder
       } as FunctionDeclarationSchema
     }
     functions.push(functionDeclaration)
@@ -304,7 +306,8 @@ export function mcpToolsToGeminiTools(mcpTools: MCPTool[] | undefined): geminiTo
   const tool: geminiTool = {
     functionDeclarations: functions
   }
-  return [tool]
+  // Return empty array if no functions, otherwise return the tool definition
+  return functions.length > 0 ? [tool] : []
 }
 
 export function geminiFunctionCallToMcpTool(
@@ -374,10 +377,10 @@ export function parseToolUse(content: string, mcpTools: MCPTool[]): MCPToolRespo
     /<tool_use>([\s\S]*?)<name>([\s\S]*?)<\/name>([\s\S]*?)<arguments>([\s\S]*?)<\/arguments>([\s\S]*?)<\/tool_use>/g
 
   // 2. Roo Code格式: <工具名><参数名>参数值</参数名></工具名>
-  const rooCodeToolUsePattern = new RegExp(`<(${mcpTools.map((tool) => tool.id).join('|')})>([\s\S]*?)<\/\\1>`, 'g')
+  const rooCodeToolUsePattern = new RegExp(`<(${mcpTools.map((tool) => tool.id).join('|')})>([\\s\\S]*?)<\\/\\1>`, 'g') // Keep escapes needed for RegExp constructor
 
   // 3. 简化格式: <tool_use>工具ID参数JSON</tool_use>
-  const simplifiedToolUsePattern = /<tool_use>\s*([\w\d]+)\s*([\s\S]*?)\s*<\/tool_use>/g
+  const simplifiedToolUsePattern = /<tool_use>\s*([\w\d]+)\s*([\s\S]*?)\s*<\/tool_use>/g // Remove unnecessary escapes: \s, \S, \/
 
   const tools: MCPToolResponse[] = []
   let idx = 0
@@ -481,25 +484,18 @@ export function parseToolUse(content: string, mcpTools: MCPTool[]): MCPToolRespo
   return tools
 }
 
-export async function parseAndCallTools(
-  content: string,
+// 新增函数：执行工具调用并返回结果，但不转换为消息
+export async function executeToolCalls(
+  tools: MCPToolResponse[],
   toolResponses: MCPToolResponse[],
   onChunk: CompletionsParams['onChunk'],
-  idx: number,
-  convertToMessage: (
-    toolCallId: string,
-    resp: MCPCallToolResponse,
-    isVisionModel: boolean
-  ) => ChatCompletionMessageParam | MessageParam | Content,
-  mcpTools?: MCPTool[],
-  isVisionModel: boolean = false
-): Promise<(ChatCompletionMessageParam | MessageParam | Content)[]> {
-  const toolResults: (ChatCompletionMessageParam | MessageParam | Content)[] = []
-  // process tool use
-  const tools = parseToolUse(content, mcpTools || [])
+  idx: number
+): Promise<{ toolId: string; response: MCPCallToolResponse }[]> {
   if (!tools || tools.length === 0) {
-    return toolResults
+    return []
   }
+
+  // 标记所有工具为调用中
   for (let i = 0; i < tools.length; i++) {
     const tool = tools[i]
     upsertMCPToolResponse(toolResponses, { id: `${tool.id}-${idx}-${i}`, tool: tool.tool, status: 'invoking' }, onChunk)
@@ -528,10 +524,44 @@ export async function parseAndCallTools(
       }
     })
 
-    return convertToMessage(tool.tool.id, toolCallResponse, isVisionModel)
+    return {
+      toolId: tool.tool.id,
+      response: toolCallResponse
+    }
   })
 
-  toolResults.push(...(await Promise.all(toolPromises)))
+  return await Promise.all(toolPromises)
+}
+
+// 修改后的函数：解析工具调用并执行，然后转换为消息
+export async function parseAndCallTools(
+  content: string,
+  toolResponses: MCPToolResponse[],
+  onChunk: CompletionsParams['onChunk'],
+  idx: number,
+  convertToMessage: (
+    toolCallId: string,
+    resp: MCPCallToolResponse,
+    isVisionModel: boolean
+  ) => ChatCompletionMessageParam | MessageParam | Content,
+  mcpTools?: MCPTool[],
+  isVisionModel: boolean = false
+): Promise<(ChatCompletionMessageParam | MessageParam | Content)[]> {
+  const toolResults: (ChatCompletionMessageParam | MessageParam | Content)[] = []
+  // process tool use
+  const tools = parseToolUse(content, mcpTools || [])
+  if (!tools || tools.length === 0) {
+    return toolResults
+  }
+
+  // 执行工具调用
+  const toolCallResults = await executeToolCalls(tools, toolResponses, onChunk, idx)
+
+  // 转换工具调用结果为消息
+  for (const result of toolCallResults) {
+    toolResults.push(convertToMessage(result.toolId, result.response, isVisionModel))
+  }
+
   return toolResults
 }
 
@@ -667,66 +697,38 @@ export function mcpToolCallResponseToAnthropicMessage(
     message.content = content
   }
 
-  return message
+  return message // This function seems unused in the new flow, keeping for potential reference
 }
 
-export function mcpToolCallResponseToGeminiMessage(
-  toolCallId: string,
-  resp: MCPCallToolResponse,
-  isVisionModel: boolean = false
-): Content {
-  const message = {
-    role: 'user'
-  } as Content
+/**
+ * Converts the response from an MCP tool call into a Gemini Part object
+ * suitable for sending back to the model as a function response.
+ * @param toolCallName The name/ID of the function that was called.
+ * @param resp The response object from the MCP tool call.
+ * @returns A Gemini Part object containing the function response.
+ */
+export function mcpToolCallResponseToGeminiFunctionResponsePart(toolCallName: string, resp: MCPCallToolResponse): Part {
+  // Serialize the response content.
+  // Join text parts, stringify others. Handle potential errors.
+  const responseContent = resp.content
+    .map((item) => {
+      if (item.type === 'text') return item.text
+      try {
+        return JSON.stringify(item) // Fallback for non-text parts
+      } catch (e) {
+        console.error('Error stringifying tool response part:', item, e)
+        return `[Error serializing ${item.type} part]`
+      }
+    })
+    .join('\n')
 
-  if (resp.isError) {
-    message.parts = [
-      {
-        text: JSON.stringify(resp.content)
+  return {
+    functionResponse: {
+      name: toolCallName,
+      response: {
+        // Pass the serialized content. Add error prefix if needed.
+        content: resp.isError ? `Error: ${responseContent}` : responseContent || '(empty response)'
       }
-    ]
-  } else {
-    const parts: Part[] = [
-      {
-        text: `Here is the result of tool call ${toolCallId}:`
-      }
-    ]
-    if (isVisionModel) {
-      for (const item of resp.content) {
-        switch (item.type) {
-          case 'text':
-            parts.push({
-              text: item.text || 'no content'
-            })
-            break
-          case 'image':
-            if (!item.data) {
-              parts.push({
-                text: 'No image data provided'
-              })
-            } else {
-              parts.push({
-                inlineData: {
-                  data: item.data,
-                  mimeType: item.mimeType || 'image/png'
-                }
-              })
-            }
-            break
-          default:
-            parts.push({
-              text: `Unsupported type: ${item.type}`
-            })
-            break
-        }
-      }
-    } else {
-      parts.push({
-        text: JSON.stringify(resp.content)
-      })
     }
-    message.parts = parts
   }
-
-  return message
 }

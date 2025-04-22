@@ -12,6 +12,7 @@ import llm from './llm'
 import mcp from './mcp'
 import memory from './memory' // Removed import of memoryPersistenceMiddleware
 import messagesReducer from './messages'
+import workspace from './workspace'
 import migrate from './migrate'
 import minapps from './minapps'
 import nutstore from './nutstore'
@@ -37,6 +38,7 @@ const rootReducer = combineReducers({
   mcp,
   copilot,
   memory,
+  workspace,
   messages: messagesReducer
 })
 

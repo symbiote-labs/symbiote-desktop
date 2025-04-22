@@ -248,6 +248,13 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
 
       processedIds.add(message.id) // 标记此消息ID为已处理
 
+      // 如果是工具调用相关消息，直接添加到显示列表中
+      if (message.metadata?.isToolResultQuery || message.metadata?.isToolResultResponse) {
+        batchDisplayMessages.push(message)
+        messageIdMap.set(message.id, true)
+        return
+      }
+
       const idSet = message.role === 'user' ? userIdSet : assistantIdSet
       const messageId = message.role === 'user' ? message.id : message.askId
 
@@ -353,12 +360,24 @@ const computeDisplayMessages = (messages: Message[], startIndex: number, display
   const processMessage = (message: Message) => {
     if (!message) return
 
+    // 跳过隐藏的消息（系统消息）
+    if (message.isHidden) {
+      return
+    }
+
     // 跳过已处理的消息ID
     if (processedIds.has(message.id)) {
       return
     }
 
     processedIds.add(message.id) // 标记此消息ID为已处理
+
+    // 如果是工具调用相关消息，直接添加到显示列表中
+    if (message.metadata?.isToolResultQuery || message.metadata?.isToolResultResponse) {
+      displayMessages.push(message)
+      messageIdMap.set(message.id, true)
+      return
+    }
 
     const idSet = message.role === 'user' ? userIdSet : assistantIdSet
     const messageId = message.role === 'user' ? message.id : message.askId

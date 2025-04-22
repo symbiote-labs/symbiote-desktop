@@ -2,8 +2,7 @@ import './services/MemoryFileService'
 
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { replaceDevtoolsFont } from '@main/utils/windowUtil'
-import { IpcChannel } from '@shared/IpcChannel'
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import installExtension, { REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } from 'electron-devtools-installer'
 import Logger from 'electron-log'
 
@@ -60,13 +59,7 @@ if (!app.requestSingleInstanceLock()) {
         .then((name) => console.log(`Added Extension:  ${name}`))
         .catch((err) => console.log('An error occurred: ', err))
     }
-    ipcMain.handle(IpcChannel.System_GetDeviceType, () => {
-      return process.platform === 'darwin' ? 'mac' : process.platform === 'win32' ? 'windows' : 'linux'
-    })
-
-    ipcMain.handle(IpcChannel.System_GetHostname, () => {
-      return require('os').hostname()
-    })
+    // 系统相关的IPC处理程序已在ipc.ts中注册
   })
 
   registerProtocolClient(app)

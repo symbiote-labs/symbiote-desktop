@@ -1,7 +1,16 @@
 import type { ExtractChunkData } from '@cherrystudio/embedjs-interfaces'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannel } from '@shared/IpcChannel'
-import { FileType, KnowledgeBaseParams, KnowledgeItem, MCPServer, Shortcut, WebDavConfig } from '@types'
+// Import MCPCallToolResponse along with other types
+import {
+  FileType,
+  KnowledgeBaseParams,
+  KnowledgeItem,
+  MCPCallToolResponse,
+  MCPServer,
+  Shortcut,
+  WebDavConfig
+} from '@types'
 import { contextBridge, ipcRenderer, OpenDialogOptions, shell } from 'electron'
 import { CreateDirectoryOptions } from 'webdav'
 
@@ -146,7 +155,45 @@ const api = {
     listResources: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListResources, server),
     getResource: ({ server, uri }: { server: MCPServer; uri: string }) =>
       ipcRenderer.invoke(IpcChannel.Mcp_GetResource, { server, uri }),
-    getInstallInfo: () => ipcRenderer.invoke(IpcChannel.Mcp_GetInstallInfo)
+    getInstallInfo: () => ipcRenderer.invoke(IpcChannel.Mcp_GetInstallInfo),
+    // Modify rerunTool function to accept serverId instead of the full server object
+    rerunTool: (
+      messageId: string,
+      toolCallId: string,
+      server: MCPServer, // Changed from serverId: string to server: MCPServer
+      toolName: string,
+      args: Record<string, any>
+    ) => ipcRenderer.invoke(IpcChannel.Mcp_RerunTool, messageId, toolCallId, server, toolName, args),
+    // Add listener for rerun updates from main process
+    onToolRerunUpdate: (
+      callback: (update: {
+        messageId: string
+        toolCallId: string
+        status: 'rerunning' | 'done' | 'error'
+        args?: Record<string, any> // Included when status is 'rerunning'
+        response?: MCPCallToolResponse // Included when status is 'done'
+        error?: string // Included when status is 'error'
+      }) => void
+    ) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        update: {
+          messageId: string
+          toolCallId: string
+          status: 'rerunning' | 'done' | 'error'
+          args?: Record<string, any>
+          response?: MCPCallToolResponse
+          error?: string
+        }
+      ) => {
+        callback(update)
+      }
+      ipcRenderer.on(IpcChannel.Mcp_ToolRerunUpdate, listener)
+      // Return a cleanup function to remove the listener
+      return () => {
+        ipcRenderer.off(IpcChannel.Mcp_ToolRerunUpdate, listener)
+      }
+    }
   },
   shell: {
     openExternal: shell.openExternal
@@ -196,6 +243,13 @@ const api = {
     loadLongTermData: () => ipcRenderer.invoke(IpcChannel.LongTermMemory_LoadData),
     saveLongTermData: (data: any, forceOverwrite: boolean = false) =>
       ipcRenderer.invoke(IpcChannel.LongTermMemory_SaveData, data, forceOverwrite)
+  },
+  workspace: {
+    selectFolder: () => ipcRenderer.invoke('workspace:selectFolder'),
+    getFiles: (workspacePath: string, options: any) => ipcRenderer.invoke('workspace:getFiles', workspacePath, options),
+    readFile: (filePath: string) => ipcRenderer.invoke('workspace:readFile', filePath),
+    getFolderStructure: (workspacePath: string, options: any) =>
+      ipcRenderer.invoke('workspace:getFolderStructure', workspacePath, options)
   },
   asrServer: {
     startServer: () => ipcRenderer.invoke(IpcChannel.Asr_StartServer),

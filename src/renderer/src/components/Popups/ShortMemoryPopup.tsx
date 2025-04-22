@@ -3,7 +3,6 @@ import { Box } from '@renderer/components/Layout'
 import { TopView } from '@renderer/components/TopView'
 import { addShortMemoryItem, analyzeAndAddShortMemories } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import store from '@renderer/store'
 import { deleteShortMemory } from '@renderer/store/memory'
 import { Button, Card, Col, Empty, Input, List, message, Modal, Row, Statistic, Tooltip } from 'antd'
 import _ from 'lodash'
@@ -120,26 +119,12 @@ const PopupContainer: React.FC<Props> = ({ topicId, resolve }) => {
   // 删除短记忆 - 直接删除无需确认，使用节流避免频繁删除操作
   const handleDeleteMemory = useCallback(
     _.throttle(async (id: string) => {
-      // 先从当前状态中获取要删除的记忆之外的所有记忆
-      const state = store.getState().memory
-      const filteredShortMemories = state.shortMemories.filter((memory) => memory.id !== id)
-
       // 执行删除操作
       dispatch(deleteShortMemory(id))
 
-      // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+      // 使用主进程的 deleteShortMemoryById 方法删除记忆
       try {
-        // 加载当前文件数据
-        const currentData = await window.api.memory.loadData()
-
-        // 替换 shortMemories 数组
-        const newData = {
-          ...currentData,
-          shortMemories: filteredShortMemories
-        }
-
-        // 使用 true 参数强制覆盖文件
-        const result = await window.api.memory.saveData(newData, true)
+        const result = await window.api.memory.deleteShortMemoryById(id)
 
         if (result) {
           console.log(`[ShortMemoryPopup] Successfully deleted short memory with ID ${id}`)

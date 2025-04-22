@@ -12,6 +12,7 @@ import { SSEClientTransport, SSEClientTransportOptions } from '@modelcontextprot
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory'
 import { nanoid } from '@reduxjs/toolkit'
+import { IpcChannel } from '@shared/IpcChannel' // Import IpcChannel
 import {
   GetMCPPromptResponse,
   GetResourceResponse,
@@ -27,6 +28,7 @@ import { EventEmitter } from 'events'
 import { memoize } from 'lodash'
 
 import { CacheService } from './CacheService'
+// Import configManager
 import { CallBackServer } from './mcp/oauth/callback'
 import { McpOAuthClientProvider } from './mcp/oauth/provider'
 import { StreamableHTTPClientTransport, type StreamableHTTPClientTransportOptions } from './MCPStreamableHttpClient'
@@ -137,8 +139,10 @@ class McpService {
           Logger.info(`[MCP] Using in-memory transport for server: ${server.name}`)
           const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair()
           // start the in-memory server with the given name and environment variables
-          const inMemoryServer = createInMemoryMCPServer(server.name, args, server.env || {})
+          // Add await here
+          const inMemoryServer = await createInMemoryMCPServer(server.name, args, server.env || {})
           try {
+            // Now connect the resolved server instance
             await inMemoryServer.connect(serverTransport)
             Logger.info(`[MCP] In-memory server started: ${server.name}`)
           } catch (error: Error | any) {
@@ -349,15 +353,17 @@ class McpService {
     const client = await this.initClient(server)
     try {
       const { tools } = await client.listTools()
-      const serverTools: MCPTool[] = []
-      tools.map((tool: any) => {
+      const serverTools: MCPTool[] = tools.map((tool: any) => {
+        // Generate the descriptive toolKey
+        const toolKey = `${server.id}-${tool.name}` // Combine server ID and tool name
         const serverTool: MCPTool = {
           ...tool,
-          id: `f${nanoid()}`,
+          id: `f${nanoid()}`, // Keep the random ID for internal use (e.g., React keys)
           serverId: server.id,
-          serverName: server.name
+          serverName: server.name,
+          toolKey: toolKey // Add the generated toolKey
         }
-        serverTools.push(serverTool)
+        return serverTool
       })
       return serverTools
     } catch (error) {
@@ -558,6 +564,87 @@ class McpService {
       `[MCP] Resource ${uri} from ${server.name}`
     )
     return await cachedGetResource(server, uri)
+  }
+
+  /**
+   * Rerun a specific tool call with potentially modified arguments
+   */
+  public rerunTool = async (
+    event: Electron.IpcMainInvokeEvent,
+    messageId: string,
+    toolCallId: string,
+    server: MCPServer, // Changed from serverId: string to server: MCPServer
+    toolName: string,
+    args: Record<string, any>
+  ): Promise<void> => {
+    // Use the passed server object directly
+    const serverConfig = server // Rename for clarity, or just use 'server' directly
+
+    Logger.info(
+      `[MCP] Rerunning tool call ${toolCallId} (Server: ${serverConfig.name} [${serverConfig.id}], Tool: ${toolName}) for message ${messageId} with args:`,
+      args
+    )
+
+    // Server lookup logic is removed as the server object is passed directly
+
+    // Send 'rerunning' status update to renderer
+    event.sender.send(IpcChannel.Mcp_ToolRerunUpdate, {
+      messageId,
+      toolCallId,
+      status: 'rerunning',
+      args // Include the new args being used
+    })
+
+    // 3. Call the tool
+    try {
+      // Note: this.callTool expects the event as the first argument, but it's not strictly needed
+      // for the core logic here. Passing null or a placeholder if the original event isn't required.
+      // However, callTool itself might need the event if it sends updates. Let's pass the event.
+      const result = await this.callTool(event, { server: serverConfig, name: toolName, args })
+
+      // 4. Send 'done' status update with the result
+      event.sender.send(IpcChannel.Mcp_ToolRerunUpdate, {
+        messageId,
+        toolCallId,
+        status: 'done',
+        response: result // Send the actual tool response
+      })
+      Logger.info(`[MCP] Rerun successful for tool call ${toolCallId}`)
+    } catch (error: any) {
+      Logger.error(`[MCP] Error rerunning tool ${toolName} on ${serverConfig.name}:`, error)
+      // 5. Send 'error' status update
+      event.sender.send(IpcChannel.Mcp_ToolRerunUpdate, {
+        messageId,
+        toolCallId,
+        status: 'error',
+        error: error.message || String(error) // Send error message
+      })
+    }
+
+    // Original placeholder logic removed
+    /* const message = findMessageById(messageId); // Hypothetical function
+    const toolCall = message?.metadata?.mcpTools?.find(tc => tc.id === toolCallId);
+    if (toolCall && toolCall.tool) {
+        const serverConfig = findServerById(toolCall.tool.serverId); // Hypothetical function
+        if (serverConfig) {
+            try {
+                const result = await this.callTool(null, { server: serverConfig, name: toolCall.tool.name, args });
+                // Send result back to renderer to update the specific tool call in the message
+                // mainWindow?.webContents.send('mcp:toolRerunCompleted', messageId, toolCallId, result);
+            } catch (error) {
+                Logger.error(`[MCP] Error rerunning tool ${toolCall.tool.name}:`, error);
+                // Send error back to renderer
+                // mainWindow?.webContents.send('mcp:toolRerunFailed', messageId, toolCallId, error);
+            }
+        } else {
+             Logger.error(`[MCP] Server not found for tool call ${toolCallId}`);
+        }
+    } else {
+        Logger.error(`[MCP] Original tool call ${toolCallId} not found for message ${messageId}`);
+    }
+    */
+    // For now, just log and return
+    return Promise.resolve()
   }
 
   private getSystemPath = memoize(async (): Promise<string> => {

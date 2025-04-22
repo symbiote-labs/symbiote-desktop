@@ -16,6 +16,7 @@ export type SidebarIcon =
   | 'knowledge'
   | 'files'
   | 'projects'
+  | 'workspace'
 
 export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'assistants',
@@ -24,7 +25,8 @@ export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'translate',
   'minapp',
   'knowledge',
-  'files'
+  'files',
+  'workspace'
 ]
 
 export interface NutstoreSyncRuntime extends WebDAVSyncState {}

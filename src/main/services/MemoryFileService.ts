@@ -110,26 +110,12 @@ export class MemoryFileService {
         // 如果文件不存在或读取失败，使用空对象
       }
 
-      // 合并数据，注意数组的处理
-      const mergedData = { ...existingData }
-
-      // 处理每个属性
-      Object.entries(data).forEach(([key, value]) => {
-        // 如果是数组属性，需要特殊处理
-        if (Array.isArray(value) && Array.isArray(mergedData[key])) {
-          // 对于 shortMemories 和 memories，直接使用传入的数组，完全替换现有的记忆
-          if (key === 'shortMemories' || key === 'memories') {
-            mergedData[key] = value
-            log.info(`Replacing ${key} array with provided data`)
-          } else {
-            // 其他数组属性，使用新值
-            mergedData[key] = value
-          }
-        } else {
-          // 非数组属性，直接使用新值
-          mergedData[key] = value
-        }
-      })
+      // 合并接收到的部分数据 (data) 到现有数据 (existingData)
+      // 使用 Object.assign 或 spread operator 进行浅合并
+      // 对于嵌套对象或数组，如果需要深度合并，可能需要更复杂的逻辑，
+      // 但对于顶层设置（如提示词字符串），浅合并足够。
+      const mergedData = { ...existingData, ...data }
+      log.info('Merging partial data into existing memory data')
 
       // 保存合并后的数据
       await fs.writeFile(memoryDataPath, JSON.stringify(mergedData, null, 2))

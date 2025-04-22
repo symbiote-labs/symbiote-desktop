@@ -1,10 +1,12 @@
+import ChatWorkspacePanel from '@renderer/components/ChatWorkspacePanel'
 import { QuickPanelProvider } from '@renderer/components/QuickPanel'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShowTopics } from '@renderer/hooks/useStore'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { Assistant, Topic } from '@renderer/types'
 import { Flex } from 'antd'
-import { FC, memo, useMemo } from 'react'
+import { FC, memo, useMemo, useState } from 'react' // Keep useState
 import styled from 'styled-components'
 
 import Inputbar from './Inputbar/Inputbar'
@@ -24,6 +26,12 @@ const Chat: FC<Props> = (props) => {
   const { assistant } = useAssistant(props.assistant.id)
   const { topicPosition, messageStyle } = useSettings()
   const { showTopics } = useShowTopics()
+  const [isWorkspacePanelVisible, setIsWorkspacePanelVisible] = useState(false) // Add state for panel visibility
+
+  // Function to toggle the workspace panel
+  const toggleWorkspacePanel = () => {
+    setIsWorkspacePanelVisible(!isWorkspacePanelVisible)
+  }
 
   // 使用 useMemo 优化渲染，只有当相关依赖变化时才重新创建元素
   const messagesComponent = useMemo(
@@ -41,10 +49,15 @@ const Chat: FC<Props> = (props) => {
   const inputbarComponent = useMemo(
     () => (
       <QuickPanelProvider>
-        <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
+        <Inputbar
+          assistant={assistant}
+          setActiveTopic={props.setActiveTopic}
+          topic={props.activeTopic}
+          onToggleWorkspacePanel={toggleWorkspacePanel} // Pass toggle function to Inputbar
+        />
       </QuickPanelProvider>
     ),
-    [assistant, props.setActiveTopic, props.activeTopic]
+    [assistant, props.setActiveTopic, props.activeTopic, toggleWorkspacePanel] // Add toggleWorkspacePanel to dependencies
   )
 
   const tabsComponent = useMemo(() => {
@@ -61,6 +74,25 @@ const Chat: FC<Props> = (props) => {
     )
   }, [topicPosition, showTopics, assistant, props.activeTopic, props.setActiveAssistant, props.setActiveTopic])
 
+  // 处理从工作区发送文件内容到聊天输入框
+  const handleSendFileToChat = (content: string) => {
+    // Emit an event to set the chat input value
+    EventEmitter.emit(EVENT_NAMES.SET_CHAT_INPUT, content)
+    // Optionally, close the workspace panel after sending
+    // toggleWorkspacePanel(); // Or use onClose() if passed down correctly for this purpose
+    setIsWorkspacePanelVisible(false) // Close the panel
+    console.log('Emitted SET_CHAT_INPUT event with content.')
+  }
+
+  // 处理从工作区发送文件作为附件
+  const handleSendFileAsAttachment = (file: any) => {
+    // 触发事件发送文件附件
+    EventEmitter.emit(EVENT_NAMES.SEND_FILE_ATTACHMENT, file)
+    // 关闭工作区面板
+    setIsWorkspacePanelVisible(false)
+    console.log('已发送文件作为附件:', file.name)
+  }
+
   return (
     <Container id="chat" className={messageStyle}>
       <Main id="chat-main" vertical flex={1} justify="space-between">
@@ -68,6 +100,12 @@ const Chat: FC<Props> = (props) => {
         {inputbarComponent}
       </Main>
       {tabsComponent}
+      <ChatWorkspacePanel
+        visible={isWorkspacePanelVisible} // Pass state to visible prop
+        onClose={toggleWorkspacePanel} // Pass toggle function as onClose prop
+        onSendToChat={handleSendFileToChat}
+        onSendFileToChat={handleSendFileAsAttachment}
+      />
     </Container>
   )
 }

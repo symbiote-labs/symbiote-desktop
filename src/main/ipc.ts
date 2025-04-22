@@ -6,7 +6,7 @@ import { arch } from 'node:os'
 import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
 import { IpcChannel } from '@shared/IpcChannel'
-import { Shortcut, ThemeMode } from '@types'
+import { MCPServer, Shortcut, ThemeMode } from '@types' // Import MCPServer here
 import { BrowserWindow, ipcMain, session, shell } from 'electron'
 import log from 'electron-log'
 
@@ -33,6 +33,7 @@ import { searchService } from './services/SearchService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { windowService } from './services/WindowService'
+import WorkspaceService from './services/WorkspaceService'
 import { getResourcePath } from './utils'
 import { decrypt, encrypt } from './utils/aes'
 import { getConfigDir, getFilesDir } from './utils/file'
@@ -278,6 +279,19 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.Mcp_ListResources, mcpService.listResources)
   ipcMain.handle(IpcChannel.Mcp_GetResource, mcpService.getResource)
   ipcMain.handle(IpcChannel.Mcp_GetInstallInfo, mcpService.getInstallInfo)
+  // Add handler for rerunTool
+  // Update handler for rerunTool to accept serverId and toolName
+  ipcMain.handle(
+    IpcChannel.Mcp_RerunTool,
+    (
+      event,
+      messageId: string,
+      toolCallId: string,
+      server: MCPServer, // Changed from serverId: string to server: MCPServer
+      toolName: string,
+      args: Record<string, any>
+    ) => mcpService.rerunTool(event, messageId, toolCallId, server, toolName, args) // Pass the full server object
+  )
 
   ipcMain.handle(IpcChannel.App_IsBinaryExist, (_, name: string) => isBinaryExists(name))
   ipcMain.handle(IpcChannel.App_GetBinaryPath, (_, name: string) => getBinaryPath(name))
@@ -359,4 +373,11 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // PDF服务
   ipcMain.handle(IpcChannel.PDF_SplitPDF, PDFService.splitPDF.bind(PDFService))
   ipcMain.handle(IpcChannel.PDF_GetPageCount, PDFService.getPDFPageCount.bind(PDFService))
+
+  // 工作区服务
+  const workspaceService = new WorkspaceService()
+  ipcMain.handle('workspace:selectFolder', workspaceService.selectWorkspaceFolder)
+  ipcMain.handle('workspace:getFiles', workspaceService.getWorkspaceFiles)
+  ipcMain.handle('workspace:readFile', workspaceService.readWorkspaceFile)
+  ipcMain.handle('workspace:getFolderStructure', workspaceService.getWorkspaceFolderStructure)
 }

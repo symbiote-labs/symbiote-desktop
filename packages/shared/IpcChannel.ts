@@ -55,6 +55,7 @@ export enum IpcChannel {
   Mcp_ListResources = 'mcp:list-resources',
   Mcp_GetResource = 'mcp:get-resource',
   Mcp_GetInstallInfo = 'mcp:get-install-info',
+  Mcp_RerunTool = 'mcp:rerunTool', // Add rerun tool channel
   Mcp_ServersChanged = 'mcp:servers-changed',
   Mcp_ServersUpdated = 'mcp:servers-updated',
 
@@ -186,5 +187,8 @@ export enum IpcChannel {
 
   // PDF
   PDF_SplitPDF = 'pdf:split-pdf',
-  PDF_GetPageCount = 'pdf:get-page-count'
+  PDF_GetPageCount = 'pdf:get-page-count',
+
+  // MCP Rerun Updates (Main -> Renderer)
+  Mcp_ToolRerunUpdate = 'mcp:tool-rerun-update'
 }

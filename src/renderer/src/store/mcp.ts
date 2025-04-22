@@ -105,6 +105,17 @@ export const builtinMCPServers: MCPServer[] = [
     description:
       '自动记忆工具，功能跟上面的记忆工具差不多。这个记忆会自动应用到对话中，无需显式调用。适合记住用户偏好、项目背景等长期有用信息.可以跨对话。',
     isActive: true
+  },
+  {
+    id: nanoid(),
+    name: '@cherry/workspacefile',
+    type: 'inMemory',
+    description:
+      '工作区文件操作工具，提供读取、写入、搜索、列出、创建和编辑工作区文件的功能。需要配置 WORKSPACE_PATH 环境变量。',
+    env: {
+      WORKSPACE_PATH: ''
+    },
+    isActive: false
   }
 ]
 

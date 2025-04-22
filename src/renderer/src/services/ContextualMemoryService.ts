@@ -279,8 +279,11 @@ class ContextualMemoryService {
       // 构建对话内容
       const conversation = recentMessages.map((msg) => `${msg.role || 'user'}: ${msg.content || ''}`).join('\n')
 
+      // 从Redux状态中获取自定义提示词
+      const customContextualPrompt = store.getState().memory?.contextualMemoryPrompt
+
       // 构建提示词
-      const prompt = `
+      const prompt = customContextualPrompt || `
 请分析以下对话内容，提取出关键信息和主题，以便我可以找到相关的记忆。
 
 请提供：

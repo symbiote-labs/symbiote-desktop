@@ -56,7 +56,7 @@ declare global {
         read: (fileId: string) => Promise<string>
         clear: () => Promise<void>
         get: (filePath: string) => Promise<FileType | null>
-        selectFolder: () => Promise<string | null>
+        selectFolder: () => Promise<{ canceled: boolean; filePaths: string[] }>
         create: (fileName: string) => Promise<string>
         write: (filePath: string, data: Uint8Array | string) => Promise<void>
         open: (options?: OpenDialogOptions) => Promise<{ fileName: string; filePath: string; content: Buffer } | null>
@@ -73,7 +73,7 @@ declare global {
         binaryFile: (fileId: string) => Promise<{ data: Buffer; mime: string }>
       }
       fs: {
-        read: (path: string) => Promise<string>
+        read: (path: string, encoding?: BufferEncoding) => Promise<string>
       }
       export: {
         toWord: (markdown: string, fileName: string) => Promise<void>
@@ -208,6 +208,12 @@ declare global {
         deleteShortMemoryById: (id: string) => Promise<boolean>
         loadLongTermData: () => Promise<any>
         saveLongTermData: (data: any, forceOverwrite?: boolean) => Promise<boolean>
+      }
+      workspace: {
+        selectFolder: () => Promise<string | null>
+        getFiles: (workspacePath: string, options: any) => Promise<any[]>
+        readFile: (filePath: string) => Promise<string>
+        getFolderStructure: (workspacePath: string, options: any) => Promise<any>
       }
       asrServer: {
         startServer: () => Promise<{ success: boolean; pid?: number; port?: number; error?: string }>

@@ -419,7 +419,8 @@ export default class OpenAIProvider extends BaseProvider {
     let firstChunk = true
 
     const processToolUses = async (content: string, idx: number) => {
-      const toolResults = await parseAndCallTools(
+      // 只执行工具调用，不生成第二条消息
+      await parseAndCallTools(
         content,
         toolResponses,
         onChunk,
@@ -429,36 +430,8 @@ export default class OpenAIProvider extends BaseProvider {
         isVisionModel(model)
       )
 
-      if (toolResults.length > 0) {
-        reqMessages.push({
-          role: 'assistant',
-          content: content
-        } as ChatCompletionMessageParam)
-        toolResults.forEach((ts) => reqMessages.push(ts as ChatCompletionMessageParam))
-
-        const newStream = await this.sdk.chat.completions
-          // @ts-ignore key is not typed
-          .create(
-            {
-              model: model.id,
-              messages: reqMessages,
-              temperature: this.getTemperature(assistant, model),
-              top_p: this.getTopP(assistant, model),
-              max_tokens: maxTokens,
-              keep_alive: this.keepAliveTime,
-              stream: isSupportStreamOutput(),
-              // tools: tools,
-              ...getOpenAIWebSearchParams(assistant, model),
-              ...this.getReasoningEffort(assistant, model),
-              ...this.getProviderSpecificParameters(assistant, model),
-              ...this.getCustomParameters(assistant)
-            },
-            {
-              signal
-            }
-          )
-        await processStream(newStream, idx + 1)
-      }
+      // 不再生成基于工具结果的新消息
+      console.log('[OpenAIProvider] 工具调用已执行，不生成第二条消息')
     }
 
     const processStream = async (stream: any, idx: number) => {

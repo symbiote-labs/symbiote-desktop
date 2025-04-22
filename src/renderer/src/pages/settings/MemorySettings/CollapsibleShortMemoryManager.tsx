@@ -367,10 +367,6 @@ const CollapsibleShortMemoryManager = () => {
   // 删除短记忆 - 直接删除无需确认
   const handleDeleteMemory = useCallback(
     async (id: string) => {
-      // 先从当前状态中获取要删除的记忆之外的所有记忆
-      const state = store.getState().memory
-      const filteredShortMemories = state.shortMemories.filter((memory) => memory.id !== id)
-
       // 在本地更新topicsWithMemories，避免触发useEffect
       setTopicsWithMemories((prev) => {
         return prev
@@ -390,19 +386,9 @@ const CollapsibleShortMemoryManager = () => {
       // 执行删除操作
       dispatch(deleteShortMemory(id))
 
-      // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+      // 使用主进程的 deleteShortMemoryById 方法删除记忆
       try {
-        // 加载当前文件数据
-        const currentData = await window.api.memory.loadData()
-
-        // 替换 shortMemories 数组
-        const newData = {
-          ...currentData,
-          shortMemories: filteredShortMemories
-        }
-
-        // 使用 true 参数强制覆盖文件
-        const result = await window.api.memory.saveData(newData, true)
+        const result = await window.api.memory.deleteShortMemoryById(id)
 
         if (result) {
           console.log(`[CollapsibleShortMemoryManager] Successfully deleted short memory with ID ${id}`)

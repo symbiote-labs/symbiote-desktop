@@ -121,6 +121,13 @@ export interface MemoryState {
   lastAnalyzeTime: number | null // 上次分析时间
   isAnalyzing: boolean // 是否正在分析
 
+  // 提示词相关
+  longTermMemoryPrompt: string | null // 长期记忆分析提示词
+  shortTermMemoryPrompt: string | null // 短期记忆分析提示词
+  assistantMemoryPrompt: string | null // 助手记忆分析提示词
+  contextualMemoryPrompt: string | null // 上下文记忆分析提示词
+  historicalContextPrompt: string | null // 历史对话上下文分析提示词
+
   // 自适应分析相关
   adaptiveAnalysisEnabled: boolean // 是否启用自适应分析
   analysisFrequency: number // 分析频率（消息数）
@@ -179,6 +186,13 @@ const initialState: MemoryState = {
   vectorizeModel: 'gpt-3.5-turbo', // 设置默认向量化模型
   lastAnalyzeTime: null,
   isAnalyzing: false,
+
+  // 提示词相关 - 默认为null，将在服务中使用默认提示词
+  longTermMemoryPrompt: null,
+  shortTermMemoryPrompt: null,
+  assistantMemoryPrompt: null,
+  contextualMemoryPrompt: null,
+  historicalContextPrompt: null,
 
   // 自适应分析相关
   adaptiveAnalysisEnabled: true, // 默认启用自适应分析
@@ -340,6 +354,31 @@ const memorySlice = createSlice({
     // 设置向量化模型
     setVectorizeModel: (state, action: PayloadAction<string | null>) => {
       state.vectorizeModel = action.payload
+    },
+
+    // 设置长期记忆分析提示词
+    setLongTermMemoryPrompt: (state, action: PayloadAction<string | null>) => {
+      state.longTermMemoryPrompt = action.payload
+    },
+
+    // 设置短期记忆分析提示词
+    setShortTermMemoryPrompt: (state, action: PayloadAction<string | null>) => {
+      state.shortTermMemoryPrompt = action.payload
+    },
+
+    // 设置助手记忆分析提示词
+    setAssistantMemoryPrompt: (state, action: PayloadAction<string | null>) => {
+      state.assistantMemoryPrompt = action.payload
+    },
+
+    // 设置上下文记忆分析提示词
+    setContextualMemoryPrompt: (state, action: PayloadAction<string | null>) => {
+      state.contextualMemoryPrompt = action.payload
+    },
+
+    // 设置历史对话上下文分析提示词
+    setHistoricalContextPrompt: (state, action: PayloadAction<string | null>) => {
+      state.historicalContextPrompt = action.payload
     },
 
     // 设置分析状态
@@ -1011,6 +1050,28 @@ const memorySlice = createSlice({
             )
           }
 
+          // 更新提示词状态
+          if (action.payload.longTermMemoryPrompt !== undefined) {
+            state.longTermMemoryPrompt = action.payload.longTermMemoryPrompt
+            console.log('[Memory Reducer] Loaded longTermMemoryPrompt')
+          }
+          if (action.payload.shortTermMemoryPrompt !== undefined) {
+            state.shortTermMemoryPrompt = action.payload.shortTermMemoryPrompt
+            console.log('[Memory Reducer] Loaded shortTermMemoryPrompt')
+          }
+          if (action.payload.assistantMemoryPrompt !== undefined) {
+            state.assistantMemoryPrompt = action.payload.assistantMemoryPrompt
+            console.log('[Memory Reducer] Loaded assistantMemoryPrompt')
+          }
+          if (action.payload.contextualMemoryPrompt !== undefined) {
+            state.contextualMemoryPrompt = action.payload.contextualMemoryPrompt
+            console.log('[Memory Reducer] Loaded contextualMemoryPrompt')
+          }
+          if (action.payload.historicalContextPrompt !== undefined) {
+            state.historicalContextPrompt = action.payload.historicalContextPrompt
+            console.log('[Memory Reducer] Loaded historicalContextPrompt')
+          }
+
           console.log('Short-term memory data loaded into state')
         }
       })
@@ -1081,6 +1142,11 @@ export const {
   setHistoricalContextAnalyzeModel,
   setVectorizeModel,
   setAnalyzing,
+  setLongTermMemoryPrompt,
+  setShortTermMemoryPrompt,
+  setAssistantMemoryPrompt,
+  setContextualMemoryPrompt,
+  setHistoricalContextPrompt,
   importMemories,
   clearMemories,
   addMemoryList,
@@ -1158,87 +1224,14 @@ export const saveMemoryData = createAsyncThunk(
     try {
       console.log('[Memory] Saving memory data to file...', Object.keys(data))
 
-      // 如果是强制覆盖模式，直接使用传入的数据，不合并当前状态
-      if (forceOverwrite) {
-        console.log('[Memory] Force overwrite mode enabled, using provided data directly')
-        const result = await window.api.memory.saveData(memoryData, forceOverwrite)
-        console.log('[Memory] Memory data saved successfully (force overwrite)')
-        return result
+      // 直接将传入的部分数据发送给主进程，不再合并完整状态
+      console.log('[Memory] Sending partial memory data to main process:', memoryData)
+      const result = await window.api.memory.saveData(memoryData, forceOverwrite)
+      if (result) {
+        console.log('[Memory] Partial memory data saved successfully via main process')
+      } else {
+        console.error('[Memory] Main process failed to save partial memory data')
       }
-
-      // 非强制覆盖模式，确保数据完整性
-      const state = store.getState().memory
-
-      // 保存所有设置，而不仅仅是特定字段
-      // 创建一个包含所有设置的对象
-      const completeData = {
-        // 基本设置
-        isActive: memoryData.isActive !== undefined ? memoryData.isActive : state.isActive,
-        shortMemoryActive:
-          memoryData.shortMemoryActive !== undefined ? memoryData.shortMemoryActive : state.shortMemoryActive,
-        autoAnalyze: memoryData.autoAnalyze !== undefined ? memoryData.autoAnalyze : state.autoAnalyze,
-        filterSensitiveInfo:
-          memoryData.filterSensitiveInfo !== undefined ? memoryData.filterSensitiveInfo : state.filterSensitiveInfo,
-
-        // 模型选择
-        analyzeModel: memoryData.analyzeModel || state.analyzeModel,
-        shortMemoryAnalyzeModel: memoryData.shortMemoryAnalyzeModel || state.shortMemoryAnalyzeModel,
-        assistantMemoryAnalyzeModel: memoryData.assistantMemoryAnalyzeModel || state.assistantMemoryAnalyzeModel,
-        historicalContextAnalyzeModel: memoryData.historicalContextAnalyzeModel || state.historicalContextAnalyzeModel,
-        vectorizeModel: memoryData.vectorizeModel || state.vectorizeModel,
-
-        // 记忆数据
-        memoryLists: memoryData.memoryLists || state.memoryLists,
-        shortMemories: memoryData.shortMemories || state.shortMemories,
-        assistantMemories: memoryData.assistantMemories || state.assistantMemories,
-        currentListId: memoryData.currentListId || state.currentListId,
-
-        // 自适应分析相关
-        adaptiveAnalysisEnabled:
-          memoryData.adaptiveAnalysisEnabled !== undefined
-            ? memoryData.adaptiveAnalysisEnabled
-            : state.adaptiveAnalysisEnabled,
-        analysisFrequency:
-          memoryData.analysisFrequency !== undefined ? memoryData.analysisFrequency : state.analysisFrequency,
-        analysisDepth: memoryData.analysisDepth || state.analysisDepth,
-
-        // 用户关注点相关
-        interestTrackingEnabled:
-          memoryData.interestTrackingEnabled !== undefined
-            ? memoryData.interestTrackingEnabled
-            : state.interestTrackingEnabled,
-
-        // 性能监控相关
-        monitoringEnabled:
-          memoryData.monitoringEnabled !== undefined ? memoryData.monitoringEnabled : state.monitoringEnabled,
-
-        // 智能优先级与时效性管理相关
-        priorityManagementEnabled:
-          memoryData.priorityManagementEnabled !== undefined
-            ? memoryData.priorityManagementEnabled
-            : state.priorityManagementEnabled,
-        decayEnabled: memoryData.decayEnabled !== undefined ? memoryData.decayEnabled : state.decayEnabled,
-        freshnessEnabled:
-          memoryData.freshnessEnabled !== undefined ? memoryData.freshnessEnabled : state.freshnessEnabled,
-        decayRate: memoryData.decayRate !== undefined ? memoryData.decayRate : state.decayRate,
-
-        // 上下文感知记忆推荐相关
-        contextualRecommendationEnabled:
-          memoryData.contextualRecommendationEnabled !== undefined
-            ? memoryData.contextualRecommendationEnabled
-            : state.contextualRecommendationEnabled,
-        autoRecommendMemories:
-          memoryData.autoRecommendMemories !== undefined
-            ? memoryData.autoRecommendMemories
-            : state.autoRecommendMemories,
-        recommendationThreshold:
-          memoryData.recommendationThreshold !== undefined
-            ? memoryData.recommendationThreshold
-            : state.recommendationThreshold
-      }
-
-      const result = await window.api.memory.saveData(completeData, forceOverwrite)
-      console.log('[Memory] Memory data saved successfully')
       return result
     } catch (error) {
       console.error('[Memory] Failed to save memory data:', error)
@@ -1290,6 +1283,10 @@ export const saveLongTermMemoryData = createAsyncThunk(
 
         // 模型选择
         analyzeModel: memoryData.analyzeModel || state.analyzeModel,
+
+        // 提示词相关
+        longTermMemoryPrompt:
+          memoryData.longTermMemoryPrompt !== undefined ? memoryData.longTermMemoryPrompt : state.longTermMemoryPrompt,
 
         // 记忆数据
         memoryLists: memoryData.memoryLists || state.memoryLists,
@@ -1369,6 +1366,13 @@ export const saveAllMemorySettings = createAsyncThunk('memory/saveAllSettings', 
       assistantMemoryAnalyzeModel: state.assistantMemoryAnalyzeModel,
       historicalContextAnalyzeModel: state.historicalContextAnalyzeModel,
       vectorizeModel: state.vectorizeModel,
+
+      // 提示词相关
+      longTermMemoryPrompt: state.longTermMemoryPrompt,
+      shortTermMemoryPrompt: state.shortTermMemoryPrompt,
+      assistantMemoryPrompt: state.assistantMemoryPrompt,
+      contextualMemoryPrompt: state.contextualMemoryPrompt,
+      historicalContextPrompt: state.historicalContextPrompt,
 
       // 记忆数据
       assistantMemories: state.assistantMemories,

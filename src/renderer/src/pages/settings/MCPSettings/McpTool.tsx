@@ -106,8 +106,9 @@ const MCPToolsSection = ({ tools, server, onToggleTool }: MCPToolsSectionProps) 
                   <Flex vertical align="flex-start">
                     <Flex align="center" style={{ width: '100%' }}>
                       <Typography.Text strong>{tool.name}</Typography.Text>
+                      {/* Display toolKey instead of the random id */}
                       <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
-                        {tool.id}
+                        {tool.toolKey}
                       </Typography.Text>
                     </Flex>
                     {tool.description && (

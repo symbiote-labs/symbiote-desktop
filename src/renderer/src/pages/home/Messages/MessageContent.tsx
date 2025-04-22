@@ -20,6 +20,7 @@ import MessageAttachments from './MessageAttachments'
 import MessageError from './MessageError'
 import MessageImage from './MessageImage'
 import MessageThought from './MessageThought'
+import { default as MessageTools } from './MessageTools' // Change to named import (using default alias)
 
 interface Props {
   message: Message
@@ -330,6 +331,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       <div className="message-content-tools">
         {/* Only display thought info at the top */}
         <MessageThought message={message} />
+        {/* Render MessageTools to display tool blocks based on metadata */}
+        <MessageTools message={message} />
       </div>
       {isSegmentedPlayback ? (
         // Apply regex replacement here for TTS

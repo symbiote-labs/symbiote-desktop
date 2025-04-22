@@ -59,8 +59,13 @@ export const analyzeAndAddAssistantMemories = async (assistantId: string, messag
     console.log(`[Assistant Memory Analysis] Analyzing assistant: ${assistantId}`)
     console.log('[Assistant Memory Analysis] New conversation length:', newConversation.length)
 
+    // 从Redux状态中获取自定义提示词
+    const customAssistantPrompt = store.getState().memory?.assistantMemoryPrompt
+
     // 构建助手记忆分析提示词
-    const prompt = `
+    const prompt =
+      customAssistantPrompt ||
+      `
 请分析以下对话内容，提取对助手需要长期记住的重要信息。这些信息将作为助手的记忆，帮助助手在未来的对话中更好地理解用户和提供个性化服务。
 
 请注意以下几点：

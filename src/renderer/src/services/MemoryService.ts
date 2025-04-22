@@ -111,8 +111,13 @@ const analyzeConversation = async (
     const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
 
     // 使用自定义提示词或默认提示词
+    // 从Redux状态中获取自定义提示词
+    const memoryState = store.getState().memory
+    const customLongTermPrompt = memoryState?.longTermMemoryPrompt
+
     let basePrompt =
       customPrompt ||
+      customLongTermPrompt ||
       `
 你是一个专业的对话分析专家，负责从对话中提取关键信息，形成精准的长期记忆。
 
@@ -423,8 +428,9 @@ export const useMemoryService = () => {
 
   // 使用 useCallback 定义分析函数，但减少依赖项
   // 增加可选的 topicId 参数，允许分析指定的话题
+  // 增加 isManualAnalysis 参数，标记是否是手动分析
   const analyzeAndAddMemories = useCallback(
-    async (topicId?: string) => {
+    async (topicId?: string, isManualAnalysis: boolean = false) => {
       // 如果没有提供话题ID，则使用当前话题
       // 在函数执行时获取最新状态
       const currentState = store.getState() // Use imported store
@@ -442,14 +448,17 @@ export const useMemoryService = () => {
         }
       }
 
-      // 重新检查条件
-      if (!memoryState.isActive || !memoryState.autoAnalyze || !memoryState.analyzeModel || memoryState.isAnalyzing) {
-        console.log('[Memory Analysis] Conditions not met or already analyzing at time of call:', {
-          isActive: memoryState.isActive,
-          autoAnalyze: memoryState.autoAnalyze,
-          analyzeModel: memoryState.analyzeModel,
-          isAnalyzing: memoryState.isAnalyzing
-        })
+      // 检查条件
+      // 手动分析时不检查 autoAnalyze 条件
+      const conditions = {
+        isActive: memoryState.isActive,
+        autoAnalyze: isManualAnalysis ? true : memoryState.autoAnalyze, // 手动分析时忽略自动分析设置
+        analyzeModel: memoryState.analyzeModel,
+        isAnalyzing: memoryState.isAnalyzing
+      }
+
+      if (!conditions.isActive || !conditions.autoAnalyze || !conditions.analyzeModel || conditions.isAnalyzing) {
+        console.log('[Memory Analysis] Conditions not met or already analyzing at time of call:', conditions)
         return
       }
 
@@ -1231,8 +1240,13 @@ export const analyzeAndAddShortMemories = async (topicId: string) => {
     // 获取当前的过滤敏感信息设置
     const filterSensitiveInfo = store.getState().memory?.filterSensitiveInfo ?? true
 
+    // 从Redux状态中获取自定义提示词
+    const customShortTermPrompt = store.getState().memory?.shortTermMemoryPrompt
+
     // 构建短期记忆分析提示词，包含已有记忆和新对话
-    let prompt = `
+    let prompt =
+      customShortTermPrompt ||
+      `
 请对以下对话内容进行非常详细的分析和总结，提取对当前对话至关重要的上下文信息。请注意，这个分析将用于生成短期记忆，帮助AI理解当前对话的完整上下文。
 
 分析要求：
@@ -1814,6 +1828,14 @@ export const applyMemoriesToPrompt = async (systemPrompt: string, topicId?: stri
     console.log('[Memory] Final prompt with memories applied')
   } else {
     console.log('[Memory] No memories to apply')
+  }
+
+  // 添加工作区信息
+  try {
+    const { enhancePromptWithWorkspaceInfo } = await import('./WorkspaceAIService')
+    result = await enhancePromptWithWorkspaceInfo(result)
+  } catch (error) {
+    console.error('[Memory] Error adding workspace info:', error)
   }
 
   // 添加历史对话上下文

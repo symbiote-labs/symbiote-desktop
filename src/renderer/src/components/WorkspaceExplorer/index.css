@@ -1,0 +1,92 @@
+.workspace-explorer-container {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-bg-container);
+  border-right: 1px solid var(--color-border);
+}
+
+.workspace-explorer-empty,
+.workspace-explorer-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+}
+
+.workspace-explorer-node {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  height: 30px;
+  line-height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-explorer-node:hover {
+  background-color: var(--color-bg-elevated);
+}
+
+.workspace-explorer-node.selected {
+  background-color: var(--color-primary-bg);
+}
+
+.node-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.toggle-icon {
+  margin-right: 4px;
+  font-size: 10px;
+  width: 16px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.folder-icon {
+  color: #e8c341;
+  margin-right: 6px;
+}
+
+.file-icon {
+  color: #8c8c8c;
+  margin-right: 6px;
+}
+
+.file-node-content {
+  display: flex;
+  align-items: center;
+  padding-left: 20px; /* 与文件夹图标对齐 */
+  width: 100%;
+}
+
+.node-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 搜索框样式 */
+.workspace-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* 刷新按钮样式 */
+.refresh-button {
+  margin-left: 8px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.refresh-button:hover {
+  color: var(--color-primary);
+}

@@ -119,7 +119,10 @@ const analyzeNeedForHistoricalContext = async (
       .map((memory) => `话题ID: ${memory.topicId}\n内容: ${memory.content}`)
       .join('\n\n')
 
-    const prompt = `
+    // 从Redux状态中获取自定义提示词
+    const customHistoricalPrompt = store.getState().memory?.historicalContextPrompt
+
+    const prompt = customHistoricalPrompt || `
 你是一个专门分析对话上下文的助手，你的任务是判断当前对话是否需要引用历史对话来提供更完整、更连贯的回答。
 
 最近的对话内容:

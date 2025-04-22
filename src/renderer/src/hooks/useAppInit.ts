@@ -93,7 +93,7 @@ export function useAppInit() {
 
   useEffect(() => {
     // set files path
-    window.api.getAppInfo().then((info) => {
+    window.api.getAppInfo().then((info: { filesPath: string; resourcesPath: string }) => {
       dispatch(setFilesPath(info.filesPath))
       dispatch(setResourcesPath(info.resourcesPath))
     })
