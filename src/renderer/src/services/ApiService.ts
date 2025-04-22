@@ -65,9 +65,14 @@ async function fetchExternalTool(
     // Notify UI that extraction/searching is starting
     onChunkReceived({ type: 'web_search_in_progress' })
 
+    const tools: string[] = []
+
+    if (assistant.enableWebSearch) tools.push('websearch')
+    if (hasKnowledgeBase) tools.push('knowledge')
+
     const summaryAssistant = getDefaultAssistant()
     summaryAssistant.model = assistant.model || getDefaultModel()
-    summaryAssistant.prompt = SEARCH_SUMMARY_PROMPT
+    summaryAssistant.prompt = SEARCH_SUMMARY_PROMPT.replace('{tools}', tools.join(', '))
 
     try {
       const keywords = await fetchSearchSummary({
