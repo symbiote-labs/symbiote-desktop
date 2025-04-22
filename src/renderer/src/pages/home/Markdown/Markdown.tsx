@@ -49,6 +49,8 @@ const Markdown: FC<Props> = ({ block, role }) => {
 
   const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
 
+  const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
+
   const rehypePlugins = useMemo(() => {
     const hasElements = ALLOWED_ELEMENTS.test(messageContent)
     return hasElements ? [rehypeRaw, rehypeMath] : [rehypeMath]
