@@ -40,7 +40,7 @@ import {
   Suggestion,
   WebSearchSource
 } from '@renderer/types'
-import { BlockCompleteChunk, WebSearchChunk } from '@renderer/types/chunk'
+import { BlockCompleteChunk, WebSearchCompleteChunk } from '@renderer/types/chunk'
 import type { Message, Response } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
@@ -479,12 +479,12 @@ export default class GeminiProvider extends BaseProvider {
         const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
         if (groundingMetadata) {
           onChunk({
-            type: 'web_search',
+            type: 'web_search_complete',
             web_search: {
               results: groundingMetadata,
               source: WebSearchSource.GEMINI
             }
-          } as WebSearchChunk)
+          } as WebSearchCompleteChunk)
         }
 
         // 4. Image Generation

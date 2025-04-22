@@ -503,49 +503,49 @@ export default class OpenAIProvider extends BaseProvider {
 
         if (!delta?.content && !reasoningContent) {
           onChunk({ type: 'text.complete', text: content })
-        }
-
-        // 3. Web Search
-        if (delta?.annotations) {
-          onChunk({
-            type: 'web_search_complete',
-            web_search: {
-              results: delta.annotations,
-              source: WebSearchSource.OPENAI
-            }
-          } as WebSearchCompleteChunk)
-        }
-
-        if (assistant.model?.provider === 'perplexity') {
-          const citations = chunk.citations
-          if (citations) {
+          // 3. Web Search
+          if (delta?.annotations) {
             onChunk({
               type: 'web_search_complete',
               web_search: {
-                results: citations,
-                source: WebSearchSource.PERPLEXITY
+                results: delta.annotations,
+                source: WebSearchSource.OPENAI
+              }
+            } as WebSearchCompleteChunk)
+          }
+
+          if (assistant.model?.provider === 'perplexity') {
+            const citations = chunk.citations
+            if (citations) {
+              onChunk({
+                type: 'web_search_complete',
+                web_search: {
+                  results: citations,
+                  source: WebSearchSource.PERPLEXITY
+                }
+              } as WebSearchCompleteChunk)
+            }
+          }
+          if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
+            onChunk({
+              type: 'web_search_complete',
+              web_search: {
+                results: chunk.web_search,
+                source: WebSearchSource.ZHIPU
+              }
+            } as WebSearchCompleteChunk)
+          }
+          if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
+            onChunk({
+              type: 'web_search_complete',
+              web_search: {
+                results: chunk.search_info.search_results,
+                source: WebSearchSource.HUNYUAN
               }
             } as WebSearchCompleteChunk)
           }
         }
-        if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
-          onChunk({
-            type: 'web_search_complete',
-            web_search: {
-              results: chunk.web_search,
-              source: WebSearchSource.ZHIPU
-            }
-          } as WebSearchCompleteChunk)
-        }
-        if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
-          onChunk({
-            type: 'web_search_complete',
-            web_search: {
-              results: chunk.search_info.search_results,
-              source: WebSearchSource.HUNYUAN
-            }
-          } as WebSearchCompleteChunk)
-        }
+
         // 6. Usage (If provided per chunk) - Capture the last known usage
         console.log('chunk', chunk)
         if (chunk.usage) {
