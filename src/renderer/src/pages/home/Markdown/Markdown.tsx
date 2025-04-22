@@ -4,7 +4,7 @@ import 'katex/dist/contrib/mhchem'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type { MainTextMessageBlock, Message } from '@renderer/types/newMessage'
+import type { MainTextMessageBlock, Message, TranslationMessageBlock } from '@renderer/types/newMessage'
 import { parseJSON } from '@renderer/utils'
 import { escapeBrackets, removeSvgEmptyLines, withGeminiGrounding } from '@renderer/utils/formats'
 import { findCitationInChildren } from '@renderer/utils/markdown'
@@ -30,7 +30,7 @@ const DISALLOWED_ELEMENTS = ['iframe']
 
 interface Props {
   // message: Message & { content: string }
-  block: MainTextMessageBlock
+  block: MainTextMessageBlock | TranslationMessageBlock
   role: Message['role']
 }
 
@@ -46,8 +46,6 @@ const Markdown: FC<Props> = ({ block, role }) => {
     const content = empty && paused ? t('message.chat.completion.paused') : withGeminiGrounding(block)
     return removeSvgEmptyLines(escapeBrackets(content))
   }, [block, t])
-
-  const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
 
   const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
 

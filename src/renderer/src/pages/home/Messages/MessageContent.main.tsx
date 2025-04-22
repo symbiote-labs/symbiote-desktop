@@ -19,7 +19,6 @@ import MessageError from './MessageError'
 import MessageImage from './MessageImage'
 import MessageThought from './MessageThought'
 import MessageTools from './MessageTools'
-import MessageTranslate from './MessageTranslate'
 
 interface Props {
   readonly message: Readonly<Message>
@@ -216,7 +215,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
       <MessageTools message={message} />
       <Markdown message={{ ...message, content: processedContent }} />
       <MessageImage message={message} />
-      <MessageTranslate message={message} />
+      {/* <MessageTranslate message={message} /> */}
       <MessageCitations message={message} formattedCitations={formattedCitations} model={model} />
       <MessageAttachments message={message} />
     </Fragment>
