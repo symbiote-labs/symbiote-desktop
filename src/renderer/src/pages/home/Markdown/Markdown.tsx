@@ -4,7 +4,12 @@ import 'katex/dist/contrib/mhchem'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type { MainTextMessageBlock, Message, TranslationMessageBlock } from '@renderer/types/newMessage'
+import type {
+  MainTextMessageBlock,
+  Message,
+  ThinkingMessageBlock,
+  TranslationMessageBlock
+} from '@renderer/types/newMessage'
 import { parseJSON } from '@renderer/utils'
 import { escapeBrackets, removeSvgEmptyLines, withGeminiGrounding } from '@renderer/utils/formats'
 import { findCitationInChildren } from '@renderer/utils/markdown'
@@ -30,7 +35,7 @@ const DISALLOWED_ELEMENTS = ['iframe']
 
 interface Props {
   // message: Message & { content: string }
-  block: MainTextMessageBlock | TranslationMessageBlock
+  block: MainTextMessageBlock | TranslationMessageBlock | ThinkingMessageBlock
   role: Message['role']
 }
 

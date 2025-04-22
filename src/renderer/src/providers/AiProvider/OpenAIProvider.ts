@@ -471,7 +471,6 @@ export default class OpenAIProvider extends BaseProvider {
       }
 
       let content = '' // Accumulate content for tool processing if needed
-      let chunk_id = 0
       // Declare variables to accumulate final results
       let final_time_completion_millsec = 0
       let final_time_thinking_millsec = 0
@@ -488,20 +487,25 @@ export default class OpenAIProvider extends BaseProvider {
 
         // --- Incremental onChunk calls ---
 
-        // 1. Text Content
-        if (delta?.content) {
-          content += delta.content // Still accumulate for processToolUses
-          onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content, chunk_id: chunk_id++ })
-        }
-
-        // 2. Reasoning Content
+        // 1. Reasoning Content
         const reasoningContent = delta?.reasoning_content || delta?.reasoning
+        if (time_first_token_millsec === 0 && !reasoningContent && !delta?.content && !delta?.finish_reason) {
+          time_first_token_millsec = new Date().getTime() - start_time_millsec
+          onChunk({ type: ChunkType.LLM_RESPONSE_CREATED, response: { metrics: { time_first_token_millsec } } })
+        }
         if (reasoningContent) {
           hasReasoningContent = true // Keep track if reasoning occurred
-          onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, chunk_id: chunk_id++ })
+          const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
+          onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, thinking_millsec: time_thinking_millsec })
         }
 
-        if (!delta?.content && !reasoningContent) {
+        // 2. Text Content
+        if (delta?.content) {
+          content += delta.content // Still accumulate for processToolUses
+          onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
+        }
+
+        if (delta?.finish_reason) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
           // 3. Web Search
           if (delta?.annotations) {
@@ -554,18 +558,6 @@ export default class OpenAIProvider extends BaseProvider {
           // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
         }
 
-        // 7. Metrics (Calculate and send FIRST token metric, update completion time)
-        if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
-          time_first_token_millsec = new Date().getTime() - start_time_millsec
-          onChunk({
-            type: ChunkType.LLM_RESPONSE_CREATED,
-            response: {
-              metrics: {
-                time_first_token_millsec
-              }
-            }
-          })
-        }
         if (time_first_content_millsec === 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }

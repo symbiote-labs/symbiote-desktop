@@ -1,8 +1,9 @@
 import { GroundingMetadata } from '@google/genai'
+import SearchingSpinner from '@renderer/components/SearchingSpinner'
 import type { RootState } from '@renderer/store'
 import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
 import { WebSearchSource } from '@renderer/types'
-import type { CitationMessageBlock } from '@renderer/types/newMessage'
+import { type CitationMessageBlock, MessageBlockStatus } from '@renderer/types/newMessage'
 import React, { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
@@ -20,6 +21,10 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
     )
   }, [formattedCitations, block.response, block.knowledge])
 
+  if (block.status === MessageBlockStatus.PROCESSING) {
+    return <SearchingSpinner />
+  }
+
   if (!hasCitations) {
     return null
   }
@@ -28,7 +33,7 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
 
   return (
     <>
-      {isGemini && block.status === 'success' && (
+      {isGemini && block.status === MessageBlockStatus.SUCCESS && (
         <>
           <CitationsList citations={formattedCitations} />
           <SearchEntryPoint
@@ -41,7 +46,9 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
           />
         </>
       )}
-      {formattedCitations.length > 0 && block.status === 'success' && <CitationsList citations={formattedCitations} />}
+      {formattedCitations.length > 0 && block.status === MessageBlockStatus.SUCCESS && (
+        <CitationsList citations={formattedCitations} />
+      )}
     </>
   )
 }

@@ -11,7 +11,7 @@ export interface StreamProcessorCallbacks {
   // Full text content received
   onTextComplete?: (text: string) => void
   // Thinking/reasoning content chunk received (e.g., from Claude)
-  onThinkingChunk?: (text: string) => void
+  onThinkingChunk?: (text: string, thinking_millsec?: number) => void
   // A tool call response chunk (from MCP)
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
   // External tool call in progress
@@ -41,9 +41,6 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
         }
         return
       }
-      if (chunk?.type === ChunkType.EXTERNEL_TOOL_IN_PROGRESS && callbacks.onExternalToolInProgress) {
-        callbacks.onExternalToolInProgress()
-      }
       // 2. Process the actual ChunkCallbackData
       const data = chunk // Cast after checking for 'final'
       // Invoke callbacks based on the fields present in the chunk data
@@ -54,11 +51,13 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
         callbacks.onTextComplete(data.text)
       }
       if (data.type === ChunkType.THINKING_DELTA && callbacks.onThinkingChunk) {
-        callbacks.onThinkingChunk(data.text)
+        callbacks.onThinkingChunk(data.text, data.thinking_millsec)
       }
       if (data.type === ChunkType.MCP_TOOL_COMPLETE && data.responses.length > 0 && callbacks.onToolCallComplete) {
-        // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
         data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
+      }
+      if (data.type === ChunkType.EXTERNEL_TOOL_IN_PROGRESS && callbacks.onExternalToolInProgress) {
+        callbacks.onExternalToolInProgress()
       }
       if (data.type === ChunkType.EXTERNEL_TOOL_COMPLETE && callbacks.onExternalToolComplete) {
         callbacks.onExternalToolComplete(data.external_tool)

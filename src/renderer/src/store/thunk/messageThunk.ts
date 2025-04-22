@@ -10,7 +10,13 @@ import {
   type Topic,
   WebSearchSource
 } from '@renderer/types'
-import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
+import type {
+  CitationMessageBlock,
+  MainTextMessageBlock,
+  Message,
+  MessageBlock,
+  ToolMessageBlock
+} from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
 import { isAbortError } from '@renderer/utils/error'
@@ -21,6 +27,7 @@ import {
   createErrorBlock,
   createImageBlock,
   createMainTextBlock,
+  createThinkingBlock,
   createToolBlock,
   resetMessage
 } from '@renderer/utils/messageUtils/create'
@@ -242,6 +249,7 @@ const fetchAndProcessAssistantResponseImpl = async (
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
 
     let accumulatedContent = ''
+    let accumulatedThinking = ''
     // Track the last block added to handle interleaving
     let lastBlockId: string | null = null
     let lastBlockType: MessageBlockType | null = null
@@ -276,6 +284,7 @@ const fetchAndProcessAssistantResponseImpl = async (
     // TODO: Apply further filtering based on assistant settings (maxContextMessages, etc.) if needed
     // --- Context Message Filtering --- END
 
+    // TODO：考虑有些块并行创建
     const callbacks: StreamProcessorCallbacks = {
       onTextChunk: (text) => {
         accumulatedContent += text
@@ -296,6 +305,24 @@ const fetchAndProcessAssistantResponseImpl = async (
         }
 
         throttledDbUpdate(assistantMsgId, topicId, getState)
+      },
+      onThinkingChunk: (text, thinking_millsec) => {
+        accumulatedThinking += text
+        // Check if the last block was already a thinking block
+        if (lastBlockType === MessageBlockType.THINKING && lastBlockId) {
+          // Update the existing thinking block
+          throttledBlockUpdate(lastBlockId, {
+            content: accumulatedThinking,
+            status: MessageBlockStatus.STREAMING,
+            thinking_millsec: thinking_millsec
+          })
+        } else {
+          const newBlock = createThinkingBlock(assistantMsgId, accumulatedThinking, {
+            status: MessageBlockStatus.STREAMING,
+            thinking_millsec: thinking_millsec
+          })
+          handleBlockTransition(newBlock, MessageBlockType.THINKING)
+        }
       },
       onTextComplete: (finalText) => {
         // Check if the last block was indeed a text block
@@ -345,6 +372,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           // Handle the case where OpenRouter citation might still be relevant even if the last block wasn't text? Unlikely but consider.
         }
       },
+      // TODO: 根据chunk的状态来判断tool block的状态，不需要在tool Response中设置状态；在不同状态的回调中更新tool block
       onToolCallComplete: (toolResponse: MCPToolResponse) => {
         console.log('toolResponse', toolResponse, toolResponse.status)
 
@@ -410,24 +438,31 @@ const fetchAndProcessAssistantResponseImpl = async (
         }
       },
       onExternalToolInProgress: () => {
-        console.warn('notify UI')
-      },
-      onExternalToolComplete: (externalToolResult: ExternalToolResult) => {
-        console.warn('onExternalToolComplete received, creating placeholder WebSearchBlock.', externalToolResult)
+        console.log('onExternalToolInProgress received, creating placeholder CitationBlock.')
         const citationBlock = createCitationBlock(
           assistantMsgId,
+          {},
           {
-            response: externalToolResult.webSearch,
-            knowledge: externalToolResult.knowledge
-          },
-          {
-            status: MessageBlockStatus.SUCCESS
+            status: MessageBlockStatus.PROCESSING
           }
         )
         lastBlockId = citationBlock.id
         lastBlockType = MessageBlockType.CITATION
         messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
         throttledDbUpdate(assistantMsgId, topicId, getState)
+      },
+      onExternalToolComplete: (externalToolResult: ExternalToolResult) => {
+        console.warn('onExternalToolComplete received, creating placeholder WebSearchBlock.', externalToolResult)
+        const changes: Partial<CitationMessageBlock> = {
+          response: externalToolResult.webSearch,
+          knowledge: externalToolResult.knowledge,
+          status: MessageBlockStatus.SUCCESS
+        }
+        // FIXME: 不清楚lastBlockId是否准确
+        if (lastBlockType === MessageBlockType.CITATION && lastBlockId) {
+          dispatch(updateOneBlock({ id: lastBlockId, changes }))
+          throttledDbUpdate(assistantMsgId, topicId, getState)
+        }
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'

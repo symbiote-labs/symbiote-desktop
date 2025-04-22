@@ -276,7 +276,7 @@ export default class AnthropicProvider extends BaseProvider {
             onChunk({
               type: ChunkType.THINKING_DELTA,
               text: thinking,
-              chunk_id: idx
+              thinking_millsec: time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
             })
           })
           .on('finalMessage', async (message) => {
@@ -305,9 +305,6 @@ export default class AnthropicProvider extends BaseProvider {
             }
 
             const time_completion_millsec = new Date().getTime() - start_time_millsec
-            const time_thinking_millsec = time_first_content_millsec
-              ? time_first_content_millsec - start_time_millsec
-              : 0
 
             onChunk({
               type: ChunkType.BLOCK_COMPLETE,
@@ -320,8 +317,7 @@ export default class AnthropicProvider extends BaseProvider {
                 metrics: {
                   completion_tokens: message.usage.output_tokens,
                   time_completion_millsec,
-                  time_first_token_millsec,
-                  time_thinking_millsec
+                  time_first_token_millsec
                 }
               }
             })

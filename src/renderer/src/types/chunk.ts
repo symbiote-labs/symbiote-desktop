@@ -136,9 +136,9 @@ export interface ThinkingDeltaChunk {
   text: string
 
   /**
-   * The ID of the chunk
+   * The thinking time of the chunk
    */
-  chunk_id?: number
+  thinking_millsec?: number
 
   /**
    * The type of the chunk
