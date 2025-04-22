@@ -1,4 +1,4 @@
-import type { GenerateImageResponse, KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@renderer/types'
+import type { ExternalToolResult, GenerateImageResponse, MCPToolResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
 import type { Response } from '@renderer/types/newMessage'
@@ -14,9 +14,10 @@ export interface StreamProcessorCallbacks {
   onThinkingChunk?: (text: string) => void
   // A tool call response chunk (from MCP)
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
-  // Citation data received (e.g., from Perplexity, OpenRouter)
-  onWebSearch?: (webSearch: WebSearchResponse) => void
-  onKnowledgeSearch?: (knowledgeSearch: KnowledgeReference[]) => void
+  // External tool call in progress
+  onExternalToolInProgress?: () => void
+  // Citation data received (e.g., from Perplexity, OpenRouter, Knowledge Base)
+  onExternalToolComplete?: (externalToolResult: ExternalToolResult) => void
   // Image generation chunk received
   onImageGenerated?: (imageData: GenerateImageResponse) => void
   // Called when an error occurs during chunk processing
@@ -40,7 +41,9 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
         }
         return
       }
-
+      if (chunk?.type === ChunkType.EXTERNEL_TOOL_IN_PROGRESS && callbacks.onExternalToolInProgress) {
+        callbacks.onExternalToolInProgress()
+      }
       // 2. Process the actual ChunkCallbackData
       const data = chunk // Cast after checking for 'final'
       // Invoke callbacks based on the fields present in the chunk data
@@ -53,15 +56,12 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
       if (data.type === ChunkType.THINKING_DELTA && callbacks.onThinkingChunk) {
         callbacks.onThinkingChunk(data.text)
       }
-      if (data.type === ChunkType.MCP_TOOL_RESPONSE && data.responses.length > 0 && callbacks.onToolCallComplete) {
+      if (data.type === ChunkType.MCP_TOOL_COMPLETE && data.responses.length > 0 && callbacks.onToolCallComplete) {
         // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
         data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
       }
-      if (data.type === ChunkType.WEB_SEARCH_COMPLETE && callbacks.onWebSearch) {
-        callbacks.onWebSearch(data.web_search)
-      }
-      if (data.type === ChunkType.KNOWLEDGE_SEARCH_COMPLETE && callbacks.onKnowledgeSearch) {
-        callbacks.onKnowledgeSearch(data.knowledge)
+      if (data.type === ChunkType.EXTERNEL_TOOL_COMPLETE && callbacks.onExternalToolComplete) {
+        callbacks.onExternalToolComplete(data.external_tool)
       }
 
       if (data.type === ChunkType.IMAGE_COMPLETE && callbacks.onImageGenerated) {

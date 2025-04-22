@@ -84,21 +84,19 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
   if (!block) return []
 
   let formattedCitations: Citation[] = []
-
-  // 1. Handle Gemini Grounding Metadata
-  if (block.response?.source === WebSearchSource.GEMINI) {
-    formattedCitations =
-      (block.response?.results as GroundingMetadata)?.groundingChunks?.map((chunk, index) => ({
-        number: index + 1,
-        url: chunk?.web?.uri || '',
-        title: chunk?.web?.title,
-        showFavicon: false,
-        type: 'websearch'
-      })) || []
-  }
-  // 2. Handle other Web Search Responses (Non-Gemini)
-  else if (block.response) {
+  // 1. Handle Web Search Responses (Non-Gemini)
+  if (block.response) {
     switch (block.response.source) {
+      case WebSearchSource.GEMINI:
+        formattedCitations =
+          (block.response?.results as GroundingMetadata)?.groundingChunks?.map((chunk, index) => ({
+            number: index + 1,
+            url: chunk?.web?.uri || '',
+            title: chunk?.web?.title,
+            showFavicon: false,
+            type: 'websearch'
+          })) || []
+        break
       case WebSearchSource.OPENAI:
         formattedCitations =
           (block.response.results as OpenAI.Chat.Completions.ChatCompletionMessage.Annotation.URLCitation[])?.map(
@@ -169,17 +167,18 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
     }
   }
   // 3. Handle Knowledge Base References
-  else if (block.knowledge) {
-    formattedCitations = block.knowledge.map((result, index) => ({
-      number: index + 1,
-      url: result.sourceUrl,
-      title: result.sourceUrl,
-      content: result.content,
-      showFavicon: true,
-      type: 'knowledge'
-    }))
+  if (block.knowledge && block.knowledge.length > 0) {
+    formattedCitations.push(
+      ...block.knowledge.map((result, index) => ({
+        number: index + 1,
+        url: result.sourceUrl,
+        title: result.sourceUrl,
+        content: result.content,
+        showFavicon: true,
+        type: 'knowledge'
+      }))
+    )
   }
-
   // 4. Deduplicate by URL and Renumber Sequentially
   const urlSet = new Set<string>()
   return formattedCitations

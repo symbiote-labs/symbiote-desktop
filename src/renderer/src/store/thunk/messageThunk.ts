@@ -2,7 +2,7 @@ import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import store from '@renderer/store'
-import { type Assistant, type MCPToolResponse, type Topic, WebSearchSource } from '@renderer/types'
+import { type Assistant, ExternalToolResult, type MCPToolResponse, type Topic, WebSearchSource } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
@@ -334,28 +334,16 @@ const fetchAndProcessAssistantResponseImpl = async (
           )
         }
       },
-      onWebSearch: (webSearch) => {
-        // TODO: Implement actual citation block creation
-        console.warn('onWebSearch received, creating placeholder WebSearchBlock.', webSearch)
-        // 还缺了知识库引用
-        const citationBlock = createCitationBlock(
-          assistantMsgId,
-          {
-            response: webSearch
-          },
-          {
-            status: MessageBlockStatus.SUCCESS
-          }
-        )
-        lastBlockId = citationBlock.id
-        lastBlockType = MessageBlockType.CITATION
-        messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+      onExternalToolInProgress: () => {
+        console.warn('notify UI')
       },
-      onKnowledgeSearch: (knowledgeSearch) => {
+      onExternalToolComplete: (externalToolResult: ExternalToolResult) => {
+        console.warn('onExternalToolComplete received, creating placeholder WebSearchBlock.', externalToolResult)
         const citationBlock = createCitationBlock(
           assistantMsgId,
           {
-            knowledge: knowledgeSearch
+            response: externalToolResult.webSearch,
+            knowledge: externalToolResult.knowledge
           },
           {
             status: MessageBlockStatus.SUCCESS
@@ -364,6 +352,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         lastBlockId = citationBlock.id
         lastBlockType = MessageBlockType.CITATION
         messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+        throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'

@@ -558,7 +558,7 @@ export default class OpenAIProvider extends BaseProvider {
         if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({
-            type: ChunkType.BLOCK_CREATED,
+            type: ChunkType.LLM_RESPONSE_CREATED,
             response: {
               metrics: {
                 time_first_token_millsec

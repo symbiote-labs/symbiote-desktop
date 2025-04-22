@@ -440,7 +440,7 @@ export default class GeminiProvider extends BaseProvider {
           // Update based on text arrival
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({
-            type: ChunkType.BLOCK_CREATED,
+            type: ChunkType.LLM_RESPONSE_CREATED,
             response: {
               metrics: {
                 time_first_token_millsec,
@@ -459,7 +459,7 @@ export default class GeminiProvider extends BaseProvider {
         // 2. Usage Data
         if (chunk.usageMetadata) {
           onChunk({
-            type: ChunkType.BLOCK_IN_PROGRESS,
+            type: ChunkType.LLM_RESPONSE_IN_PROGRESS,
             response: {
               text: content,
               metrics: {

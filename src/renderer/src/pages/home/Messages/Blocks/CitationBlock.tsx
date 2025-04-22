@@ -3,15 +3,14 @@ import type { RootState } from '@renderer/store'
 import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
 import { WebSearchSource } from '@renderer/types'
 import type { CitationMessageBlock } from '@renderer/types/newMessage'
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 
 import CitationsList from '../CitationsList'
 
-export default function CitationBlock({ block }: { block: CitationMessageBlock }) {
+function CitationBlock({ block }: { block: CitationMessageBlock }) {
   const formattedCitations = useSelector((state: RootState) => selectFormattedCitationsByBlockId(state, block.id))
-
   const hasCitations = useMemo(() => {
     const hasGeminiBlock = block.response?.source === WebSearchSource.GEMINI
     return (
@@ -26,15 +25,12 @@ export default function CitationBlock({ block }: { block: CitationMessageBlock }
   }
 
   const isGemini = block.response?.source === WebSearchSource.GEMINI
-  const geminiCitations = isGemini ? formattedCitations : []
-  const nonGeminiWebCitations = isGemini ? [] : formattedCitations.filter((c) => c.type !== 'knowledge')
-  const knowledgeCitations = block.knowledge ? formattedCitations.filter((c) => c.type === 'knowledge') : []
 
   return (
     <>
       {isGemini && block.status === 'success' && (
         <>
-          <CitationsList citations={geminiCitations} />
+          <CitationsList citations={formattedCitations} />
           <SearchEntryPoint
             dangerouslySetInnerHTML={{
               __html:
@@ -45,8 +41,7 @@ export default function CitationBlock({ block }: { block: CitationMessageBlock }
           />
         </>
       )}
-      {nonGeminiWebCitations.length > 0 && <CitationsList citations={nonGeminiWebCitations} />}
-      {knowledgeCitations.length > 0 && block.status === 'success' && <CitationsList citations={knowledgeCitations} />}
+      {formattedCitations.length > 0 && block.status === 'success' && <CitationsList citations={formattedCitations} />}
     </>
   )
 }
@@ -54,3 +49,5 @@ export default function CitationBlock({ block }: { block: CitationMessageBlock }
 const SearchEntryPoint = styled.div`
   margin: 10px 2px;
 `
+
+export default React.memo(CitationBlock)

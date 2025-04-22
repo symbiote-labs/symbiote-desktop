@@ -255,6 +255,7 @@ export default class AnthropicProvider extends BaseProvider {
           .on('text', (text) => {
             if (time_first_token_millsec == 0) {
               time_first_token_millsec = new Date().getTime() - start_time_millsec
+              onChunk({ type: ChunkType.LLM_RESPONSE_CREATED, response: { metrics: { time_first_token_millsec } } })
             }
 
             if (hasThinkingContent && time_first_content_millsec === 0) {

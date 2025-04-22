@@ -4,6 +4,7 @@ import i18n from '@renderer/i18n'
 import store from '@renderer/store'
 import {
   Assistant,
+  ExternalToolResult,
   KnowledgeReference,
   MCPTool,
   Model,
@@ -12,7 +13,7 @@ import {
   WebSearchResponse,
   WebSearchSource
 } from '@renderer/types'
-import type { Chunk } from '@renderer/types/chunk'
+import { type Chunk, ChunkType } from '@renderer/types/chunk'
 import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -31,27 +32,12 @@ import { processKnowledgeSearch } from './KnowledgeService'
 import { filterContextMessages, filterMessages, filterUsefulMessages } from './MessagesService'
 import WebSearchService from './WebSearchService'
 
-// Define a type for the chunk data passed to onChunkReceived
-// type ChunkCallbackData = {
-//   type?: 'text' | 'reasoning' | 'status' | 'metadata' | 'final'
-//   text?: string
-//   reasoning_content?: string
-//   status?: 'searching' | 'processing' | 'success' | 'error'
-//   webSearch?: WebSearchResponse | any[]
-//   knowledge?: KnowledgeReference[]
-//   error?: any
-// }
-
-type ExternalToolResult = {
-  mcpTools?: MCPTool[]
-}
-
 async function fetchExternalTool(
   lastUserMessage: Message,
   assistant: Assistant,
   onChunkReceived: (chunk: Chunk) => void,
   lastAnswer?: Message
-): Promise<ExternalToolResult | null> {
+): Promise<ExternalToolResult> {
   const hasKnowledgeBase = !isEmpty(lastUserMessage?.blocks)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
@@ -63,7 +49,7 @@ async function fetchExternalTool(
     if (!assistant.enableWebSearch && !hasKnowledgeBase) return undefined
 
     // Notify UI that extraction/searching is starting
-    onChunkReceived({ type: 'web_search_in_progress' })
+    onChunkReceived({ type: ChunkType.EXTERNEL_TOOL_IN_PROGRESS })
 
     const tools: string[] = []
 
@@ -164,18 +150,16 @@ async function fetchExternalTool(
     searchTheWeb(),
     searchKnowledgeBase()
   ])
-  if (webSearchResponseFromSearch) {
-    onChunkReceived({ type: 'web_search_complete', web_search: webSearchResponseFromSearch })
-  }
-  if (knowledgeReferencesFromSearch) {
-    onChunkReceived({ type: 'knowledge_search_complete', knowledge: knowledgeReferencesFromSearch })
-  }
+
+  onChunkReceived({
+    type: ChunkType.EXTERNEL_TOOL_COMPLETE,
+    external_tool: {
+      webSearch: webSearchResponseFromSearch,
+      knowledge: knowledgeReferencesFromSearch
+    }
+  })
 
   // --- Prepare for AI Completion ---
-
-  // Update status to processing *after* search phase
-  onChunkReceived({ type: 'block_in_progress' })
-
   // Store results temporarily (e.g., using window.keyv like before)
   if (lastUserMessage) {
     if (webSearchResponseFromSearch) {
@@ -199,9 +183,9 @@ async function fetchExternalTool(
       mcpTools = results.flat() // Flatten the array of arrays
     } catch (toolError) {
       console.error('Error fetching MCP tools:', toolError)
-      // Decide how to handle tool fetching errors, maybe proceed without tools?
     }
   }
+
   return { mcpTools }
 }
 
@@ -230,9 +214,8 @@ export async function fetchChatCompletion({
   try {
     // NOTE: The search results are NOT added to the messages sent to the AI here.
     // They will be retrieved and used by the messageThunk later to create CitationBlocks.
-    const externalToolResult = await fetchExternalTool(lastUserMessage, assistant, onChunkReceived, lastAnswer)
+    const { mcpTools } = await fetchExternalTool(lastUserMessage, assistant, onChunkReceived, lastAnswer)
 
-    // Filter messages for context
     const filteredMessages = filterUsefulMessages(filterContextMessages(messages))
 
     // --- Call AI Completions ---
@@ -242,17 +225,17 @@ export async function fetchChatCompletion({
       assistant,
       onFilterMessages: () => {},
       onChunk: onChunkReceived,
-      mcpTools: externalToolResult?.mcpTools
+      mcpTools: mcpTools
     })
     console.log('[DEBUG] AI.completions call finished')
 
     // --- Signal Final Success ---
-    onChunkReceived({ type: 'block_complete' })
+    onChunkReceived({ type: ChunkType.BLOCK_COMPLETE })
   } catch (error: any) {
     // console.error('Error during fetchChatCompletion:', error)
     // Signal Final Error
     // onChunkReceived({ type: 'error', error: formatMessageError(error) })
-    onChunkReceived({ type: 'block_complete', error: error })
+    onChunkReceived({ type: ChunkType.BLOCK_COMPLETE, error: error })
     // Re-throwing might still be desired depending on upstream error handling
     // throw error;
   }

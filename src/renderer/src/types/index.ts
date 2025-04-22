@@ -342,6 +342,13 @@ export interface TranslateHistory {
 
 export type SidebarIcon = 'assistants' | 'agents' | 'paintings' | 'translate' | 'minapp' | 'knowledge' | 'files'
 
+export type ExternalToolResult = {
+  mcpTools?: MCPTool[]
+  toolUse?: MCPToolResponse[]
+  webSearch?: WebSearchResponse
+  knowledge?: KnowledgeReference[]
+}
+
 export type WebSearchProvider = {
   id: string
   name: string
