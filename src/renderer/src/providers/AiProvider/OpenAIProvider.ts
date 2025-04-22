@@ -31,7 +31,7 @@ import {
   Suggestion,
   WebSearchSource
 } from '@renderer/types'
-import { WebSearchCompleteChunk } from '@renderer/types/chunk'
+import { ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
@@ -462,10 +462,10 @@ export default class OpenAIProvider extends BaseProvider {
         }
         // Separate onChunk calls for text and usage/metrics
         if (stream.choices[0].message?.content) {
-          onChunk({ type: 'text.complete', text: stream.choices[0].message.content, chunk_id: 0 })
+          onChunk({ type: ChunkType.TEXT_COMPLETE, text: stream.choices[0].message.content, chunk_id: 0 })
         }
         if (stream.usage) {
-          onChunk({ type: 'block_complete', response: { usage: stream.usage, metrics: finalMetrics } })
+          onChunk({ type: ChunkType.BLOCK_COMPLETE, response: { usage: stream.usage, metrics: finalMetrics } })
         }
         return
       }
@@ -491,22 +491,22 @@ export default class OpenAIProvider extends BaseProvider {
         // 1. Text Content
         if (delta?.content) {
           content += delta.content // Still accumulate for processToolUses
-          onChunk({ type: 'text.delta', text: delta.content, chunk_id: chunk_id++ })
+          onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content, chunk_id: chunk_id++ })
         }
 
         // 2. Reasoning Content
         const reasoningContent = delta?.reasoning_content || delta?.reasoning
         if (reasoningContent) {
           hasReasoningContent = true // Keep track if reasoning occurred
-          onChunk({ type: 'thinking.delta', text: reasoningContent, chunk_id: chunk_id++ })
+          onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, chunk_id: chunk_id++ })
         }
 
         if (!delta?.content && !reasoningContent) {
-          onChunk({ type: 'text.complete', text: content })
+          onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
           // 3. Web Search
           if (delta?.annotations) {
             onChunk({
-              type: 'web_search_complete',
+              type: ChunkType.WEB_SEARCH_COMPLETE,
               web_search: {
                 results: delta.annotations,
                 source: WebSearchSource.OPENAI
@@ -518,7 +518,7 @@ export default class OpenAIProvider extends BaseProvider {
             const citations = chunk.citations
             if (citations) {
               onChunk({
-                type: 'web_search_complete',
+                type: ChunkType.WEB_SEARCH_COMPLETE,
                 web_search: {
                   results: citations,
                   source: WebSearchSource.PERPLEXITY
@@ -528,7 +528,7 @@ export default class OpenAIProvider extends BaseProvider {
           }
           if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
             onChunk({
-              type: 'web_search_complete',
+              type: ChunkType.WEB_SEARCH_COMPLETE,
               web_search: {
                 results: chunk.web_search,
                 source: WebSearchSource.ZHIPU
@@ -537,7 +537,7 @@ export default class OpenAIProvider extends BaseProvider {
           }
           if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
             onChunk({
-              type: 'web_search_complete',
+              type: ChunkType.WEB_SEARCH_COMPLETE,
               web_search: {
                 results: chunk.search_info.search_results,
                 source: WebSearchSource.HUNYUAN
@@ -547,7 +547,6 @@ export default class OpenAIProvider extends BaseProvider {
         }
 
         // 6. Usage (If provided per chunk) - Capture the last known usage
-        console.log('chunk', chunk)
         if (chunk.usage) {
           console.log('chunk.usage', chunk.usage)
           lastUsage = chunk.usage // Update with the latest usage info
@@ -559,7 +558,7 @@ export default class OpenAIProvider extends BaseProvider {
         if (time_first_token_millsec === 0 && (delta?.content || reasoningContent)) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({
-            type: 'block_created',
+            type: ChunkType.BLOCK_CREATED,
             response: {
               metrics: {
                 time_first_token_millsec
@@ -587,7 +586,7 @@ export default class OpenAIProvider extends BaseProvider {
 
       console.log('usage', lastUsage) // Log the captured usage
       onChunk({
-        type: 'block_complete',
+        type: ChunkType.BLOCK_COMPLETE,
         response: {
           // Use the last captured usage object directly
           usage: lastUsage,

@@ -11,6 +11,7 @@ import type {
   WebSearchProviderResponse,
   WebSearchResponse
 } from '@renderer/types'
+import { ChunkType } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import { delay, isJSON, parseJSON } from '@renderer/utils'
 import { addAbortController, removeAbortController } from '@renderer/utils/abortController'
@@ -91,7 +92,7 @@ export default abstract class BaseProvider {
       await delay(0.01)
       onChunk({
         response: { text: i + '\n', usage: { completion_tokens: 0, prompt_tokens: 0, total_tokens: 0 } },
-        type: 'block_complete'
+        type: ChunkType.BLOCK_COMPLETE
       })
     }
   }

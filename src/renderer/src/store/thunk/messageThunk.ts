@@ -452,6 +452,15 @@ const fetchAndProcessAssistantResponseImpl = async (
             console.log(`[onComplete] Setting final streaming MAIN_TEXT block ${lastBlock.id} to SUCCESS.`)
             dispatch(updateOneBlock({ id: lastBlock.id, changes: { status: MessageBlockStatus.SUCCESS } }))
           }
+
+          // const citationBlocks = finalAssistantMsg.blocks
+          //   .map((block) => finalState.messageBlocks.entities[block])
+          //   .filter((block) => block.type === MessageBlockType.CITATION)
+          //   .map((block) => ({
+          //     ...block,
+          //     status: MessageBlockStatus.SUCCESS
+          //   }))
+          // dispatch(upsertManyBlocks(citationBlocks))
         }
         // --- End of final block status update on SUCCESS --- END
 

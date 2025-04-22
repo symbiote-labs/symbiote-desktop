@@ -11,6 +11,7 @@ import {
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
 import { Assistant, FileTypes, MCPToolResponse, Model, Provider, Suggestion } from '@renderer/types'
+import { ChunkType } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToAnthropicMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
@@ -228,7 +229,7 @@ export default class AnthropicProvider extends BaseProvider {
       }
 
       return onChunk({
-        type: 'block_complete',
+        type: ChunkType.BLOCK_COMPLETE,
         response: {
           text,
           reasoning_content,
@@ -260,7 +261,7 @@ export default class AnthropicProvider extends BaseProvider {
               time_first_content_millsec = new Date().getTime()
             }
 
-            onChunk({ type: 'text.delta', text, chunk_id: idx })
+            onChunk({ type: ChunkType.TEXT_DELTA, text, chunk_id: idx })
           })
           .on('thinking', (thinking) => {
             hasThinkingContent = true
@@ -272,7 +273,7 @@ export default class AnthropicProvider extends BaseProvider {
             // const time_completion_millsec = new Date().getTime() - start_time_millsec
 
             onChunk({
-              type: 'thinking.delta',
+              type: ChunkType.THINKING_DELTA,
               text: thinking,
               chunk_id: idx
             })
@@ -308,7 +309,7 @@ export default class AnthropicProvider extends BaseProvider {
               : 0
 
             onChunk({
-              type: 'block_complete',
+              type: ChunkType.BLOCK_COMPLETE,
               response: {
                 usage: {
                   prompt_tokens: message.usage.input_tokens,

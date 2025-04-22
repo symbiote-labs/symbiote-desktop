@@ -1,5 +1,6 @@
 import type { GenerateImageResponse, KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
+import { ChunkType } from '@renderer/types/chunk'
 import type { Response } from '@renderer/types/newMessage'
 import { AssistantMessageStatus } from '@renderer/types/newMessage'
 
@@ -31,7 +32,7 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
     try {
       console.log('createStreamProcessor', chunk)
       // 1. Handle the manual final signal first
-      if (chunk?.type === 'block_complete') {
+      if (chunk?.type === ChunkType.BLOCK_COMPLETE) {
         if (chunk?.error) {
           callbacks.onComplete?.(AssistantMessageStatus.ERROR, undefined, chunk?.error)
         } else {
@@ -43,24 +44,28 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
       // 2. Process the actual ChunkCallbackData
       const data = chunk // Cast after checking for 'final'
       // Invoke callbacks based on the fields present in the chunk data
-      if (data.type === 'text.delta' && callbacks.onTextChunk) {
+      if (data.type === ChunkType.TEXT_DELTA && callbacks.onTextChunk) {
         callbacks.onTextChunk(data.text)
       }
-      if (data.type === 'text.complete' && callbacks.onTextComplete) {
+      if (data.type === ChunkType.TEXT_COMPLETE && callbacks.onTextComplete) {
         callbacks.onTextComplete(data.text)
       }
-      if (data.type === 'thinking.delta' && callbacks.onThinkingChunk) {
+      if (data.type === ChunkType.THINKING_DELTA && callbacks.onThinkingChunk) {
         callbacks.onThinkingChunk(data.text)
       }
-      if (data.type === 'mcp_tool_response' && data.responses.length > 0 && callbacks.onToolCallComplete) {
+      if (data.type === ChunkType.MCP_TOOL_RESPONSE && data.responses.length > 0 && callbacks.onToolCallComplete) {
         // TODO 目前tool只有mcp,也可以将web search等其他tool整合进来
         data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
       }
-      if (data.type === 'web_search_complete' && callbacks.onWebSearch) {
+      if (data.type === ChunkType.WEB_SEARCH_COMPLETE && callbacks.onWebSearch) {
         callbacks.onWebSearch(data.web_search)
       }
-      if (data.type === 'knowledge_search_complete' && callbacks.onKnowledgeSearch) {
+      if (data.type === ChunkType.KNOWLEDGE_SEARCH_COMPLETE && callbacks.onKnowledgeSearch) {
         callbacks.onKnowledgeSearch(data.knowledge)
+      }
+
+      if (data.type === ChunkType.IMAGE_COMPLETE && callbacks.onImageGenerated) {
+        callbacks.onImageGenerated(data.image)
       }
       // Note: Usage and Metrics are usually handled at the end or accumulated differently,
       // so direct callbacks might not be the best fit here. They are often part of the final message state.

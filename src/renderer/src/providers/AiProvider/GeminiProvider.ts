@@ -40,7 +40,7 @@ import {
   Suggestion,
   WebSearchSource
 } from '@renderer/types'
-import { BlockCompleteChunk, WebSearchCompleteChunk } from '@renderer/types/chunk'
+import { BlockCompleteChunk, ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
 import type { Message, Response } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
@@ -366,7 +366,7 @@ export default class GeminiProvider extends BaseProvider {
       })
       const time_completion_millsec = new Date().getTime() - start_time_millsec
       onChunk({
-        type: 'block_complete',
+        type: ChunkType.BLOCK_COMPLETE,
         response: {
           text: response.text,
           usage: {
@@ -440,7 +440,7 @@ export default class GeminiProvider extends BaseProvider {
           // Update based on text arrival
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({
-            type: 'block_created',
+            type: ChunkType.BLOCK_CREATED,
             response: {
               metrics: {
                 time_first_token_millsec,
@@ -453,13 +453,13 @@ export default class GeminiProvider extends BaseProvider {
         // 1. Text Content
         if (chunk.text !== undefined) {
           content += chunk.text
-          onChunk({ type: 'text.delta', text: chunk.text, chunk_id: chunk_id++ })
+          onChunk({ type: ChunkType.TEXT_DELTA, text: chunk.text, chunk_id: chunk_id++ })
         }
 
         // 2. Usage Data
         if (chunk.usageMetadata) {
           onChunk({
-            type: 'block_in_progress',
+            type: ChunkType.BLOCK_IN_PROGRESS,
             response: {
               text: content,
               metrics: {
@@ -479,7 +479,7 @@ export default class GeminiProvider extends BaseProvider {
         const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
         if (groundingMetadata) {
           onChunk({
-            type: 'web_search_complete',
+            type: ChunkType.WEB_SEARCH_COMPLETE,
             web_search: {
               results: groundingMetadata,
               source: WebSearchSource.GEMINI
@@ -489,8 +489,8 @@ export default class GeminiProvider extends BaseProvider {
 
         // 4. Image Generation
         const generateImage = this.processGeminiImageResponse(chunk)
-        if (generateImage) {
-          onChunk({ type: 'image.complete', image: generateImage })
+        if (generateImage?.images?.length) {
+          onChunk({ type: ChunkType.IMAGE_COMPLETE, image: generateImage })
         }
 
         // --- End Incremental onChunk calls ---
@@ -506,7 +506,7 @@ export default class GeminiProvider extends BaseProvider {
 
     const final_time_completion_millsec = new Date().getTime() - start_time_millsec
     onChunk({
-      type: 'block_complete',
+      type: ChunkType.BLOCK_COMPLETE,
       response: {
         metrics: {
           time_completion_millsec: final_time_completion_millsec,

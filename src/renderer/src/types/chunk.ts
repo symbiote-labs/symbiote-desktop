@@ -2,6 +2,27 @@ import { KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@types'
 
 import { Response, ResponseError } from './newMessage'
 
+// Define Enum for Chunk Types
+export enum ChunkType {
+  TEXT_DELTA = 'text.delta',
+  TEXT_COMPLETE = 'text.complete',
+  AUDIO_DELTA = 'audio.delta',
+  AUDIO_COMPLETE = 'audio.complete',
+  IMAGE_DELTA = 'image.delta',
+  IMAGE_COMPLETE = 'image.complete',
+  THINKING_DELTA = 'thinking.delta',
+  THINKING_COMPLETE = 'thinking.complete',
+  WEB_SEARCH_IN_PROGRESS = 'web_search_in_progress',
+  WEB_SEARCH_COMPLETE = 'web_search_complete',
+  KNOWLEDGE_SEARCH_IN_PROGRESS = 'knowledge_search_in_progress',
+  KNOWLEDGE_SEARCH_COMPLETE = 'knowledge_search_complete',
+  MCP_TOOL_RESPONSE = 'mcp_tool_response',
+  ERROR = 'error',
+  BLOCK_CREATED = 'block_created',
+  BLOCK_IN_PROGRESS = 'block_in_progress',
+  BLOCK_COMPLETE = 'block_complete'
+}
+
 export interface TextDeltaChunk {
   /**
    * The text content of the chunk
@@ -16,7 +37,7 @@ export interface TextDeltaChunk {
   /**
    * The type of the chunk
    */
-  type: 'text.delta'
+  type: ChunkType.TEXT_DELTA
 }
 
 export interface TextCompleteChunk {
@@ -33,7 +54,7 @@ export interface TextCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'text.complete'
+  type: ChunkType.TEXT_COMPLETE
 }
 
 export interface AudioDeltaChunk {
@@ -45,14 +66,14 @@ export interface AudioDeltaChunk {
   /**
    * The type of the chunk
    */
-  type: 'audio.delta'
+  type: ChunkType.AUDIO_DELTA
 }
 
 export interface AudioCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'audio.complete'
+  type: ChunkType.AUDIO_COMPLETE
 }
 
 export interface ImageDeltaChunk {
@@ -64,14 +85,14 @@ export interface ImageDeltaChunk {
   /**
    * The type of the chunk
    */
-  type: 'image.delta'
+  type: ChunkType.IMAGE_DELTA
 }
 
 export interface ImageCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'image.complete'
+  type: ChunkType.IMAGE_COMPLETE
 
   /**
    * The image content of the chunk
@@ -93,7 +114,7 @@ export interface ThinkingDeltaChunk {
   /**
    * The type of the chunk
    */
-  type: 'thinking.delta'
+  type: ChunkType.THINKING_DELTA
 }
 
 export interface ThinkingCompleteChunk {
@@ -110,14 +131,14 @@ export interface ThinkingCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'thinking.complete'
+  type: ChunkType.THINKING_COMPLETE
 }
 
 export interface WebSearchInProgressChunk {
   /**
    * The type of the chunk
    */
-  type: 'web_search_in_progress'
+  type: ChunkType.WEB_SEARCH_IN_PROGRESS
 }
 
 export interface WebSearchCompleteChunk {
@@ -134,14 +155,14 @@ export interface WebSearchCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'web_search_complete'
+  type: ChunkType.WEB_SEARCH_COMPLETE
 }
 
 export interface KnowledgeSearchInProgressChunk {
   /**
    * The type of the chunk
    */
-  type: 'knowledge_search_in_progress'
+  type: ChunkType.KNOWLEDGE_SEARCH_IN_PROGRESS
 }
 
 export interface KnowledgeSearchCompleteChunk {
@@ -153,7 +174,7 @@ export interface KnowledgeSearchCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'knowledge_search_complete'
+  type: ChunkType.KNOWLEDGE_SEARCH_COMPLETE
 }
 
 export interface MCPToolResponseChunk {
@@ -165,13 +186,13 @@ export interface MCPToolResponseChunk {
   /**
    * The type of the chunk
    */
-  type: 'mcp_tool_response'
+  type: ChunkType.MCP_TOOL_RESPONSE
 }
 
 export interface ErrorChunk {
   error: ResponseError
 
-  type: 'error'
+  type: ChunkType.ERROR
 }
 
 export interface BlockCreatedChunk {
@@ -183,14 +204,14 @@ export interface BlockCreatedChunk {
   /**
    * The type of the chunk
    */
-  type: 'block_created'
+  type: ChunkType.BLOCK_CREATED
 }
 
 export interface BlockInProgressChunk {
   /**
    * The type of the chunk
    */
-  type: 'block_in_progress'
+  type: ChunkType.BLOCK_IN_PROGRESS
 
   /**
    * The response
@@ -207,7 +228,7 @@ export interface BlockCompleteChunk {
   /**
    * The type of the chunk
    */
-  type: 'block_complete'
+  type: ChunkType.BLOCK_COMPLETE
 
   /**
    * The error

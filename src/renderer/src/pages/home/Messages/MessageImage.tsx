@@ -87,11 +87,10 @@ const MessageImage: FC<Props> = ({ block }) => {
     }
   }
 
-  const images = block.metadata?.generateImage?.images.length
-    ? block.metadata?.generateImage?.images
+  const images = block.metadata?.generateImageResponse?.images?.length
+    ? block.metadata?.generateImageResponse?.images
     : // TODO 加file是否合适？
       [`file://${block?.file?.path}`]
-
   return (
     <Container style={{ marginBottom: 8 }}>
       {images.map((image, index) => (
@@ -115,7 +114,7 @@ const MessageImage: FC<Props> = ({ block }) => {
                 <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
                 <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
                 <UndoOutlined onClick={onReset} />
-                <CopyOutlined onClick={() => onCopy(block.metadata?.generateImage?.type!, image)} />
+                <CopyOutlined onClick={() => onCopy(block.metadata?.generateImageResponse?.type!, image)} />
                 <DownloadOutlined onClick={() => onDownload(image, index)} />
               </ToobarWrapper>
             )
