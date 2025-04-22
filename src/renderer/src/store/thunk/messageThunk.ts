@@ -2,7 +2,7 @@ import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import store from '@renderer/store'
-import { type Assistant, type MCPToolResponse, type Topic, WebSearchSource } from '@renderer/types'
+import { type Assistant, type MCPToolResponse, type Model, type Topic, WebSearchSource } from '@renderer/types'
 import type { MainTextMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
@@ -44,7 +44,7 @@ const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]
       } else {
         updatedMessages.push(message)
       }
-      console.log('[DEBUG] Updating topic in DB')
+      console.log('[DEBUG] Updating topic in DB', updatedMessages)
       await db.topics.update(message.topicId, { messages: updatedMessages })
       console.log('[DEBUG] Topic updated in DB')
     } else {
@@ -91,6 +91,8 @@ const updateExistingMessageAndBlocksInDB = async (
     console.error(`[updateExistingMsg] Failed to update message ${updatedMessage.id}:`, error)
   }
 }
+
+// 更新单个块的逻辑，用于更新消息中的单个块
 const throttledBlockUpdate = throttle((id, blockUpdate) => {
   store.dispatch(updateOneBlock({ id, changes: blockUpdate }))
 }, 150)
@@ -100,6 +102,7 @@ const throttledBlockUpdate = throttle((id, blockUpdate) => {
 //   dispatch(newMessagesActions.updateMessage({ topicId, messageId, updates: { blockInstruction: messageUpdates } }))
 // }, 150)
 
+// 更新消息和块的逻辑，用于更新消息中的单个块
 const messageAndBlockUpdate = (topicId, messageId, blockUpdate) => {
   const dispatch = store.dispatch
   store.dispatch(
@@ -110,6 +113,7 @@ const messageAndBlockUpdate = (topicId, messageId, blockUpdate) => {
   dispatch(newMessagesActions.upsertBlockReference({ messageId, blockId: blockUpdate.id, status: blockUpdate.status }))
 }
 
+// 节流保存消息和块于数据库
 const throttledDbUpdate = throttle(
   async (messageId: string, topicId: string, getState: () => RootState) => {
     const state = getState()
@@ -128,14 +132,90 @@ const throttledDbUpdate = throttle(
   { leading: false, trailing: true }
 )
 
+// --- Helper Function for Multi-Model Dispatch ---
+// 多模型创建和发送请求的逻辑，用于用户消息多模型发送和重发
+const dispatchMultiModelResponses = async (
+  dispatch: AppDispatch,
+  getState: () => RootState,
+  topicId: string,
+  triggeringMessage: Message, // userMessage or messageToResend
+  assistant: Assistant,
+  mentionedModels: Model[],
+  queue: any // Assuming queue has an 'add' method
+) => {
+  console.log(
+    `[DEBUG] dispatchMultiModelResponses called for ${mentionedModels.length} models, triggered by message ${triggeringMessage.id}.`
+  )
+  // Prepare arrays to hold stubs and task data
+  const assistantMessageStubs: Message[] = []
+  const tasksToQueue: { assistantConfig: Assistant; messageStub: Message }[] = []
+
+  for (const mentionedModel of mentionedModels) {
+    const assistantForThisMention = { ...assistant, model: mentionedModel }
+
+    // Create the initial Assistant Message stub for this model
+    console.log(`[DEBUG] Creating assistant message stub for model: ${mentionedModel.id}`)
+    const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+      askId: triggeringMessage.id, // Use the triggering message ID
+      model: mentionedModel,
+      modelId: mentionedModel.id
+    })
+
+    // Add stub to Redux store (sync)
+    console.log('[DEBUG] Adding assistant message stub to store')
+    dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+
+    // Collect the stub itself for DB update later
+    assistantMessageStubs.push(assistantMessage)
+
+    // Collect task data for queueing later
+    tasksToQueue.push({ assistantConfig: assistantForThisMention, messageStub: assistantMessage })
+  }
+
+  // After the loop: Update the Topic in DB once with all stubs
+  console.log('[DEBUG] Updating topic in DB with all assistant message stubs...')
+  try {
+    const topicFromDB = await db.topics.get(topicId)
+    if (topicFromDB) {
+      const updatedMessages = [...topicFromDB.messages, ...assistantMessageStubs]
+      await db.topics.update(topicId, { messages: updatedMessages })
+      console.log('[DEBUG] Topic updated in DB successfully.')
+    } else {
+      console.error(`[dispatchMultiModelResponses] Topic ${topicId} not found in DB during multi-model save.`)
+      throw new Error(`Topic ${topicId} not found in DB.`)
+    }
+  } catch (dbError) {
+    console.error('[dispatchMultiModelResponses] Error updating topic in DB for multi-model:', dbError)
+    throw dbError // Propagate error
+  }
+
+  // Now, queue all the processing tasks
+  console.log('[DEBUG] Queueing all processing tasks...')
+  for (const task of tasksToQueue) {
+    console.log(`[DEBUG] Adding task to queue for model: ${task.messageStub.model?.id}`)
+    queue.add(async () => {
+      console.log(`[DEBUG] Queue task started for model: ${task.messageStub.model?.id}`)
+      await fetchAndProcessAssistantResponseImpl(
+        dispatch,
+        getState,
+        topicId,
+        task.assistantConfig, // Use the specific assistant config
+        task.messageStub // Pass the specific assistant message stub
+      )
+      console.log(`[DEBUG] fetchAndProcessAssistantResponseImpl completed for model: ${task.messageStub.model?.id}`)
+    })
+  }
+  console.log('[DEBUG] All processing tasks queued.')
+}
+
+// --- End Helper Function ---
+
 // Internal function extracted from sendMessage to handle fetching and processing assistant response
 const fetchAndProcessAssistantResponseImpl = async (
   dispatch: AppDispatch,
   getState: () => RootState,
   topicId: string,
   assistant: Assistant,
-  userMessage: Message, // The message that triggers the response (sets askId)
-  contextMessages: Message[], // The history for the LLM call
   assistantMessage: Message // Pass the prepared assistant message (new or reset)
 ) => {
   console.log('[DEBUG] fetchAndProcessAssistantResponseImpl started for existing message:', assistantMessage.id)
@@ -165,28 +245,16 @@ const fetchAndProcessAssistantResponseImpl = async (
     // --- Helper Function --- START
     // Helper to manage state transitions when switching block types
     const handleBlockTransition = (newBlock: MessageBlock, newBlockType: MessageBlockType) => {
-      // 1. Finalize previous block (IF NEEDED for non-text types)
-      // Example: If a TOOL block was processing and now text comes, finalize TOOL?
-      // The original logic only finalized MAIN_TEXT. Decide if other types need explicit finalization here.
-      /*
-         if (lastBlockType === MessageBlockType.SOME_OTHER_TYPE && lastBlockId) {
-            // Update status of lastBlockId if it needs finalization
-         }
-       */
-
-      // Removed the logic to mark previous MAIN_TEXT block as SUCCESS here.
-      // It will be handled by onTextComplete.
-
-      // 2. Update trackers to the new block
+      // 1. Update trackers to the new block
       lastBlockId = newBlock.id
       lastBlockType = newBlockType
 
-      // 3. Reset text accumulator (if transitioning away from text)
+      // 2. Reset text accumulator (if transitioning away from text)
       if (newBlockType !== MessageBlockType.MAIN_TEXT) {
         accumulatedContent = '' // Reset if moving away from text accumulation
       }
 
-      // 4. Add/Update the new block in store and DB (via messageAndBlockUpdate)
+      // 3. Add/Update the new block in store and DB (via messageAndBlockUpdate)
       console.log(`[Transition] Adding/Updating new ${newBlockType} block ${newBlock.id}.`)
       messageAndBlockUpdate(topicId, assistantMsgId, newBlock) // Centralized call
     }
@@ -551,82 +619,52 @@ export const sendMessage =
       await saveMessageAndBlocksToDB(userMessage, userMessageBlocks)
       console.log('[DEBUG] Saved user message to DB successfully')
 
-      // Create, add, and save the initial Assistant Message stub BEFORE queueing
-      console.log('[DEBUG] Creating assistant message stub')
-      const assistantMessage = createAssistantMessage(assistant.id, topicId, {
-        askId: userMessage.id,
-        model: assistant.model
-      })
-      console.log('[DEBUG] Adding assistant message stub to store')
-      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-      console.log('[DEBUG] Saving assistant message stub to DB')
-      await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
+      // --- 2. Prepare Context (Do this once) ---
+      // const currentState = getState()
+      // const allMessages = currentState.messages.messagesByTopic[topicId] || []
+      // const userMessageIndex = allMessages.findIndex((m) => m.id === userMessage.id)
+      // Context includes messages up to (and including) the user message itself
+      // const contextMessages = userMessageIndex !== -1 ? allMessages.slice(0, userMessageIndex + 1) : [...allMessages] // Safety fallback
+      console.log('[DEBUG] Context messages prepared')
 
-      // 将获取/处理调用添加到队列
-      console.log('[DEBUG] Getting topic queue')
-      const queue = getTopicQueue(topicId)
-      console.log('[DEBUG] Adding task to queue')
-      queue.add(async () => {
-        console.log('[DEBUG] Queue task started')
-        const currentState = getState()
-        const allMessages = currentState.messages.messagesByTopic[topicId] || []
-        // 传递原始消息列表直到用户消息
-        const contextMessages = allMessages.slice(0, allMessages.findIndex((m) => m.id === userMessage.id) + 1)
-        console.log('[DEBUG] Context messages prepared')
+      // --- 3. Handle Assistant Response(s) ---
+      const mentionedModels = userMessage.mentions
+      const queue = getTopicQueue(topicId) // Get queue once
 
-        console.log('[DEBUG] Calling fetchAndProcessAssistantResponseImpl')
-        await fetchAndProcessAssistantResponseImpl(
-          dispatch,
-          getState,
-          topicId,
-          assistant,
-          userMessage,
-          contextMessages,
-          assistantMessage // Pass the created assistant message stub
-        )
-        console.log('[DEBUG] fetchAndProcessAssistantResponseImpl completed')
-      })
+      if (mentionedModels && mentionedModels.length > 0) {
+        // --- Multi-Model Scenario ---
+        console.log(`[DEBUG] Multi-model send detected for ${mentionedModels.length} models.`)
+        await dispatchMultiModelResponses(dispatch, getState, topicId, userMessage, assistant, mentionedModels, queue)
+      } else {
+        // --- Single-Model Scenario (Original Logic) ---
+        console.log('[DEBUG] Single-model send.')
+        // Create, add, and save the initial Assistant Message stub
+        console.log('[DEBUG] Creating assistant message stub')
+        const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+          askId: userMessage.id,
+          model: assistant.model // Use the primary assistant's model
+        })
+        console.log('[DEBUG] Adding assistant message stub to store')
+        dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+        console.log('[DEBUG] Saving assistant message stub to DB')
+        await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub
+
+        // Queue the processing task
+        console.log('[DEBUG] Adding task to queue')
+        queue.add(async () => {
+          console.log('[DEBUG] Queue task started')
+          await fetchAndProcessAssistantResponseImpl(
+            dispatch,
+            getState,
+            topicId,
+            assistant, // Use the primary assistant config
+            assistantMessage // Pass the created assistant message stub
+          )
+          console.log('[DEBUG] fetchAndProcessAssistantResponseImpl completed')
+        })
+      }
     } catch (error) {
       console.error('Error in sendMessage thunk:', error)
-    }
-  }
-
-// Placeholder for the new resendMessage thunk
-export const resendMessage =
-  (messageToResend: Message, assistant: Assistant, topic: Topic) =>
-  async (dispatch: AppDispatch, getState: () => RootState) => {
-    console.warn('resendMessage thunk not fully implemented yet.')
-    // 初步实现resendMessage逻辑
-    try {
-      const topicId = topic.id
-      // 1. 获取要重发的消息
-      const state = getState()
-
-      // 2. 创建新的助手消息作为回复
-      const assistantMessage = createAssistantMessage(assistant.id, topicId, { askId: messageToResend.id })
-
-      // 3. 将消息添加到store
-      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-
-      // 4. 使用现有的fetchAndProcessAssistantResponseImpl处理助手响应
-      // 找到消息上下文
-      const allMessages = state.messages.messagesByTopic[topicId] || []
-      const messageIndex = allMessages.findIndex((m) => m.id === messageToResend.id)
-      const contextMessages =
-        messageIndex !== -1 ? allMessages.slice(0, messageIndex + 1) : [...allMessages, messageToResend]
-
-      // 调用处理助手响应的函数
-      await fetchAndProcessAssistantResponseImpl(
-        dispatch,
-        getState,
-        topicId,
-        assistant,
-        messageToResend,
-        contextMessages,
-        assistantMessage
-      )
-    } catch (error) {
-      console.error('Error in resendMessage thunk:', error)
     }
   }
 
@@ -825,37 +863,48 @@ export const resendMessageThunk =
       }
       // --- End Deletion ---
 
-      // Create, add, and save the new Assistant Message stub BEFORE queueing
-      console.log('[DEBUG] Creating new assistant message stub for resend')
-      const assistantMessage = createAssistantMessage(assistant.id, topicId, {
-        askId: messageToResend.id, // Link to the user message being resent
-        model: assistant.model
-      })
-      console.log('[DEBUG] Adding new assistant message stub to store')
-      dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-      console.log('[DEBUG] Saving new assistant message stub to DB')
-      await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
+      // --- Handle Assistant Response(s) based on mentions ---
+      const mentionedModels = messageToResend.mentions // Check mentions on the message being resent
+      const queue = getTopicQueue(topicId) // Get queue once
 
-      // Context includes messages up to (and including) the one being resent
-      const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list
-      const contextMessages = currentMessages.slice(
-        0,
-        currentMessages.findIndex((m) => m.id === messageToResend.id) + 1
-      )
-
-      // Add fetch/process call to the queue for this topic
-      const queue = getTopicQueue(topicId)
-      queue.add(async () => {
-        await fetchAndProcessAssistantResponseImpl(
+      if (mentionedModels && mentionedModels.length > 0) {
+        // --- Multi-Model Resend Scenario ---
+        console.log(`[DEBUG] Multi-model resend detected for ${mentionedModels.length} models.`)
+        await dispatchMultiModelResponses(
           dispatch,
           getState,
           topicId,
+          messageToResend,
           assistant,
-          messageToResend, // The user message triggering the response
-          contextMessages, // Context for the LLM call
-          assistantMessage // Pass the newly created assistant message stub
+          mentionedModels,
+          queue
         )
-      })
+      } else {
+        // --- Single-Model Resend Scenario ---
+        console.log('[DEBUG] Single-model resend.')
+        // Create, add, and save the new Assistant Message stub BEFORE queueing
+        console.log('[DEBUG] Creating new assistant message stub for resend')
+        const assistantMessage = createAssistantMessage(assistant.id, topicId, {
+          askId: messageToResend.id, // Link to the user message being resent
+          model: assistant.model
+        })
+        console.log('[DEBUG] Adding new assistant message stub to store')
+        dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
+        console.log('[DEBUG] Saving new assistant message stub to DB')
+        await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
+
+        // Add fetch/process call to the queue for this topic
+        console.log('[DEBUG] Adding task to queue')
+        queue.add(async () => {
+          await fetchAndProcessAssistantResponseImpl(
+            dispatch,
+            getState,
+            topicId,
+            assistant,
+            assistantMessage // Pass the newly created assistant message stub
+          )
+        })
+      }
     } catch (error) {
       console.error(`[resendMessageThunk] Error resending message ${messageToResend.id}:`, error)
       // Ensure loading state is potentially reset if error happens before fetch starts
@@ -939,7 +988,7 @@ export const resendUserMessageWithEditThunk =
     }
 
     // 5. Get updated context messages (up to and including the edited user message)
-    const contextMessages = getState().messages.messagesByTopic[topicId]?.slice(0, messageIndex + 1) || []
+    // const contextMessages = getState().messages.messagesByTopic[topicId]?.slice(0, messageIndex + 1) || []
 
     // 6. Create, add, and save the new Assistant Message stub BEFORE calling the core logic
     console.log('[DEBUG] Creating new assistant message stub for edited resend')
@@ -953,15 +1002,7 @@ export const resendUserMessageWithEditThunk =
     await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
 
     // 7. Send New Request
-    await fetchAndProcessAssistantResponseImpl(
-      dispatch,
-      getState,
-      topicId,
-      assistant,
-      updatedUserMessage, // Pass the *updated* user message
-      contextMessages, // Pass context including the updated message
-      assistantMessage // Pass the newly created assistant message stub
-    )
+    await fetchAndProcessAssistantResponseImpl(dispatch, getState, topicId, assistant, assistantMessage)
   }
 
 // --- NEW Thunk for regenerating Assistant Response ---
@@ -1046,28 +1087,20 @@ export const regenerateAssistantResponseThunk =
       }
 
       // 9. Prepare context: Messages up to and including the original user query
-      const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list AFTER the reset
-      const userQueryIndex = currentMessages.findIndex((m) => m.id === originalUserQuery.id)
-      if (userQueryIndex === -1) {
-        console.error(
-          `[regenerateAssistantResponseThunk] Original user query ${originalUserQuery.id} disappeared after reset? Aborting.`
-        )
-        return
-      }
-      const contextMessages = currentMessages.slice(0, userQueryIndex + 1)
+      // const currentMessages = getState().messages.messagesByTopic[topicId] || [] // Get updated list AFTER the reset
+      // const userQueryIndex = currentMessages.findIndex((m) => m.id === originalUserQuery.id)
+      // if (userQueryIndex === -1) {
+      //   console.error(
+      //     `[regenerateAssistantResponseThunk] Original user query ${originalUserQuery.id} disappeared after reset? Aborting.`
+      //   )
+      //   return
+      // }
+      // const contextMessages = currentMessages.slice(0, userQueryIndex + 1)
 
       // 10. Add fetch/process call to the queue for this topic
       const queue = getTopicQueue(topicId)
       queue.add(async () => {
-        await fetchAndProcessAssistantResponseImpl(
-          dispatch,
-          getState,
-          topicId,
-          assistant,
-          originalUserQuery, // Use the ORIGINAL user query as the trigger for correct askId
-          contextMessages, // Context up to the user query
-          resetAssistantMsg // Pass the RESET assistant message object
-        )
+        await fetchAndProcessAssistantResponseImpl(dispatch, getState, topicId, assistant, resetAssistantMsg)
       })
     } catch (error) {
       console.error(

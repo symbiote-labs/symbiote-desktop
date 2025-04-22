@@ -15,7 +15,7 @@ import {
 import type { Chunk } from '@renderer/types/chunk'
 import { MainTextMessageBlock, Message, MessageBlockType } from '@renderer/types/newMessage'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
-import { getMainTextContent } from '@renderer/utils/messageUtils/find'
+import { findMainTextBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
 
 import AiProvider from '../providers/AiProvider'
@@ -52,7 +52,7 @@ async function fetchExternalTool(
   onChunkReceived: (chunk: Chunk) => void,
   lastAnswer?: Message
 ): Promise<ExternalToolResult | null> {
-  const hasKnowledgeBase = !isEmpty(lastUserMessage?.blocks)
+  const hasKnowledgeBase = !isEmpty(findMainTextBlocks(lastUserMessage).filter((block) => block.knowledgeBaseIds))
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
   let extractResults: ExtractResults | undefined

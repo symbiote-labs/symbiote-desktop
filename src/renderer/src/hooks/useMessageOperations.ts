@@ -180,7 +180,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * Regenerate an assistant message's response.
+   * 重新生成助手消息
    * Dispatches regenerateAssistantResponseThunk.
    */
   const regenerateAssistantMessage = useCallback(
