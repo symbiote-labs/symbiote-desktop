@@ -495,6 +495,10 @@ export default class AnthropicProvider extends BaseProvider {
     return []
   }
 
+  public async generateImageByChat(): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
+
   /**
    * Generate suggestions
    * @returns The suggestions

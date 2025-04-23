@@ -336,32 +336,13 @@ export default class GeminiProvider extends BaseProvider {
     let time_first_token_millsec = 0
 
     const { cleanup, abortController } = this.createAbortController(userLastMessage?.id, true)
-    const signalProxy = {
-      _originalSignal: abortController.signal,
-
-      addEventListener: (eventName: string, listener: () => void) => {
-        if (eventName === 'abort') {
-          abortController.signal.addEventListener('abort', listener)
-        }
-      },
-      removeEventListener: (eventName: string, listener: () => void) => {
-        if (eventName === 'abort') {
-          abortController.signal.removeEventListener('abort', listener)
-        }
-      },
-      get aborted() {
-        return abortController.signal.aborted
-      }
-    }
 
     if (!streamOutput) {
       const response = await chat.sendMessage({
         message: messageContents as PartUnion,
         config: {
           ...generateContentConfig,
-          httpOptions: {
-            signal: signalProxy as any
-          }
+          abortSignal: abortController.signal
         }
       })
       const time_completion_millsec = new Date().getTime() - start_time_millsec
@@ -393,9 +374,7 @@ export default class GeminiProvider extends BaseProvider {
       message: messageContents as PartUnion,
       config: {
         ...generateContentConfig,
-        httpOptions: {
-          signal: signalProxy as any
-        }
+        abortSignal: abortController.signal
       }
     })
 
@@ -420,9 +399,7 @@ export default class GeminiProvider extends BaseProvider {
           message: flatten(toolResults.map((ts) => (ts as Content).parts)) as PartUnion,
           config: {
             ...generateContentConfig,
-            httpOptions: {
-              signal: signalProxy as any
-            }
+            abortSignal: abortController.signal
           }
         })
         await processStream(newStream, idx + 1)
@@ -812,5 +789,9 @@ export default class GeminiProvider extends BaseProvider {
       contents: [{ role: 'user', parts: [{ text: 'hi' }] }]
     })
     return data.embeddings?.[0]?.values?.length || 0
+  }
+
+  public generateImageByChat(): Promise<void> {
+    throw new Error('Method not implemented.')
   }
 }
