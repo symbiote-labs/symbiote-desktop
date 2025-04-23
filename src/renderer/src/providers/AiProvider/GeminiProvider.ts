@@ -592,8 +592,22 @@ export default class GeminiProvider extends BaseProvider {
             // 将当前工具调用添加到历史中
             const updatedToolResponses = [...previousToolResponses, currentToolResponse]
 
-            // 将工具调用和响应添加到历史中
+            // 将工具调用添加到历史中（模型角色）
             const toolCallMessage: Content = {
+              role: 'model',
+              parts: [
+                {
+                  functionCall: functionCall // 添加原始的函数调用
+                }
+              ]
+            }
+
+            // 将工具调用添加到历史中
+            history.push(toolCallMessage)
+
+            // 将工具调用响应添加到历史中（用户角色，但使用文本格式）
+            // 注意：GoogleGenerativeAI API 有限制，role为'user'的内容不能包含'functionResponse'部分
+            const toolResponseMessage: Content = {
               role: 'user',
               parts: [
                 {
@@ -610,8 +624,12 @@ export default class GeminiProvider extends BaseProvider {
               ]
             }
 
-            // 将工具调用结果添加到历史中
-            history.push(toolCallMessage)
+            // 将工具响应添加到历史中
+            history.push(toolResponseMessage)
+
+            // 打印添加到历史记录的内容，便于调试
+            console.log('[GeminiProvider] 添加到历史的工具调用:', JSON.stringify(toolCallMessage, null, 2))
+            console.log('[GeminiProvider] 添加到历史的工具响应:', JSON.stringify(toolResponseMessage, null, 2))
 
             // 打印历史记录信息，便于调试
             console.log(`[GeminiProvider] 工具调用历史记录已更新，当前历史长度: ${history.length}`)

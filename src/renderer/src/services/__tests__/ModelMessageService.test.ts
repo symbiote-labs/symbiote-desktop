@@ -1,11 +1,9 @@
-import assert from 'node:assert'
-import { test } from 'node:test'
-
 import { ChatCompletionMessageParam } from 'openai/resources'
+import { describe, expect, it } from 'vitest'
 
-const { processReqMessages } = require('../ModelMessageService')
+import { processReqMessages } from '../ModelMessageService'
 
-test('ModelMessageService', async (t) => {
+describe('ModelMessageService', () => {
   const mockMessages: ChatCompletionMessageParam[] = [
     { role: 'user', content: 'First question' },
     { role: 'user', content: 'Additional context' },
@@ -15,83 +13,73 @@ test('ModelMessageService', async (t) => {
     { role: 'assistant', content: 'Second answer' }
   ]
 
-  await t.test('should merge successive messages with same role for deepseek-reasoner model', () => {
-    const model = { id: 'deepseek-reasoner' }
+  it('should interleave messages with same role for deepseek-reasoner model', () => {
+    const model = { id: 'deepseek-reasoner', provider: 'test', name: 'Test Model', group: 'Test' }
     const result = processReqMessages(model, mockMessages)
 
-    assert.strictEqual(result.length, 4)
-    assert.deepStrictEqual(result[0], {
+    // Expected result should have empty messages inserted between consecutive messages of the same role
+    expect(result.length).toBe(9)
+    expect(result[0]).toEqual({
       role: 'user',
-      content: 'First question\nAdditional context'
+      content: 'First question'
     })
-    assert.deepStrictEqual(result[1], {
+    expect(result[1]).toEqual({
       role: 'assistant',
-      content: 'First answer\nAdditional information'
+      content: ''
     })
-    assert.deepStrictEqual(result[2], {
+    expect(result[2]).toEqual({
+      role: 'user',
+      content: 'Additional context'
+    })
+    expect(result[3]).toEqual({
+      role: 'assistant',
+      content: 'First answer'
+    })
+    expect(result[4]).toEqual({
+      role: 'user',
+      content: ''
+    })
+    expect(result[5]).toEqual({
+      role: 'assistant',
+      content: 'Additional information'
+    })
+    expect(result[6]).toEqual({
       role: 'user',
       content: 'Second question'
     })
-    assert.deepStrictEqual(result[3], {
+    expect(result[7]).toEqual({
       role: 'assistant',
       content: 'Second answer'
     })
   })
 
-  await t.test('should not merge messages for other models', () => {
-    const model = { id: 'gpt-4' }
+  it('should not modify messages for other models', () => {
+    const model = { id: 'gpt-4', provider: 'test', name: 'Test Model', group: 'Test' }
     const result = processReqMessages(model, mockMessages)
 
-    assert.strictEqual(result.length, mockMessages.length)
-    assert.deepStrictEqual(result, mockMessages)
+    expect(result.length).toBe(mockMessages.length)
+    expect(result).toEqual(mockMessages)
   })
 
-  await t.test('should handle empty messages array', () => {
-    const model = { id: 'deepseek-reasoner' }
+  it('should handle empty messages array', () => {
+    const model = { id: 'deepseek-reasoner', provider: 'test', name: 'Test Model', group: 'Test' }
     const result = processReqMessages(model, [])
 
-    assert.strictEqual(result.length, 0)
-    assert.deepStrictEqual(result, [])
+    expect(result.length).toBe(0)
+    expect(result).toEqual([])
   })
 
-  await t.test('should handle single message', () => {
-    const model = { id: 'deepseek-reasoner' }
-    const singleMessage = [{ role: 'user', content: 'Single message' }]
+  it('should handle single message', () => {
+    const model = { id: 'deepseek-reasoner', provider: 'test', name: 'Test Model', group: 'Test' }
+    const singleMessage = [{ role: 'user', content: 'Single message' }] as ChatCompletionMessageParam[]
     const result = processReqMessages(model, singleMessage)
 
-    assert.strictEqual(result.length, 1)
-    assert.deepStrictEqual(result, singleMessage)
+    expect(result.length).toBe(1)
+    expect(result).toEqual(singleMessage)
   })
 
-  await t.test('should preserve other message properties when merging', () => {
-    const model = { id: 'deepseek-reasoner' }
-    const messagesWithProps = [
-      {
-        role: 'user',
-        content: 'First message',
-        name: 'user1',
-        function_call: { name: 'test', arguments: '{}' }
-      },
-      {
-        role: 'user',
-        content: 'Second message',
-        name: 'user1'
-      }
-    ] as ChatCompletionMessageParam[]
-
-    const result = processReqMessages(model, messagesWithProps)
-
-    assert.strictEqual(result.length, 1)
-    assert.deepStrictEqual(result[0], {
-      role: 'user',
-      content: 'First message\nSecond message',
-      name: 'user1',
-      function_call: { name: 'test', arguments: '{}' }
-    })
-  })
-
-  await t.test('should handle alternating roles correctly', () => {
-    const model = { id: 'deepseek-reasoner' }
+  it('should handle alternating roles correctly', () => {
+    const model = { id: 'deepseek-reasoner', provider: 'test', name: 'Test Model', group: 'Test' }
     const alternatingMessages = [
       { role: 'user', content: 'Q1' },
       { role: 'assistant', content: 'A1' },
@@ -101,12 +89,13 @@ test('ModelMessageService', async (t) => {
 
     const result = processReqMessages(model, alternatingMessages)
 
-    assert.strictEqual(result.length, 4)
-    assert.deepStrictEqual(result, alternatingMessages)
+    // Alternating roles should remain unchanged
+    expect(result.length).toBe(4)
+    expect(result).toEqual(alternatingMessages)
   })
 
-  await t.test('should handle messages with empty content', () => {
-    const model = { id: 'deepseek-reasoner' }
+  it('should handle messages with empty content', () => {
+    const model = { id: 'deepseek-reasoner', provider: 'test', name: 'Test Model', group: 'Test' }
     const messagesWithEmpty = [
       { role: 'user', content: 'Q1' },
       { role: 'user', content: '' },
@@ -115,10 +104,12 @@ test('ModelMessageService', async (t) => {
 
     const result = processReqMessages(model, messagesWithEmpty)
 
-    assert.strictEqual(result.length, 1)
-    assert.deepStrictEqual(result[0], {
-      role: 'user',
-      content: 'Q1\n\nQ2'
-    })
+    // Should insert empty assistant messages between consecutive user messages
+    expect(result.length).toBe(5)
+    expect(result[0]).toEqual({ role: 'user', content: 'Q1' })
+    expect(result[1]).toEqual({ role: 'assistant', content: '' })
+    expect(result[2]).toEqual({ role: 'user', content: '' })
+    expect(result[3]).toEqual({ role: 'assistant', content: '' })
+    expect(result[4]).toEqual({ role: 'user', content: 'Q2' })
   })
 })

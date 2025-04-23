@@ -52,6 +52,17 @@ const MessageAttachments: FC<Props> = ({ message }) => {
     })
   }, [nonImageFiles])
 
+  const StyledUpload = styled(Upload)`
+    .ant-upload-list-item-name {
+      max-width: 220px;
+      display: inline-block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+  `
+
   return (
     <Container style={{ marginBottom: 8 }}>
       {/* 渲染图片文件 */}
@@ -99,7 +110,7 @@ const MessageAttachments: FC<Props> = ({ message }) => {
       {/* 渲染非图片文件 */}
       {nonImageFiles.length > 0 && (
         <FileContainer className="message-attachments">
-          <Upload listType="text" disabled fileList={memoizedFileList} />
+          <StyledUpload listType="text" disabled fileList={memoizedFileList} />
         </FileContainer>
       )}
     </Container>

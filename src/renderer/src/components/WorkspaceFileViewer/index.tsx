@@ -25,7 +25,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { useTheme } from '../../hooks/useTheme'
 
 const { Title } = Typography
-const { TabPane } = Tabs
 
 // --- Styled Components Props Interfaces ---
 
@@ -308,48 +307,56 @@ const WorkspaceFileViewer: React.FC<FileViewerProps> = ({
       </FileHeader>
 
       <FileContent>
-        <FullHeightTabs defaultActiveKey="code">
-          {/* 代码 Tab: 使用 SyntaxHighlighter 或 TextArea */}
-          <TabPane tab={t('workspace.code')} key="code">
-            <CodeScrollContainer>
-              {isEditing ? (
-                <EditorTextArea
-                  value={editedContent}
-                  onChange={(e) => setEditedContent(e.target.value)}
-                  isDark={!useInternalLightTheme}
-                  ref={textAreaRef}
-                  spellCheck={false}
-                />
-              ) : (
-                <SyntaxHighlighter
-                  language={language}
-                  style={syntaxHighlighterStyle} // 应用所选主题
-                  showLineNumbers
-                  wrapLines={true}
-                  lineProps={{ style: { wordBreak: 'break-all', whiteSpace: 'pre-wrap' } }}
-                  customStyle={{
-                    margin: 0,
-                    padding: '16px',
-                    borderRadius: 0,
-                    minHeight: '100%',
-                    fontSize: token.fontSizeSM // 可以用小号字体
-                    // 背景色由 style prop 的主题决定
-                  }}
-                  codeTagProps={{ style: { display: 'block', fontFamily: token.fontFamilyCode } }} // 明确使用代码字体
-                >
-                  {content}
-                </SyntaxHighlighter>
-              )}
-            </CodeScrollContainer>
-          </TabPane>
-
-          {/* 原始内容 Tab: 只使用 RawScrollContainer 显示纯文本 */}
-          <TabPane tab={t('workspace.raw')} key="raw">
-            <RawScrollContainer isDark={isDarkThemeForRaw} token={token}>
-              {content} {/* 直接渲染文本内容，没有 SyntaxHighlighter */}
-            </RawScrollContainer>
-          </TabPane>
-        </FullHeightTabs>
+        <FullHeightTabs
+          defaultActiveKey="code"
+          items={[
+            {
+              key: 'code',
+              label: t('workspace.code'),
+              children: (
+                <CodeScrollContainer>
+                  {isEditing ? (
+                    <EditorTextArea
+                      value={editedContent}
+                      onChange={(e) => setEditedContent(e.target.value)}
+                      isDark={!useInternalLightTheme}
+                      ref={textAreaRef}
+                      spellCheck={false}
+                    />
+                  ) : (
+                    <SyntaxHighlighter
+                      language={language}
+                      style={syntaxHighlighterStyle} // 应用所选主题
+                      showLineNumbers
+                      wrapLines={true}
+                      lineProps={{ style: { wordBreak: 'break-all', whiteSpace: 'pre-wrap' } }}
+                      customStyle={{
+                        margin: 0,
+                        padding: '16px',
+                        borderRadius: 0,
+                        minHeight: '100%',
+                        fontSize: token.fontSizeSM // 可以用小号字体
+                        // 背景色由 style prop 的主题决定
+                      }}
+                      codeTagProps={{ style: { display: 'block', fontFamily: token.fontFamilyCode } }} // 明确使用代码字体
+                    >
+                      {content}
+                    </SyntaxHighlighter>
+                  )}
+                </CodeScrollContainer>
+              )
+            },
+            {
+              key: 'raw',
+              label: t('workspace.raw'),
+              children: (
+                <RawScrollContainer isDark={isDarkThemeForRaw} token={token}>
+                  {content} {/* 直接渲染文本内容，没有 SyntaxHighlighter */}
+                </RawScrollContainer>
+              )
+            }
+          ]}
+        />
       </FileContent>
 
       <ActionBar token={token}>

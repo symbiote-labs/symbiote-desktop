@@ -373,6 +373,7 @@ export type WebSearchProvider = {
   url?: string
   contentLimit?: number
   usingBrowser?: boolean
+  description?: string
 }
 
 export type WebSearchResponse = {
@@ -384,6 +385,10 @@ export type WebSearchResult = {
   title: string
   content: string
   url: string
+  source?: string
+  summary?: string
+  keywords?: string[]
+  relevanceScore?: number
 }
 
 export type KnowledgeReference = {

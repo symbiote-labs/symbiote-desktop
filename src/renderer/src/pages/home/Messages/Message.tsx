@@ -1,6 +1,8 @@
 import TTSProgressBar from '@renderer/components/TTSProgressBar'
 import { FONT_FAMILY } from '@renderer/config/constant'
+import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useAssistant } from '@renderer/hooks/useAssistant'
+import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useModel } from '@renderer/hooks/useModel'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useMessageStyle, useSettings } from '@renderer/hooks/useSettings'
@@ -19,6 +21,13 @@ import { useTranslation } from 'react-i18next'
 import { shallowEqual } from 'react-redux'
 // import { useSelector } from 'react-redux'; // Removed unused import
 import styled from 'styled-components' // Ensure styled-components is imported
+
+// 扩展Window接口
+declare global {
+  interface Window {
+    toggleTranslation: (event: MouseEvent) => void
+  }
+}
 
 import MessageContent from './MessageContent'
 import MessageErrorBoundary from './MessageErrorBoundary'
@@ -341,6 +350,171 @@ const MessageItem: FC<Props> = ({
 
 // 使用 hook 封装上下文菜单项生成逻辑，便于在组件内使用
 const useContextMenuItems = (t: (key: string) => string, message: Message) => {
+  // 使用useAppSelector获取话题对象
+  const topicObj = useAppSelector((state) => {
+    const assistants = state.assistants.assistants
+    for (const assistant of assistants) {
+      const topic = assistant.topics.find((t) => t.id === message.topicId)
+      if (topic) return topic
+    }
+    return null
+  })
+
+  // 如果找不到话题对象，创建一个简单的话题对象
+  const fallbackTopic = useMemo(
+    () => ({
+      id: message.topicId,
+      assistantId: message.assistantId,
+      name: '',
+      createdAt: '',
+      updatedAt: '',
+      messages: []
+    }),
+    [message.topicId, message.assistantId]
+  )
+
+  // 导入翻译相关的依赖
+  const { editMessage } = useMessageOperations(topicObj || fallbackTopic)
+  const [isTranslating, setIsTranslating] = useState(false)
+
+  // 不再需要存储翻译映射关系
+
+  // 处理翻译功能
+  const handleTranslate = useCallback(
+    async (language: string, text: string, selection?: { start: number; end: number }) => {
+      if (isTranslating) return
+
+      // 显示翻译中的提示
+      window.message.loading({ content: t('translate.processing'), key: 'translate-message' })
+
+      setIsTranslating(true)
+
+      try {
+        // 导入翻译服务
+        const { translateText } = await import('@renderer/services/TranslateService')
+
+        // 检查文本是否包含翻译标签
+        const translatedTagRegex = /<translated[^>]*>([\s\S]*?)<\/translated>/g
+
+        // 如果文本包含翻译标签，则提取原始文本
+        let originalText = text
+        const translatedMatch = text.match(translatedTagRegex)
+        if (translatedMatch) {
+          // 提取原始文本属性
+          const originalAttrRegex = /original="([^"]*)"/
+          const originalAttrMatch = translatedMatch[0].match(originalAttrRegex)
+          if (originalAttrMatch && originalAttrMatch[1]) {
+            originalText = originalAttrMatch[1].replace(/&quot;/g, '"')
+          }
+        }
+
+        // 执行翻译
+        const translatedText = await translateText(originalText, language)
+
+        // 如果是选中的文本，直接替换原文中的选中部分
+        if (selection) {
+          // 不再需要存储翻译映射关系
+
+          // 替换消息内容中的选中部分
+          const newContent =
+            message.content.substring(0, selection.start) +
+            `<translated original="${originalText.replace(/"/g, '&quot;')}" language="${language}">${translatedText}</translated>` +
+            message.content.substring(selection.end)
+
+          // 更新消息内容
+          editMessage(message.id, { content: newContent })
+
+          // 关闭加载提示
+          window.message.destroy('translate-message')
+
+          // 显示成功提示
+          window.message.success({
+            content: t('translate.success'),
+            key: 'translate-message'
+          })
+        }
+        // 如果是整个消息的翻译，则更新消息的翻译内容
+        else if (text === message.content) {
+          // 更新消息的翻译内容
+          editMessage(message.id, { translatedContent: translatedText })
+
+          // 关闭加载提示
+          window.message.destroy('translate-message')
+
+          // 显示成功提示
+          window.message.success({
+            content: t('translate.success'),
+            key: 'translate-message'
+          })
+        }
+      } catch (error) {
+        console.error('Translation failed:', error)
+        window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
+      } finally {
+        setIsTranslating(false)
+      }
+    },
+    [isTranslating, message, editMessage, t]
+  )
+
+  // 添加全局翻译切换函数
+  useEffect(() => {
+    // 定义切换翻译的函数
+    window.toggleTranslation = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (target.classList.contains('translated-text')) {
+        const original = target.getAttribute('data-original')
+        const currentText = target.textContent
+
+        // 切换显示内容
+        if (target.getAttribute('data-showing-original') === 'true') {
+          // 当前显示原文，切换回翻译文本
+          target.textContent = target.getAttribute('data-translated') || ''
+          target.setAttribute('data-showing-original', 'false')
+        } else {
+          // 当前显示翻译文本，切换回原文
+          // 始终保存当前翻译文本，不论翻译多少次
+          if (!target.hasAttribute('data-translated')) {
+            target.setAttribute('data-translated', currentText || '')
+          }
+          target.textContent = original || ''
+          target.setAttribute('data-showing-original', 'true')
+        }
+      }
+    }
+
+    // 清理函数
+    return () => {
+      // 使用类型断言来避免 TypeScript 错误
+      ;(window as any).toggleTranslation = undefined
+    }
+  }, [])
+
+  // 获取选中文本的位置信息
+  const getSelectionInfo = useCallback(() => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return null
+
+    // 获取消息内容
+    const content = message.content
+
+    // 获取选中文本
+    const selectedText = selection.toString()
+
+    // 如果没有选中文本，返回null
+    if (!selectedText) return null
+
+    // 尝试获取选中文本在消息内容中的位置
+    const startIndex = content.indexOf(selectedText)
+    if (startIndex === -1) return null
+
+    return {
+      text: selectedText,
+      start: startIndex,
+      end: startIndex + selectedText.length
+    }
+  }, [message.content])
+
   return useMemo(() => {
     return (selectedQuoteText: string, selectedText: string): ItemType[] => {
       const items: ItemType[] = []
@@ -363,6 +537,27 @@ const useContextMenuItems = (t: (key: string) => string, message: Message) => {
             EventEmitter.emit(EVENT_NAMES.QUOTE_TEXT, selectedQuoteText)
           }
         })
+
+        // 添加翻译子菜单
+        items.push({
+          key: 'translate',
+          label: t('chat.translate') || '翻译',
+          children: [
+            ...TranslateLanguageOptions.map((item) => ({
+              label: item.emoji + ' ' + item.label,
+              key: `translate-${item.value}`,
+              onClick: () => {
+                const selectionInfo = getSelectionInfo()
+                if (selectionInfo) {
+                  handleTranslate(item.value, selectedText, selectionInfo)
+                } else {
+                  handleTranslate(item.value, selectedText)
+                }
+              }
+            }))
+          ]
+        })
+
         items.push({
           key: 'speak_selected',
           label: t('chat.message.speak_selection') || '朗读选中部分',
@@ -406,7 +601,7 @@ const useContextMenuItems = (t: (key: string) => string, message: Message) => {
 
       return items
     }
-  }, [t, message.id, message.content]) // 只依赖 t 和 message 的关键属性
+  }, [t, message.id, message.content, handleTranslate, getSelectionInfo]) // 添加getSelectionInfo到依赖项
 }
 
 // Styled components definitions
@@ -445,6 +640,8 @@ const MessageContentContainer = styled.div`
   margin-left: 46px;
   margin-top: 5px;
 `
+
+// 样式已移至Markdown组件中处理
 
 const MessageFooter = styled.div`
   display: flex;

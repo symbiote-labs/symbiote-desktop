@@ -169,6 +169,7 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     // Convert [n] format to superscript numbers and make them clickable
     // Use <sup> tag for superscript and make it a link with citation data
     if (message.metadata?.webSearch || message.metadata?.knowledge) {
+      // 修复引用bug，支持[[1]]和[1]两种格式
       content = content.replace(/\[\[(\d+)\]\]|\[(\d+)\]/g, (match, num1, num2) => {
         const num = num1 || num2
         const index = parseInt(num) - 1
@@ -229,9 +230,11 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   }
 
   // --- MODIFIED LINE BELOW ---
-  // This regex now matches <tool_use ...> OR <XML ...> tags (case-insensitive)
-  // and allows for attributes and whitespace, then removes the entire tag pair and content.
-  const tagsToRemoveRegex = /<(?:tool_use|XML)(?:[^>]*)?>(?:.*?)<\/\s*(?:tool_use|XML)\s*>/gis
+  // This regex matches various tool calling formats:
+  // 1. <tool_use>...</tool_use> - Standard format
+  // 2. Special format: <tool_use>feaAumUH6sCQu074KDtuY6{"format": "time"}</tool_use>
+  // Case-insensitive, allows for attributes and whitespace
+  const tagsToRemoveRegex = /<tool_use>(?:[\s\S]*?)<\/tool_use>/gi
 
   return (
     <Fragment>
@@ -338,8 +341,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         // Apply regex replacement here for TTS
         <TTSHighlightedText text={processedContent.replace(tagsToRemoveRegex, '')} />
       ) : (
-        // Don't remove XML tags, let Markdown component handle them
-        <Markdown message={{ ...message, content: processedContent }} />
+        // Remove tool_use XML tags before rendering Markdown
+        <Markdown message={{ ...message, content: processedContent.replace(tagsToRemoveRegex, '') }} />
       )}
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (

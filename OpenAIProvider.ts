@@ -19,24 +19,23 @@ import {
   filterEmptyMessages,
   filterUserRoleStartMessages
 } from '@renderer/services/MessagesService'
-import { processReqMessages } from '@renderer/services/ModelMessageService'
 import store from '@renderer/store'
-import { getActiveServers } from '@renderer/store/mcp'
 import {
   Assistant,
   FileTypes,
   GenerateImageParams,
   MCPToolResponse,
-  Message,
   Model,
   Provider,
   Suggestion
 } from '@renderer/types'
+import { Message } from '@renderer/types/newMessageTypes'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
+import { findFileBlocks, findImageBlocks, getMessageContent } from '@renderer/utils/messageUtils/find'
 import { mcpToolCallResponseToOpenAIMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
-import { isEmpty, takeRight } from 'lodash'
+import { takeRight } from 'lodash'
 import OpenAI, { AzureOpenAI } from 'openai'
 import {
   ChatCompletionContentPart,
@@ -96,14 +95,18 @@ export default class OpenAIProvider extends BaseProvider {
    * @returns The file content
    */
   private async extractFileContent(message: Message) {
-    if (message.files && message.files.length > 0) {
-      const textFiles = message.files.filter((file) => [FileTypes.TEXT, FileTypes.DOCUMENT].includes(file.type))
+    const fileBlocks = findFileBlocks(message)
+    if (fileBlocks.length > 0) {
+      const textFileBlocks = fileBlocks.filter(
+        (fb) => fb.file && [FileTypes.TEXT, FileTypes.DOCUMENT].includes(fb.file.type)
+      )
 
-      if (textFiles.length > 0) {
+      if (textFileBlocks.length > 0) {
         let text = ''
         const divider = '\n\n---\n\n'
 
-        for (const file of textFiles) {
+        for (const fileBlock of textFileBlocks) {
+          const file = fileBlock.file
           const fileContent = (await window.api.file.read(file.id + file.ext)).trim()
           const fileNameRow = 'file: ' + file.origin_name + '\n\n'
           text = text + fileNameRow + fileContent + divider
@@ -128,11 +131,12 @@ export default class OpenAIProvider extends BaseProvider {
   ): Promise<OpenAI.Chat.Completions.ChatCompletionMessageParam> {
     const isVision = isVisionModel(model)
     const content = await this.getMessageContent(message)
+    const fileBlocks = findFileBlocks(message)
+    const imageBlocks = findImageBlocks(message)
 
-    // If the message does not have files, return the message
-    if (isEmpty(message.files)) {
+    if (fileBlocks.length === 0 && imageBlocks.length === 0) {
       return {
-        role: message.role,
+        role: message.role === 'system' ? 'user' : message.role,
         content
       }
     }
@@ -142,7 +146,7 @@ export default class OpenAIProvider extends BaseProvider {
       const fileContent = await this.extractFileContent(message)
 
       return {
-        role: message.role,
+        role: message.role === 'system' ? 'user' : message.role,
         content: content + '\n\n---\n\n' + fileContent
       }
     }
@@ -154,14 +158,21 @@ export default class OpenAIProvider extends BaseProvider {
       parts.push({ type: 'text', text: content })
     }
 
-    for (const file of message.files || []) {
-      if (file.type === FileTypes.IMAGE && isVision) {
-        const image = await window.api.file.base64Image(file.id + file.ext)
-        parts.push({
-          type: 'image_url',
-          image_url: { url: image.data }
-        })
+    for (const imageBlock of imageBlocks) {
+      if (isVision) {
+        if (imageBlock.file) {
+          const image = await window.api.file.base64Image(imageBlock.file.id + imageBlock.file.ext)
+          parts.push({ type: 'image_url', image_url: { url: image.data } })
+        } else if (imageBlock.url && imageBlock.url.startsWith('data:')) {
+          parts.push({ type: 'image_url', image_url: { url: imageBlock.url } })
+        }
       }
+    }
+
+    for (const fileBlock of fileBlocks) {
+      const file = fileBlock.file
+      if (!file) continue
+
       if ([FileTypes.TEXT, FileTypes.DOCUMENT].includes(file.type)) {
         const fileContent = await (await window.api.file.read(file.id + file.ext)).trim()
         parts.push({
@@ -172,7 +183,7 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     return {
-      role: message.role,
+      role: message.role === 'system' ? 'user' : message.role,
       content: parts
     } as ChatCompletionMessageParam
   }
@@ -295,7 +306,7 @@ export default class OpenAIProvider extends BaseProvider {
    * @returns True if the model is an OpenAI reasoning model, false otherwise
    */
   private isOpenAIReasoning(model: Model) {
-    return model.id.startsWith('o1') || model.id.startsWith('o3') || model.id.startsWith('o4')
+    return model.id.startsWith('o1') || model.id.startsWith('o3')
   }
 
   /**
@@ -312,17 +323,7 @@ export default class OpenAIProvider extends BaseProvider {
     const model = assistant.model || defaultModel
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
     messages = addImageFileToContents(messages)
-    // 应用记忆功能到系统提示词
-    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
-    // 获取当前话题ID
-    const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
-    const enhancedPrompt = await applyMemoriesToPrompt(assistant.prompt || '', currentTopicId)
-    console.log(
-      '[OpenAIProvider.completions] Applied memories to prompt, length difference:',
-      enhancedPrompt.length - (assistant.prompt || '').length
-    )
-
-    let systemMessage = { role: 'system', content: enhancedPrompt }
+    let systemMessage = { role: 'system', content: assistant.prompt || '' }
     if (isOpenAIoSeries(model)) {
       systemMessage = {
         role: 'developer',
@@ -330,21 +331,7 @@ export default class OpenAIProvider extends BaseProvider {
       }
     }
     if (mcpTools && mcpTools.length > 0) {
-      // 获取是否使用提示词调用工具的设置
-      const usePromptForToolCalling = store.getState().settings.usePromptForToolCalling
-
-      if (usePromptForToolCalling) {
-        // 使用提示词调用工具
-        systemMessage.content = await buildSystemPrompt(
-          systemMessage.content || '',
-          mcpTools,
-          getActiveServers(store.getState())
-        )
-        console.log('[OpenAIProvider] 使用提示词调用MCP工具')
-      } else {
-        // 使用函数调用
-        console.log('[OpenAIProvider] 使用函数调用MCP工具')
-      }
+      systemMessage.content = buildSystemPrompt(systemMessage.content || '', mcpTools)
     }
 
     const userMessages: ChatCompletionMessageParam[] = []
@@ -382,14 +369,8 @@ export default class OpenAIProvider extends BaseProvider {
       const combinedChunks = lastChunk + delta.content
       lastChunk = delta.content
 
-      // 检测思考结束 - 支持多种标签格式
-      if (
-        combinedChunks.includes('###Response') ||
-        delta.content === '</think>' ||
-        delta.content.includes('</think>') ||
-        delta.content === '</thinking>' ||
-        delta.content.includes('</thinking>')
-      ) {
+      // 检测思考结束
+      if (combinedChunks.includes('###Response') || delta.content === '</think>') {
         return true
       }
 
@@ -414,146 +395,53 @@ export default class OpenAIProvider extends BaseProvider {
     const { signal } = abortController
     await this.checkIsCopilot()
 
-    //当 systemMessage 内容为空时不发送 systemMessage
-    let reqMessages: ChatCompletionMessageParam[]
-    if (!systemMessage.content) {
-      reqMessages = [...userMessages]
-    } else {
-      reqMessages = [systemMessage, ...userMessages].filter(Boolean) as ChatCompletionMessageParam[]
-    }
-
-    // 处理连续的相同角色消息，例如 deepseek-reasoner 模型不支持连续的用户或助手消息
-    console.debug('[tool] reqMessages before processing', model.id, reqMessages)
-    reqMessages = processReqMessages(model, reqMessages)
-    console.debug('[tool] reqMessages', model.id, reqMessages)
+    const reqMessages: ChatCompletionMessageParam[] = [systemMessage, ...userMessages].filter(
+      Boolean
+    ) as ChatCompletionMessageParam[]
 
     const toolResponses: MCPToolResponse[] = []
     let firstChunk = true
 
     const processToolUses = async (content: string, idx: number) => {
-      try {
-        // 执行工具调用并获取结果
-        const toolResults = await parseAndCallTools(
-          content,
-          toolResponses,
-          onChunk,
-          idx,
-          mcpToolCallResponseToOpenAIMessage,
-          mcpTools,
-          isVisionModel(model)
-        )
+      const toolResults = await parseAndCallTools(
+        content,
+        toolResponses,
+        onChunk,
+        idx,
+        mcpToolCallResponseToOpenAIMessage,
+        mcpTools,
+        isVisionModel(model)
+      )
 
-        // 如果有工具调用结果，将其添加到上下文中，并进行第二次API调用
-        if (toolResults.length > 0) {
-          console.log('[OpenAIProvider] 工具调用已执行，将结果添加到上下文并生成第二条消息')
+      if (toolResults.length > 0) {
+        reqMessages.push({
+          role: 'assistant',
+          content: content
+        } as ChatCompletionMessageParam)
+        toolResults.forEach((ts) => reqMessages.push(ts as ChatCompletionMessageParam))
 
-          // 添加原始助手消息到消息列表
-          reqMessages.push({
-            role: 'assistant',
-            content: content
-          } as ChatCompletionMessageParam)
-
-          // 添加工具调用结果到消息列表
-          toolResults.forEach((ts) => reqMessages.push(ts as ChatCompletionMessageParam))
-
-          try {
-            // 进行第二次API调用
-            const requestParams: any = {
+        const newStream = await this.sdk.chat.completions
+          // @ts-ignore key is not typed
+          .create(
+            {
               model: model.id,
               messages: reqMessages,
               temperature: this.getTemperature(assistant, model),
               top_p: this.getTopP(assistant, model),
               max_tokens: maxTokens,
-              stream: isSupportStreamOutput()
+              keep_alive: this.keepAliveTime,
+              stream: isSupportStreamOutput(),
+              // tools: tools,
+              ...getOpenAIWebSearchParams(assistant, model),
+              ...this.getReasoningEffort(assistant, model),
+              ...this.getProviderSpecificParameters(assistant, model),
+              ...this.getCustomParameters(assistant)
+            },
+            {
+              signal
             }
-
-            // 添加其他参数
-            const webSearchParams = getOpenAIWebSearchParams(assistant, model)
-            const reasoningEffort = this.getReasoningEffort(assistant, model)
-            const specificParams = this.getProviderSpecificParameters(assistant, model)
-            const customParams = this.getCustomParameters(assistant)
-
-            // 合并所有参数
-            const newStream = await this.sdk.chat.completions.create(
-              {
-                ...requestParams,
-                ...webSearchParams,
-                ...reasoningEffort,
-                ...specificParams,
-                ...customParams
-              },
-              {
-                signal
-              }
-            )
-
-            // 处理第二次响应
-            await processStream(newStream, idx + 1)
-          } catch (error: any) {
-            // 处理API调用错误
-            console.error('[OpenAIProvider] 第二次API调用失败:', error)
-
-            // 尝试使用简化的消息列表再次请求
-            try {
-              // 创建简化的消息列表，只包含系统消息、最后一条用户消息和工具调用结果
-              const lastUserMessage = reqMessages.find((m) => m.role === 'user')
-              const simplifiedMessages: ChatCompletionMessageParam[] = [
-                reqMessages[0], // 系统消息
-                ...(lastUserMessage ? [lastUserMessage] : []), // 最后一条用户消息，如果存在
-                ...toolResults.map((ts) => ts as ChatCompletionMessageParam) // 工具调用结果
-              ]
-
-              // 等待3秒再尝试
-              await new Promise((resolve) => setTimeout(resolve, 3000))
-
-              const fallbackResponse = await this.sdk.chat.completions.create(
-                {
-                  model: model.id,
-                  messages: simplifiedMessages,
-                  temperature: this.getTemperature(assistant, model),
-                  top_p: this.getTopP(assistant, model),
-                  max_tokens: maxTokens,
-                  stream: isSupportStreamOutput()
-                },
-                {
-                  signal
-                }
-              )
-
-              // 处理备用方案响应
-              if (isSupportStreamOutput()) {
-                await processStream(fallbackResponse, idx + 1)
-              } else {
-                // 非流式响应的处理
-                const time_completion_millsec = new Date().getTime() - start_time_millsec
-                const response = fallbackResponse as OpenAI.Chat.Completions.ChatCompletion
-
-                onChunk({
-                  text: response.choices[0].message?.content || '',
-                  usage: response.usage,
-                  metrics: {
-                    completion_tokens: response.usage?.completion_tokens,
-                    time_completion_millsec,
-                    time_first_token_millsec: 0
-                  }
-                })
-              }
-            } catch (fallbackError: any) {
-              // 备用方案也失败
-              onChunk({
-                text: `\n\n工具调用结果处理失败: ${error.message || '未知错误'}`
-              })
-            }
-          }
-        }
-      } catch (error: any) {
-        // 处理工具调用过程中的错误
-        console.error('[OpenAIProvider] 工具调用过程出错:', error)
-
-        // 向用户发送错误消息
-        onChunk({
-          text: `\n\n工具调用过程出错: ${error.message || '未知错误'}`
-        })
+          )
+        await processStream(newStream, idx + 1)
       }
     }
 
@@ -571,107 +459,35 @@ export default class OpenAIProvider extends BaseProvider {
         })
       }
 
-      let content = '' // Accumulates the full, raw content
-      let isCurrentlyThinking = false // Flag to track if we are inside <thinking> tags
-
+      let content = ''
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
         }
 
         const delta = chunk.choices[0]?.delta
-        let deltaContent = delta?.content || '' // Get delta content for processing
-
-        // Accumulate raw content
         if (delta?.content) {
           content += delta.content
         }
 
-        let textToSend = '' // Content for the main answer part
-        let reasoningToSend = delta?.reasoning_content || delta?.reasoning || '' // Content for the thinking box (includes specific fields + tagged content)
-
-        if (isReasoningModel(model)) {
-          // Process content chunk by chunk, handling tags
-          while (deltaContent.length > 0) {
-            if (isCurrentlyThinking) {
-              // Look for the end tag
-              const endTagThinkIndex = deltaContent.indexOf('</think>')
-              const endTagThinkingIndex = deltaContent.indexOf('</thinking>')
-              let endTagIndex = -1
-              let endTag = ''
-
-              if (endTagThinkIndex !== -1 && (endTagThinkingIndex === -1 || endTagThinkIndex < endTagThinkingIndex)) {
-                endTagIndex = endTagThinkIndex
-                endTag = '</think>'
-              } else if (endTagThinkingIndex !== -1) {
-                endTagIndex = endTagThinkingIndex
-                endTag = '</thinking>'
-              }
-
-              if (endTagIndex !== -1) {
-                // End tag found in this chunk
-                const thinkingPart = deltaContent.substring(0, endTagIndex + endTag.length)
-                reasoningToSend += thinkingPart // Add content up to and including the tag to reasoning
-                deltaContent = deltaContent.substring(endTagIndex + endTag.length) // Remaining content
-                isCurrentlyThinking = false // Exited thinking state
-              } else {
-                // No end tag in this chunk, entire chunk is thinking content
-                reasoningToSend += deltaContent
-                deltaContent = '' // Consumed the chunk
-              }
-            } else {
-              // Not currently thinking, look for the start tag
-              const startTagThinkIndex = deltaContent.indexOf('<think>')
-              const startTagThinkingIndex = deltaContent.indexOf('<thinking>')
-              let startTagIndex = -1
-
-              if (
-                startTagThinkIndex !== -1 &&
-                (startTagThinkingIndex === -1 || startTagThinkIndex < startTagThinkingIndex)
-              ) {
-                startTagIndex = startTagThinkIndex
-              } else if (startTagThinkingIndex !== -1) {
-                startTagIndex = startTagThinkingIndex
-              }
-
-              if (startTagIndex !== -1) {
-                // Start tag found in this chunk
-                const nonThinkingPart = deltaContent.substring(0, startTagIndex)
-                textToSend += nonThinkingPart // Add content before the tag to text
-                // The part from the tag onwards will be handled in the next iteration or as reasoning
-                deltaContent = deltaContent.substring(startTagIndex)
-                isCurrentlyThinking = true // Entered thinking state
-              } else {
-                // No start tag in this chunk, entire chunk is non-thinking content
-                textToSend += deltaContent
-                deltaContent = '' // Consumed the chunk
-              }
-            }
-          }
-        } else {
-          // Non-reasoning models: always assign to textToSend
-          textToSend = delta?.content || '' // Use original delta content directly
-        }
-
-        // --- Timing and other metadata calculation ---
         if (delta?.reasoning_content || delta?.reasoning) {
-          // Keep track if specific reasoning fields were ever present
           hasReasoningContent = true
         }
-        if (time_first_token_millsec == 0 && delta?.content) {
-          // First token with any content
+
+        if (time_first_token_millsec == 0) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
         }
-        // Use the previously modified isReasoningJustDone for timing the end of *initial* reasoning phase
+
         if (time_first_content_millsec == 0 && isReasoningJustDone(delta)) {
           time_first_content_millsec = new Date().getTime()
         }
+
         const time_completion_millsec = new Date().getTime() - start_time_millsec
         const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
-        // --- End Timing ---
 
         // Extract citations from the raw response if available
         const citations = (chunk as OpenAI.Chat.Completions.ChatCompletionChunk & { citations?: string[] })?.citations
+
         const finishReason = chunk.choices[0]?.finish_reason
 
         let webSearch: any[] | undefined = undefined
@@ -680,35 +496,26 @@ export default class OpenAIProvider extends BaseProvider {
         }
         if (firstChunk && assistant.enableWebSearch && isHunyuanSearchModel(model)) {
           webSearch = chunk?.search_info?.search_results
-          firstChunk = false // Corrected: set to false after processing first chunk
+          firstChunk = true
         }
+        onChunk({
+          text: delta?.content || '',
+          reasoning_content: delta?.reasoning_content || delta?.reasoning || '',
+          usage: chunk.usage,
+          metrics: {
+            completion_tokens: chunk.usage?.completion_tokens,
+            time_completion_millsec,
+            time_first_token_millsec,
+            time_thinking_millsec
+          },
+          webSearch,
+          annotations: delta?.annotations,
+          citations,
+          mcpToolResponse: toolResponses
+        })
+      }
 
-        // 添加日志输出，帮助调试
-        if (reasoningToSend && reasoningToSend.length > 0) {
-          console.log('[OpenAIProvider] 发送思考内容，长度:', reasoningToSend.length)
-        }
-
-        // Call onChunk only if there's something to send (text, reasoning, or metadata)
-        if (textToSend || reasoningToSend || chunk.usage || webSearch || delta?.annotations || citations) {
-          onChunk({
-            text: textToSend, // Only non-thinking content
-            reasoning_content: reasoningToSend, // Thinking content + specific reasoning fields
-            usage: chunk.usage,
-            metrics: {
-              completion_tokens: chunk.usage?.completion_tokens,
-              time_completion_millsec,
-              time_first_token_millsec,
-              time_thinking_millsec
-            },
-            webSearch,
-            annotations: delta?.annotations,
-            citations,
-            mcpToolResponse: toolResponses
-          })
-        }
-      } // End for await loop
-
-      await processToolUses(content, idx) // Process tool uses based on the full accumulated content
+      await processToolUses(content, idx)
     }
 
     const stream = await this.sdk.chat.completions
@@ -722,18 +529,7 @@ export default class OpenAIProvider extends BaseProvider {
           max_tokens: maxTokens,
           keep_alive: this.keepAliveTime,
           stream: isSupportStreamOutput(),
-          ...(mcpTools && mcpTools.length > 0 && !store.getState().settings.usePromptForToolCalling
-            ? {
-                tools: mcpTools.map((tool) => ({
-                  type: 'function',
-                  function: {
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.inputSchema
-                  }
-                }))
-              }
-            : {}),
+          // tools: tools,
           ...getOpenAIWebSearchParams(assistant, model),
           ...this.getReasoningEffort(assistant, model),
           ...this.getProviderSpecificParameters(assistant, model),
@@ -761,23 +557,13 @@ export default class OpenAIProvider extends BaseProvider {
   async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
-
-    // 应用记忆功能到系统提示词
-    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
-    // 获取当前话题ID
-    const currentTopicId = message.topicId
-    const enhancedPrompt = await applyMemoriesToPrompt(assistant.prompt || '', currentTopicId)
-    console.log(
-      '[OpenAIProvider.translate] Applied memories to prompt, length difference:',
-      enhancedPrompt.length - (assistant.prompt || '').length
-    )
-
-    const messages = message.content
+    const content = await this.getMessageContent(message)
+    const messagesForApi = content
       ? [
-          { role: 'system', content: enhancedPrompt },
-          { role: 'user', content: message.content }
+          { role: 'system', content: assistant.prompt },
+          { role: 'user', content }
         ]
-      : [{ role: 'user', content: enhancedPrompt }]
+      : [{ role: 'user', content: assistant.prompt }]
 
     const isOpenAIReasoning = this.isOpenAIReasoning(model)
 
@@ -798,7 +584,7 @@ export default class OpenAIProvider extends BaseProvider {
     // @ts-ignore key is not typed
     const response = await this.sdk.chat.completions.create({
       model: model.id,
-      messages: messages as ChatCompletionMessageParam[],
+      messages: messagesForApi as ChatCompletionMessageParam[],
       stream,
       keep_alive: this.keepAliveTime,
       temperature: assistant?.settings?.temperature
@@ -816,8 +602,7 @@ export default class OpenAIProvider extends BaseProvider {
       const deltaContent = chunk.choices[0]?.delta?.content || ''
 
       if (isReasoning) {
-        // 检测思考开始 - 支持多种标签格式
-        if (deltaContent.includes('<think>') || deltaContent.includes('<thinking>')) {
+        if (deltaContent.includes('<think>')) {
           isThinking = true
         }
 
@@ -826,8 +611,7 @@ export default class OpenAIProvider extends BaseProvider {
           onResponse?.(text)
         }
 
-        // 检测思考结束 - 支持多种标签格式
-        if (deltaContent.includes('</think>') || deltaContent.includes('</thinking>')) {
+        if (deltaContent.includes('</think>')) {
           isThinking = false
         }
       } else {
@@ -852,7 +636,7 @@ export default class OpenAIProvider extends BaseProvider {
       .filter((message) => !message.isPreset)
       .map((message) => ({
         role: message.role,
-        content: message.content
+        content: getMessageContent(message)
       }))
 
     const userMessageContent = userMessages.reduce((prev, curr) => {
@@ -860,25 +644,9 @@ export default class OpenAIProvider extends BaseProvider {
       return prev + (prev ? '\n' : '') + content
     }, '')
 
-    // 获取原始提示词
-    const originalPrompt = getStoreSetting('topicNamingPrompt') || i18n.t('prompts.title')
-
-    // 应用记忆功能到系统提示词
-    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
-    // 获取当前话题ID
-    const currentTopicId = messages.length > 0 ? messages[0].topicId : undefined
-    // 使用双重类型断言强制转换类型
-    const enhancedPrompt = (await applyMemoriesToPrompt(originalPrompt as string, currentTopicId)) as unknown as string
-    // 存储原始提示词长度
-    const originalPromptLength = (originalPrompt as string).length
-    console.log(
-      '[OpenAIProvider.summaries] Applied memories to prompt, length difference:',
-      enhancedPrompt.length - originalPromptLength
-    )
-
     const systemMessage = {
       role: 'system',
-      content: enhancedPrompt
+      content: getStoreSetting('topicNamingPrompt') || i18n.t('prompts.title')
     }
 
     const userMessage = {
@@ -897,11 +665,9 @@ export default class OpenAIProvider extends BaseProvider {
       max_tokens: 1000
     })
 
-    // 针对思考类模型的返回，总结仅截取思考标签之后的内容
+    // 针对思考类模型的返回，总结仅截取</think>之后的内容
     let content = response.choices[0].message?.content || ''
-    // 支持多种思考标签格式
     content = content.replace(/^<think>(.*?)<\/think>/s, '')
-    content = content.replace(/^<thinking>(.*?)<\/thinking>/s, '')
 
     return removeSpecialCharactersForTopicName(content.substring(0, 50))
   }
@@ -920,9 +686,12 @@ export default class OpenAIProvider extends BaseProvider {
       content: assistant.prompt
     }
 
+    const messageContents = messages.map((m) => getMessageContent(m))
+    const userMessageContent = messageContents.join('\n')
+
     const userMessage = {
       role: 'user',
-      content: messages.map((m) => m.content).join('\n')
+      content: userMessageContent
     }
     // @ts-ignore key is not typed
     const response = await this.sdk.chat.completions.create(
@@ -938,11 +707,9 @@ export default class OpenAIProvider extends BaseProvider {
       }
     )
 
-    // 针对思考类模型的返回，总结仅截取思考标签之后的内容
+    // 针对思考类模型的返回，总结仅截取</think>之后的内容
     let content = response.choices[0].message?.content || ''
-    // 支持多种思考标签格式
     content = content.replace(/^<think>(.*?)<\/think>/s, '')
-    content = content.replace(/^<thinking>(.*?)<\/thinking>/s, '')
 
     return content
   }
@@ -951,46 +718,18 @@ export default class OpenAIProvider extends BaseProvider {
    * Generate text
    * @param prompt - The prompt
    * @param content - The content
-   * @param modelId - Optional model ID to use
    * @returns The generated text
    */
-  public async generateText({
-    prompt,
-    content,
-    modelId
-  }: {
-    prompt: string
-    content: string
-    modelId?: string
-  }): Promise<string> {
-    // 使用指定的模型或默认模型
-    const model = modelId
-      ? store
-          .getState()
-          .llm.providers.flatMap((provider) => provider.models)
-          .find((m) => m.id === modelId)
-      : getDefaultModel()
-
-    if (!model) {
-      console.error(`Model ${modelId} not found, using default model`)
-      return ''
-    }
+  public async generateText({ prompt, content }: { prompt: string; content: string }): Promise<string> {
+    const model = getDefaultModel()
 
     await this.checkIsCopilot()
-
-    // 应用记忆功能到系统提示词
-    const { applyMemoriesToPrompt } = await import('@renderer/services/MemoryService')
-    // 使用双重类型断言强制转换类型
-    const enhancedPrompt = (await applyMemoriesToPrompt(prompt as string)) as unknown as string
-    // 存储原始提示词长度
-    const promptLength = (prompt as string).length
-    console.log('[OpenAIProvider] Applied memories to prompt, length difference:', enhancedPrompt.length - promptLength)
 
     const response = await this.sdk.chat.completions.create({
       model: model.id,
       stream: false,
       messages: [
-        { role: 'system', content: enhancedPrompt },
+        { role: 'system', content: prompt },
         { role: 'user', content }
       ]
     })
@@ -1013,11 +752,18 @@ export default class OpenAIProvider extends BaseProvider {
 
     await this.checkIsCopilot()
 
+    const userMessagesForApi = messages
+      .filter((m) => m.role === 'user')
+      .map((m) => ({
+        role: m.role,
+        content: getMessageContent(m)
+      }))
+
     const response: any = await this.sdk.request({
       method: 'post',
       path: '/advice_questions',
       body: {
-        messages: messages.filter((m) => m.role === 'user').map((m) => ({ role: m.role, content: m.content })),
+        messages: userMessagesForApi,
         model: model.id,
         max_tokens: 0,
         temperature: 0,
@@ -1072,7 +818,7 @@ export default class OpenAIProvider extends BaseProvider {
       if (this.provider.id === 'github') {
         // @ts-ignore key is not typed
         return response.body
-          .map((model: any) => ({
+          .map((model) => ({
             id: model.name,
             description: model.summary,
             object: 'model',

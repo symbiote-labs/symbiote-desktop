@@ -62,14 +62,15 @@ export const MARKDOWN_ALLOWED_TAGS = [
   'tspan',
   'sub',
   'sup',
-  'think'
+  'think',
+  'translated' // 添加自定义翻译标签
 ]
 
 // rehype-sanitize配置
 export const sanitizeSchema = {
   tagNames: MARKDOWN_ALLOWED_TAGS,
   attributes: {
-    '*': ['className', 'style', 'id', 'title'],
+    '*': ['className', 'style', 'id', 'title', 'data-*'],
     svg: ['viewBox', 'width', 'height', 'xmlns', 'fill', 'stroke'],
     path: ['d', 'fill', 'stroke', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin'],
     circle: ['cx', 'cy', 'r', 'fill', 'stroke'],
@@ -79,6 +80,7 @@ export const sanitizeSchema = {
     polygon: ['points', 'fill', 'stroke'],
     text: ['x', 'y', 'fill', 'textAnchor', 'dominantBaseline'],
     g: ['transform', 'fill', 'stroke'],
-    a: ['href', 'target', 'rel']
+    a: ['href', 'target', 'rel'],
+    translated: ['original', 'language', 'onclick'] // 添加翻译标签的属性
   }
 }

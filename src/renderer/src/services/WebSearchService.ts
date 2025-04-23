@@ -1,6 +1,6 @@
 import WebSearchEngineProvider from '@renderer/providers/WebSearchProvider'
 import store from '@renderer/store'
-import { setDefaultProvider, WebSearchState } from '@renderer/store/websearch'
+import { addWebSearchProvider, setDefaultProvider, WebSearchState } from '@renderer/store/websearch'
 import { WebSearchProvider, WebSearchResponse } from '@renderer/types'
 import { hasObjectKey } from '@renderer/utils'
 import dayjs from 'dayjs'
@@ -9,12 +9,48 @@ import dayjs from 'dayjs'
  * 提供网络搜索相关功能的服务类
  */
 class WebSearchService {
+  private initialized = false;
+
+  /**
+   * 确保DeepSearch供应商存在于列表中
+   * @private
+   */
+  private ensureDeepSearchProvider(): void {
+    if (this.initialized) return;
+
+    try {
+      const state = store.getState();
+      if (!state || !state.websearch) return;
+
+      const { providers } = state.websearch;
+      if (!providers) return;
+
+      const deepSearchExists = providers.some(provider => provider.id === 'deep-search');
+
+      if (!deepSearchExists) {
+        console.log('[WebSearchService] 添加DeepSearch供应商到列表');
+        store.dispatch(addWebSearchProvider({
+          id: 'deep-search',
+          name: 'DeepSearch (多引擎)',
+          description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
+          contentLimit: 10000
+        }));
+      }
+
+      this.initialized = true;
+    } catch (error) {
+      console.error('[WebSearchService] 初始化DeepSearch失败:', error);
+    }
+  }
+
   /**
    * 获取当前存储的网络搜索状态
    * @private
    * @returns 网络搜索状态
    */
   private getWebSearchState(): WebSearchState {
+    // 确保DeepSearch供应商存在
+    this.ensureDeepSearchProvider();
     return store.getState().websearch
   }
 
@@ -31,7 +67,8 @@ class WebSearchService {
       return false
     }
 
-    if (provider.id.startsWith('local-')) {
+    // DeepSearch和本地搜索引擎总是可用的
+    if (provider.id === 'deep-search' || provider.id.startsWith('local-')) {
       return true
     }
 
@@ -139,8 +176,22 @@ class WebSearchService {
    * @throws 如果文本中没有question标签则抛出错误
    */
   public extractInfoFromXML(text: string): { question: string; links?: string[] } {
+    // 提取工具标签内容
+    let questionText = text
+
+    // 先检查是否有工具标签
+    const websearchMatch = text.match(/<websearch>([\s\S]*?)<\/websearch>/)
+    const knowledgeMatch = text.match(/<knowledge>([\s\S]*?)<\/knowledge>/)
+
+    // 如果有工具标签，使用工具标签内的内容
+    if (websearchMatch) {
+      questionText = websearchMatch[1]
+    } else if (knowledgeMatch) {
+      questionText = knowledgeMatch[1]
+    }
+
     // 提取question标签内容
-    const questionMatch = text.match(/<question>([\s\S]*?)<\/question>/)
+    const questionMatch = questionText.match(/<question>([\s\S]*?)<\/question>/) || text.match(/<question>([\s\S]*?)<\/question>/)
     if (!questionMatch) {
       throw new Error('Missing required <question> tag')
     }

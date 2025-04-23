@@ -1,0 +1,53 @@
+/* 翻译标签的样式 */
+.translated-text {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+  position: relative;
+  display: inline;
+}
+
+/* 鼠标悬停时显示提示 */
+.translated-text:not([data-showing-original="true"]):hover::after {
+  content: "点击查看原文";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* 原文悬停提示 */
+.translated-text[data-showing-original="true"]:hover::after {
+  content: "点击查看翻译";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* 原文的样式 */
+.translated-text[data-showing-original="true"] {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* 用户消息样式 */
+.user-message-content {
+  margin-bottom: 5px;
+  white-space: pre-wrap;
+}

@@ -58,10 +58,16 @@ const initialState: WebSearchState = {
       id: 'local-baidu',
       name: 'Baidu',
       url: 'https://www.baidu.com/s?wd=%s'
+    },
+    {
+      id: 'deep-search',
+      name: 'DeepSearch (多引擎)',
+      description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
+      contentLimit: 10000
     }
   ],
   searchWithTime: true,
-  maxResults: 5,
+  maxResults: 100,
   excludeDomains: [],
   subscribeSources: [],
   enhanceMode: true,

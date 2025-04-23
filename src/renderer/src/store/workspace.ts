@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { RootState } from '@renderer/store'
+import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit'
 import db from '@renderer/databases'
+import { RootState } from '@renderer/store'
 import { nanoid } from 'nanoid'
 
 // 工作区类型定义
@@ -14,7 +14,7 @@ export interface Workspace {
 }
 
 // 工作区状态
-interface WorkspaceState {
+export interface WorkspaceState {
   workspaces: Workspace[]
   currentWorkspaceId: string | null
   isLoading: boolean
@@ -55,9 +55,9 @@ const workspaceSlice = createSlice({
     },
 
     // 更新工作区
-    updateWorkspace: (state, action: PayloadAction<{ id: string, workspace: Partial<Workspace> }>) => {
+    updateWorkspace: (state, action: PayloadAction<{ id: string; workspace: Partial<Workspace> }>) => {
       const { id, workspace } = action.payload
-      const index = state.workspaces.findIndex(w => w.id === id)
+      const index = state.workspaces.findIndex((w) => w.id === id)
 
       if (index !== -1) {
         state.workspaces[index] = {
@@ -77,7 +77,7 @@ const workspaceSlice = createSlice({
     // 删除工作区
     removeWorkspace: (state, action: PayloadAction<string>) => {
       const id = action.payload
-      state.workspaces = state.workspaces.filter(w => w.id !== id)
+      state.workspaces = state.workspaces.filter((w) => w.id !== id)
 
       // 如果删除的是当前工作区，重置当前工作区
       if (state.currentWorkspaceId === id) {
@@ -126,17 +126,25 @@ export const {
 // 选择器
 export const selectWorkspaces = (state: RootState) => state.workspace.workspaces
 export const selectCurrentWorkspaceId = (state: RootState) => state.workspace.currentWorkspaceId
-export const selectCurrentWorkspace = (state: RootState) => {
-  const { currentWorkspaceId, workspaces } = state.workspace
-  return currentWorkspaceId ? workspaces.find(w => w.id === currentWorkspaceId) || null : null
-}
+
+// 使用createSelector记忆化选择器
+export const selectCurrentWorkspace = createSelector(
+  [(state: RootState) => state.workspace.currentWorkspaceId, (state: RootState) => state.workspace.workspaces],
+  (currentWorkspaceId, workspaces) => {
+    return currentWorkspaceId ? workspaces.find((w) => w.id === currentWorkspaceId) || null : null
+  }
+)
+
 export const selectIsLoading = (state: RootState) => state.workspace.isLoading
 export const selectError = (state: RootState) => state.workspace.error
 
 // 选择对AI可见的工作区
-export const selectVisibleToAIWorkspaces = (state: RootState) => {
-  return state.workspace.workspaces.filter(w => w.visibleToAI !== false) // 如果visibleToAI为undefined或true，则返回
-}
+export const selectVisibleToAIWorkspaces = createSelector(
+  [(state: RootState) => state.workspace.workspaces],
+  (workspaces) => {
+    return workspaces.filter((w) => w.visibleToAI !== false) // 如果visibleToAI为undefined或true，则返回
+  }
+)
 
 // 导出 reducer
 export default workspaceSlice.reducer
@@ -151,7 +159,7 @@ export const initWorkspaces = () => async (dispatch: any) => {
 
     // 检查并设置默认的visibleToAI属性
     let needsUpdate = false
-    workspaces = workspaces.map(workspace => {
+    workspaces = workspaces.map((workspace) => {
       if (workspace.visibleToAI === undefined) {
         needsUpdate = true
         // 默认只有第一个工作区对AI可见
@@ -176,7 +184,7 @@ export const initWorkspaces = () => async (dispatch: any) => {
 
     // 从本地存储获取当前工作区ID
     const currentWorkspaceId = localStorage.getItem('currentWorkspaceId')
-    if (currentWorkspaceId && workspaces.some(w => w.id === currentWorkspaceId)) {
+    if (currentWorkspaceId && workspaces.some((w) => w.id === currentWorkspaceId)) {
       dispatch(setCurrentWorkspace(currentWorkspaceId))
     } else if (workspaces.length > 0) {
       dispatch(setCurrentWorkspace(workspaces[0].id))

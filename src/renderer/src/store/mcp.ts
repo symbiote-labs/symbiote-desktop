@@ -116,6 +116,13 @@ export const builtinMCPServers: MCPServer[] = [
       WORKSPACE_PATH: ''
     },
     isActive: false
+  },
+  {
+    id: nanoid(),
+    name: '@cherry/timetools',
+    type: 'inMemory',
+    description: '时间工具，提供获取当前系统时间的功能，允许AI随时知道当前日期和时间。',
+    isActive: true
   }
 ]
 

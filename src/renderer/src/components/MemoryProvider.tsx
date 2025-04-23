@@ -1,6 +1,7 @@
 import { useMemoryService } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
+import { createSelector } from '@reduxjs/toolkit'
 import {
   clearShortMemories,
   loadLongTermMemoryData,
@@ -43,14 +44,28 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
   const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
 
-  // 获取当前对话
-  const currentTopic = useAppSelector((state) => state.messages?.currentTopic?.id)
-  const messages = useAppSelector((state) => {
-    if (!currentTopic || !state.messages?.messagesByTopic) {
-      return []
+  // 创建记忆化选择器
+  const selectCurrentTopicId = createSelector(
+    [(state) => state.messages?.currentTopic?.id],
+    (topicId) => topicId
+  )
+
+  const selectMessagesForTopic = createSelector(
+    [
+      (state) => state.messages?.messagesByTopic,
+      (_state, topicId) => topicId
+    ],
+    (messagesByTopic, topicId) => {
+      if (!topicId || !messagesByTopic) {
+        return []
+      }
+      return messagesByTopic[topicId] || []
     }
-    return state.messages.messagesByTopic[currentTopic] || []
-  })
+  )
+
+  // 获取当前对话
+  const currentTopic = useAppSelector(selectCurrentTopicId)
+  const messages = useAppSelector((state) => selectMessagesForTopic(state, currentTopic))
 
   // 存储上一次的话题ID
   const previousTopicRef = useRef<string | null>(null)

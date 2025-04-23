@@ -61,6 +61,7 @@ export interface SettingsState {
   autoCheckUpdate: boolean
   renderInputMessageAsMarkdown: boolean
   enableHistoricalContext: boolean // 是否启用历史对话上下文功能
+  usePromptForToolCalling: boolean // 是否使用提示词而非函数调用来调用MCP工具
   codeShowLineNumbers: boolean
   codeCollapsible: boolean
   codeWrappable: boolean
@@ -222,6 +223,7 @@ export const initialState: SettingsState = {
   autoCheckUpdate: true,
   renderInputMessageAsMarkdown: false,
   enableHistoricalContext: false, // 默认禁用历史对话上下文功能
+  usePromptForToolCalling: true, // 默认使用提示词而非函数调用来调用MCP工具
   codeShowLineNumbers: false,
   codeCollapsible: false,
   codeWrappable: false,
@@ -349,6 +351,9 @@ const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    setUsePromptForToolCalling: (state, action: PayloadAction<boolean>) => {
+      state.usePromptForToolCalling = action.payload
+    },
     setShowAssistants: (state, action: PayloadAction<boolean>) => {
       state.showAssistants = action.payload
     },
@@ -936,7 +941,8 @@ export const {
   setIsVoiceCallActive,
   setLastPlayedMessageId,
   setSkipNextAutoTTS,
-  setEnableBackspaceDeleteModel
+  setEnableBackspaceDeleteModel,
+  setUsePromptForToolCalling
 } = settingsSlice.actions
 
 // PDF设置相关的action

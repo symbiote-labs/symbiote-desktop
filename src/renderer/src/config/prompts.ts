@@ -117,6 +117,11 @@ export const SEARCH_SUMMARY_PROMPT = `
   If the user asks some question from some URL or wants you to summarize a PDF or a webpage (via URL) you need to return the links inside the \`links\` XML block and the question inside the \`question\` XML block. If the user wants to you to summarize the webpage or the PDF you need to return \`summarize\` inside the \`question\` XML block in place of a question and the link to summarize in the \`links\` XML block.
   You must always return the rephrased question inside the \`question\` XML block, if there are no links in the follow-up question then don't insert a \`links\` XML block in your response.
 
+  4. Websearch: Always return the rephrased question inside the 'question' XML block. If there are no links in the follow-up question, do not insert a 'links' XML block in your response.
+  5. Knowledge: Always return the rephrased question inside the 'question' XML block.
+  6. Always wrap the rephrased question in the appropriate XML blocks to specify the tool(s) for retrieving information: use <websearch></websearch> for queries requiring real-time or external information, <knowledge></knowledge> for queries that can be answered from a pre-existing knowledge base, or both if the question could be applicable to either tool. Ensure that the rephrased question is always contained within a <question></question> block inside these wrappers.
+  7. *use {tools} to rephrase the question*
+
   There are several examples attached for your reference inside the below \`examples\` XML block
 
   <examples>

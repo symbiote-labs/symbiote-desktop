@@ -12,7 +12,6 @@ import llm from './llm'
 import mcp from './mcp'
 import memory from './memory' // Removed import of memoryPersistenceMiddleware
 import messagesReducer from './messages'
-import workspace from './workspace'
 import migrate from './migrate'
 import minapps from './minapps'
 import nutstore from './nutstore'
@@ -21,6 +20,7 @@ import runtime from './runtime'
 import settings from './settings'
 import shortcuts from './shortcuts'
 import websearch from './websearch'
+import workspace from './workspace'
 
 const rootReducer = combineReducers({
   assistants,

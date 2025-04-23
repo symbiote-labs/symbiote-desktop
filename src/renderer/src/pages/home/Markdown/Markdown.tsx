@@ -1,6 +1,7 @@
 import 'katex/dist/katex.min.css'
 import 'katex/dist/contrib/copy-tex'
 import 'katex/dist/contrib/mhchem'
+import '@renderer/styles/translation.css'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
@@ -38,6 +39,11 @@ const Markdown: FC<Props> = ({ message }) => {
   const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
 
   const messageContent = useMemo(() => {
+    // 检查消息内容是否为空或未定义
+    if (message.content === undefined) {
+      return ''
+    }
+
     const empty = isEmpty(message.content)
     const paused = message.status === 'paused'
     const content = empty && paused ? t('message.chat.completion.paused') : withGeminiGrounding(message)
@@ -82,6 +88,19 @@ const Markdown: FC<Props> = ({ message }) => {
             {props.children}
           </span>
         )
+      },
+      // 自定义处理translated标签
+      translated: (props: any) => {
+        // 将translated标签渲染为可点击的span
+        return (
+          <span
+            className="translated-text"
+            onClick={(e) => window.toggleTranslation(e as unknown as MouseEvent)}
+            data-original={props.original}
+            data-language={props.language}>
+            {props.children}
+          </span>
+        )
       }
       // Removed custom div renderer for tool markers
     } as Partial<Components> // Keep Components type here
@@ -89,7 +108,7 @@ const Markdown: FC<Props> = ({ message }) => {
   }, []) // Removed message.metadata dependency as it's no longer used here
 
   if (message.role === 'user' && !renderInputMessageAsMarkdown) {
-    return <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}>{messageContent}</p>
+    return <p className="user-message-content">{messageContent}</p>
   }
 
   if (processedMessageContent.includes('<style>')) {

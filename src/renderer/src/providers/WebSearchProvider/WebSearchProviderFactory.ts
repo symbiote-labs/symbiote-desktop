@@ -2,6 +2,7 @@ import { WebSearchProvider } from '@renderer/types'
 
 import BaseWebSearchProvider from './BaseWebSearchProvider'
 import DefaultProvider from './DefaultProvider'
+import DeepSearchProvider from './DeepSearchProvider'
 import ExaProvider from './ExaProvider'
 import LocalBaiduProvider from './LocalBaiduProvider'
 import LocalBingProvider from './LocalBingProvider'
@@ -24,6 +25,8 @@ export default class WebSearchProviderFactory {
         return new LocalBaiduProvider(provider)
       case 'local-bing':
         return new LocalBingProvider(provider)
+      case 'deep-search':
+        return new DeepSearchProvider(provider)
       default:
         return new DefaultProvider(provider)
     }

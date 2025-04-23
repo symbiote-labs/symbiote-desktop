@@ -214,7 +214,7 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
           onClick={() => scrollToMessage(message)}>
           <MessageItemContainer style={{ transform: ` scale(${scale})` }}>
             <MessageItemTitle>{username}</MessageItemTitle>
-            <MessageItemContent>{message.content.substring(0, 50)}</MessageItemContent>
+            <MessageItemContent>{message.content ? message.content.substring(0, 50) : ''}</MessageItemContent>
           </MessageItemContainer>
 
           {message.role === 'assistant' ? (

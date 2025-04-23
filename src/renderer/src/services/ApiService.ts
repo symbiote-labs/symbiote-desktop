@@ -82,9 +82,14 @@ export async function fetchChatCompletion({
 
           try {
             // 等待关键词生成完成
+            const tools: string[] = []
+
+            if (assistant.enableWebSearch) tools.push('websearch')
+            if (hasKnowledgeBase) tools.push('knowledge')
+
             const searchSummaryAssistant = getDefaultAssistant()
             searchSummaryAssistant.model = assistant.model || getDefaultModel()
-            searchSummaryAssistant.prompt = SEARCH_SUMMARY_PROMPT
+            searchSummaryAssistant.prompt = SEARCH_SUMMARY_PROMPT.replace('{tools}', tools.join(', '))
 
             // 如果启用搜索增强模式，则使用搜索增强模式
             if (WebSearchService.isEnhanceModeEnabled()) {

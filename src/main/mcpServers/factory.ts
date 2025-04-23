@@ -7,6 +7,7 @@ import FileSystemServer from './filesystem'
 import MemoryServer from './memory'
 import ThinkingServer from './sequentialthinking'
 import SimpleRememberServer from './simpleremember'
+import TimeToolsServer from './timetools'
 import { WorkspaceFileToolServer } from './workspacefile'
 
 export async function createInMemoryMCPServer(
@@ -61,6 +62,17 @@ export async function createInMemoryMCPServer(
       }
 
       return new WorkspaceFileToolServer(workspacePath).server
+    }
+    case '@cherry/timetools': {
+      Logger.info('[MCP] Creating TimeToolsServer instance')
+      try {
+        const server = new TimeToolsServer().server
+        Logger.info('[MCP] TimeToolsServer instance created successfully')
+        return server
+      } catch (error) {
+        Logger.error('[MCP] Error creating TimeToolsServer instance:', error)
+        throw error
+      }
     }
     default:
       throw new Error(`Unknown in-memory MCP server: ${name}`)

@@ -19,7 +19,7 @@ import FileManager from './FileManager'
 export const filterMessages = (messages: Message[]) => {
   return messages
     .filter((message) => !['@', 'clear'].includes(message.type!))
-    .filter((message) => !isEmpty(message.content.trim()))
+    .filter((message) => message.content && !isEmpty(message.content.trim()))
 }
 
 export function filterContextMessages(messages: Message[]): Message[] {
@@ -46,10 +46,10 @@ export function filterEmptyMessages(messages: Message[]): Message[] {
   return messages.filter((message) => {
     const content = message.content as string | any[]
     if (typeof content === 'string' && isEmpty(message.files)) {
-      return !isEmpty(content.trim())
+      return content && !isEmpty(content.trim())
     }
     if (Array.isArray(content)) {
-      return content.some((c) => !isEmpty(c.text.trim()))
+      return content.some((c) => c.text && !isEmpty(c.text.trim()))
     }
     return true
   })

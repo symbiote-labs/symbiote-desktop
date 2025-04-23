@@ -1,3 +1,4 @@
+import store from '@renderer/store'
 import { MCPTool } from '@renderer/types'
 
 export const SYSTEM_PROMPT = `In this environment you have access to a set of tools you can use to answer the user's question. \
@@ -206,21 +207,46 @@ export const buildSystemPrompt = async (
   const enhancedPrompt = appMemoriesPrompt + (mcpMemoriesPrompt ? `\n\n${mcpMemoriesPrompt}` : '')
 
   let finalPrompt: string
-  // When using native function calling (tools are present), the system prompt should only contain
-  // the user's instructions and any relevant memories. The model learns how to call tools
-  // from the 'tools' parameter in the API request, not from XML instructions in the prompt.
+  // 检查是否有工具可用
   if (tools && tools.length > 0) {
-    console.log('[Prompt] Building prompt for native function calling:', { promptLength: enhancedPrompt.length })
-    // 添加强化工具使用的提示词
-    finalPrompt = GEMINI_TOOL_PROMPT + '\n\n' + enhancedPrompt
-    console.log('[Prompt] Added tool usage enhancement prompt')
+    // 获取当前的usePromptForToolCalling设置
+    const usePromptForToolCalling = store.getState().settings.usePromptForToolCalling
+
+    // 获取当前的provider类型（从OpenAIProvider.ts调用时为OpenAI，从GeminiProvider.ts调用时为Gemini）
+    // 这里我们通过调用栈来判断是哪个provider调用的
+    const callStack = new Error().stack || ''
+    const isOpenAIProvider = callStack.includes('OpenAIProvider')
+    const isGeminiProvider = callStack.includes('GeminiProvider')
+
+    console.log('[Prompt] Building prompt for tools:', {
+      promptLength: enhancedPrompt.length,
+      usePromptForToolCalling,
+      isOpenAIProvider,
+      isGeminiProvider
+    })
+
+    if (isOpenAIProvider && usePromptForToolCalling) {
+      // 对于OpenAI，使用SYSTEM_PROMPT模板，并替换占位符
+      const openAIToolPrompt = SYSTEM_PROMPT.replace('{{ TOOL_USE_EXAMPLES }}', ToolUseExamples)
+        .replace('{{ AVAILABLE_TOOLS }}', AvailableTools(tools))
+        .replace('{{ USER_SYSTEM_PROMPT }}', enhancedPrompt)
+
+      console.log('[Prompt] Using OpenAI tool prompt with examples')
+      finalPrompt = openAIToolPrompt
+    } else if (isGeminiProvider) {
+      // 对于Gemini，使用GEMINI_TOOL_PROMPT
+      finalPrompt = GEMINI_TOOL_PROMPT + '\n\n' + enhancedPrompt
+      console.log('[Prompt] Added Gemini tool usage enhancement prompt')
+    } else {
+      // 默认情况，直接使用增强的提示词
+      finalPrompt = enhancedPrompt
+      console.log('[Prompt] Using enhanced prompt without tool instructions')
+    }
   } else {
-    console.log('[Prompt] Building prompt without tools (or for XML tool use):', {
+    console.log('[Prompt] Building prompt without tools:', {
       promptLength: enhancedPrompt.length
     })
-    // If no tools are provided (or if a model doesn't support native calls and relies on XML),
-    // we might still need the old SYSTEM_PROMPT logic. For now, assume no tools means no tool instructions needed.
-    // If XML fallback is needed later, this 'else' block might need to re-introduce SYSTEM_PROMPT.
+    // 如果没有工具，直接使用增强的提示词
     finalPrompt = enhancedPrompt
   }
   // Single return point for the function

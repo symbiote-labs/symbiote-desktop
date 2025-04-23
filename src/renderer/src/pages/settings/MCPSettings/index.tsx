@@ -2,6 +2,7 @@ import { ArrowLeftOutlined, CodeOutlined, PlusOutlined } from '@ant-design/icons
 import { nanoid } from '@reduxjs/toolkit'
 import IndicatorLight from '@renderer/components/IndicatorLight'
 import { VStack } from '@renderer/components/Layout'
+import { Button, Flex } from 'antd'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
 import { MCPServer } from '@renderer/types'
@@ -14,6 +15,7 @@ import styled from 'styled-components'
 import { SettingContainer, SettingTitle } from '..'
 import InstallNpxUv from './InstallNpxUv'
 import McpSettings from './McpSettings'
+import McpToolCallingSettings from './McpToolCallingSettings'
 import NpxSearch from './NpxSearch'
 
 const MCPSettings: FC = () => {
@@ -65,7 +67,14 @@ const MCPSettings: FC = () => {
     () => (
       <GridContainer>
         <GridHeader>
-          <SettingTitle>{t('settings.mcp.newServer')}</SettingTitle>
+          <SettingTitle>
+            <Flex justify="space-between" align="center">
+              {t('settings.mcp.newServer')}
+              <Link to="/settings/mcp/tool-calling">
+                <Button type="link">{t('settings.mcp.tool_calling.title', '工具调用设置')}</Button>
+              </Link>
+            </Flex>
+          </SettingTitle>
         </GridHeader>
         <ServersGrid>
           <AddServerCard onClick={onAddMcpServer}>
@@ -122,6 +131,7 @@ const MCPSettings: FC = () => {
         <Routes>
           <Route path="/" element={<McpServersList />} />
           <Route path="server/:id" element={selectedMcpServer ? <McpSettings server={selectedMcpServer} /> : null} />
+          <Route path="tool-calling" element={<McpToolCallingSettings />} />
           <Route
             path="npx-search"
             element={

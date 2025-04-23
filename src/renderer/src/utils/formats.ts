@@ -20,6 +20,8 @@ export function escapeDollarNumber(text: string) {
 }
 
 export function escapeBrackets(text: string) {
+  if (!text) return ''
+
   const pattern = /(```[\s\S]*?```|`.*?`)|\\\[([\s\S]*?[^\\])\\\]|\\\((.*?)\\\)/g
   return text.replace(pattern, (match, codeBlock, squareBracket, roundBracket) => {
     if (codeBlock) {
@@ -62,6 +64,11 @@ export function removeSvgEmptyLines(text: string): string {
 }
 
 export function withGeminiGrounding(message: Message) {
+  // 检查消息内容是否为空或未定义
+  if (message.content === undefined) {
+    return ''
+  }
+
   const { groundingSupports } = message?.metadata?.groundingMetadata || {}
 
   if (!groundingSupports) {
@@ -161,6 +168,12 @@ export function withMessageThought(message: Message) {
     return message
   }
 
+  // 检查消息内容是否为空或未定义
+  if (message.content === undefined) {
+    message.content = ''
+    return message
+  }
+
   const model = message.model
   if (!model || !isReasoningModel(model)) return message
 
@@ -184,6 +197,11 @@ export function withMessageThought(message: Message) {
 }
 
 export function withGenerateImage(message: Message) {
+  // 检查消息内容是否为空或未定义
+  if (message.content === undefined) {
+    message.content = ''
+    return message
+  }
   const imagePattern = new RegExp(`!\\[[^\\]]*\\]\\((.*?)\\s*("(?:.*[^"])")?\\s*\\)`)
   const imageMatches = message.content.match(imagePattern)
 

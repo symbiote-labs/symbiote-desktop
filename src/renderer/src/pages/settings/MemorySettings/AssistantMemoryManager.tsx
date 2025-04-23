@@ -7,8 +7,14 @@ import { Button, Empty, Input, List, Select, Switch, Tooltip, Typography } from 
 import _ from 'lodash'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
 
 const { Title } = Typography
+
+const StyledSelect = styled(Select<string>)`
+  width: 100%;
+  margin-bottom: 16px;
+`
 
 const AssistantMemoryManager = () => {
   const { t } = useTranslation()
@@ -49,81 +55,83 @@ const AssistantMemoryManager = () => {
   }
 
   // 添加新的助手记忆 - 使用防抖减少频繁更新
-  const handleAddMemory = useCallback(
-    _.debounce(() => {
+  const handleAddMemory = useCallback(() => {
+    const debouncedAdd = _.debounce(() => {
       if (newMemoryContent.trim() && selectedAssistantId) {
         addAssistantMemoryItem(newMemoryContent.trim(), selectedAssistantId)
         setNewMemoryContent('') // 清空输入框
       }
-    }, 300),
-    [newMemoryContent, selectedAssistantId]
-  )
+    }, 300)
+    debouncedAdd()
+  }, [newMemoryContent, selectedAssistantId])
 
   // 删除助手记忆 - 直接删除无需确认，使用节流避免频繁删除操作
   const handleDeleteMemory = useCallback(
-    _.throttle(async (id: string) => {
-      // 先从当前状态中获取要删除的记忆之外的所有记忆
-      const state = store.getState().memory
-      const filteredAssistantMemories = state.assistantMemories.filter((memory) => memory.id !== id)
+    (id: string) => {
+      const throttledDelete = _.throttle(async (memoryId: string) => {
+        // 先从当前状态中获取要删除的记忆之外的所有记忆
+        const state = store.getState().memory
+        const filteredAssistantMemories = state.assistantMemories.filter((memory) => memory.id !== memoryId)
 
-      // 执行删除操作
-      dispatch(deleteAssistantMemory(id))
+        // 执行删除操作
+        dispatch(deleteAssistantMemory(memoryId))
 
-      // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
-      try {
-        // 加载当前文件数据
-        const currentData = await window.api.memory.loadData()
+        // 直接使用 window.api.memory.saveData 方法保存过滤后的列表
+        try {
+          // 加载当前文件数据
+          const currentData = await window.api.memory.loadData()
 
-        // 替换 assistantMemories 数组，保留其他重要设置
-        const newData = {
-          ...currentData,
-          assistantMemories: filteredAssistantMemories,
-          assistantMemoryActive: currentData.assistantMemoryActive,
-          assistantMemoryAnalyzeModel: currentData.assistantMemoryAnalyzeModel
+          // 替换 assistantMemories 数组，保留其他重要设置
+          const newData = {
+            ...currentData,
+            assistantMemories: filteredAssistantMemories,
+            assistantMemoryActive: currentData.assistantMemoryActive,
+            assistantMemoryAnalyzeModel: currentData.assistantMemoryAnalyzeModel
+          }
+
+          // 使用 true 参数强制覆盖文件
+          const result = await window.api.memory.saveData(newData, true)
+
+          if (result) {
+            console.log(`[AssistantMemoryManager] Successfully deleted assistant memory with ID ${memoryId}`)
+            // 移除消息提示，避免触发界面重新渲染
+          } else {
+            console.error(`[AssistantMemoryManager] Failed to delete assistant memory with ID ${memoryId}`)
+          }
+        } catch (error) {
+          console.error('[AssistantMemoryManager] Failed to delete assistant memory:', error)
         }
-
-        // 使用 true 参数强制覆盖文件
-        const result = await window.api.memory.saveData(newData, true)
-
-        if (result) {
-          console.log(`[AssistantMemoryManager] Successfully deleted assistant memory with ID ${id}`)
-          // 移除消息提示，避免触发界面重新渲染
-        } else {
-          console.error(`[AssistantMemoryManager] Failed to delete assistant memory with ID ${id}`)
-        }
-      } catch (error) {
-        console.error('[AssistantMemoryManager] Failed to delete assistant memory:', error)
-      }
-    }, 500),
+      }, 500)
+      throttledDelete(id)
+    },
     [dispatch]
   )
 
   return (
     <div className="assistant-memory-manager">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <HeaderContainer>
         <Title level={4}>{t('settings.memory.assistantMemory') || '助手记忆'}</Title>
         <Tooltip title={t('settings.memory.toggleAssistantMemoryActive') || '切换助手记忆功能'}>
           <Switch checked={assistantMemoryActive} onChange={handleToggleActive} />
         </Tooltip>
-      </div>
+      </HeaderContainer>
 
       {/* 助手选择器 */}
-      <div style={{ marginBottom: 16 }}>
-        <Select
+      <SectionContainer>
+        <StyledSelect
           value={selectedAssistantId}
-          onChange={setSelectedAssistantId}
+          onChange={(value: string) => setSelectedAssistantId(value)}
           placeholder={t('settings.memory.selectAssistant') || '选择助手'}
-          style={{ width: '100%', marginBottom: 16 }}
           disabled={!assistantMemoryActive}>
           {assistants.map((assistant) => (
             <Select.Option key={assistant.id} value={assistant.id}>
               {assistant.name}
             </Select.Option>
           ))}
-        </Select>
-      </div>
+        </StyledSelect>
+      </SectionContainer>
 
-      <div style={{ marginBottom: 16 }}>
+      <SectionContainer>
         <Input.TextArea
           value={newMemoryContent}
           onChange={(e) => setNewMemoryContent(e.target.value)}
@@ -131,14 +139,13 @@ const AssistantMemoryManager = () => {
           autoSize={{ minRows: 2, maxRows: 4 }}
           disabled={!assistantMemoryActive || !selectedAssistantId}
         />
-        <Button
+        <AddButton
           type="primary"
           onClick={() => handleAddMemory()}
-          style={{ marginTop: 8 }}
           disabled={!assistantMemoryActive || !newMemoryContent.trim() || !selectedAssistantId}>
           {t('settings.memory.addAssistantMemory') || '添加助手记忆'}
-        </Button>
-      </div>
+        </AddButton>
+      </SectionContainer>
 
       <div className="assistant-memories-list">
         {assistantMemories.length > 0 ? (
@@ -158,7 +165,7 @@ const AssistantMemoryManager = () => {
                   </Tooltip>
                 ]}>
                 <List.Item.Meta
-                  title={<div style={{ wordBreak: 'break-word' }}>{memory.content}</div>}
+                  title={<MemoryContent>{memory.content}</MemoryContent>}
                   description={new Date(memory.createdAt).toLocaleString()}
                 />
               </List.Item>
@@ -177,5 +184,24 @@ const AssistantMemoryManager = () => {
     </div>
   )
 }
+
+const HeaderContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`
+
+const SectionContainer = styled.div`
+  margin-bottom: 16px;
+`
+
+const AddButton = styled(Button)`
+  margin-top: 8px;
+`
+
+const MemoryContent = styled.div`
+  word-break: break-word;
+`
 
 export default AssistantMemoryManager

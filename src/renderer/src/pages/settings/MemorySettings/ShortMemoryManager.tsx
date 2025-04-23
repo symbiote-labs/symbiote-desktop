@@ -6,6 +6,7 @@ import { Button, Empty, Input, List, Switch, Tooltip, Typography } from 'antd'
 import _ from 'lodash'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
 
 const { Title } = Typography
 // 不再需要确认对话框
@@ -69,14 +70,14 @@ const ShortMemoryManager = () => {
 
   return (
     <div className="short-memory-manager">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <HeaderContainer>
         <Title level={4}>{t('settings.memory.shortMemory')}</Title>
         <Tooltip title={t('settings.memory.toggleShortMemoryActive')}>
           <Switch checked={shortMemoryActive} onChange={handleToggleActive} />
         </Tooltip>
-      </div>
+      </HeaderContainer>
 
-      <div style={{ marginBottom: 16 }}>
+      <SectionContainer>
         <Input.TextArea
           value={newMemoryContent}
           onChange={(e) => setNewMemoryContent(e.target.value)}
@@ -84,14 +85,13 @@ const ShortMemoryManager = () => {
           autoSize={{ minRows: 2, maxRows: 4 }}
           disabled={!shortMemoryActive || !currentTopicId}
         />
-        <Button
+        <AddButton
           type="primary"
           onClick={() => handleAddMemory()}
-          style={{ marginTop: 8 }}
           disabled={!shortMemoryActive || !newMemoryContent.trim() || !currentTopicId}>
           {t('settings.memory.addShortMemory')}
-        </Button>
-      </div>
+        </AddButton>
+      </SectionContainer>
 
       <div className="short-memories-list">
         {shortMemories.length > 0 ? (
@@ -111,7 +111,7 @@ const ShortMemoryManager = () => {
                   </Tooltip>
                 ]}>
                 <List.Item.Meta
-                  title={<div style={{ wordBreak: 'break-word' }}>{memory.content}</div>}
+                  title={<MemoryContent>{memory.content}</MemoryContent>}
                   description={new Date(memory.createdAt).toLocaleString()}
                 />
               </List.Item>
@@ -126,5 +126,24 @@ const ShortMemoryManager = () => {
     </div>
   )
 }
+
+const HeaderContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`
+
+const SectionContainer = styled.div`
+  margin-bottom: 16px;
+`
+
+const AddButton = styled(Button)`
+  margin-top: 8px;
+`
+
+const MemoryContent = styled.div`
+  word-break: break-word;
+`
 
 export default ShortMemoryManager
