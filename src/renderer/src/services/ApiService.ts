@@ -116,6 +116,7 @@ async function fetchExternalTool(
     console.log('Performing external web search...')
     try {
       // Use the consolidated processWebsearch function
+      WebSearchService.createAbortSignal(lastUserMessage.id)
       return {
         results: await WebSearchService.processWebsearch(webSearchProvider, extractResults),
         source: WebSearchSource.WEBSEARCH

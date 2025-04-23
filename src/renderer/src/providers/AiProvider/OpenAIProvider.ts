@@ -503,7 +503,6 @@ export default class OpenAIProvider extends BaseProvider {
           content += delta.content // Still accumulate for processToolUses
           onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
         }
-
         if (delta?.finish_reason) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
           // 3. Web Search

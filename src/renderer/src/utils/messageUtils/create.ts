@@ -374,3 +374,55 @@ export function resetMessage(
     // NOTE: Add any other fields here that should be reset upon message regeneration
   }
 }
+
+/**
+ * Resets an existing assistant message to a clean state, ready for regeneration.
+ * It clears blocks and response-specific data, while retaining core identifiers.
+ *
+ * @param originalMessage The assistant message to reset.
+ * @param updates Optional partial message object to override default reset values (e.g., status).
+ * @returns A new message object representing the reset state.
+ */
+export const resetAssistantMessage = (
+  originalMessage: Message,
+  updates?: Partial<Pick<Message, 'status'>> // Primarily allow updating status
+): Message => {
+  // Ensure we are only resetting assistant messages
+  if (originalMessage.role !== 'assistant') {
+    console.warn(
+      `[resetAssistantMessage] Attempted to reset a non-assistant message (ID: ${originalMessage.id}, Role: ${originalMessage.role}). Returning original.`
+    )
+    return originalMessage
+  }
+
+  // Create the base reset message
+  const resetMsg: Message = {
+    // --- Retain Core Identifiers ---
+    id: originalMessage.id, // Keep the same message ID
+    topicId: originalMessage.topicId,
+    askId: originalMessage.askId, // Keep the link to the original user query
+
+    // --- Retain Identity ---
+    role: 'assistant',
+    assistantId: originalMessage.assistantId,
+    model: originalMessage.model, // Keep the model information
+    modelId: originalMessage.modelId,
+
+    // --- Reset Response Content & Status ---
+    blocks: [], // <<< CRITICAL: Clear the blocks array
+    mentions: undefined, // Clear any mentions
+    status: AssistantMessageStatus.PENDING, // Default to PENDING
+    metrics: undefined, // Clear performance metrics
+    usage: undefined, // Clear token usage data
+
+    // --- Timestamps ---
+    createdAt: originalMessage.createdAt, // Keep original creation timestamp
+
+    // --- Apply Overrides ---
+    ...updates // Apply any specific updates passed in (e.g., a different status)
+  }
+
+  return resetMsg
+}
+
+// 需要一个重置助手消息

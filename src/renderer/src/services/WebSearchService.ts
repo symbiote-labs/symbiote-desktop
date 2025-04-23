@@ -3,15 +3,33 @@ import store from '@renderer/store'
 import { setDefaultProvider, WebSearchState } from '@renderer/store/websearch'
 import { WebSearchProvider, WebSearchProviderResponse } from '@renderer/types'
 import { hasObjectKey } from '@renderer/utils'
+import { addAbortController } from '@renderer/utils/abortController'
 import { ExtractResults } from '@renderer/utils/extract'
 import { fetchWebContents } from '@renderer/utils/fetch'
 import dayjs from 'dayjs'
-
 /**
  * 提供网络搜索相关功能的服务类
  * TODO:添加暂停能力
  */
 class WebSearchService {
+  /**
+   * 是否暂停
+   */
+  private signal: AbortSignal | null = null
+
+  isPaused = false
+
+  createAbortSignal(key: string) {
+    const controller = new AbortController()
+    this.signal = controller.signal
+    addAbortController(key, () => {
+      this.isPaused = true
+      this.signal = null
+      controller.abort()
+    })
+    return controller
+  }
+
   /**
    * 获取当前存储的网络搜索状态
    * @private
@@ -140,7 +158,7 @@ class WebSearchService {
       const firstQuestion = questions[0]
 
       if (firstQuestion === 'summarize' && links && links.length > 0) {
-        const contents = await fetchWebContents(links)
+        const contents = await fetchWebContents(links, undefined, undefined, this.signal)
         return {
           query: 'summaries',
           results: contents

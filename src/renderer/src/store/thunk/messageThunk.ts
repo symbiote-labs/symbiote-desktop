@@ -28,7 +28,7 @@ import {
   createMainTextBlock,
   createThinkingBlock,
   createToolBlock,
-  resetMessage
+  resetAssistantMessage
 } from '@renderer/utils/messageUtils/create'
 import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
 import { throttle } from 'lodash'
@@ -826,85 +826,111 @@ export const clearTopicMessagesThunk =
   }
 
 /**
- * Thunk to resend an existing message (usually the last user message).
- * This involves potentially deleting subsequent messages and re-fetching the assistant response.
+ * Thunk to resend a user message by regenerating its associated assistant responses.
+ * This finds all assistant messages responding to the given user message,
+ * resets them, and queues them for regeneration without deleting other messages.
  */
 export const resendMessageThunk =
-  (topicId: Topic['id'], messageToResend: Message, assistant: Assistant) =>
+  (topicId: Topic['id'], userMessageToResend: Message, assistant: Assistant) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
-    console.log(`[resendMessageThunk] Resending message ${messageToResend.id} in topic ${topicId}`)
+    console.log(
+      `[resendMessageThunk] Regenerating responses for user message ${userMessageToResend.id} in topic ${topicId}`
+    )
     try {
       const state = getState()
       const allMessages = state.messages.messagesByTopic[topicId] || []
-      const resendIndex = allMessages.findIndex((m) => m.id === messageToResend.id)
 
-      if (resendIndex === -1) {
-        console.error(`[resendMessageThunk] Message ${messageToResend.id} not found for resend.`)
+      // 1. 找到所有助手消息
+      const assistantMessagesToReset = allMessages.filter(
+        (m) => m.askId === userMessageToResend.id && m.role === 'assistant'
+      )
+      console.log('allMessages', allMessages)
+      if (assistantMessagesToReset.length === 0) {
+        console.warn(
+          `[resendMessageThunk] No assistant responses found for user message ${userMessageToResend.id}. Nothing to regenerate.`
+        )
         return
       }
-      console.log('resendIndex', resendIndex, allMessages)
-      // --- Delete subsequent messages and their blocks ---
-      const messagesToDelete = allMessages.slice(resendIndex + 1)
-      const messageIdsToDelete = messagesToDelete.map((m) => m.id)
-      const blockIdsToDelete = messagesToDelete.flatMap((m) => m.blocks)
 
-      if (messagesToDelete.length > 0) {
-        console.log(`[resendMessageThunk] Deleting ${messagesToDelete.length} subsequent messages.`)
-        // Update Redux
-        dispatch(newMessagesActions.removeMessages({ topicId, messageIds: messageIdsToDelete }))
-        if (blockIdsToDelete.length > 0) {
-          dispatch(removeManyBlocks(blockIdsToDelete))
-        }
-        // Update DB (remove from topic and delete blocks)
-        const dbTopic = await db.topics.get(topicId)
-        if (dbTopic && dbTopic.messages) {
-          const updatedMessages = dbTopic.messages.filter((m) => !messageIdsToDelete.includes(m.id))
-          await db.topics.update(topicId, { messages: updatedMessages })
-        }
-        if (blockIdsToDelete.length > 0) {
-          await db.message_blocks.bulkDelete(blockIdsToDelete)
-        }
-      }
-      // --- End Deletion ---
+      console.log(
+        `[resendMessageThunk] Found ${assistantMessagesToReset.length} assistant messages to reset and regenerate.`
+      )
 
-      // --- Handle Assistant Response(s) based on mentions ---
-      const mentionedModels = messageToResend.mentions // Check mentions on the message being resent
-      const queue = getTopicQueue(topicId) // Get queue once
+      // 2. Prepare data for updates
+      const resetDataList: { resetMsg: Message }[] = []
+      const allBlockIdsToDelete: string[] = []
+      const messagesToUpdateInRedux: { topicId: string; messageId: string; updates: Partial<Message> }[] = []
+      const messagesToUpdateInDB: Message[] = []
 
-      if (mentionedModels && mentionedModels.length > 0) {
-        // --- Multi-Model Resend Scenario ---
-        console.log(`[DEBUG] Multi-model resend detected for ${mentionedModels.length} models.`)
-        await dispatchMultiModelResponses(dispatch, getState, topicId, messageToResend, assistant, mentionedModels)
-      } else {
-        // --- Single-Model Resend Scenario ---
-        console.log('[DEBUG] Single-model resend.')
-        // Create, add, and save the new Assistant Message stub BEFORE queueing
-        console.log('[DEBUG] Creating new assistant message stub for resend')
-        const assistantMessage = createAssistantMessage(assistant.id, topicId, {
-          askId: messageToResend.id, // Link to the user message being resent
-          model: assistant.model
+      for (const originalMsg of assistantMessagesToReset) {
+        const blockIdsToDelete = [...originalMsg.blocks]
+        const resetMsg = resetAssistantMessage(originalMsg, {
+          status: AssistantMessageStatus.PENDING // Start regeneration in PENDING state
+          // Keep the original model information if available
         })
-        console.log('[DEBUG] Adding new assistant message stub to store')
-        dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-        console.log('[DEBUG] Saving new assistant message stub to DB')
-        await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
 
-        // Add fetch/process call to the queue for this topic
-        console.log('[DEBUG] Adding task to queue')
+        resetDataList.push({ resetMsg })
+        allBlockIdsToDelete.push(...blockIdsToDelete)
+        messagesToUpdateInRedux.push({ topicId, messageId: resetMsg.id, updates: resetMsg })
+        messagesToUpdateInDB.push(resetMsg)
+      }
+
+      // 3. 更新redux
+      console.log('[resendMessageThunk] Updating Redux state...')
+      messagesToUpdateInRedux.forEach((update) => dispatch(newMessagesActions.updateMessage(update)))
+      if (allBlockIdsToDelete.length > 0) {
+        dispatch(removeManyBlocks(allBlockIdsToDelete))
+        console.log(`[resendMessageThunk] Removed ${allBlockIdsToDelete.length} old blocks from Redux.`)
+      }
+
+      // 4. 更新数据库
+      console.log('[resendMessageThunk] Updating Database...')
+      try {
+        // 先删除旧的blocks
+        if (allBlockIdsToDelete.length > 0) {
+          await db.message_blocks.bulkDelete(allBlockIdsToDelete)
+          console.log(`[resendMessageThunk] Removed ${allBlockIdsToDelete.length} old blocks from DB.`)
+        }
+
+        // 获取最新的messages数组
+        const finalMessagesFromState = getState().messages.messagesByTopic[topicId] || []
+
+        // 更新数据库中的topic
+        await db.topics.update(topicId, { messages: finalMessagesFromState })
+        console.log(`[resendMessageThunk] Updated DB topic ${topicId} with latest messages from Redux state.`)
+      } catch (dbError) {
+        console.error('[resendMessageThunk] Error updating database:', dbError)
+        // TODO: Consider state rollback? For now, log the error.
+        // throw dbError //
+      }
+
+      // 5. 队列生成任务
+      console.log('[resendMessageThunk] Queueing regeneration tasks...')
+      const queue = getTopicQueue(topicId)
+      for (const { resetMsg } of resetDataList) {
+        // 确定用于此特定生成的助手配置
+        // 如果重置消息保留了其模型，则使用该模型。否则，使用默认助手。
+        const assistantConfigForThisRegen = {
+          ...assistant,
+          ...(resetMsg.model ? { model: resetMsg.model } : {}) // Use the specific model from the message if available
+        }
+
+        console.log(
+          `[resendMessageThunk] Queueing task for message ${resetMsg.id} with model ${assistantConfigForThisRegen.model?.id}`
+        )
         queue.add(async () => {
           await fetchAndProcessAssistantResponseImpl(
             dispatch,
             getState,
             topicId,
-            assistant,
-            assistantMessage // Pass the newly created assistant message stub
+            assistantConfigForThisRegen, // Use potentially specific assistant config
+            resetMsg // Pass the reset assistant message stub
           )
         })
       }
+      console.log(`[resendMessageThunk] Successfully queued ${resetDataList.length} regeneration tasks.`)
     } catch (error) {
-      console.error(`[resendMessageThunk] Error resending message ${messageToResend.id}:`, error)
-      // Ensure loading state is potentially reset if error happens before fetch starts
-      dispatch(newMessagesActions.setTopicLoading({ topicId: topicId, loading: false }))
+      console.error(`[resendMessageThunk] Error resending user message ${userMessageToResend.id}:`, error)
     } finally {
       handleChangeLoadingOfTopic(topicId)
     }
@@ -1040,7 +1066,7 @@ export const regenerateAssistantResponseThunk =
       const blockIdsToDelete = [...messageToReset.blocks]
 
       // 5. Reset the assistant message using the utility function
-      const resetAssistantMsg = resetMessage(messageToReset, {
+      const resetAssistantMsg = resetAssistantMessage(messageToReset, {
         status: AssistantMessageStatus.PENDING // Or PROCESSING
       })
 
