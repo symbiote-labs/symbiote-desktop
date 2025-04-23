@@ -367,6 +367,22 @@ export type WebSearchResult = {
   meta?: Record<string, any> // 添加meta字段用于存储元数据
 }
 
+export interface ResearchIteration {
+  query: string
+  results: WebSearchResult[]
+  analysis: string
+  followUpQueries: string[]
+}
+
+export interface ResearchReport {
+  originalQuery: string
+  iterations: ResearchIteration[]
+  summary: string
+  directAnswer: string // 对原始问题的直接回答
+  keyInsights: string[]
+  sources: string[]
+}
+
 export type KnowledgeReference = {
   id: number
   content: string
@@ -515,3 +531,25 @@ export interface Citation {
 }
 
 export type MathEngine = 'KaTeX' | 'MathJax' | 'none'
+
+// Deep Research 类型定义
+export interface ResearchIteration {
+  query: string
+  results: WebSearchResult[]
+  analysis: string
+  followUpQueries: string[]
+}
+
+export interface ResearchReport {
+  originalQuery: string
+  iterations: ResearchIteration[]
+  summary: string
+  directAnswer: string // 对原始问题的直接回答
+  keyInsights: string[]
+  sources: string[]
+  tokenUsage?: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+  }
+}

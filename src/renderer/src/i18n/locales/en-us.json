@@ -1,5 +1,29 @@
 {
   "translation": {
+    "deepresearch": {
+      "title": "Deep Research",
+      "description": "Provides comprehensive research reports through multiple rounds of search, analysis, and summarization",
+      "start": "Start Deep Research",
+      "query": {
+        "placeholder": "Enter research topic or question",
+        "empty": "Please enter a research query"
+      },
+      "max_iterations": "Maximum Iterations",
+      "researching": "Conducting deep research, this may take a few minutes...",
+      "report": {
+        "title": "Deep Research Report",
+        "key_insights": "Key Insights",
+        "summary": "Research Summary",
+        "iterations": "Research Iterations",
+        "sources": "Information Sources"
+      },
+      "iteration": {
+        "title": "Iteration",
+        "search_results": "Search Results",
+        "analysis": "Analysis",
+        "follow_up_queries": "Follow-up Queries"
+      }
+    },
     "agents": {
       "add.button": "Add to Assistant",
       "add.knowledge_base": "Knowledge Base",
@@ -1337,6 +1361,12 @@
       "tray.show": "Show Tray Icon",
       "tray.title": "Tray",
       "websearch": {
+        "deep_research": {
+          "title": "Deep Research Settings",
+          "max_iterations": "Maximum Iterations",
+          "max_results_per_query": "Maximum Results Per Query",
+          "auto_summary": "Auto Summary"
+        },
         "blacklist": "Blacklist",
         "blacklist_description": "Results from the following websites will not appear in search results",
         "blacklist_tooltip": "Please use the following format (separated by line breaks)\nexample.com\nhttps://www.example.com\nhttps://example.com\n*://*.example.com",

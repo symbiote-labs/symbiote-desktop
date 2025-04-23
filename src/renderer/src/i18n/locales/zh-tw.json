@@ -1,5 +1,29 @@
 {
   "translation": {
+    "deepresearch": {
+      "title": "深度研究",
+      "description": "通過多輪搜索、分析和總結，提供全面的研究報告",
+      "start": "開始深度研究",
+      "query": {
+        "placeholder": "輸入研究主題或問題",
+        "empty": "請輸入研究查詢"
+      },
+      "max_iterations": "最大迭代次數",
+      "researching": "正在進行深度研究，這可能需要幾分鐘時間...",
+      "report": {
+        "title": "深度研究報告",
+        "key_insights": "關鍵見解",
+        "summary": "研究總結",
+        "iterations": "研究迭代",
+        "sources": "信息來源"
+      },
+      "iteration": {
+        "title": "迭代",
+        "search_results": "搜索結果",
+        "analysis": "分析",
+        "follow_up_queries": "後續查詢"
+      }
+    },
     "agents": {
       "add.button": "新增到助手",
       "add.knowledge_base": "知識庫",
@@ -1336,6 +1360,12 @@
       "tray.show": "顯示系统匣圖示",
       "tray.title": "系统匣",
       "websearch": {
+        "deep_research": {
+          "title": "深度研究設置",
+          "max_iterations": "最大迭代次數",
+          "max_results_per_query": "每次查詢的最大結果數",
+          "auto_summary": "自動生成摘要"
+        },
         "check_success": "驗證成功",
         "get_api_key": "點選這裡取得金鑰",
         "search_with_time": "搜尋包含日期",

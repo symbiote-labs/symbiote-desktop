@@ -1,5 +1,31 @@
 {
   "translation": {
+    "deepresearch": {
+      "title": "深度研究",
+      "description": "通过多轮搜索、分析和总结，提供全面的研究报告",
+      "start": "开始深度研究",
+      "query": {
+        "placeholder": "输入研究主题或问题",
+        "empty": "请输入研究查询"
+      },
+      "max_iterations": "最大迭代次数",
+      "researching": "正在进行深度研究，这可能需要几分钟时间...",
+      "report": {
+        "title": "深度研究报告",
+        "key_insights": "关键见解",
+        "summary": "研究总结",
+        "iterations": "研究迭代",
+        "sources": "信息来源"
+      },
+      "iteration": {
+        "title": "迭代",
+        "search_results": "搜索结果",
+        "analysis": "分析",
+        "follow_up_queries": "后续查询"
+      },
+      "engine_rotation": "每次迭代使用不同类别的搜索引擎：中文、国际、元搜索和学术搜索",
+      "open": "打开深度研究"
+    },
     "agents": {
       "add.button": "添加到助手",
       "add.knowledge_base": "知识库",
@@ -1337,6 +1363,12 @@
       "tray.show": "显示托盘图标",
       "tray.title": "托盘",
       "websearch": {
+        "deep_research": {
+          "title": "深度研究设置",
+          "max_iterations": "最大迭代次数",
+          "max_results_per_query": "每次查询的最大结果数",
+          "auto_summary": "自动生成摘要"
+        },
         "blacklist": "黑名单",
         "blacklist_description": "在搜索结果中不会出现以下网站的结果",
         "blacklist_tooltip": "请使用以下格式(换行分隔)\n匹配模式: *://*.example.com/*\n正则表达式: /example\\.(net|org)/",

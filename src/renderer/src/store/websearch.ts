@@ -7,6 +7,14 @@ export interface SubscribeSource {
   blacklist?: string[] // 存储从该订阅源获取的黑名单
 }
 
+export interface DeepResearchConfig {
+  maxIterations: number
+  maxResultsPerQuery: number
+  autoSummary: boolean
+  modelId?: string
+  enableQueryOptimization?: boolean
+}
+
 export interface WebSearchState {
   // 默认搜索提供商的ID
   defaultProvider: string
@@ -23,6 +31,8 @@ export interface WebSearchState {
   // 是否覆盖服务商搜索
   overwrite: boolean
   contentLimit?: number
+  // Deep Research 配置
+  deepResearchConfig: DeepResearchConfig
 }
 
 const initialState: WebSearchState = {
@@ -70,7 +80,13 @@ const initialState: WebSearchState = {
   maxResults: 10,
   excludeDomains: [],
   subscribeSources: [],
-  overwrite: false
+  overwrite: false,
+  deepResearchConfig: {
+    maxIterations: 3,
+    maxResultsPerQuery: 5,
+    autoSummary: true,
+    enableQueryOptimization: true
+  }
 }
 
 export const defaultWebSearchProviders = initialState.providers
@@ -144,6 +160,9 @@ const websearchSlice = createSlice({
     },
     setContentLimit: (state, action: PayloadAction<number>) => {
       state.contentLimit = action.payload
+    },
+    setDeepResearchConfig: (state, action: PayloadAction<DeepResearchConfig>) => {
+      state.deepResearchConfig = action.payload
     }
   }
 })
@@ -162,7 +181,8 @@ export const {
   setSubscribeSources,
   setOverwrite,
   addWebSearchProvider,
-  setContentLimit
+  setContentLimit,
+  setDeepResearchConfig
 } = websearchSlice.actions
 
 export default websearchSlice.reducer

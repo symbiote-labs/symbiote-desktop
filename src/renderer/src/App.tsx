@@ -16,6 +16,7 @@ import { ThemeProvider } from './context/ThemeProvider'
 import NavigationHandler from './handler/NavigationHandler'
 import AgentsPage from './pages/agents/AgentsPage'
 import AppsPage from './pages/apps/AppsPage'
+import DeepResearchPage from './pages/deepresearch/DeepResearchPage'
 import FilesPage from './pages/files/FilesPage'
 import HomePage from './pages/home/HomePage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
@@ -45,6 +46,7 @@ function App(): React.ReactElement {
                       <Route path="/files" element={<FilesPage />} />
                       <Route path="/knowledge" element={<KnowledgePage />} />
                       <Route path="/apps" element={<AppsPage />} />
+                      <Route path="/deepresearch" element={<DeepResearchPage />} />
                       <Route path="/settings/*" element={<SettingsPage />} />
                     </Routes>
                   </HashRouter>

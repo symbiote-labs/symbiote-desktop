@@ -6,6 +6,7 @@ import {
 } from '@renderer/config/models'
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
+import { getModelUniqId } from '@renderer/services/ModelService'
 import store from '@renderer/store'
 import { setGenerating } from '@renderer/store/runtime'
 import {
@@ -391,8 +392,27 @@ export async function fetchSearchSummary({ messages, assistant }: { messages: Me
   }
 }
 
-export async function fetchGenerate({ prompt, content }: { prompt: string; content: string }): Promise<string> {
-  const model = getDefaultModel()
+export async function fetchGenerate({
+  prompt,
+  content,
+  modelId
+}: {
+  prompt: string
+  content: string
+  modelId?: string
+}): Promise<string> {
+  let model = getDefaultModel()
+
+  // 如果提供了指定的模型 ID，尝试使用该模型
+  if (modelId) {
+    const { providers } = store.getState().llm
+    const allModels = providers.flatMap((p) => p.models)
+    const specifiedModel = allModels.find((m) => getModelUniqId(m) === modelId)
+    if (specifiedModel) {
+      model = specifiedModel
+    }
+  }
+
   const provider = getProviderByModel(model)
 
   if (!hasApiKey(provider)) {
@@ -404,6 +424,7 @@ export async function fetchGenerate({ prompt, content }: { prompt: string; conte
   try {
     return await AI.generateText({ prompt, content })
   } catch (error: any) {
+    console.error('Generate text error:', error)
     return ''
   }
 }

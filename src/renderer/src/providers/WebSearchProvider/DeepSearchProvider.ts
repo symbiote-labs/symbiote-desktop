@@ -15,60 +15,74 @@ import BaseWebSearchProvider from './BaseWebSearchProvider'
 export default class DeepSearchProvider extends BaseWebSearchProvider {
   // 定义默认的搜索引擎URLs
   private searchEngines = [
-    { name: 'Baidu', url: 'https://www.baidu.com/s?wd=%s' },
-    { name: 'Bing', url: 'https://cn.bing.com/search?q=%s&ensearch=1' },
-    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s&t=h_' },
-    { name: 'Sogou', url: 'https://www.sogou.com/web?query=%s' },
+    // 中文搜索引擎
+    { name: 'Baidu', url: 'https://www.baidu.com/s?wd=%s', category: 'chinese' },
+    { name: 'Sogou', url: 'https://www.sogou.com/web?query=%s', category: 'chinese' },
+    { name: '360', url: 'https://www.so.com/s?q=%s', category: 'chinese' },
+    { name: 'Yisou', url: 'https://yisou.com/search?q=%s', category: 'chinese' },
+
+    // 国际搜索引擎
+    { name: 'Bing', url: 'https://cn.bing.com/search?q=%s&ensearch=1', category: 'international' },
+    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s&t=h_', category: 'international' },
+    { name: 'Brave', url: 'https://search.brave.com/search?q=%s', category: 'international' },
+    { name: 'Qwant', url: 'https://www.qwant.com/?q=%s', category: 'international' },
+
+    // 元搜索引擎
     {
       name: 'SearX',
-      url: 'https://searx.tiekoetter.com/search?q=%s&categories=general&language=auto&time_range=&safesearch=0&theme=simple'
-    }
+      url: 'https://searx.tiekoetter.com/search?q=%s&categories=general&language=auto',
+      category: 'meta'
+    },
+    { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s', category: 'meta' },
+    { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=%s', category: 'meta' },
+    { name: 'Mojeek', url: 'https://www.mojeek.com/search?q=%s', category: 'meta' },
+
+    // 学术搜索引擎
+    { name: 'Scholar', url: 'https://scholar.google.com/scholar?q=%s', category: 'academic' },
+    { name: 'Semantic', url: 'https://www.semanticscholar.org/search?q=%s', category: 'academic' },
+    { name: 'BASE', url: 'https://www.base-search.net/Search/Results?lookfor=%s', category: 'academic' },
+    { name: 'CNKI', url: 'https://kns.cnki.net/kns/brief/Default_Result.aspx?code=SCDB&kw=%s', category: 'academic' }
   ]
 
   // 定义URL过滤规则
   private urlFilters = {
-    // 排除的域名
+    // 排除的域名（增强版）
     excludedDomains: [
+      // 账户相关
       'login',
       'signin',
       'signup',
       'register',
       'account',
-      'download',
-      'shop',
-      'store',
-      'buy',
-      'cart',
       'checkout',
+
+      // 广告相关
       'ads',
+      'ad.',
+      'adv.',
       'advertisement',
       'sponsor',
       'tracking',
-      'facebook.com',
-      'twitter.com',
-      'instagram.com',
-      'pinterest.com',
-      'youtube.com/channel',
-      'youtube.com/user',
-      'youtube.com/c/',
-      'tiktok.com',
-      'douyin.com',
-      'weibo.com',
-      'zhihu.com/question',
-      'baike.baidu.com',
-      'wiki.com',
-      'wikipedia.org/wiki/Help:',
-      'wikipedia.org/wiki/Wikipedia:',
-      'wikipedia.org/wiki/Template:',
-      'wikipedia.org/wiki/File:',
-      'wikipedia.org/wiki/Category:',
-      'amazon.com/s',
-      'amazon.cn/s',
-      'taobao.com/search',
-      'jd.com/search',
-      'tmall.com/search',
-      'ebay.com/sch',
-      'aliexpress.com/wholesale'
+      'promotion',
+      'marketing',
+      'banner',
+      'popup',
+
+      // 购物相关
+      'cart',
+      'shop',
+      'store',
+      'buy',
+      'price',
+      'deal',
+      'coupon',
+      'discount',
+
+      // 社交媒体评论区
+      'comment',
+      'comments',
+      'forum',
+      'bbs'
     ],
     // 优先的域名（相关性更高）
     priorityDomains: [
@@ -143,7 +157,7 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     // 不再强制要求provider.url，因为我们有默认的搜索引擎
   }
 
-  public async search(query: string, websearch: WebSearchState): Promise<WebSearchResponse> {
+  public async search(query: string, websearch: WebSearchState, engineCategory?: string): Promise<WebSearchResponse> {
     try {
       if (!query.trim()) {
         throw new Error('Search query cannot be empty')
@@ -155,8 +169,22 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       // 存储所有搜索引擎的结果
       const allItems: Array<{ title: string; url: string; source: string }> = []
 
-      // 并行搜索所有引擎
-      const searchPromises = this.searchEngines.map(async (engine) => {
+      // 根据类别筛选搜索引擎
+      let enginesToUse = this.searchEngines
+
+      // 如果指定了类别，则只使用该类别的搜索引擎
+      if (engineCategory) {
+        enginesToUse = this.searchEngines.filter((engine) => engine.category === engineCategory)
+        // 如果该类别没有搜索引擎，则使用所有搜索引擎
+        if (enginesToUse.length === 0) {
+          enginesToUse = this.searchEngines
+        }
+      }
+
+      console.log(`[DeepSearch] 使用${engineCategory || '所有'}类别的搜索引擎，共 ${enginesToUse.length} 个`)
+
+      // 并行搜索选定的引擎
+      const searchPromises = enginesToUse.map(async (engine) => {
         try {
           const uid = `deep-search-${engine.name.toLowerCase()}-${nanoid()}`
           const url = engine.url.replace('%s', encodeURIComponent(cleanedQuery))
@@ -289,6 +317,93 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       console.error('[DeepSearch] 搜索失败:', error)
       throw new Error(`DeepSearch failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
+  }
+
+  /**
+   * 检测内容是否包含乱码或无意义内容
+   * @param content 要检测的内容
+   * @returns 如果包含乱码或无意义内容返回true，否则返回false
+   */
+  private containsGarbage(content: string): boolean {
+    if (!content) return true
+
+    // 检测内容长度
+    if (content.length < 50) return true // 内容过短
+
+    // 检测乱码字符比例
+    // 使用安全的方式检测乱码字符
+    // 手动检测不可打印字符而不使用正则表达式
+    let nonReadableCharsCount = 0
+    for (let i = 0; i < content.length; i++) {
+      const charCode = content.charCodeAt(i)
+      // 检测控制字符和特殊字符
+      if (
+        (charCode >= 0 && charCode <= 8) ||
+        charCode === 11 ||
+        charCode === 12 ||
+        (charCode >= 14 && charCode <= 31) ||
+        (charCode >= 127 && charCode <= 159) ||
+        charCode === 0xfffd ||
+        charCode === 0xfffe ||
+        charCode === 0xffff
+      ) {
+        nonReadableCharsCount++
+      }
+    }
+    if (nonReadableCharsCount > content.length * 0.05) {
+      return true // 乱码字符超过5%
+    }
+
+    // 检测重复模式
+    const repeatedPatterns = content.match(/(.{10,})\1{3,}/g)
+    if (repeatedPatterns && repeatedPatterns.length > 0) {
+      return true // 存在多次重复的长模式
+    }
+
+    // 检测广告关键词
+    const adKeywords = [
+      'advertisement',
+      'sponsored',
+      'promotion',
+      'discount',
+      'sale',
+      'buy now',
+      'limited time',
+      'special offer',
+      'click here',
+      'best price',
+      'free shipping',
+      '广告',
+      '促销',
+      '特惠',
+      '打折',
+      '限时',
+      '点击购买',
+      '立即购买'
+    ]
+
+    const contentLower = content.toLowerCase()
+    const adKeywordCount = adKeywords.filter((keyword) => contentLower.includes(keyword)).length
+
+    if (adKeywordCount >= 3) {
+      return true // 包含多个广告关键词
+    }
+
+    // 检测内容多样性（字符类型比例）
+    const letters = content.match(/[a-zA-Z]/g)?.length || 0
+    const digits = content.match(/\d/g)?.length || 0
+    const spaces = content.match(/\s/g)?.length || 0
+    const punctuation = content.match(/[.,;:!?]/g)?.length || 0
+
+    // 如果内容几乎只有一种字符类型，可能是乱码
+    const totalChars = content.length
+    const mainCharType = Math.max(letters, digits, spaces, punctuation)
+
+    if (mainCharType / totalChars > 0.9) {
+      return true // 单一字符类型超过90%
+    }
+
+    return false
   }
 
   /**
@@ -623,10 +738,19 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       return scoreB - scoreA
     })
 
-    // 过滤掉明显不相关的结果，提高阈值以只保留更相关的结果
+    // 过滤掉明显不相关的结果和乱码内容
     const filteredResults = analyzedResults.filter((result) => {
+      // 检查相关性分数
       const score = (result as AnalyzedResult).relevanceScore || 0
-      return score > 0.2 // 提高阈值到 0.2，只保留相关性分数较高的结果
+      if (score <= 0.05) return false // 相关性分数过低
+
+      // 检查是否包含乱码或广告
+      if (this.containsGarbage(result.content)) {
+        console.log(`[DeepSearch] 过滤乱码或广告内容: ${result.title}`)
+        return false
+      }
+
+      return true
     })
 
     console.log(`[DeepSearch] 完成分析 ${results.length} 个结果，过滤后剩余 ${filteredResults.length} 个结果`)
