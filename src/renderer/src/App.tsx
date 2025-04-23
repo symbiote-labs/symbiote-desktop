@@ -6,7 +6,9 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 
 import Sidebar from './components/app/Sidebar'
+import GeminiInitializer from './components/GeminiInitializer'
 import TopViewContainer from './components/TopView'
+import WebSearchInitializer from './components/WebSearchInitializer'
 import AntdProvider from './context/AntdProvider'
 import StyleSheetManager from './context/StyleSheetManager'
 import { SyntaxHighlighterProvider } from './context/SyntaxHighlighterProvider'
@@ -29,6 +31,8 @@ function App(): React.ReactElement {
           <AntdProvider>
             <SyntaxHighlighterProvider>
               <PersistGate loading={null} persistor={persistor}>
+                <GeminiInitializer />
+                <WebSearchInitializer />
                 <TopViewContainer>
                   <HashRouter>
                     <NavigationHandler />

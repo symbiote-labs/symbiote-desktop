@@ -44,6 +44,13 @@ const initialState: WebSearchState = {
       apiKey: ''
     },
     {
+      id: 'deep-search',
+      name: 'DeepSearch',
+      description: '多引擎深度搜索',
+      usingBrowser: true,
+      contentLimit: 10000
+    },
+    {
       id: 'local-google',
       name: 'Google',
       url: 'https://www.google.com/search?q=%s'
@@ -60,7 +67,7 @@ const initialState: WebSearchState = {
     }
   ],
   searchWithTime: true,
-  maxResults: 5,
+  maxResults: 10,
   excludeDomains: [],
   subscribeSources: [],
   overwrite: false

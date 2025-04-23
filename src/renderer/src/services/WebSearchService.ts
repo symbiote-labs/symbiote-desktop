@@ -45,6 +45,11 @@ class WebSearchService {
       return provider.apiHost !== ''
     }
 
+    // DeepSearch提供商不需要API密钥或主机
+    if (provider.id === 'deep-search') {
+      return true
+    }
+
     return false
   }
 

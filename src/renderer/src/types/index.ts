@@ -362,6 +362,7 @@ export type WebSearchResult = {
   title: string
   content: string
   url: string
+  source?: string
 }
 
 export type KnowledgeReference = {
