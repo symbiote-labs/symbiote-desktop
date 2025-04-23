@@ -29,34 +29,105 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
   private urlFilters = {
     // 排除的域名
     excludedDomains: [
-      'login', 'signin', 'signup', 'register', 'account',
-      'download', 'shop', 'store', 'buy', 'cart', 'checkout',
-      'ads', 'advertisement', 'sponsor', 'tracking',
-      'facebook.com', 'twitter.com', 'instagram.com', 'pinterest.com',
-      'youtube.com/channel', 'youtube.com/user', 'youtube.com/c/',
-      'tiktok.com', 'douyin.com', 'weibo.com', 'zhihu.com/question',
-      'baike.baidu.com', 'wiki.com', 'wikipedia.org/wiki/Help:',
-      'wikipedia.org/wiki/Wikipedia:', 'wikipedia.org/wiki/Template:',
-      'wikipedia.org/wiki/File:', 'wikipedia.org/wiki/Category:',
-      'amazon.com/s', 'amazon.cn/s', 'taobao.com/search', 'jd.com/search',
-      'tmall.com/search', 'ebay.com/sch', 'aliexpress.com/wholesale'
+      'login',
+      'signin',
+      'signup',
+      'register',
+      'account',
+      'download',
+      'shop',
+      'store',
+      'buy',
+      'cart',
+      'checkout',
+      'ads',
+      'advertisement',
+      'sponsor',
+      'tracking',
+      'facebook.com',
+      'twitter.com',
+      'instagram.com',
+      'pinterest.com',
+      'youtube.com/channel',
+      'youtube.com/user',
+      'youtube.com/c/',
+      'tiktok.com',
+      'douyin.com',
+      'weibo.com',
+      'zhihu.com/question',
+      'baike.baidu.com',
+      'wiki.com',
+      'wikipedia.org/wiki/Help:',
+      'wikipedia.org/wiki/Wikipedia:',
+      'wikipedia.org/wiki/Template:',
+      'wikipedia.org/wiki/File:',
+      'wikipedia.org/wiki/Category:',
+      'amazon.com/s',
+      'amazon.cn/s',
+      'taobao.com/search',
+      'jd.com/search',
+      'tmall.com/search',
+      'ebay.com/sch',
+      'aliexpress.com/wholesale'
     ],
     // 优先的域名（相关性更高）
     priorityDomains: [
-      'github.com/augment', 'augmentcode.com', 'augment.dev',
-      'github.com', 'stackoverflow.com', 'dev.to', 'medium.com',
-      'docs.github.com', 'npmjs.com', 'pypi.org', 'microsoft.com/en-us/learn',
-      'developer.mozilla.org', 'w3schools.com', 'reactjs.org', 'vuejs.org',
-      'angular.io', 'tensorflow.org', 'pytorch.org', 'kubernetes.io',
-      'docker.com', 'aws.amazon.com/documentation', 'cloud.google.com/docs',
+      'github.com/augment',
+      'augmentcode.com',
+      'augment.dev',
+      'github.com',
+      'stackoverflow.com',
+      'dev.to',
+      'medium.com',
+      'docs.github.com',
+      'npmjs.com',
+      'pypi.org',
+      'microsoft.com/en-us/learn',
+      'developer.mozilla.org',
+      'w3schools.com',
+      'reactjs.org',
+      'vuejs.org',
+      'angular.io',
+      'tensorflow.org',
+      'pytorch.org',
+      'kubernetes.io',
+      'docker.com',
+      'aws.amazon.com/documentation',
+      'cloud.google.com/docs',
       'azure.microsoft.com/en-us/documentation'
     ],
     // 排除的文件类型
     excludedFileTypes: [
-      '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp',
-      '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.wav', '.ogg',
-      '.zip', '.rar', '.7z', '.tar', '.gz', '.exe', '.dmg', '.apk',
-      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.svg',
+      '.webp',
+      '.mp3',
+      '.mp4',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.wav',
+      '.ogg',
+      '.zip',
+      '.rar',
+      '.7z',
+      '.tar',
+      '.gz',
+      '.exe',
+      '.dmg',
+      '.apk',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx'
     ]
   }
 
@@ -238,12 +309,78 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
 
     // 过滤掉常见的停用词
     const stopWords = new Set([
-      'a', 'an', 'the', 'and', 'or', 'but', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'against', 'between', 'into', 'through',
-      'during', 'before', 'after', 'above', 'below', 'from', 'up', 'down', 'of', 'off', 'over', 'under',
-      'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any',
-      'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
-      'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
+      'a',
+      'an',
+      'the',
+      'and',
+      'or',
+      'but',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'being',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'with',
+      'by',
+      'about',
+      'against',
+      'between',
+      'into',
+      'through',
+      'during',
+      'before',
+      'after',
+      'above',
+      'below',
+      'from',
+      'up',
+      'down',
+      'of',
+      'off',
+      'over',
+      'under',
+      'again',
+      'further',
+      'then',
+      'once',
+      'here',
+      'there',
+      'when',
+      'where',
+      'why',
+      'how',
+      'all',
+      'any',
+      'both',
+      'each',
+      'few',
+      'more',
+      'most',
+      'other',
+      'some',
+      'such',
+      'no',
+      'nor',
+      'not',
+      'only',
+      'own',
+      'same',
+      'so',
+      'than',
+      'too',
+      'very',
+      'can',
+      'will',
+      'just',
+      'should',
+      'now'
     ])
 
     // 提取重要关键词，并为每个词分配权重
@@ -262,7 +399,7 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
 
     // 如果没有提取到关键词，使用原始查询词
     if (keywordWeights.size === 0) {
-      queryWords.forEach(word => {
+      queryWords.forEach((word) => {
         if (word.length > 2) {
           keywordWeights.set(word, 1.0)
         }
@@ -283,7 +420,7 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         const sentences = content.split(/(?<=[.!?])\s+/)
 
         // 为每个句子评分
-        const sentenceScores = sentences.map(sentence => {
+        const sentenceScores = sentences.map((sentence) => {
           const sentenceLower = sentence.toLowerCase()
           let score = 0
 
@@ -343,13 +480,11 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         const keywordScores = new Map<string, number>()
 
         // 从内容中提取潜在关键词
-        const contentWords = contentLower.split(/\W+/).filter(word =>
-          word.length > 3 && !stopWords.has(word)
-        )
+        const contentWords = contentLower.split(/\W+/).filter((word) => word.length > 3 && !stopWords.has(word))
 
         // 计算词频
         const wordFrequency = new Map<string, number>()
-        contentWords.forEach(word => {
+        contentWords.forEach((word) => {
           wordFrequency.set(word, (wordFrequency.get(word) || 0) + 1)
         })
 
@@ -382,14 +517,13 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         const sortedKeywords = Array.from(keywordScores.entries())
           .sort((a, b) => b[1] - a[1])
           .slice(0, 5)
-          .map(entry => entry[0])
+          .map((entry) => entry[0])
 
         // 计算相关性评分（改进实现）
         let relevanceScore = 0
 
         // 1. 基于关键词匹配度的评分
         let keywordMatchScore = 0
-        let keywordCount = 0
 
         for (const [keyword, weight] of keywordWeights.entries()) {
           // 计算关键词出现的次数
@@ -401,9 +535,8 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
           }
 
           if (count > 0) {
-            keywordCount++
             // 权重 * 出现次数 * 归一化因子
-            keywordMatchScore += weight * Math.min(10, count) / 10
+            keywordMatchScore += (weight * Math.min(10, count)) / 10
           }
         }
 
@@ -442,28 +575,26 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         } else {
           // 如果没有预先计算的分数，使用基于域名的评分
           // 检查是否是官方网站或知名网站
-          if (url.includes('github.com/augment') ||
-              url.includes('augmentcode.com') ||
-              url.includes('augment.dev')) {
-            urlScore = 1.0  // 官方网站最高分
-          } else if (url.includes('github.com') ||
-                    url.includes('stackoverflow.com') ||
-                    url.includes('medium.com') ||
-                    url.includes('dev.to')) {
-            urlScore = 0.8  // 知名技术网站高分
-          } else if (!url.includes('login') &&
-                    !url.includes('signup') &&
-                    !url.includes('register')) {
-            urlScore = 0.5  // 普通网站中等分
+          if (url.includes('github.com/augment') || url.includes('augmentcode.com') || url.includes('augment.dev')) {
+            urlScore = 1.0 // 官方网站最高分
+          } else if (
+            url.includes('github.com') ||
+            url.includes('stackoverflow.com') ||
+            url.includes('medium.com') ||
+            url.includes('dev.to')
+          ) {
+            urlScore = 0.8 // 知名技术网站高分
+          } else if (!url.includes('login') && !url.includes('signup') && !url.includes('register')) {
+            urlScore = 0.5 // 普通网站中等分
           }
         }
 
         // 组合所有评分因素，调整权重以提高URL质量的重要性
         relevanceScore =
           keywordMatchScore * 0.4 + // 关键词匹配度占40%
-          titleScore * 0.3 +        // 标题相关性占30%
-          lengthScore * 0.05 +      // 内容长度占5%
-          urlScore * 0.25           // URL质量占25%，增加了权重
+          titleScore * 0.3 + // 标题相关性占30%
+          lengthScore * 0.05 + // 内容长度占5%
+          urlScore * 0.25 // URL质量占25%，增加了权重
 
         // 确保分数在0-1范围内
         relevanceScore = Math.min(1, Math.max(0, relevanceScore))
@@ -493,7 +624,7 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     })
 
     // 过滤掉明显不相关的结果，提高阈值以只保留更相关的结果
-    const filteredResults = analyzedResults.filter(result => {
+    const filteredResults = analyzedResults.filter((result) => {
       const score = (result as AnalyzedResult).relevanceScore || 0
       return score > 0.2 // 提高阈值到 0.2，只保留相关性分数较高的结果
     })

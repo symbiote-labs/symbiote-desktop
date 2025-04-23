@@ -1,8 +1,8 @@
 import { WebSearchProvider } from '@renderer/types'
 
 import BaseWebSearchProvider from './BaseWebSearchProvider'
-import DefaultProvider from './DefaultProvider'
 import DeepSearchProvider from './DeepSearchProvider'
+import DefaultProvider from './DefaultProvider'
 import ExaProvider from './ExaProvider'
 import LocalBaiduProvider from './LocalBaiduProvider'
 import LocalBingProvider from './LocalBingProvider'

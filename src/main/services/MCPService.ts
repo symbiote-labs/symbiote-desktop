@@ -159,7 +159,7 @@ class McpService {
         } else if (server.type === 'sse') {
           const options: SSEClientTransportOptions = {
             eventSourceInit: {
-              fetch: (url, init) => fetch(url, { ...init, headers: server.headers || {} }),
+              fetch: (url, init) => fetch(url, { ...init, headers: server.headers || {} })
             },
             requestInit: {
               headers: server.headers || {}

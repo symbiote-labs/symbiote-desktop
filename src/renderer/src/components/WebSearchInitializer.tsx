@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@renderer/store'
 import { addWebSearchProvider } from '@renderer/store/websearch'
 import { WebSearchProvider } from '@renderer/types'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 /**
  * WebSearchInitializer组件

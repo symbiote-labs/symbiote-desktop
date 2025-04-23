@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@renderer/store'
 import { updateProvider } from '@renderer/store/llm'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 /**
  * GeminiInitializer组件
