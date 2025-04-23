@@ -351,6 +351,7 @@ export type WebSearchProvider = {
   basicAuthPassword?: string
   contentLimit?: number
   usingBrowser?: boolean
+  description?: string
 }
 
 export type WebSearchResponse = {
@@ -363,6 +364,7 @@ export type WebSearchResult = {
   content: string
   url: string
   source?: string
+  meta?: Record<string, any> // 添加meta字段用于存储元数据
 }
 
 export type KnowledgeReference = {

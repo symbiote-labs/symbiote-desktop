@@ -22,9 +22,9 @@ const WebSearchInitializer = () => {
       const deepSearchProvider: WebSearchProvider = {
         id: 'deep-search',
         name: 'DeepSearch',
-        description: '多引擎深度搜索',
         usingBrowser: true,
-        contentLimit: 10000
+        contentLimit: 10000,
+        description: '多引擎深度搜索'
       }
       dispatch(addWebSearchProvider(deepSearchProvider))
     }
