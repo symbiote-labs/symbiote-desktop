@@ -358,6 +358,44 @@
     "docs": {
       "title": "帮助文档"
     },
+    "deepresearch": {
+      "title": "深度研究",
+      "description": "深度研究功能通过多轮搜索、分析和总结，为您提供全面的研究报告。",
+      "engine_rotation": "每次迭代使用不同类别的搜索引擎：中文、国际、元搜索和学术搜索",
+      "startResearch": "开始深度研究",
+      "open": "打开深度研究",
+      "open_success": "正在打开深度研究页面",
+      "open_error": "打开深度研究页面失败",
+      "history": "历史记录",
+      "exportReport": "导出报告",
+      "maxIterations": "最大迭代次数",
+      "researchLoading": "正在进行深度研究",
+      "iteration": "迭代",
+      "directAnswer": "问题回答",
+      "keyInsights": "关键见解",
+      "summary": "研究总结",
+      "researchIterations": "研究迭代",
+      "sources": "信息来源",
+      "searchResults": "搜索结果",
+      "analysis": "分析",
+      "followUpQueries": "后续查询",
+      "historyTitle": "历史研究记录",
+      "load": "加载",
+      "export": "导出",
+      "noHistory": "暂无历史记录",
+      "date": "日期",
+      "iterationCount": "迭代次数",
+      "tokenStats": "Token统计",
+      "input": "输入",
+      "output": "输出",
+      "total": "总计",
+      "error": {
+        "emptyQuery": "请输入研究查询",
+        "noProvider": "请选择搜索提供商",
+        "providerNotFound": "找不到选定的搜索提供商",
+        "researchFailed": "研究过程中出错"
+      }
+    },
     "error": {
       "backup.file_format": "备份文件格式错误",
       "chat.response": "出错了，如果没有配置 API 密钥，请前往设置 > 模型提供商中配置密钥",
@@ -1766,7 +1804,15 @@
         },
         "title": "网络搜索",
         "apikey": "API 密钥",
-        "free": "免费"
+        "free": "免费",
+        "deep_research": {
+          "title": "深度研究",
+          "max_iterations": "最大迭代次数",
+          "max_results_per_query": "每次查询最大结果数",
+          "auto_summary": "自动生成摘要",
+          "enable_query_optimization": "启用查询优化",
+          "query_optimization_desc": "使用 AI 分析您的问题并生成更有效的搜索查询"
+        }
       },
       "quickPhrase": {
         "title": "快捷短语",

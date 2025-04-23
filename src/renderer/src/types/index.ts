@@ -363,6 +363,8 @@ export type SidebarIcon =
   | 'knowledge'
   | 'files'
   | 'projects'
+  | 'workspace'
+  | 'deepresearch'
 
 export type WebSearchProvider = {
   id: string
@@ -374,6 +376,7 @@ export type WebSearchProvider = {
   contentLimit?: number
   usingBrowser?: boolean
   description?: string
+  category?: string
 }
 
 export type WebSearchResponse = {
@@ -389,6 +392,31 @@ export type WebSearchResult = {
   summary?: string
   keywords?: string[]
   relevanceScore?: number
+  meta?: {
+    priorityScore?: number
+    [key: string]: any
+  }
+}
+
+export interface ResearchIteration {
+  query: string
+  results: WebSearchResult[]
+  analysis: string
+  followUpQueries: string[]
+}
+
+export interface ResearchReport {
+  originalQuery: string
+  iterations: ResearchIteration[]
+  summary: string
+  directAnswer: string
+  keyInsights: string[]
+  sources: string[]
+  tokenUsage?: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+  }
 }
 
 export type KnowledgeReference = {

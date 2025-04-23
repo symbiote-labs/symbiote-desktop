@@ -15,15 +15,135 @@ import BaseWebSearchProvider from './BaseWebSearchProvider'
 export default class DeepSearchProvider extends BaseWebSearchProvider {
   // 定义默认的搜索引擎URLs
   private searchEngines = [
-    { name: 'Baidu', url: 'https://www.baidu.com/s?wd=%s' },
-    { name: 'Bing', url: 'https://cn.bing.com/search?q=%s&ensearch=1' },
-    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s&t=h_' },
-    { name: 'Sogou', url: 'https://www.sogou.com/web?query=%s' },
+    // 中文搜索引擎
+    { name: 'Baidu', url: 'https://www.baidu.com/s?wd=%s', category: 'chinese' },
+    { name: 'Sogou', url: 'https://www.sogou.com/web?query=%s', category: 'chinese' },
+    { name: '360', url: 'https://www.so.com/s?q=%s', category: 'chinese' },
+    { name: 'Yisou', url: 'https://yisou.com/search?q=%s', category: 'chinese' },
+
+    // 国际搜索引擎
+    { name: 'Bing', url: 'https://cn.bing.com/search?q=%s&ensearch=1', category: 'international' },
+    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s&t=h_', category: 'international' },
+    { name: 'Brave', url: 'https://search.brave.com/search?q=%s', category: 'international' },
+    { name: 'Qwant', url: 'https://www.qwant.com/?q=%s', category: 'international' },
+
+    // 元搜索引擎
     {
       name: 'SearX',
-      url: 'https://searx.tiekoetter.com/search?q=%s&categories=general&language=auto&time_range=&safesearch=0&theme=simple'
-    }
+      url: 'https://searx.tiekoetter.com/search?q=%s&categories=general&language=auto',
+      category: 'meta'
+    },
+    { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s', category: 'meta' },
+    { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=%s', category: 'meta' },
+    { name: 'Mojeek', url: 'https://www.mojeek.com/search?q=%s', category: 'meta' },
+
+    // 学术搜索引擎
+    { name: 'Scholar', url: 'https://scholar.google.com/scholar?q=%s', category: 'academic' },
+    { name: 'Semantic', url: 'https://www.semanticscholar.org/search?q=%s', category: 'academic' },
+    { name: 'BASE', url: 'https://www.base-search.net/Search/Results?lookfor=%s', category: 'academic' },
+    { name: 'CNKI', url: 'https://kns.cnki.net/kns/brief/Default_Result.aspx?code=SCDB&kw=%s', category: 'academic' }
   ]
+
+  // 定义URL过滤规则
+  private urlFilters = {
+    // 排除的域名（增强版）
+    excludedDomains: [
+      // 账户相关
+      'login',
+      'signin',
+      'signup',
+      'register',
+      'account',
+      'checkout',
+
+      // 广告相关
+      'ads',
+      'ad.',
+      'adv.',
+      'advertisement',
+      'sponsor',
+      'tracking',
+      'promotion',
+      'marketing',
+      'banner',
+      'popup',
+
+      // 购物相关
+      'cart',
+      'shop',
+      'store',
+      'buy',
+      'price',
+      'deal',
+      'coupon',
+      'discount',
+
+      // 社交媒体评论区
+      'comment',
+      'comments',
+      'forum',
+      'bbs'
+    ],
+    // 优先的域名（相关性更高）
+    priorityDomains: [
+      'github.com/augment',
+      'augmentcode.com',
+      'augment.dev',
+      'github.com',
+      'stackoverflow.com',
+      'dev.to',
+      'medium.com',
+      'docs.github.com',
+      'npmjs.com',
+      'pypi.org',
+      'microsoft.com/en-us/learn',
+      'developer.mozilla.org',
+      'w3schools.com',
+      'reactjs.org',
+      'vuejs.org',
+      'angular.io',
+      'tensorflow.org',
+      'pytorch.org',
+      'kubernetes.io',
+      'docker.com',
+      'aws.amazon.com/documentation',
+      'cloud.google.com/docs',
+      'azure.microsoft.com/en-us/documentation'
+    ],
+    // 排除的文件类型
+    excludedFileTypes: [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.svg',
+      '.webp',
+      '.mp3',
+      '.mp4',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.wav',
+      '.ogg',
+      '.zip',
+      '.rar',
+      '.7z',
+      '.tar',
+      '.gz',
+      '.exe',
+      '.dmg',
+      '.apk',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx'
+    ]
+  }
 
   // 分析模型配置
   private analyzeConfig = {
@@ -37,7 +157,7 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     // 不再强制要求provider.url，因为我们有默认的搜索引擎
   }
 
-  public async search(query: string, websearch: WebSearchState): Promise<WebSearchResponse> {
+  public async search(query: string, websearch: WebSearchState, engineCategory?: string): Promise<WebSearchResponse> {
     try {
       if (!query.trim()) {
         throw new Error('Search query cannot be empty')
@@ -49,8 +169,58 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       // 存储所有搜索引擎的结果
       const allItems: Array<{ title: string; url: string; source: string }> = []
 
-      // 并行搜索所有引擎
-      const searchPromises = this.searchEngines.map(async (engine) => {
+      // 根据类别筛选搜索引擎
+      let enginesToUse = this.searchEngines
+
+      // 如果是 DeepResearch 调用（指定了类别），则按类别筛选搜索引擎
+      if (engineCategory) {
+        enginesToUse = this.searchEngines.filter((engine) => engine.category === engineCategory)
+        // 如果该类别没有搜索引擎，则使用所有搜索引擎
+        if (enginesToUse.length === 0) {
+          enginesToUse = this.searchEngines
+        }
+      }
+      // 如果是普通 DeepSearch 调用（没有指定类别），则根据用户配置筛选搜索引擎
+      else if (websearch.deepSearchConfig?.enabledEngines) {
+        const enabledEngines = websearch.deepSearchConfig.enabledEngines
+        enginesToUse = this.searchEngines.filter((engine) => {
+          // 中文搜索引擎
+          if (engine.name === 'Baidu' && enabledEngines.baidu === false) return false
+          if (engine.name === 'Sogou' && enabledEngines.sogou === false) return false
+          if (engine.name === '360' && enabledEngines['360'] === false) return false
+          if (engine.name === 'Yisou' && enabledEngines.yisou === false) return false
+
+          // 国际搜索引擎
+          if (engine.name === 'Bing' && enabledEngines.bing === false) return false
+          if (engine.name === 'DuckDuckGo' && enabledEngines.duckduckgo === false) return false
+          if (engine.name === 'Brave' && enabledEngines.brave === false) return false
+          if (engine.name === 'Qwant' && enabledEngines.qwant === false) return false
+
+          // 元搜索引擎
+          if (engine.name === 'SearX' && enabledEngines.searx === false) return false
+          if (engine.name === 'Ecosia' && enabledEngines.ecosia === false) return false
+          if (engine.name === 'Startpage' && enabledEngines.startpage === false) return false
+          if (engine.name === 'Mojeek' && enabledEngines.mojeek === false) return false
+
+          // 学术搜索引擎
+          if (engine.name === 'Scholar' && enabledEngines.scholar === false) return false
+          if (engine.name === 'Semantic' && enabledEngines.semantic === false) return false
+          if (engine.name === 'BASE' && enabledEngines.base === false) return false
+          if (engine.name === 'CNKI' && enabledEngines.cnki === false) return false
+
+          return true
+        })
+
+        // 如果没有启用任何搜索引擎，则至少使用百度
+        if (enginesToUse.length === 0) {
+          enginesToUse = this.searchEngines.filter((engine) => engine.name === 'Baidu')
+        }
+      }
+
+      console.log(`[DeepSearch] 使用${engineCategory || '所有'}类别的搜索引擎，共 ${enginesToUse.length} 个`)
+
+      // 并行搜索选定的引擎
+      const searchPromises = enginesToUse.map(async (engine) => {
         try {
           const uid = `deep-search-${engine.name.toLowerCase()}-${nanoid()}`
           const url = engine.url.replace('%s', encodeURIComponent(cleanedQuery))
@@ -186,6 +356,93 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
   }
 
   /**
+   * 检测内容是否包含乱码或无意义内容
+   * @param content 要检测的内容
+   * @returns 如果包含乱码或无意义内容返回true，否则返回false
+   */
+  private containsGarbage(content: string): boolean {
+    if (!content) return true
+
+    // 检测内容长度
+    if (content.length < 50) return true // 内容过短
+
+    // 检测乱码字符比例
+    // 使用安全的方式检测乱码字符
+    // 手动检测不可打印字符而不使用正则表达式
+    let nonReadableCharsCount = 0
+    for (let i = 0; i < content.length; i++) {
+      const charCode = content.charCodeAt(i)
+      // 检测控制字符和特殊字符
+      if (
+        (charCode >= 0 && charCode <= 8) ||
+        charCode === 11 ||
+        charCode === 12 ||
+        (charCode >= 14 && charCode <= 31) ||
+        (charCode >= 127 && charCode <= 159) ||
+        charCode === 0xfffd ||
+        charCode === 0xfffe ||
+        charCode === 0xffff
+      ) {
+        nonReadableCharsCount++
+      }
+    }
+    if (nonReadableCharsCount > content.length * 0.05) {
+      return true // 乱码字符超过5%
+    }
+
+    // 检测重复模式
+    const repeatedPatterns = content.match(/(.{10,})\1{3,}/g)
+    if (repeatedPatterns && repeatedPatterns.length > 0) {
+      return true // 存在多次重复的长模式
+    }
+
+    // 检测广告关键词
+    const adKeywords = [
+      'advertisement',
+      'sponsored',
+      'promotion',
+      'discount',
+      'sale',
+      'buy now',
+      'limited time',
+      'special offer',
+      'click here',
+      'best price',
+      'free shipping',
+      '广告',
+      '促销',
+      '特惠',
+      '打折',
+      '限时',
+      '点击购买',
+      '立即购买'
+    ]
+
+    const contentLower = content.toLowerCase()
+    const adKeywordCount = adKeywords.filter((keyword) => contentLower.includes(keyword)).length
+
+    if (adKeywordCount >= 3) {
+      return true // 包含多个广告关键词
+    }
+
+    // 检测内容多样性（字符类型比例）
+    const letters = content.match(/[a-zA-Z]/g)?.length || 0
+    const digits = content.match(/\d/g)?.length || 0
+    const spaces = content.match(/\s/g)?.length || 0
+    const punctuation = content.match(/[.,;:!?]/g)?.length || 0
+
+    // 如果内容几乎只有一种字符类型，可能是乱码
+    const totalChars = content.length
+    const mainCharType = Math.max(letters, digits, spaces, punctuation)
+
+    if (mainCharType / totalChars > 0.9) {
+      return true // 单一字符类型超过90%
+    }
+
+    return false
+  }
+
+  /**
    * 分析搜索结果，提取摘要和关键词
    * @param results 搜索结果
    * @param query 搜索查询
@@ -198,56 +455,306 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     const batchSize = this.analyzeConfig.batchSize
     const analyzedResults: AnalyzedResult[] = [...results] // 复制原始结果
 
-    // 简单的分析逻辑：提取前几句作为摘要
+    // 预处理查询，提取重要关键词
+    const queryWords = query.toLowerCase().split(/\s+/)
+
+    // 过滤掉常见的停用词
+    const stopWords = new Set([
+      'a',
+      'an',
+      'the',
+      'and',
+      'or',
+      'but',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'being',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'with',
+      'by',
+      'about',
+      'against',
+      'between',
+      'into',
+      'through',
+      'during',
+      'before',
+      'after',
+      'above',
+      'below',
+      'from',
+      'up',
+      'down',
+      'of',
+      'off',
+      'over',
+      'under',
+      'again',
+      'further',
+      'then',
+      'once',
+      'here',
+      'there',
+      'when',
+      'where',
+      'why',
+      'how',
+      'all',
+      'any',
+      'both',
+      'each',
+      'few',
+      'more',
+      'most',
+      'other',
+      'some',
+      'such',
+      'no',
+      'nor',
+      'not',
+      'only',
+      'own',
+      'same',
+      'so',
+      'than',
+      'too',
+      'very',
+      'can',
+      'will',
+      'just',
+      'should',
+      'now'
+    ])
+
+    // 提取重要关键词，并为每个词分配权重
+    const keywordWeights = new Map<string, number>()
+    queryWords.forEach((word, index) => {
+      if (word.length > 2 && !stopWords.has(word)) {
+        // 根据词的位置分配权重，前面的词权重更高
+        const positionWeight = 1 - (index / queryWords.length) * 0.5 // 位置权重范围：0.5-1.0
+        // 根据词的长度分配权重，更长的词权重更高
+        const lengthWeight = Math.min(1, word.length / 10) // 长度权重最高为1
+        // 组合权重
+        const weight = positionWeight * 0.7 + lengthWeight * 0.3
+        keywordWeights.set(word, weight)
+      }
+    })
+
+    // 如果没有提取到关键词，使用原始查询词
+    if (keywordWeights.size === 0) {
+      queryWords.forEach((word) => {
+        if (word.length > 2) {
+          keywordWeights.set(word, 1.0)
+        }
+      })
+    }
+
+    // 分析每个结果
     for (let i = 0; i < results.length; i++) {
       const result = results[i]
       if (result.content === noContent) continue
 
       try {
-        // 提取摘要（简单实现，取前300个字符）
+        // 提取摘要（改进实现，尝试找到包含关键词的最相关段落）
         const maxLength = this.analyzeConfig.maxSummaryLength
-        let summary = result.content.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
+        const content = result.content.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim()
 
-        if (summary.length > maxLength) {
-          // 截取到最后一个完整的句子
-          summary = summary.substring(0, maxLength)
+        // 将内容分成句子
+        const sentences = content.split(/(?<=[.!?])\s+/)
+
+        // 为每个句子评分
+        const sentenceScores = sentences.map((sentence) => {
+          const sentenceLower = sentence.toLowerCase()
+          let score = 0
+
+          // 根据句子中包含的关键词计算分数
+          for (const [keyword, weight] of keywordWeights.entries()) {
+            if (sentenceLower.includes(keyword)) {
+              score += weight
+
+              // 如果关键词在句子开头，给予额外加分
+              if (sentenceLower.indexOf(keyword) < 20) {
+                score += weight * 0.5
+              }
+            }
+          }
+
+          return { sentence, score }
+        })
+
+        // 按分数排序句子
+        sentenceScores.sort((a, b) => b.score - a.score)
+
+        // 选择最相关的句子作为摘要
+        let summary = ''
+        let currentLength = 0
+
+        // 首先添加得分最高的句子
+        if (sentenceScores.length > 0 && sentenceScores[0].score > 0) {
+          summary = sentenceScores[0].sentence
+          currentLength = summary.length
+        }
+
+        // 如果还有空间，添加更多相关句子
+        for (let j = 1; j < sentenceScores.length && currentLength < maxLength; j++) {
+          if (sentenceScores[j].score > 0) {
+            const nextSentence = sentenceScores[j].sentence
+            if (currentLength + nextSentence.length + 1 <= maxLength) {
+              summary += ' ' + nextSentence
+              currentLength += nextSentence.length + 1
+            }
+          }
+        }
+
+        // 如果没有找到相关句子，回退到简单摘要提取
+        if (summary.length === 0) {
+          summary = content.substring(0, maxLength)
           const lastPeriod = summary.lastIndexOf('.')
           if (lastPeriod > maxLength * 0.7) {
-            // 至少要有总长度的70%
             summary = summary.substring(0, lastPeriod + 1)
           }
           summary += '...'
+        } else if (summary.length < content.length) {
+          summary += '...'
         }
 
-        // 提取关键词（简单实现，基于查询词拆分）
-        const keywords = query
-          .split(/\s+/)
-          .filter((word) => word.length > 2 && result.content.toLowerCase().includes(word.toLowerCase()))
+        // 提取关键词（改进实现）
+        const contentLower = result.content.toLowerCase()
+        const keywordScores = new Map<string, number>()
 
-        // 计算相关性评分（简单实现，基于关键词出现频率）
-        let relevanceScore = 0
-        if (keywords.length > 0) {
-          const contentLower = result.content.toLowerCase()
-          for (const word of keywords) {
-            const wordLower = word.toLowerCase()
-            // 计算关键词出现的次数
-            let count = 0
-            let pos = contentLower.indexOf(wordLower)
-            while (pos !== -1) {
-              count++
-              pos = contentLower.indexOf(wordLower, pos + 1)
-            }
-            relevanceScore += count
+        // 从内容中提取潜在关键词
+        const contentWords = contentLower.split(/\W+/).filter((word) => word.length > 3 && !stopWords.has(word))
+
+        // 计算词频
+        const wordFrequency = new Map<string, number>()
+        contentWords.forEach((word) => {
+          wordFrequency.set(word, (wordFrequency.get(word) || 0) + 1)
+        })
+
+        // 为每个词评分
+        for (const [word, freq] of wordFrequency.entries()) {
+          // 基础分数是词频
+          let score = freq
+
+          // 如果是查询关键词，增加分数
+          if (keywordWeights.has(word)) {
+            score += freq * keywordWeights.get(word)! * 3
           }
-          // 标准化评分，范围为0-1
-          relevanceScore = Math.min(1, relevanceScore / (contentLower.length / 100))
+
+          // 如果在标题中出现，增加分数
+          if (result.title.toLowerCase().includes(word)) {
+            score += 5
+          }
+
+          keywordScores.set(word, score)
         }
+
+        // 添加查询关键词（如果内容中包含）
+        for (const [keyword, weight] of keywordWeights.entries()) {
+          if (contentLower.includes(keyword) && !keywordScores.has(keyword)) {
+            keywordScores.set(keyword, weight * 3)
+          }
+        }
+
+        // 选择得分最高的关键词
+        const sortedKeywords = Array.from(keywordScores.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map((entry) => entry[0])
+
+        // 计算相关性评分（改进实现）
+        let relevanceScore = 0
+
+        // 1. 基于关键词匹配度的评分
+        let keywordMatchScore = 0
+
+        for (const [keyword, weight] of keywordWeights.entries()) {
+          // 计算关键词出现的次数
+          let count = 0
+          let pos = contentLower.indexOf(keyword)
+          while (pos !== -1) {
+            count++
+            pos = contentLower.indexOf(keyword, pos + 1)
+          }
+
+          if (count > 0) {
+            // 权重 * 出现次数 * 归一化因子
+            keywordMatchScore += (weight * Math.min(10, count)) / 10
+          }
+        }
+
+        // 归一化关键词匹配分数
+        if (keywordWeights.size > 0) {
+          keywordMatchScore = keywordMatchScore / keywordWeights.size
+        }
+
+        // 2. 基于标题相关性的评分
+        let titleScore = 0
+        const titleLower = result.title.toLowerCase()
+
+        for (const [keyword, weight] of keywordWeights.entries()) {
+          if (titleLower.includes(keyword)) {
+            titleScore += weight
+          }
+        }
+
+        // 归一化标题分数
+        if (keywordWeights.size > 0) {
+          titleScore = titleScore / keywordWeights.size
+        }
+
+        // 3. 基于内容长度的评分（适中长度最佳）
+        const contentLength = result.content.length
+        const lengthScore = Math.min(1, contentLength / 2000) * (contentLength < 50000 ? 1 : 0.5)
+
+        // 4. 基于URL的评分（官方网站、知名网站加分）
+        let urlScore = 0
+        const url = result.url.toLowerCase()
+
+        // 首先检查是否有预先计算的优先级分数
+        if (result.meta && result.meta.priorityScore) {
+          // 使用预先计算的分数
+          urlScore = result.meta.priorityScore
+        } else {
+          // 如果没有预先计算的分数，使用基于域名的评分
+          // 检查是否是官方网站或知名网站
+          if (url.includes('github.com/augment') || url.includes('augmentcode.com') || url.includes('augment.dev')) {
+            urlScore = 1.0 // 官方网站最高分
+          } else if (
+            url.includes('github.com') ||
+            url.includes('stackoverflow.com') ||
+            url.includes('medium.com') ||
+            url.includes('dev.to')
+          ) {
+            urlScore = 0.8 // 知名技术网站高分
+          } else if (!url.includes('login') && !url.includes('signup') && !url.includes('register')) {
+            urlScore = 0.5 // 普通网站中等分
+          }
+        }
+
+        // 组合所有评分因素，调整权重以提高URL质量的重要性
+        relevanceScore =
+          keywordMatchScore * 0.4 + // 关键词匹配度占40%
+          titleScore * 0.3 + // 标题相关性占30%
+          lengthScore * 0.05 + // 内容长度占5%
+          urlScore * 0.25 // URL质量占25%，增加了权重
+
+        // 确保分数在0-1范围内
+        relevanceScore = Math.min(1, Math.max(0, relevanceScore))
 
         // 更新分析结果
         analyzedResults[i] = {
           ...analyzedResults[i],
           summary,
-          keywords,
+          keywords: sortedKeywords,
           relevanceScore
         }
 
@@ -267,16 +774,31 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       return scoreB - scoreA
     })
 
-    console.log(`[DeepSearch] 完成分析 ${results.length} 个结果`)
-    return analyzedResults
+    // 过滤掉明显不相关的结果和乱码内容
+    const filteredResults = analyzedResults.filter((result) => {
+      // 检查相关性分数
+      const score = (result as AnalyzedResult).relevanceScore || 0
+      if (score <= 0.05) return false // 相关性分数过低
+
+      // 检查是否包含乱码或广告
+      if (this.containsGarbage(result.content)) {
+        console.log(`[DeepSearch] 过滤乱码或广告内容: ${result.title}`)
+        return false
+      }
+
+      return true
+    })
+
+    console.log(`[DeepSearch] 完成分析 ${results.length} 个结果，过滤后剩余 ${filteredResults.length} 个结果`)
+    return filteredResults
   }
 
   /**
    * 解析搜索结果页面中的URL
    * 默认实现，子类可以覆盖此方法以适应不同的搜索引擎
    */
-  protected parseValidUrls(htmlContent: string): Array<{ title: string; url: string }> {
-    const results: Array<{ title: string; url: string }> = []
+  protected parseValidUrls(htmlContent: string): Array<{ title: string; url: string; meta?: Record<string, any> }> {
+    const results: Array<{ title: string; url: string; meta?: Record<string, any> }> = []
 
     try {
       // 通用解析逻辑，查找所有链接
@@ -288,7 +810,11 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         ...doc.querySelectorAll('#content_left .result h3 a'),
         ...doc.querySelectorAll('#content_left .c-container h3 a'),
         ...doc.querySelectorAll('#content_left .c-container a.c-title'),
-        ...doc.querySelectorAll('#content_left a[data-click]')
+        ...doc.querySelectorAll('#content_left a[data-click]'),
+        // 添加更多选择器来适应百度的变化
+        ...doc.querySelectorAll('#content_left .result-op a[href*="http"]'),
+        ...doc.querySelectorAll('#content_left .c-container .t a'),
+        ...doc.querySelectorAll('#content_left .c-container .c-title-text')
       ]
 
       // 尝试解析Bing搜索结果 - 使用多个选择器来获取更多结果
@@ -296,7 +822,11 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         ...doc.querySelectorAll('.b_algo h2 a'),
         ...doc.querySelectorAll('.b_algo a.tilk'),
         ...doc.querySelectorAll('.b_algo a.b_title'),
-        ...doc.querySelectorAll('.b_results a.b_restorLink')
+        ...doc.querySelectorAll('.b_results a.b_restorLink'),
+        // 添加更多选择器来适应Bing的变化
+        ...doc.querySelectorAll('.b_algo .b_caption a'),
+        ...doc.querySelectorAll('.b_algo .b_attribution cite'),
+        ...doc.querySelectorAll('.b_algo .b_deep a')
       ]
 
       // 尝试解析DuckDuckGo搜索结果 - 使用多个选择器来获取更多结果
@@ -368,19 +898,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
             const url = (link as HTMLAnchorElement).href
             const title = link.textContent || url
 
-            // 过滤掉搜索引擎内部链接和重复链接
-            if (
-              url &&
-              (url.startsWith('http') || url.startsWith('https')) &&
-              !url.includes('google.com/search') &&
-              !url.includes('bing.com/search') &&
-              !url.includes('baidu.com/s?') &&
-              !uniqueUrls.has(url)
-            ) {
+            // 使用过滤方法检查URL
+            if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url)) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: title.trim() || url,
-                url: url
+                url: url,
+                // 将优先级分数作为元数据保存
+                meta: { priorityScore }
               })
             }
           } catch (error) {
@@ -399,19 +927,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
             const url = (link as HTMLAnchorElement).href
             const title = link.textContent || url
 
-            // 过滤掉搜索引擎内部链接和重复链接
-            if (
-              url &&
-              (url.startsWith('http') || url.startsWith('https')) &&
-              !url.includes('google.com/search') &&
-              !url.includes('bing.com/search') &&
-              !url.includes('baidu.com/s?') &&
-              !uniqueUrls.has(url)
-            ) {
+            // 使用过滤方法检查URL
+            if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url)) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: title.trim() || url,
-                url: url
+                url: url,
+                // 将优先级分数作为元数据保存
+                meta: { priorityScore }
               })
             }
           } catch (error) {
@@ -430,21 +956,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
             const url = (link as HTMLAnchorElement).href
             const title = link.textContent || url
 
-            // 过滤掉搜索引擎内部链接和重复链接
-            if (
-              url &&
-              (url.startsWith('http') || url.startsWith('https')) &&
-              !url.includes('google.com/search') &&
-              !url.includes('bing.com/search') &&
-              !url.includes('baidu.com/s?') &&
-              !url.includes('sogou.com/web') &&
-              !url.includes('duckduckgo.com/?q=') &&
-              !uniqueUrls.has(url)
-            ) {
+            // 使用过滤方法检查URL
+            if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url)) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: title.trim() || url,
-                url: url
+                url: url,
+                // 将优先级分数作为元数据保存
+                meta: { priorityScore }
               })
             }
           } catch (error) {
@@ -465,21 +987,25 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
               const url = (link as HTMLAnchorElement).href
               const title = link.textContent || url
 
-              // 更宽松的过滤条件
+              // 使用过滤方法检查URL，但使用更宽松的条件
               if (
                 url &&
                 (url.startsWith('http') || url.startsWith('https')) &&
-                !url.includes('sogou.com/web') &&
+                !url.includes('sogou.com/web') && // 仍然过滤掉搜索引擎内部链接
                 !url.includes('javascript:') &&
                 !url.includes('mailto:') &&
                 !url.includes('tel:') &&
                 !uniqueUrls.has(url) &&
                 title.trim().length > 0
               ) {
+                // 计算URL优先级分数
+                const priorityScore = this.getUrlPriorityScore(url)
+
                 uniqueUrls.add(url)
                 results.push({
                   title: title.trim() || url,
-                  url: url
+                  url: url,
+                  meta: { priorityScore }
                 })
               }
             } catch (error) {
@@ -501,22 +1027,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
             const url = (link as HTMLAnchorElement).href
             const title = link.textContent || url
 
-            // 过滤掉搜索引擎内部链接和重复链接
-            if (
-              url &&
-              (url.startsWith('http') || url.startsWith('https')) &&
-              !url.includes('google.com/search') &&
-              !url.includes('bing.com/search') &&
-              !url.includes('baidu.com/s?') &&
-              !url.includes('sogou.com/web') &&
-              !url.includes('duckduckgo.com/?q=') &&
-              !url.includes('searx.tiekoetter.com/search') &&
-              !uniqueUrls.has(url)
-            ) {
+            // 使用过滤方法检查URL
+            if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url)) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: title.trim() || url,
-                url: url
+                url: url,
+                // 将优先级分数作为元数据保存
+                meta: { priorityScore }
               })
             }
           } catch (error) {
@@ -547,10 +1068,14 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
                 !uniqueUrls.has(url) &&
                 title.trim().length > 0
               ) {
+                // 计算URL优先级分数
+                const priorityScore = this.getUrlPriorityScore(url)
+
                 uniqueUrls.add(url)
                 results.push({
                   title: title.trim() || url,
-                  url: url
+                  url: url,
+                  meta: { priorityScore }
                 })
               }
             } catch (error) {
@@ -600,10 +1125,14 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
                 !uniqueUrls.has(url) &&
                 title.trim().length > 0
               ) {
+                // 计算URL优先级分数
+                const priorityScore = this.getUrlPriorityScore(url)
+
                 uniqueUrls.add(url)
                 results.push({
                   title: title.trim() || url,
-                  url: url
+                  url: url,
+                  meta: { priorityScore }
                 })
               }
             } catch (error) {
@@ -617,20 +1146,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
               const url = (link as HTMLAnchorElement).href
               const title = link.textContent || url
 
-              // 过滤掉搜索引擎内部链接和重复链接
-              if (
-                url &&
-                (url.startsWith('http') || url.startsWith('https')) &&
-                !url.includes('google.com/search') &&
-                !url.includes('bing.com/search') &&
-                !url.includes('baidu.com/s?') &&
-                !url.includes('duckduckgo.com/?q=') &&
-                !uniqueUrls.has(url)
-              ) {
+              // 使用过滤方法检查URL
+              if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url)) {
+                // 计算URL优先级分数
+                const priorityScore = this.getUrlPriorityScore(url)
+
                 uniqueUrls.add(url)
                 results.push({
                   title: title.trim() || url,
-                  url: url
+                  url: url,
+                  // 将优先级分数作为元数据保存
+                  meta: { priorityScore }
                 })
               }
             } catch (error) {
@@ -661,10 +1187,14 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
               !url.includes('searx.tiekoetter.com/search') &&
               !uniqueUrls.has(url)
             ) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: url,
-                url: url
+                url: url,
+                meta: { priorityScore }
               })
             }
           }
@@ -684,31 +1214,17 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
             const url = (link as HTMLAnchorElement).href
             const title = link.textContent || url
 
-            // 过滤掉无效链接和搜索引擎内部链接
-            if (
-              url &&
-              (url.startsWith('http') || url.startsWith('https')) &&
-              !url.includes('google.com/search') &&
-              !url.includes('bing.com/search') &&
-              !url.includes('baidu.com/s?') &&
-              !url.includes('duckduckgo.com/?q=') &&
-              !url.includes('sogou.com/web') &&
-              !url.includes('searx.tiekoetter.com/search') &&
-              !uniqueUrls.has(url) &&
-              // 过滤掉常见的无用链接
-              !url.includes('javascript:') &&
-              !url.includes('mailto:') &&
-              !url.includes('tel:') &&
-              !url.includes('login') &&
-              !url.includes('register') &&
-              !url.includes('signup') &&
-              !url.includes('signin') &&
-              title.trim().length > 0
-            ) {
+            // 使用过滤方法检查URL
+            if (url && !this.shouldFilterUrl(url) && !uniqueUrls.has(url) && title.trim().length > 0) {
+              // 计算URL优先级分数
+              const priorityScore = this.getUrlPriorityScore(url)
+
               uniqueUrls.add(url)
               results.push({
                 title: title.trim(),
-                url: url
+                url: url,
+                // 将优先级分数作为元数据保存
+                meta: { priorityScore }
               })
             }
           } catch (error) {
@@ -723,6 +1239,81 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     }
 
     return results
+  }
+
+  /**
+   * 检查URL是否应该被过滤掉
+   * @param url 要检查的URL
+   * @returns 如果应该过滤掉返回true，否则返回false
+   */
+  private shouldFilterUrl(url: string): boolean {
+    if (!url || !url.startsWith('http')) {
+      return true
+    }
+
+    const urlLower = url.toLowerCase()
+
+    // 检查是否是搜索引擎内部链接
+    if (
+      urlLower.includes('google.com/search') ||
+      urlLower.includes('bing.com/search') ||
+      urlLower.includes('baidu.com/s?') ||
+      urlLower.includes('sogou.com/web') ||
+      urlLower.includes('duckduckgo.com/?q=') ||
+      urlLower.includes('searx.tiekoetter.com/search')
+    ) {
+      return true
+    }
+
+    // 检查是否包含排除的域名
+    for (const domain of this.urlFilters.excludedDomains) {
+      if (urlLower.includes(domain)) {
+        return true
+      }
+    }
+
+    // 检查是否是排除的文件类型
+    for (const fileType of this.urlFilters.excludedFileTypes) {
+      if (urlLower.endsWith(fileType)) {
+        return true
+      }
+    }
+
+    // 检查是否是常见的无用链接
+    if (
+      urlLower.includes('javascript:') ||
+      urlLower.includes('mailto:') ||
+      urlLower.includes('tel:') ||
+      urlLower.includes('about:') ||
+      urlLower.includes('chrome:') ||
+      urlLower.includes('file:')
+    ) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * 计算URL的优先级分数
+   * @param url 要计算的URL
+   * @returns 优先级分数，范围从0到1，越高越优先
+   */
+  private getUrlPriorityScore(url: string): number {
+    if (!url) return 0
+
+    const urlLower = url.toLowerCase()
+
+    // 检查是否是优先域名
+    for (let i = 0; i < this.urlFilters.priorityDomains.length; i++) {
+      const domain = this.urlFilters.priorityDomains[i]
+      if (urlLower.includes(domain)) {
+        // 根据域名在数组中的位置计算分数，前面的域名分数更高
+        return 1 - (i / this.urlFilters.priorityDomains.length) * 0.5
+      }
+    }
+
+    return 0
   }
 
   /**
@@ -848,8 +1439,13 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
 
     while ((match = markdownLinkRegex.exec(markdown)) !== null) {
       const url = match[2]
-      if (url && (url.startsWith('http') || url.startsWith('https'))) {
-        urls.add(url)
+      if (url && (url.startsWith('http') || url.startsWith('https')) && !this.shouldFilterUrl(url)) {
+        // 计算URL优先级分数
+        const priorityScore = this.getUrlPriorityScore(url)
+        // 优先级较高的URL更有可能被添加
+        if (priorityScore > 0.3 || Math.random() < 0.7) {
+          urls.add(url)
+        }
       }
     }
 
@@ -857,8 +1453,13 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     const urlRegex = /(https?:\/\/[^\s]+)/g
     while ((match = urlRegex.exec(markdown)) !== null) {
       const url = match[1]
-      if (url) {
-        urls.add(url)
+      if (url && !this.shouldFilterUrl(url)) {
+        // 计算URL优先级分数
+        const priorityScore = this.getUrlPriorityScore(url)
+        // 优先级较高的URL更有可能被添加
+        if (priorityScore > 0.3 || Math.random() < 0.5) {
+          urls.add(url)
+        }
       }
     }
 

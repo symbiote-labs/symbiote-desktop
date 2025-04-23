@@ -356,6 +356,44 @@
     "docs": {
       "title": "Docs"
     },
+    "deepresearch": {
+      "title": "Deep Research",
+      "description": "Deep Research provides comprehensive research reports through multiple rounds of search, analysis, and summarization.",
+      "engine_rotation": "Use different categories of search engines for each iteration: Chinese, International, Metasearch, and Academic",
+      "startResearch": "Start Deep Research",
+      "open": "Open Deep Research",
+      "open_success": "Opening Deep Research page",
+      "open_error": "Failed to open Deep Research page",
+      "history": "History",
+      "exportReport": "Export Report",
+      "maxIterations": "Max Iterations",
+      "researchLoading": "Conducting Deep Research",
+      "iteration": "Iteration",
+      "directAnswer": "Answer",
+      "keyInsights": "Key Insights",
+      "summary": "Research Summary",
+      "researchIterations": "Research Iterations",
+      "sources": "Sources",
+      "searchResults": "Search Results",
+      "analysis": "Analysis",
+      "followUpQueries": "Follow-up Queries",
+      "historyTitle": "Research History",
+      "load": "Load",
+      "export": "Export",
+      "noHistory": "No history records",
+      "date": "Date",
+      "iterationCount": "Iteration Count",
+      "tokenStats": "Token Statistics",
+      "input": "Input",
+      "output": "Output",
+      "total": "Total",
+      "error": {
+        "emptyQuery": "Please enter a research query",
+        "noProvider": "Please select a search provider",
+        "providerNotFound": "Selected search provider not found",
+        "researchFailed": "Error during research process"
+      }
+    },
     "error": {
       "backup.file_format": "Backup file format error",
       "chat.response": "Something went wrong. Please check if you have set your API key in the Settings > Providers",
@@ -1659,7 +1697,15 @@
         "overwrite": "Override search service",
         "overwrite_tooltip": "Force use search service instead of LLM",
         "apikey": "API key",
-        "free": "Free"
+        "free": "Free",
+        "deep_research": {
+          "title": "Deep Research",
+          "max_iterations": "Maximum Iterations",
+          "max_results_per_query": "Maximum Results Per Query",
+          "auto_summary": "Auto Summary",
+          "enable_query_optimization": "Enable Query Optimization",
+          "query_optimization_desc": "Use AI to analyze your question and generate more effective search queries"
+        }
       },
       "quickPhrase": {
         "title": "Quick Phrases",

@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
+import EnableDeepResearch from './EnableDeepResearch'
 import SidebarIconsManager from './SidebarIconsManager'
 
 const DisplaySettings: FC = () => {
@@ -178,6 +179,8 @@ const DisplaySettings: FC = () => {
           setDisabledIcons={setDisabledIcons}
         />
       </SettingGroup>
+
+      <EnableDeepResearch />
       <SettingGroup theme={theme}>
         <SettingTitle>
           {t('settings.display.custom.css')}

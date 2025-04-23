@@ -1,6 +1,7 @@
 import { createHashRouter, HashRouter, Route, Routes } from 'react-router-dom'
 import AgentsPage from '@renderer/pages/agents/AgentsPage'
 import AppsPage from '@renderer/pages/apps/AppsPage'
+import DeepResearchPage from '@renderer/pages/deepresearch/DeepResearchPage'
 import FilesPage from '@renderer/pages/files/FilesPage'
 import HomePage from '@renderer/pages/home/HomePage'
 import KnowledgePage from '@renderer/pages/knowledge/KnowledgePage'
@@ -47,6 +48,10 @@ export const router = createHashRouter(
       element: <WorkspacePage />
     },
     {
+      path: '/deepresearch',
+      element: <DeepResearchPage />
+    },
+    {
       path: '/settings/*',
       element: <SettingsPage />
     }
@@ -80,6 +85,7 @@ export const RouterComponent = ({ children }: { children?: React.ReactNode }) =>
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/apps" element={<AppsPage />} />
         <Route path="/workspace" element={<WorkspacePage />} />
+        <Route path="/deepresearch" element={<DeepResearchPage />} />
         <Route path="/settings/*" element={<SettingsPage />} />
       </Routes>
       {children}

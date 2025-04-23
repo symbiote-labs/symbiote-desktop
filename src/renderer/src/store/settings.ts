@@ -17,6 +17,7 @@ export type SidebarIcon =
   | 'files'
   | 'projects'
   | 'workspace'
+  | 'deepresearch'
 
 export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'assistants',
@@ -26,7 +27,8 @@ export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'minapp',
   'knowledge',
   'files',
-  'workspace'
+  'workspace',
+  'deepresearch'
 ]
 
 export interface NutstoreSyncRuntime extends WebDAVSyncState {}
@@ -191,6 +193,12 @@ export interface SettingsState {
     siyuan: boolean
     docx: boolean
   }
+  // DeepResearch 设置
+  enableDeepResearch: boolean
+  deepResearchShortcut: string
+  deepResearchMaxDepth: number
+  deepResearchMaxUrls: number
+  deepResearchTimeLimit: number
 }
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -344,7 +352,13 @@ export const initialState: SettingsState = {
     obsidian: true,
     siyuan: true,
     docx: true
-  }
+  },
+  // DeepResearch 设置
+  enableDeepResearch: true,
+  deepResearchShortcut: 'Alt+D',
+  deepResearchMaxDepth: 3,
+  deepResearchMaxUrls: 30,
+  deepResearchTimeLimit: 120
 }
 
 const settingsSlice = createSlice({
@@ -802,6 +816,22 @@ const settingsSlice = createSlice({
     setEnableBackspaceDeleteModel: (state, action: PayloadAction<boolean>) => {
       state.enableBackspaceDeleteModel = action.payload
     },
+    // DeepResearch 设置
+    setEnableDeepResearch: (state, action: PayloadAction<boolean>) => {
+      state.enableDeepResearch = action.payload
+    },
+    setDeepResearchShortcut: (state, action: PayloadAction<string>) => {
+      state.deepResearchShortcut = action.payload
+    },
+    setDeepResearchMaxDepth: (state, action: PayloadAction<number>) => {
+      state.deepResearchMaxDepth = action.payload
+    },
+    setDeepResearchMaxUrls: (state, action: PayloadAction<number>) => {
+      state.deepResearchMaxUrls = action.payload
+    },
+    setDeepResearchTimeLimit: (state, action: PayloadAction<number>) => {
+      state.deepResearchTimeLimit = action.payload
+    },
     // PDF设置相关的action
     setPdfSettings: (
       state,
@@ -942,7 +972,13 @@ export const {
   setLastPlayedMessageId,
   setSkipNextAutoTTS,
   setEnableBackspaceDeleteModel,
-  setUsePromptForToolCalling
+  setUsePromptForToolCalling,
+  // DeepResearch 设置
+  setEnableDeepResearch,
+  setDeepResearchShortcut,
+  setDeepResearchMaxDepth,
+  setDeepResearchMaxUrls,
+  setDeepResearchTimeLimit
 } = settingsSlice.actions
 
 // PDF设置相关的action

@@ -101,6 +101,8 @@
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
     "@notionhq/client": "^2.2.15",
+    "@sentry/electron": "^6.5.0",
+    "@sentry/react": "^9.14.0",
     "@shikijs/markdown-it": "^3.2.2",
     "@strongtz/win32-arm64-msvc": "^0.4.7",
     "@tryfabric/martian": "^1.2.4",

@@ -1,0 +1,67 @@
+.deep-research-container {
+  padding: 20px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.token-stats {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #888;
+}
+
+.source-link {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  display: block;
+}
+
+.research-loading {
+  text-align: center;
+  padding: 40px;
+}
+
+.loading-status {
+  margin-top: 20px;
+}
+
+.iteration-info {
+  margin-top: 10px;
+}
+
+.progress-container {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.progress-bar-container {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #1890ff;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-percentage {
+  margin-top: 5px;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 20px;
+}
+
+.direct-answer-card {
+  background-color: #f0f8ff;
+  margin-bottom: 20px;
+}
+
+.direct-answer-title {
+  color: #1890ff;
+}

@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next'
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
 import BasicSettings from './BasicSettings'
 import BlacklistSettings from './BlacklistSettings'
+import DeepResearchSettings from './DeepResearchSettings'
+import DeepSearchSettings from './DeepSearchSettings'
 import WebSearchProviderSetting from './WebSearchProviderSetting'
 
 const WebSearchSettings: FC = () => {
@@ -57,6 +59,8 @@ const WebSearchSettings: FC = () => {
       )}
       <BasicSettings />
       <BlacklistSettings />
+      <DeepSearchSettings />
+      <DeepResearchSettings />
     </SettingContainer>
   )
 }

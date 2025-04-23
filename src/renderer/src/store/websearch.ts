@@ -24,6 +24,41 @@ export interface WebSearchState {
   enhanceMode: boolean
   // 是否覆盖服务商搜索
   overwrite: boolean
+  // 深度研究配置
+  deepResearchConfig?: {
+    maxIterations?: number
+    maxResultsPerQuery?: number
+    autoSummary?: boolean
+    enableQueryOptimization?: boolean
+  }
+  // DeepSearch 配置
+  deepSearchConfig?: {
+    enabledEngines?: {
+      // 中文搜索引擎
+      baidu?: boolean
+      sogou?: boolean
+      '360'?: boolean
+      yisou?: boolean
+
+      // 国际搜索引擎
+      bing?: boolean
+      duckduckgo?: boolean
+      brave?: boolean
+      qwant?: boolean
+
+      // 元搜索引擎
+      searx?: boolean
+      ecosia?: boolean
+      startpage?: boolean
+      mojeek?: boolean
+
+      // 学术搜索引擎
+      scholar?: boolean
+      semantic?: boolean
+      base?: boolean
+      cnki?: boolean
+    }
+  }
 }
 
 const initialState: WebSearchState = {
@@ -64,6 +99,12 @@ const initialState: WebSearchState = {
       name: 'DeepSearch (多引擎)',
       description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
       contentLimit: 10000
+    },
+    {
+      id: 'deep-research',
+      name: 'DeepResearch (深度研究)',
+      description: '使用多轮搜索、分析和总结进行深度研究',
+      contentLimit: 30000
     }
   ],
   searchWithTime: true,
@@ -71,7 +112,34 @@ const initialState: WebSearchState = {
   excludeDomains: [],
   subscribeSources: [],
   enhanceMode: true,
-  overwrite: false
+  overwrite: false,
+  deepSearchConfig: {
+    enabledEngines: {
+      // 中文搜索引擎
+      baidu: true,
+      sogou: true,
+      '360': false,
+      yisou: false,
+
+      // 国际搜索引擎
+      bing: true,
+      duckduckgo: true,
+      brave: false,
+      qwant: false,
+
+      // 元搜索引擎
+      searx: true,
+      ecosia: false,
+      startpage: false,
+      mojeek: false,
+
+      // 学术搜索引擎
+      scholar: true,
+      semantic: false,
+      base: false,
+      cnki: false
+    }
+  }
 }
 
 export const defaultWebSearchProviders = initialState.providers
@@ -145,6 +213,39 @@ const websearchSlice = createSlice({
         // Add the new provider to the array
         state.providers.push(action.payload)
       }
+    },
+    setDeepResearchConfig: (
+      state,
+      action: PayloadAction<{
+        maxIterations?: number
+        maxResultsPerQuery?: number
+        autoSummary?: boolean
+        enableQueryOptimization?: boolean
+        modelId?: string
+      }>
+    ) => {
+      state.deepResearchConfig = {
+        ...state.deepResearchConfig,
+        ...action.payload
+      }
+    },
+    setDeepSearchConfig: (
+      state,
+      action: PayloadAction<{
+        enabledEngines?: {
+          baidu?: boolean
+          bing?: boolean
+          duckduckgo?: boolean
+          sogou?: boolean
+          searx?: boolean
+          scholar?: boolean
+        }
+      }>
+    ) => {
+      state.deepSearchConfig = {
+        ...state.deepSearchConfig,
+        ...action.payload
+      }
     }
   }
 })
@@ -163,7 +264,9 @@ export const {
   setSubscribeSources,
   setEnhanceMode,
   setOverwrite,
-  addWebSearchProvider
+  addWebSearchProvider,
+  setDeepResearchConfig,
+  setDeepSearchConfig
 } = websearchSlice.actions
 
 export default websearchSlice.reducer

@@ -5,6 +5,7 @@ import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 
 import DeepClaudeProvider from './components/DeepClaudeProvider'
+import GeminiInitializer from './components/GeminiInitializer'
 import MemoryProvider from './components/MemoryProvider'
 import PDFSettingsInitializer from './components/PDFSettingsInitializer'
 import WebSearchInitializer from './components/WebSearchInitializer'
@@ -26,6 +27,7 @@ function App(): React.ReactElement {
               <PersistGate loading={null} persistor={persistor}>
                 <MemoryProvider>
                   <DeepClaudeProvider />
+                  <GeminiInitializer />
                   <PDFSettingsInitializer />
                   <WebSearchInitializer />
                   <WorkspaceInitializer />

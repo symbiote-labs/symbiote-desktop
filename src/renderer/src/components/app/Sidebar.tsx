@@ -17,6 +17,7 @@ import {
   Languages,
   LayoutGrid,
   MessageSquareQuote,
+  Microscope,
   Moon,
   Palette,
   Settings,
@@ -138,7 +139,8 @@ const MainMenus: FC = () => {
     minapp: <LayoutGrid size={18} className="icon" />,
     knowledge: <FileSearch size={18} className="icon" />,
     files: <Folder size={17} className="icon" />,
-    workspace: <FolderGit size={17} className="icon" />
+    workspace: <FolderGit size={17} className="icon" />,
+    deepresearch: <Microscope size={18} className="icon" />
   }
 
   const pathMap = {
@@ -149,7 +151,8 @@ const MainMenus: FC = () => {
     minapp: '/apps',
     knowledge: '/knowledge',
     files: '/files',
-    workspace: '/workspace'
+    workspace: '/workspace',
+    deepresearch: '/deepresearch'
   }
 
   return sidebarIcons.visible.map((icon) => {
