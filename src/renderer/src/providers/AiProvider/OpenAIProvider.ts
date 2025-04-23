@@ -389,7 +389,6 @@ export default class OpenAIProvider extends BaseProvider {
     let time_first_content_millsec = 0
     const start_time_millsec = new Date().getTime()
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
-
     const { abortController, cleanup, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
     await this.checkIsCopilot()
@@ -552,7 +551,7 @@ export default class OpenAIProvider extends BaseProvider {
 
         // 6. Usage (If provided per chunk) - Capture the last known usage
         if (chunk.usage) {
-          console.log('chunk.usage', chunk.usage)
+          // console.log('chunk.usage', chunk.usage)
           lastUsage = chunk.usage // Update with the latest usage info
           // Send incremental usage update if needed by UI (optional, keep if useful)
           // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
@@ -779,19 +778,28 @@ export default class OpenAIProvider extends BaseProvider {
       content: userMessageContent
     }
     console.debug('[summaryForSearch] reqMessages', model.id, [systemMessage, userMessage])
-    // @ts-ignore key is not typed
-    const response = await this.sdk.chat.completions.create(
-      {
-        model: model.id,
-        messages: [systemMessage, userMessage] as ChatCompletionMessageParam[],
-        stream: false,
-        keep_alive: this.keepAliveTime,
-        max_tokens: 1000
-      },
-      {
-        timeout: 20 * 1000
-      }
-    )
+
+    const lastUserMessage = messages[messages.length - 1]
+    console.log('lastUserMessage?.id', lastUserMessage?.id)
+    const { abortController, cleanup } = this.createAbortController(lastUserMessage?.id)
+    const { signal } = abortController
+
+    const response = await this.sdk.chat.completions
+      // @ts-ignore key is not typed
+      .create(
+        {
+          model: model.id,
+          messages: [systemMessage, userMessage] as ChatCompletionMessageParam[],
+          stream: false,
+          keep_alive: this.keepAliveTime,
+          max_tokens: 1000
+        },
+        {
+          timeout: 20 * 1000,
+          signal: signal
+        }
+      )
+      .finally(cleanup)
 
     // 针对思考类模型的返回，总结仅截取</think>之后的内容
     let content = response.choices[0].message?.content || ''

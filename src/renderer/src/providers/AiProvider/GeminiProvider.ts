@@ -683,22 +683,29 @@ export default class GeminiProvider extends BaseProvider {
       ? `<start_of_turn>user\n${systemMessage.content}<end_of_turn>\n<start_of_turn>user\n${userMessageContent}<end_of_turn>`
       : userMessageContent
 
-    const response = await this.sdk.models.generateContent({
-      model: model.id,
-      config: {
-        systemInstruction: isGemmaModel(model) ? undefined : systemMessage.content,
-        temperature: assistant?.settings?.temperature,
-        httpOptions: {
-          timeout: 20 * 1000
-        }
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: content }]
-        }
-      ]
-    })
+    const lastUserMessage = messages[messages.length - 1]
+    const { abortController, cleanup } = this.createAbortController(lastUserMessage?.id)
+    const { signal } = abortController
+
+    const response = await this.sdk.models
+      .generateContent({
+        model: model.id,
+        config: {
+          systemInstruction: isGemmaModel(model) ? undefined : systemMessage.content,
+          temperature: assistant?.settings?.temperature,
+          httpOptions: {
+            timeout: 20 * 1000,
+            signal
+          }
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: content }]
+          }
+        ]
+      })
+      .finally(cleanup)
 
     return response.text || ''
   }

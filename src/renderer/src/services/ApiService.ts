@@ -14,6 +14,7 @@ import {
 } from '@renderer/types'
 import { type Chunk, ChunkType } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
+import { isAbortError } from '@renderer/utils/error'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
 import { findMainTextBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
@@ -73,6 +74,8 @@ async function fetchExternalTool(
     } catch (e: any) {
       console.error('extract error', e)
       // Fallback to using original content if extraction fails
+      if (isAbortError(e)) throw e
+
       const fallbackContent = getMainTextContent(lastUserMessage)
       return {
         websearch: {
@@ -152,7 +155,6 @@ async function fetchExternalTool(
       return
     }
   }
-
   // --- Execute Extraction and Searches ---
   if (assistant.enableWebSearch || hasKnowledgeBase) {
     extractResults = await extract()
@@ -327,11 +329,7 @@ export async function fetchSearchSummary({ messages, assistant }: { messages: Me
 
   const AI = new AiProvider(provider)
 
-  try {
-    return await AI.summaryForSearch(messages, assistant)
-  } catch (error: any) {
-    return null
-  }
+  return await AI.summaryForSearch(messages, assistant)
 }
 
 export async function fetchGenerate({ prompt, content }: { prompt: string; content: string }): Promise<string> {

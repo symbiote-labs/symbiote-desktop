@@ -440,17 +440,22 @@ export default class AnthropicProvider extends BaseProvider {
       role: 'user' as const,
       content: userMessageContent
     }
+    const lastUserMessage = messages[messages.length - 1]
+    const { abortController, cleanup } = this.createAbortController(lastUserMessage?.id)
+    const { signal } = abortController
 
-    const response = await this.sdk.messages.create(
-      {
-        messages: [userMessage],
-        model: model.id,
-        system: systemMessage.content,
-        stream: false,
-        max_tokens: 4096
-      },
-      { timeout: 20 * 1000 }
-    )
+    const response = await this.sdk.messages
+      .create(
+        {
+          messages: [userMessage],
+          model: model.id,
+          system: systemMessage.content,
+          stream: false,
+          max_tokens: 4096
+        },
+        { timeout: 20 * 1000, signal }
+      )
+      .finally(cleanup)
 
     const responseContent = response.content[0].type === 'text' ? response.content[0].text : ''
     return responseContent
