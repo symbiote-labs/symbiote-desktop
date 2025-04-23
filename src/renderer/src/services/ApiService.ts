@@ -40,9 +40,8 @@ async function fetchExternalTool(
   const mainTextBlocks = findMainTextBlocks(lastUserMessage)
   // 可能会有重复？
   const knowledgeBaseIds = mainTextBlocks
-    .map((block) => block.knowledgeBaseIds)
-    .filter(Boolean)
-    .flat()
+    .flatMap((block) => block.knowledgeBaseIds)
+    .filter((id): id is string => Boolean(id))
   const hasKnowledgeBase = !isEmpty(knowledgeBaseIds)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
@@ -88,7 +87,11 @@ async function fetchExternalTool(
 
   // --- Web Search Function ---
   const searchTheWeb = async (): Promise<WebSearchResponse | undefined> => {
-    if (!lastUserMessage || !extractResults?.websearch || !assistant.model) return
+    // Add check for extractResults existence early
+    if (!extractResults?.websearch) {
+      console.warn('searchTheWeb called without valid extractResults.websearch')
+      return
+    }
 
     const shouldSearch =
       WebSearchService.isWebSearchEnabled() &&
@@ -96,6 +99,12 @@ async function fetchExternalTool(
       extractResults.websearch.question[0] !== 'not_needed'
 
     if (!shouldSearch) return
+
+    // Add check for assistant.model before using it
+    if (!assistant.model) {
+      console.warn('searchTheWeb called without assistant.model')
+      return undefined
+    }
 
     // Pass the guaranteed model to the check function
     const webSearchParams = getOpenAIWebSearchParams(assistant, assistant.model)
@@ -119,7 +128,11 @@ async function fetchExternalTool(
 
   // --- Knowledge Base Search Function ---
   const searchKnowledgeBase = async (): Promise<KnowledgeReference[] | undefined> => {
-    if (!lastUserMessage || !extractResults?.knowledge) return
+    // Add check for extractResults existence early
+    if (!extractResults?.knowledge) {
+      console.warn('searchKnowledgeBase called without valid extractResults.knowledge')
+      return
+    }
 
     const shouldSearch = hasKnowledgeBase && extractResults.knowledge.question[0] !== 'not_needed'
 
@@ -133,11 +146,7 @@ async function fetchExternalTool(
       // const mainTextBlock = mainTextBlocks
       //   ?.map((blockId) => store.getState().messageBlocks.entities[blockId])
       //   .find((block) => block?.type === MessageBlockType.MAIN_TEXT) as MainTextMessageBlock | undefined
-      return await processKnowledgeSearch(
-        extractResults,
-        // Filter out potential undefined values from knowledgeBaseIds
-        knowledgeBaseIds?.filter((id): id is string => typeof id === 'string')
-      )
+      return await processKnowledgeSearch(extractResults, knowledgeBaseIds)
     } catch (error) {
       console.error('Knowledge base search failed:', error)
       return
@@ -150,10 +159,27 @@ async function fetchExternalTool(
     console.log('extractResults', extractResults)
   }
   // Run searches potentially in parallel
-  const [webSearchResponseFromSearch, knowledgeReferencesFromSearch] = await Promise.all([
-    searchTheWeb(),
-    searchKnowledgeBase()
-  ])
+
+  let webSearchResponseFromSearch: WebSearchResponse | undefined
+  let knowledgeReferencesFromSearch: KnowledgeReference[] | undefined
+  const isWebSearchValid = extractResults?.websearch && assistant.model
+  const isKnowledgeSearchValid = extractResults?.knowledge
+  const isAllValidSearch = lastUserMessage && (isKnowledgeSearchValid || isWebSearchValid)
+
+  if (isAllValidSearch) {
+    // 应该在这写search开始
+    if (isKnowledgeSearchValid && isWebSearchValid) {
+      ;[webSearchResponseFromSearch, knowledgeReferencesFromSearch] = await Promise.all([
+        searchTheWeb(),
+        searchKnowledgeBase()
+      ])
+    } else if (isKnowledgeSearchValid) {
+      knowledgeReferencesFromSearch = await searchKnowledgeBase()
+    } else if (isWebSearchValid) {
+      webSearchResponseFromSearch = await searchTheWeb()
+    }
+    // 应该在这写search结束
+  }
 
   onChunkReceived({
     type: ChunkType.EXTERNEL_TOOL_COMPLETE,

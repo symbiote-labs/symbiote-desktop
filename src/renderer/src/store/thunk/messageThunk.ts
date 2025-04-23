@@ -119,11 +119,13 @@ const throttledBlockUpdate = throttle((id, blockUpdate) => {
 // 更新消息和块的逻辑，用于更新消息中的单个块
 const messageAndBlockUpdate = (topicId, messageId, blockUpdate) => {
   const dispatch = store.dispatch
+  // 更新message.blocks
   store.dispatch(
     newMessagesActions.updateMessage({ topicId, messageId, updates: { blockInstruction: { id: blockUpdate.id } } })
   )
+  // 更新块/没有就创建
   dispatch(upsertOneBlock(blockUpdate))
-
+  // 更新message的引用(目前只是用来更新status)
   dispatch(newMessagesActions.upsertBlockReference({ messageId, blockId: blockUpdate.id, status: blockUpdate.status }))
 }
 
@@ -446,10 +448,11 @@ const fetchAndProcessAssistantResponseImpl = async (
             status: MessageBlockStatus.PROCESSING
           }
         )
-        lastBlockId = citationBlock.id
-        lastBlockType = MessageBlockType.CITATION
+        // lastBlockId = citationBlock.id
+        // lastBlockType = MessageBlockType.CITATION
+        // messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
+        // throttledDbUpdate(assistantMsgId, topicId, getState)
         messageAndBlockUpdate(topicId, assistantMsgId, citationBlock)
-        throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onExternalToolComplete: (externalToolResult: ExternalToolResult) => {
         console.warn('onExternalToolComplete received, creating placeholder WebSearchBlock.', externalToolResult)
@@ -459,10 +462,11 @@ const fetchAndProcessAssistantResponseImpl = async (
           status: MessageBlockStatus.SUCCESS
         }
         // FIXME: 不清楚lastBlockId是否准确
-        if (lastBlockType === MessageBlockType.CITATION && lastBlockId) {
-          dispatch(updateOneBlock({ id: lastBlockId, changes }))
-          throttledDbUpdate(assistantMsgId, topicId, getState)
-        }
+        // if (lastBlockType === MessageBlockType.CITATION && lastBlockId) {
+        // dispatch(updateOneBlock({ id: lastBlockId, changes }))
+        throttledBlockUpdate(lastBlockId, changes)
+        throttledDbUpdate(assistantMsgId, topicId, getState)
+        // }
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'

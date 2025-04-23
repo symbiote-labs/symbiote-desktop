@@ -29,7 +29,9 @@ export enum ChunkType {
   LLM_WEB_SEARCH_COMPLETE = 'llm_websearch_complete',
   LLM_RESPONSE_COMPLETE = 'llm_response_complete',
   BLOCK_COMPLETE = 'block_complete',
-  ERROR = 'error'
+  ERROR = 'error',
+  SEARCH_IN_PROGRESS_UNION = 'search_in_progress_union',
+  SEARCH_COMPLETE_UNION = 'search_complete_union'
 }
 
 export interface LLMResponseCreatedChunk {
@@ -316,6 +318,14 @@ export interface BlockCompleteChunk {
   error?: ResponseError
 }
 
+export interface SearchInProgressUnionChunk {
+  type: ChunkType.SEARCH_IN_PROGRESS_UNION
+}
+
+export interface SearchCompleteUnionChunk {
+  type: ChunkType.SEARCH_COMPLETE_UNION
+}
+
 export type Chunk =
   | BlockCreatedChunk // 消息块创建，无意义
   | BlockInProgressChunk // 消息块进行中，无意义
@@ -342,3 +352,5 @@ export type Chunk =
   | LLMResponseCompleteChunk // 大模型响应完成，未来用于作为流式处理的完成标记
   | BlockCompleteChunk // 所有块创建完成，通常用于非流式处理；目前没有做区分
   | ErrorChunk // 错误
+  | SearchInProgressUnionChunk // 搜索(知识库/互联网)进行中
+  | SearchCompleteUnionChunk // 搜索(知识库/互联网)完成
