@@ -255,7 +255,8 @@ const fetchAndProcessAssistantResponseImpl = async (
     // Track the last block added to handle interleaving
     let lastBlockId: string | null = null
     let lastBlockType: MessageBlockType | null = null
-    // Map to track tool call IDs to their corresponding block IDs
+    // 用于存储tool call id 和 block id 的映射
+    // mcp-tools中使用promise.all并发调用mcp,所以onToolCallComplete可能是乱序的
     const toolCallIdToBlockIdMap = new Map<string, string>()
 
     // --- Context Message Filtering --- START
@@ -374,21 +375,9 @@ const fetchAndProcessAssistantResponseImpl = async (
           // Handle the case where OpenRouter citation might still be relevant even if the last block wasn't text? Unlikely but consider.
         }
       },
-      // TODO: 根据chunk的状态来判断tool block的状态，不需要在tool Response中设置状态；在不同状态的回调中更新tool block
-      onToolCallComplete: (toolResponse: MCPToolResponse) => {
-        console.log('toolResponse', toolResponse, toolResponse.status)
-
-        const existingBlockId = toolCallIdToBlockIdMap.get(toolResponse.id)
-
+      onToolCallInProgress: (toolResponse: MCPToolResponse) => {
         if (toolResponse.status === 'invoking') {
           // Status: Invoking - Create the block
-          if (existingBlockId) {
-            console.warn(
-              `[onToolCallComplete] Block already exists for invoking tool call ID: ${toolResponse.id}. Ignoring.`
-            )
-            return
-          }
-
           const toolBlock = createToolBlock(assistantMsgId, toolResponse.id, {
             toolName: toolResponse.tool.name,
             metadata: {
@@ -404,7 +393,18 @@ const fetchAndProcessAssistantResponseImpl = async (
           console.log('[Invoking] onToolCallComplete', toolBlock)
           // Optionally save initial invoking state to DB
           // throttledDbUpdate(assistantMsgId, topicId, getState)
-        } else if (toolResponse.status === 'done' || toolResponse.status === 'error') {
+        } else {
+          console.warn(
+            `[onToolCallInProgress] Received unhandled tool status: ${toolResponse.status} for ID: ${toolResponse.id}`
+          )
+        }
+      },
+      onToolCallComplete: (toolResponse: MCPToolResponse) => {
+        console.log('toolResponse', toolResponse, toolResponse.status)
+
+        const existingBlockId = toolCallIdToBlockIdMap.get(toolResponse.id)
+
+        if (toolResponse.status === 'done' || toolResponse.status === 'error') {
           // Status: Done or Error - Update the existing block
           if (!existingBlockId) {
             console.error(

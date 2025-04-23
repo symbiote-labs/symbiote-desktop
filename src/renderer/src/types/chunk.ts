@@ -251,6 +251,10 @@ export interface MCPToolInProgressChunk {
    * The type of the chunk
    */
   type: ChunkType.MCP_TOOL_IN_PROGRESS
+  /**
+   * The tool responses of the chunk
+   */
+  responses: MCPToolResponse[]
 }
 
 export interface MCPToolCompleteChunk {

@@ -13,6 +13,7 @@ export interface StreamProcessorCallbacks {
   // Thinking/reasoning content chunk received (e.g., from Claude)
   onThinkingChunk?: (text: string, thinking_millsec?: number) => void
   // A tool call response chunk (from MCP)
+  onToolCallInProgress?: (toolResponse: MCPToolResponse) => void
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
   // External tool call in progress
   onExternalToolInProgress?: () => void
@@ -27,7 +28,7 @@ export interface StreamProcessorCallbacks {
 }
 
 // Function to create a stream processor instance
-export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
+export function createStreamProcessor(callbacks: StreamProcessorCallbacks = {}) {
   // The returned function processes a single chunk or a final signal
   return (chunk: Chunk) => {
     try {
@@ -52,6 +53,9 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks) {
       }
       if (data.type === ChunkType.THINKING_DELTA && callbacks.onThinkingChunk) {
         callbacks.onThinkingChunk(data.text, data.thinking_millsec)
+      }
+      if (data.type === ChunkType.MCP_TOOL_IN_PROGRESS && callbacks.onToolCallInProgress) {
+        data.responses.forEach((toolResp) => callbacks.onToolCallInProgress!(toolResp))
       }
       if (data.type === ChunkType.MCP_TOOL_COMPLETE && data.responses.length > 0 && callbacks.onToolCallComplete) {
         data.responses.forEach((toolResp) => callbacks.onToolCallComplete!(toolResp))
