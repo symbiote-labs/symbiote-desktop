@@ -39,11 +39,17 @@ interface Props {
   role: Message['role']
 }
 
-const remarkPlugins = [remarkMath, remarkGfm, remarkCjkFriendly]
-
 const Markdown: FC<Props> = ({ block, role }) => {
   const { t } = useTranslation()
   const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
+
+  const remarkPlugins = useMemo(() => {
+    const plugins = [remarkGfm, remarkCjkFriendly]
+    if (mathEngine !== 'none') {
+      plugins.push(remarkMath)
+    }
+    return plugins
+  }, [mathEngine])
 
   const messageContent = useMemo(() => {
     const empty = isEmpty(block.content)
@@ -52,12 +58,18 @@ const Markdown: FC<Props> = ({ block, role }) => {
     return removeSvgEmptyLines(escapeBrackets(content))
   }, [block, t])
 
-  const rehypeMath = useMemo(() => (mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax), [mathEngine])
-
   const rehypePlugins = useMemo(() => {
-    const hasElements = ALLOWED_ELEMENTS.test(messageContent)
-    return hasElements ? [rehypeRaw, rehypeMath] : [rehypeMath]
-  }, [messageContent, rehypeMath])
+    const plugins: any[] = []
+    if (ALLOWED_ELEMENTS.test(messageContent)) {
+      plugins.push(rehypeRaw)
+    }
+    if (mathEngine === 'KaTeX') {
+      plugins.push(rehypeKatex as any)
+    } else if (mathEngine === 'MathJax') {
+      plugins.push(rehypeMathjax as any)
+    }
+    return plugins
+  }, [mathEngine, messageContent])
 
   const components = useMemo(() => {
     const baseComponents = {
