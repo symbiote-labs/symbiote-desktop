@@ -19,7 +19,6 @@ import type {
 } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
-import { isAbortError } from '@renderer/utils/error'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
 import {
   createAssistantMessage,
@@ -31,12 +30,18 @@ import {
   createToolBlock,
   resetMessage
 } from '@renderer/utils/messageUtils/create'
-import { getTopicQueue } from '@renderer/utils/queue'
+import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
 import { throttle } from 'lodash'
 
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
 import { newMessagesActions, removeMessage, removeMessages, removeMessagesByAskId } from '../newMessage'
+
+const handleChangeLoadingOfTopic = async (topicId: string) => {
+  await waitForTopicQueue(topicId)
+  console.log('[DEBUG] Waiting for topic queue to complete')
+  store.dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+}
 
 const saveMessageAndBlocksToDB = async (message: Message, blocks: MessageBlock[]) => {
   try {
@@ -111,11 +116,6 @@ const throttledBlockUpdate = throttle((id, blockUpdate) => {
   store.dispatch(updateOneBlock({ id, changes: blockUpdate }))
 }, 150)
 
-// const throttledMessageUpdate = throttle((topicId, messageId, messageUpdates) => {
-//   const dispatch = store.dispatch
-//   dispatch(newMessagesActions.updateMessage({ topicId, messageId, updates: { blockInstruction: messageUpdates } }))
-// }, 150)
-
 // 更新消息和块的逻辑，用于更新消息中的单个块
 const messageAndBlockUpdate = (topicId, messageId, blockUpdate) => {
   const dispatch = store.dispatch
@@ -156,8 +156,7 @@ const dispatchMultiModelResponses = async (
   topicId: string,
   triggeringMessage: Message, // userMessage or messageToResend
   assistant: Assistant,
-  mentionedModels: Model[],
-  queue: any // Assuming queue has an 'add' method
+  mentionedModels: Model[]
 ) => {
   console.log(
     `[DEBUG] dispatchMultiModelResponses called for ${mentionedModels.length} models, triggered by message ${triggeringMessage.id}.`
@@ -190,27 +189,21 @@ const dispatchMultiModelResponses = async (
 
   // After the loop: Update the Topic in DB once with all stubs
   console.log('[DEBUG] Updating topic in DB with all assistant message stubs...')
-  try {
-    const topicFromDB = await db.topics.get(topicId)
-    if (topicFromDB) {
-      const updatedMessages = [...topicFromDB.messages, ...assistantMessageStubs]
-      await db.topics.update(topicId, { messages: updatedMessages })
-      console.log('[DEBUG] Topic updated in DB successfully.')
-    } else {
-      console.error(`[dispatchMultiModelResponses] Topic ${topicId} not found in DB during multi-model save.`)
-      throw new Error(`Topic ${topicId} not found in DB.`)
-    }
-  } catch (dbError) {
-    console.error('[dispatchMultiModelResponses] Error updating topic in DB for multi-model:', dbError)
-    throw dbError // Propagate error
+  const topicFromDB = await db.topics.get(topicId)
+  if (topicFromDB) {
+    const updatedMessages = [...topicFromDB.messages, ...assistantMessageStubs]
+    await db.topics.update(topicId, { messages: updatedMessages })
+    console.log('[DEBUG] Topic updated in DB successfully.')
+  } else {
+    console.error(`[dispatchMultiModelResponses] Topic ${topicId} not found in DB during multi-model save.`)
+    throw new Error(`Topic ${topicId} not found in DB.`)
   }
 
   // Now, queue all the processing tasks
   console.log('[DEBUG] Queueing all processing tasks...')
+  const queue = getTopicQueue(topicId)
   for (const task of tasksToQueue) {
-    console.log(`[DEBUG] Adding task to queue for model: ${task.messageStub.model?.id}`)
     queue.add(async () => {
-      console.log(`[DEBUG] Queue task started for model: ${task.messageStub.model?.id}`)
       await fetchAndProcessAssistantResponseImpl(
         dispatch,
         getState,
@@ -218,10 +211,8 @@ const dispatchMultiModelResponses = async (
         task.assistantConfig, // Use the specific assistant config
         task.messageStub // Pass the specific assistant message stub
       )
-      console.log(`[DEBUG] fetchAndProcessAssistantResponseImpl completed for model: ${task.messageStub.model?.id}`)
     })
   }
-  console.log('[DEBUG] All processing tasks queued.')
 }
 
 // --- End Helper Function ---
@@ -236,6 +227,7 @@ const fetchAndProcessAssistantResponseImpl = async (
 ) => {
   console.log('[DEBUG] fetchAndProcessAssistantResponseImpl started for existing message:', assistantMessage.id)
   const assistantMsgId = assistantMessage.id // Use the passed message ID
+  let callbacks: StreamProcessorCallbacks = {}
   try {
     // REMOVED: Assistant message creation, adding to store, and initial DB save are now handled upstream.
     // assistantMessage = createAssistantMessage(assistant.id, passedTopicId, {
@@ -287,8 +279,7 @@ const fetchAndProcessAssistantResponseImpl = async (
     // TODO: Apply further filtering based on assistant settings (maxContextMessages, etc.) if needed
     // --- Context Message Filtering --- END
 
-    // TODO：考虑有些块并行创建
-    const callbacks: StreamProcessorCallbacks = {
+    callbacks = {
       onTextChunk: (text) => {
         accumulatedContent += text
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
@@ -477,18 +468,20 @@ const fetchAndProcessAssistantResponseImpl = async (
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onError: (error) => {
-        console.error('Stream processing error:', error)
+        // console.error('Stream processing error:', error)
+        // 所有错误都收束到这
         // Create a serializable error object
         const serializableError = {
           name: error.name,
-          message: 'Stream processing error', // Keep specific message for this context
+          message: error.message || 'Stream processing error', // Keep specific message for this context
           originalMessage: error.message, // Store original message separately
           stack: error.stack // Include stack trace if available
           // Add any other relevant serializable properties from the error if needed
         }
         const errorBlock = createErrorBlock(assistantMsgId, serializableError) // Pass the serializable object
         // Use immediate update for error block
-        messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
+        // messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
+        handleBlockTransition(errorBlock, MessageBlockType.ERROR)
 
         // Also update message status directly
         dispatch(
@@ -500,22 +493,22 @@ const fetchAndProcessAssistantResponseImpl = async (
         )
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
-      onComplete: async (status: AssistantMessageStatus, response?: Response, finalError?: any) => {
+      onComplete: async (status: AssistantMessageStatus, response?: Response) => {
         // --- Handle Abort Error Specifically ---
-        if (status === 'error' && isAbortError(finalError)) {
-          console.log(`[onComplete] Stream aborted for message ${assistantMsgId}. Setting status to paused.`)
-          // Update message status to 'paused'
-          dispatch(
-            newMessagesActions.updateMessage({
-              topicId,
-              messageId: assistantMsgId,
-              updates: { status: AssistantMessageStatus.PAUSED }
-            })
-          )
-          // Ensure paused state is saved to DB
-          throttledDbUpdate(assistantMsgId, topicId, getState)
-          return
-        }
+        // if (status === 'error' && isAbortError(finalError)) {
+        //   console.log(`[onComplete] Stream aborted for message ${assistantMsgId}. Setting status to paused.`)
+        //   // Update message status to 'paused'
+        //   dispatch(
+        //     newMessagesActions.updateMessage({
+        //       topicId,
+        //       messageId: assistantMsgId,
+        //       updates: { status: AssistantMessageStatus.PAUSED }
+        //     })
+        //   )
+        //   // Ensure paused state is saved to DB
+        //   throttledDbUpdate(assistantMsgId, topicId, getState)
+        //   return
+        // }
 
         // Non-abort error logging is handled by onError or the error source directly.
 
@@ -524,17 +517,17 @@ const fetchAndProcessAssistantResponseImpl = async (
         const finalAssistantMsg = finalState.messages.messagesByTopic[topicId]?.find((m) => m.id === assistantMsgId)
 
         // --- Create Error Block if needed for non-abort errors reported via onComplete --- START
-        if (status === 'error' && finalError) {
-          // 有错误就创建错误块
-          const serializableError = {
-            name: finalError.name || 'Error',
-            message: finalError.message || 'Stream completed with an unspecified error',
-            stack: finalError.stack
-          }
-          const errorBlock = createErrorBlock(assistantMsgId, serializableError)
-          // Use immediate update
-          messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
-        }
+        // if (status === 'error' && finalError) {
+        //   // 有错误就创建错误块
+        //   const serializableError = {
+        //     name: finalError.name || 'Error',
+        //     message: finalError.message || 'Stream completed with an unspecified error',
+        //     stack: finalError.stack
+        //   }
+        //   const errorBlock = createErrorBlock(assistantMsgId, serializableError)
+        //   // Use immediate update
+        //   messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
+        // }
         // --- Create Error Block if needed --- END
 
         // --- Update final block status ---
@@ -594,31 +587,9 @@ const fetchAndProcessAssistantResponseImpl = async (
   } catch (error: any) {
     console.error('Error fetching chat completion:', error)
     if (assistantMessage) {
-      // Create a serializable error object
-      const serializableError = {
-        name: error.name,
-        message: error.message || 'Failed to fetch completion',
-        stack: error.stack // Include stack trace if available
-        // Add any other relevant serializable properties from the error if needed
-      }
-      const errorBlock = createErrorBlock(assistantMessage.id, serializableError) // Pass the serializable object
-
-      // Use immediate update for error block during catch
-      messageAndBlockUpdate(topicId, assistantMessage.id, errorBlock)
-      // Also update message status directly
-      dispatch(
-        newMessagesActions.updateMessage({
-          topicId,
-          messageId: assistantMessage.id,
-          updates: { status: AssistantMessageStatus.ERROR }
-        })
-      )
-      throttledDbUpdate(assistantMessage.id, topicId, getState) // Ensure DB is updated on error
-    }
-  } finally {
-    const isLoading = getState().messages.loadingByTopic[topicId]
-    if (isLoading) {
-      dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+      callbacks.onError?.(error)
+      // 抛出错误
+      throw error
     }
   }
 }
@@ -666,7 +637,7 @@ export const sendMessage =
       if (mentionedModels && mentionedModels.length > 0) {
         // --- Multi-Model Scenario ---
         console.log(`[DEBUG] Multi-model send detected for ${mentionedModels.length} models.`)
-        await dispatchMultiModelResponses(dispatch, getState, topicId, userMessage, assistant, mentionedModels, queue)
+        await dispatchMultiModelResponses(dispatch, getState, topicId, userMessage, assistant, mentionedModels)
       } else {
         // --- Single-Model Scenario (Original Logic) ---
         console.log('[DEBUG] Single-model send.')
@@ -697,6 +668,8 @@ export const sendMessage =
       }
     } catch (error) {
       console.error('Error in sendMessage thunk:', error)
+    } finally {
+      handleChangeLoadingOfTopic(topicId)
     }
   }
 
@@ -857,11 +830,10 @@ export const clearTopicMessagesThunk =
  * This involves potentially deleting subsequent messages and re-fetching the assistant response.
  */
 export const resendMessageThunk =
-  (topic: Topic, messageToResend: Message, assistant: Assistant) =>
+  (topicId: Topic['id'], messageToResend: Message, assistant: Assistant) =>
   async (dispatch: AppDispatch, getState: () => RootState) => {
-    console.log(`[resendMessageThunk] Resending message ${messageToResend.id} in topic ${topic.id}`)
+    console.log(`[resendMessageThunk] Resending message ${messageToResend.id} in topic ${topicId}`)
     try {
-      const topicId = topic.id
       const state = getState()
       const allMessages = state.messages.messagesByTopic[topicId] || []
       const resendIndex = allMessages.findIndex((m) => m.id === messageToResend.id)
@@ -902,15 +874,7 @@ export const resendMessageThunk =
       if (mentionedModels && mentionedModels.length > 0) {
         // --- Multi-Model Resend Scenario ---
         console.log(`[DEBUG] Multi-model resend detected for ${mentionedModels.length} models.`)
-        await dispatchMultiModelResponses(
-          dispatch,
-          getState,
-          topicId,
-          messageToResend,
-          assistant,
-          mentionedModels,
-          queue
-        )
+        await dispatchMultiModelResponses(dispatch, getState, topicId, messageToResend, assistant, mentionedModels)
       } else {
         // --- Single-Model Resend Scenario ---
         console.log('[DEBUG] Single-model resend.')
@@ -940,7 +904,9 @@ export const resendMessageThunk =
     } catch (error) {
       console.error(`[resendMessageThunk] Error resending message ${messageToResend.id}:`, error)
       // Ensure loading state is potentially reset if error happens before fetch starts
-      dispatch(newMessagesActions.setTopicLoading({ topicId: topic.id, loading: false }))
+      dispatch(newMessagesActions.setTopicLoading({ topicId: topicId, loading: false }))
+    } finally {
+      handleChangeLoadingOfTopic(topicId)
     }
   }
 

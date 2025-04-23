@@ -155,9 +155,7 @@ const messagesSlice = createSlice({
       const topicMessages = state.messagesByTopic[topicId]
       if (topicMessages) {
         // Keep messages that are NOT part of the ask group (user query + assistant response)
-        state.messagesByTopic[topicId] = topicMessages.filter(
-          (msg) => msg.askId !== askId && msg.id !== askId // Also remove the user query which has id === askId
-        )
+        state.messagesByTopic[topicId] = topicMessages.filter((msg) => msg.askId !== askId)
       }
     },
     removeMessages(state, action: PayloadAction<RemoveMessagesPayload>) {

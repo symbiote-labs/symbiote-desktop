@@ -16,7 +16,7 @@ import { type Chunk, ChunkType } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { isAbortError } from '@renderer/utils/error'
 import { extractInfoFromXML, ExtractResults } from '@renderer/utils/extract'
-import { findMainTextBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
+import { getKnowledgeBaseIds, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { findLast, isEmpty } from 'lodash'
 
 import AiProvider from '../providers/AiProvider'
@@ -38,11 +38,8 @@ async function fetchExternalTool(
   onChunkReceived: (chunk: Chunk) => void,
   lastAnswer?: Message
 ): Promise<ExternalToolResult> {
-  const mainTextBlocks = findMainTextBlocks(lastUserMessage)
   // 可能会有重复？
-  const knowledgeBaseIds = mainTextBlocks
-    .flatMap((block) => block.knowledgeBaseIds)
-    .filter((id): id is string => Boolean(id))
+  const knowledgeBaseIds = getKnowledgeBaseIds(lastUserMessage)
   const hasKnowledgeBase = !isEmpty(knowledgeBaseIds)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
@@ -243,34 +240,23 @@ export async function fetchChatCompletion({
     console.error('fetchChatCompletion returning early: Missing lastUserMessage or lastAnswer')
     return
   }
-  try {
-    // NOTE: The search results are NOT added to the messages sent to the AI here.
-    // They will be retrieved and used by the messageThunk later to create CitationBlocks.
-    const { mcpTools } = await fetchExternalTool(lastUserMessage, assistant, onChunkReceived, lastAnswer)
+  // try {
+  // NOTE: The search results are NOT added to the messages sent to the AI here.
+  // They will be retrieved and used by the messageThunk later to create CitationBlocks.
+  const { mcpTools } = await fetchExternalTool(lastUserMessage, assistant, onChunkReceived, lastAnswer)
 
-    const filteredMessages = filterUsefulMessages(filterContextMessages(messages))
+  const filteredMessages = filterUsefulMessages(filterContextMessages(messages))
 
-    // --- Call AI Completions ---
-    console.log('[DEBUG] Calling AI.completions')
-    await AI.completions({
-      messages: filteredMessages,
-      assistant,
-      onFilterMessages: () => {},
-      onChunk: onChunkReceived,
-      mcpTools: mcpTools
-    })
-    console.log('[DEBUG] AI.completions call finished')
-
-    // --- Signal Final Success ---
-    onChunkReceived({ type: ChunkType.BLOCK_COMPLETE })
-  } catch (error: any) {
-    // console.error('Error during fetchChatCompletion:', error)
-    // Signal Final Error
-    // onChunkReceived({ type: 'error', error: formatMessageError(error) })
-    onChunkReceived({ type: ChunkType.BLOCK_COMPLETE, error: error })
-    // Re-throwing might still be desired depending on upstream error handling
-    // throw error;
-  }
+  // --- Call AI Completions ---
+  console.log('[DEBUG] Calling AI.completions')
+  await AI.completions({
+    messages: filteredMessages,
+    assistant,
+    onFilterMessages: () => {},
+    onChunk: onChunkReceived,
+    mcpTools: mcpTools
+  })
+  console.log('[DEBUG] AI.completions call finished')
 }
 
 interface FetchTranslateProps {

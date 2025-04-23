@@ -103,9 +103,9 @@ export function useMessageOperations(topic: Topic) {
    */
   const resendMessage = useCallback(
     async (message: Message, assistant: Assistant) => {
-      await dispatch(resendMessageThunk(topic, message, assistant))
+      await dispatch(resendMessageThunk(topic.id, message, assistant))
     },
-    [dispatch, topic] // topic object needed by thunk
+    [dispatch, topic.id] // topic object needed by thunk
   )
 
   /**
