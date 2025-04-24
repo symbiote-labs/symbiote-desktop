@@ -268,17 +268,25 @@ export default class AnthropicProvider extends BaseProvider {
           })
           .on('thinking', (thinking) => {
             hasThinkingContent = true
+            const currentTime = new Date().getTime() // Get current time for each chunk
 
             if (time_first_token_millsec == 0) {
-              time_first_token_millsec = new Date().getTime() - start_time_millsec
+              time_first_token_millsec = currentTime - start_time_millsec
+              // Potentially add LLM_RESPONSE_CREATED chunk here if needed, similar to OpenAI
             }
 
-            // const time_completion_millsec = new Date().getTime() - start_time_millsec
+            // Set time_first_content_millsec ONLY when the first content (thinking or text) arrives
+            if (time_first_content_millsec === 0) {
+              time_first_content_millsec = currentTime // Record the time of the very first content chunk
+            }
+
+            // Calculate thinking time as time elapsed since start until this chunk
+            const thinking_time = currentTime - start_time_millsec
 
             onChunk({
               type: ChunkType.THINKING_DELTA,
               text: thinking,
-              thinking_millsec: time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
+              thinking_millsec: thinking_time
             })
           })
           .on('finalMessage', async (message) => {

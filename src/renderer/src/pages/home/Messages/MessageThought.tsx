@@ -42,7 +42,6 @@ const MessageThought: FC<Props> = ({ message }) => {
     }
   }
 
-  // FIXME: 时间显示错误
   const thinkingTime = message.thinking_millsec || 0
   const thinkingTimeSeconds = (thinkingTime / 1000).toFixed(1)
   const isPaused = message.status === 'paused'

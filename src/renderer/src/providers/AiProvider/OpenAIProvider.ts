@@ -493,14 +493,23 @@ export default class OpenAIProvider extends BaseProvider {
 
         // 1. Reasoning Content
         const reasoningContent = delta?.reasoning_content || delta?.reasoning
+        const currentTime = new Date().getTime() // Get current time for each chunk
+
         if (time_first_token_millsec === 0 && !reasoningContent && !delta?.content && !delta?.finish_reason) {
           time_first_token_millsec = new Date().getTime() - start_time_millsec
           onChunk({ type: ChunkType.LLM_RESPONSE_CREATED, response: { metrics: { time_first_token_millsec } } })
         }
         if (reasoningContent) {
           hasReasoningContent = true // Keep track if reasoning occurred
-          const time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
-          onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, thinking_millsec: time_thinking_millsec })
+
+          // Set time_first_content_millsec ONLY when the first content (reasoning or text) arrives
+          if (time_first_content_millsec === 0) {
+            time_first_content_millsec = currentTime
+          }
+
+          // Calculate thinking time as time elapsed since start until this chunk
+          const thinking_time = currentTime - start_time_millsec
+          onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, thinking_millsec: thinking_time })
         }
 
         // 2. Text Content
@@ -568,8 +577,10 @@ export default class OpenAIProvider extends BaseProvider {
           // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
         }
 
-        if (time_first_content_millsec === 0 && isReasoningJustDone(delta)) {
-          time_first_content_millsec = new Date().getTime()
+        if (isReasoningJustDone(delta)) {
+          if (time_first_content_millsec === 0) {
+            time_first_content_millsec = new Date().getTime()
+          }
         }
         // Continuously update the completion time
         final_time_completion_millsec = new Date().getTime() - start_time_millsec

@@ -127,7 +127,8 @@ export function createThinkingBlock(
   const baseBlock = createBaseMessageBlock(messageId, MessageBlockType.THINKING, baseOverrides)
   return {
     ...baseBlock,
-    content
+    content,
+    thinking_millsec: overrides.thinking_millsec
   }
 }
 
