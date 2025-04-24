@@ -21,6 +21,7 @@ export enum ChunkType {
   TEXT_COMPLETE = 'text.complete',
   AUDIO_DELTA = 'audio.delta',
   AUDIO_COMPLETE = 'audio.complete',
+  IMAGE_CREATED = 'image.created',
   IMAGE_DELTA = 'image.delta',
   IMAGE_COMPLETE = 'image.complete',
   THINKING_DELTA = 'thinking.delta',
@@ -105,6 +106,13 @@ export interface AudioCompleteChunk {
    * The type of the chunk
    */
   type: ChunkType.AUDIO_COMPLETE
+}
+
+export interface ImageCreatedChunk {
+  /**
+   * The type of the chunk
+   */
+  type: ChunkType.IMAGE_CREATED
 }
 
 export interface ImageDeltaChunk {
@@ -347,6 +355,7 @@ export type Chunk =
   | TextCompleteChunk // 文本内容生成完成
   | AudioDeltaChunk // 音频内容生成中
   | AudioCompleteChunk // 音频内容生成完成
+  | ImageCreatedChunk // 图片内容创建
   | ImageDeltaChunk // 图片内容生成中
   | ImageCompleteChunk // 图片内容生成完成
   | ThinkingDeltaChunk // 思考内容生成中

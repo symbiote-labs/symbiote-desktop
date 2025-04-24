@@ -1,3 +1,4 @@
+import SearchingSpinner from '@renderer/components/SearchingSpinner'
 import type { RootState } from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import type { Model } from '@renderer/types'
@@ -11,7 +12,7 @@ import type {
   ThinkingMessageBlock,
   TranslationMessageBlock
 } from '@renderer/types/newMessage'
-import { MessageBlockType } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import React from 'react'
 import { useSelector } from 'react-redux'
 
@@ -39,7 +40,14 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   const renderedBlocks = blocks.map((blockId) => blockEntities[blockId]).filter(Boolean)
   return (
     <>
+      {/* FIXME: 如果创建了错误块，实际上是由上一个块错误导致的，因此不应该渲染上一个块 (不知道理解对不对) */}
       {renderedBlocks.map((block) => {
+        if (block.status === MessageBlockStatus.PROCESSING) {
+          return <SearchingSpinner key={block.id} text="message.processing" />
+        }
+        if (block.status === MessageBlockStatus.ERROR) {
+          return null
+        }
         switch (block.type) {
           case MessageBlockType.MAIN_TEXT:
           case MessageBlockType.CODE: {

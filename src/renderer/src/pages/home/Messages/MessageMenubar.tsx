@@ -19,6 +19,7 @@ import {
   exportMessageAsMarkdown,
   messageToMarkdown
 } from '@renderer/utils/export'
+// import { withMessageThought } from '@renderer/utils/formats'
 import { removeTrailingDoubleSpaces } from '@renderer/utils/markdown'
 import { findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { Button, Dropdown, Popconfirm, Tooltip } from 'antd'

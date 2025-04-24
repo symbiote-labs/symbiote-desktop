@@ -1020,6 +1020,10 @@ export default class OpenAIProvider extends BaseProvider {
     const lastUserMessage = messages.findLast((m) => m.role === 'user')
     const { abortController } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
+
+    onChunk({
+      type: ChunkType.IMAGE_CREATED
+    })
     const response = await this.sdk.images.generate(
       {
         model: model.id,

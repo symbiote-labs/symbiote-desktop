@@ -10,7 +10,13 @@ import {
   type Topic,
   WebSearchSource
 } from '@renderer/types'
-import type { CitationMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
+import type {
+  CitationMessageBlock,
+  ImageMessageBlock,
+  Message,
+  MessageBlock,
+  ToolMessageBlock
+} from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
@@ -437,7 +443,7 @@ const fetchAndProcessAssistantResponseImpl = async (
             // For now, just log and return.
             return
           }
-
+          //FIXME： 没有收束到onError回调
           const finalStatus = toolResponse.status === 'done' ? MessageBlockStatus.SUCCESS : MessageBlockStatus.ERROR
           const changes: Partial<ToolMessageBlock> = {
             content: toolResponse.response,
@@ -498,16 +504,25 @@ const fetchAndProcessAssistantResponseImpl = async (
         handleBlockTransition(citationBlock, MessageBlockType.CITATION)
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
-      onImageGenerated: (imageData) => {
-        const imageUrl = imageData.images?.[0] || 'placeholder_image_url'
+      onImageCreated: () => {
         const imageBlock = createImageBlock(assistantMsgId, {
-          url: imageUrl,
-          metadata: { generateImageResponse: imageData },
-          status: MessageBlockStatus.SUCCESS
+          status: MessageBlockStatus.PROCESSING
         })
         // Handle the transition using the helper
         handleBlockTransition(imageBlock, MessageBlockType.IMAGE)
         throttledDbUpdate(assistantMsgId, topicId, getState)
+      },
+      onImageGenerated: (imageData) => {
+        const imageUrl = imageData.images?.[0] || 'placeholder_image_url'
+        if (lastBlockId) {
+          const changes: Partial<ImageMessageBlock> = {
+            url: imageUrl,
+            metadata: { generateImageResponse: imageData },
+            status: MessageBlockStatus.SUCCESS
+          }
+          dispatch(updateOneBlock({ id: lastBlockId, changes }))
+          throttledDbUpdate(assistantMsgId, topicId, getState)
+        }
       },
       onError: (error) => {
         // console.error('Stream processing error:', error)
@@ -520,7 +535,23 @@ const fetchAndProcessAssistantResponseImpl = async (
           stack: error.stack // Include stack trace if available
           // Add any other relevant serializable properties from the error if needed
         }
-        const errorBlock = createErrorBlock(assistantMsgId, serializableError) // Pass the serializable object
+
+        // FIXME: 创建了错误块需要把上一个块的status设置为ERROR
+        if (lastBlockId && lastBlockType !== MessageBlockType.ERROR) {
+          // Don't try to update if the last block was already an error block
+          console.log(`[onError] Marking block ${lastBlockId} (type: ${lastBlockType}) as ERROR.`)
+          dispatch(
+            updateOneBlock({
+              id: lastBlockId,
+              changes: { status: MessageBlockStatus.ERROR }
+            })
+          )
+          // No need to reset lastBlockId here, handleBlockTransition below will update it
+        }
+
+        const errorBlock = createErrorBlock(assistantMsgId, serializableError, {
+          status: MessageBlockStatus.SUCCESS // 错误块本身是成功的
+        }) // Pass the serializable object
         // Use immediate update for error block
         // messageAndBlockUpdate(topicId, assistantMsgId, errorBlock)
         handleBlockTransition(errorBlock, MessageBlockType.ERROR)

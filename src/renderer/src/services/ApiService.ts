@@ -1,4 +1,4 @@
-import { getOpenAIWebSearchParams, isOpenAIWebSearch } from '@renderer/config/models'
+import { getOpenAIWebSearchParams, isOpenAIWebSearch, isWebSearchModel } from '@renderer/config/models'
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
 import {
@@ -43,19 +43,16 @@ async function fetchExternalTool(
   const hasKnowledgeBase = !isEmpty(knowledgeBaseIds)
   const webSearchProvider = WebSearchService.getWebSearchProvider()
 
-  let extractResults: ExtractResults | undefined
-
   // --- Keyword/Question Extraction Function ---
   const extract = async (): Promise<ExtractResults | undefined> => {
     if (!lastUserMessage) return undefined
-    if (!assistant.enableWebSearch && !hasKnowledgeBase) return undefined
 
     // Notify UI that extraction/searching is starting
     onChunkReceived({ type: ChunkType.EXTERNEL_TOOL_IN_PROGRESS })
 
     const tools: string[] = []
 
-    if (assistant.enableWebSearch) tools.push('websearch')
+    if (shouldSearch) tools.push('websearch')
     if (hasKnowledgeBase) tools.push('knowledge')
 
     const summaryAssistant = getDefaultAssistant()
@@ -75,12 +72,16 @@ async function fetchExternalTool(
 
       const fallbackContent = getMainTextContent(lastUserMessage)
       return {
-        websearch: {
-          question: [fallbackContent || 'search']
-        },
-        knowledge: {
-          question: [fallbackContent || 'search']
-        }
+        websearch: shouldSearch
+          ? {
+              question: [fallbackContent || 'search']
+            }
+          : undefined,
+        knowledge: hasKnowledgeBase
+          ? {
+              question: [fallbackContent || 'search']
+            }
+          : undefined
       } as ExtractResults
     }
   }
@@ -153,11 +154,12 @@ async function fetchExternalTool(
       return
     }
   }
+
+  const shouldSearch =
+    assistant.enableWebSearch && (!isWebSearchModel(assistant.model!) || WebSearchService.isOverwriteEnabled())
   // --- Execute Extraction and Searches ---
-  if (assistant.enableWebSearch || hasKnowledgeBase) {
-    extractResults = await extract()
-    console.log('extractResults', extractResults)
-  }
+  const extractResults = await extract()
+  console.log('extractResults', extractResults)
   // Run searches potentially in parallel
 
   let webSearchResponseFromSearch: WebSearchResponse | undefined
@@ -167,7 +169,7 @@ async function fetchExternalTool(
   const isAllValidSearch = lastUserMessage && (isKnowledgeSearchValid || isWebSearchValid)
 
   if (isAllValidSearch) {
-    // 应该在这写search开始
+    // TODO: 应该在这写search开始
     if (isKnowledgeSearchValid && isWebSearchValid) {
       ;[webSearchResponseFromSearch, knowledgeReferencesFromSearch] = await Promise.all([
         searchTheWeb(),
@@ -178,16 +180,15 @@ async function fetchExternalTool(
     } else if (isWebSearchValid) {
       webSearchResponseFromSearch = await searchTheWeb()
     }
-    // 应该在这写search结束
+    // TODO: 应该在这写search结束
+    onChunkReceived({
+      type: ChunkType.EXTERNEL_TOOL_COMPLETE,
+      external_tool: {
+        webSearch: webSearchResponseFromSearch,
+        knowledge: knowledgeReferencesFromSearch
+      }
+    })
   }
-
-  onChunkReceived({
-    type: ChunkType.EXTERNEL_TOOL_COMPLETE,
-    external_tool: {
-      webSearch: webSearchResponseFromSearch,
-      knowledge: knowledgeReferencesFromSearch
-    }
-  })
 
   // --- Prepare for AI Completion ---
   // Store results temporarily (e.g., using window.keyv like before)
