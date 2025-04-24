@@ -677,9 +677,9 @@ export default class GeminiProvider extends BaseProvider {
           systemInstruction: isGemmaModel(model) ? undefined : systemMessage.content,
           temperature: assistant?.settings?.temperature,
           httpOptions: {
-            timeout: 20 * 1000,
-            signal
-          }
+            timeout: 20 * 1000
+          },
+          abortSignal: signal
         },
         contents: [
           {

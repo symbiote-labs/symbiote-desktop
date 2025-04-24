@@ -1016,7 +1016,8 @@ export default class OpenAIProvider extends BaseProvider {
     const response = await this.sdk.images.generate(
       {
         model: model.id,
-        prompt: lastUserMessage?.content || ''
+        prompt: getMainTextContent(lastUserMessage!) || '',
+        response_format: ['dall-e-2', 'dall-e-3', 'grok-2-image-1212'].includes(model.id) ? 'url' : undefined
       },
       {
         signal
@@ -1027,11 +1028,12 @@ export default class OpenAIProvider extends BaseProvider {
       throw error
     })
 
+    // TODO: 测试一下
     return onChunk({
-      text: '',
-      generateImage: {
-        type: 'url',
-        images: response.data.map((item) => item.url).filter((url): url is string => url !== undefined)
+      type: ChunkType.IMAGE_COMPLETE,
+      image: {
+        type: 'base64',
+        images: response.data.map((item) => item.b64_json).filter((url): url is string => url !== undefined)
       }
     })
   }
