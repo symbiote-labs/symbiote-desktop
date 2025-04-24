@@ -3,7 +3,8 @@ import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { MultiModelMessageStyle } from '@renderer/store/settings'
-import type { Message, Topic } from '@renderer/types'
+import type { Topic } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessage'
 import { classNames } from '@renderer/utils'
 import { Popover } from 'antd'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
@@ -222,7 +223,7 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         $layout={multiModelMessageStyle}
         $gridColumns={gridColumns}
         className={classNames([isGrouped && 'group-grid-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
-        {messages.map((message, index) => renderMessage(message, index))}
+        {messages.map(renderMessage)}
       </GridContainer>
       {isGrouped && (
         <MessageGroupMenuBar

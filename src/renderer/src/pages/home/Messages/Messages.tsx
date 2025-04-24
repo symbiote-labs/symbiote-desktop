@@ -11,7 +11,8 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getContextCount, getGroupedMessages, getUserMessage } from '@renderer/services/MessagesService'
 import { estimateHistoryTokens } from '@renderer/services/TokenService'
 import { useAppDispatch } from '@renderer/store'
-import type { Assistant, Message, Topic } from '@renderer/types'
+import type { Assistant, Topic } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessage'
 import {
   captureScrollableDivAsBlob,
   captureScrollableDivAsDataURL,
@@ -215,6 +216,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     }
   })
 
+  const groupedMessages = useMemo(() => Object.entries(getGroupedMessages(displayMessages)), [displayMessages])
   return (
     <Container
       id="messages"
@@ -235,7 +237,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
             <LoaderContainer $loading={isLoadingMore}>
               <BeatLoader size={8} color="var(--color-text-2)" />
             </LoaderContainer>
-            {Object.entries(getGroupedMessages(displayMessages)).map(([key, groupMessages]) => (
+            {groupedMessages.map(([key, groupMessages]) => (
               <MessageGroup
                 key={key}
                 messages={groupMessages}

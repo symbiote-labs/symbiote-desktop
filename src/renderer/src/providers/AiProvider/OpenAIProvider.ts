@@ -1023,7 +1023,7 @@ export default class OpenAIProvider extends BaseProvider {
     const response = await this.sdk.images.generate(
       {
         model: model.id,
-        prompt: lastUserMessage?.content || '',
+        prompt: getMainTextContent(lastUserMessage!) || '',
         response_format: model.id.includes('gpt-image-1') ? undefined : 'b64_json'
       },
       {
@@ -1031,12 +1031,16 @@ export default class OpenAIProvider extends BaseProvider {
       }
     )
 
-    return onChunk({
-      text: '',
-      generateImage: {
+    onChunk({
+      type: ChunkType.IMAGE_COMPLETE,
+      image: {
         type: 'base64',
         images: response.data.map((item) => `data:image/png;base64,${item.b64_json}`)
       }
     })
+    onChunk({
+      type: ChunkType.BLOCK_COMPLETE
+    })
+    return
   }
 }
