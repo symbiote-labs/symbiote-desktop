@@ -40,7 +40,7 @@ import {
   Suggestion,
   WebSearchSource
 } from '@renderer/types'
-import { BlockCompleteChunk, ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
+import { BlockCompleteChunk, ChunkType, LLMWebSearchCompleteChunk } from '@renderer/types/chunk'
 import type { Message, Response } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToGeminiMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
@@ -389,6 +389,8 @@ export default class GeminiProvider extends BaseProvider {
       return
     }
 
+    // 等待接口返回流
+    onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     const userMessagesStream = await chat.sendMessageStream({
       message: messageContents as PartUnion,
       config: {
@@ -479,18 +481,22 @@ export default class GeminiProvider extends BaseProvider {
         const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
         if (groundingMetadata) {
           onChunk({
-            type: ChunkType.WEB_SEARCH_COMPLETE,
-            web_search: {
+            type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+            llm_web_search: {
               results: groundingMetadata,
               source: WebSearchSource.GEMINI
             }
-          } as WebSearchCompleteChunk)
+          } as LLMWebSearchCompleteChunk)
         }
 
         // 4. Image Generation
         const generateImage = this.processGeminiImageResponse(chunk)
         if (generateImage?.images?.length) {
           onChunk({ type: ChunkType.IMAGE_COMPLETE, image: generateImage })
+        }
+
+        if (chunk.candidates?.[0]?.finishReason && chunk.text) {
+          onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
         }
 
         // --- End Incremental onChunk calls ---

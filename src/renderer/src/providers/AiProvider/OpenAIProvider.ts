@@ -461,7 +461,7 @@ export default class OpenAIProvider extends BaseProvider {
         }
         // Separate onChunk calls for text and usage/metrics
         if (stream.choices[0].message?.content) {
-          onChunk({ type: ChunkType.TEXT_COMPLETE, text: stream.choices[0].message.content, chunk_id: 0 })
+          onChunk({ type: ChunkType.TEXT_COMPLETE, text: stream.choices[0].message.content })
         }
         if (stream.usage) {
           onChunk({ type: ChunkType.BLOCK_COMPLETE, response: { usage: stream.usage, metrics: finalMetrics } })
@@ -598,6 +598,8 @@ export default class OpenAIProvider extends BaseProvider {
     console.debug('[completions] reqMessages before processing', model.id, reqMessages)
     reqMessages = processReqMessages(model, reqMessages)
     console.debug('[completions] reqMessages', model.id, reqMessages)
+    // 等待接口返回流
+    onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     const stream = await this.sdk.chat.completions
       // @ts-ignore key is not typed
       .create(

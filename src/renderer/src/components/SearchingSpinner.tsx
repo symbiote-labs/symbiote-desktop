@@ -3,12 +3,16 @@ import { useTranslation } from 'react-i18next'
 import BarLoader from 'react-spinners/BarLoader'
 import styled, { css } from 'styled-components'
 
-export default function SearchingSpinner() {
+interface Props {
+  text: string
+}
+
+export default function SearchingSpinner({ text }: Props) {
   const { t } = useTranslation()
   return (
     <SearchingContainer>
       <Search size={24} />
-      <SearchingText>{t('message.searching')}</SearchingText>
+      <SearchingText>{t(text)}</SearchingText>
       <BarLoader color="#1677ff" />
     </SearchingContainer>
   )

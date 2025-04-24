@@ -1,9 +1,11 @@
+import SearchingSpinner from '@renderer/components/SearchingSpinner'
 import type { Citation } from '@renderer/pages/home/Messages/CitationsList'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import type { RootState } from '@renderer/store'
 import { selectFormattedCitationsByBlockId } from '@renderer/store/messageBlock'
 import type { Model } from '@renderer/types'
 import type { MainTextMessageBlock, Message } from '@renderer/types/newMessage'
+import { MessageBlockStatus } from '@renderer/types/newMessage'
 import { Flex } from 'antd'
 import React, { useMemo } from 'react'
 import { useSelector } from 'react-redux'
@@ -84,6 +86,10 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
 
     return content
   }, [block.content, block.citationReferences, citationBlockId, formattedCitations])
+
+  if (block.status === MessageBlockStatus.PROCESSING) {
+    return <SearchingSpinner text="message.processing" />
+  }
 
   return (
     <>

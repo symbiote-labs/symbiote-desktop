@@ -22,7 +22,7 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
   }, [formattedCitations, block.response, block.knowledge])
 
   if (block.status === MessageBlockStatus.PROCESSING) {
-    return <SearchingSpinner />
+    return <SearchingSpinner text="message.searching" />
   }
 
   if (!hasCitations) {
@@ -33,22 +33,22 @@ function CitationBlock({ block }: { block: CitationMessageBlock }) {
 
   return (
     <>
-      {isGemini && block.status === MessageBlockStatus.SUCCESS && (
-        <>
-          <CitationsList citations={formattedCitations} />
-          <SearchEntryPoint
-            dangerouslySetInnerHTML={{
-              __html:
-                (block.response?.results as GroundingMetadata)?.searchEntryPoint?.renderedContent
-                  ?.replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
-                  .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]') || ''
-            }}
-          />
-        </>
-      )}
-      {formattedCitations.length > 0 && block.status === MessageBlockStatus.SUCCESS && (
-        <CitationsList citations={formattedCitations} />
-      )}
+      {block.status === MessageBlockStatus.SUCCESS &&
+        (isGemini ? (
+          <>
+            <CitationsList citations={formattedCitations} />
+            <SearchEntryPoint
+              dangerouslySetInnerHTML={{
+                __html:
+                  (block.response?.results as GroundingMetadata)?.searchEntryPoint?.renderedContent
+                    ?.replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
+                    .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]') || ''
+              }}
+            />
+          </>
+        ) : (
+          formattedCitations.length > 0 && <CitationsList citations={formattedCitations} />
+        ))}
     </>
   )
 }

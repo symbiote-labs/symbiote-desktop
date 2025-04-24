@@ -280,6 +280,13 @@ const fetchAndProcessAssistantResponseImpl = async (
     // --- Context Message Filtering --- END
 
     callbacks = {
+      // FIXME: 哪怕返回其他模态，应该也是文字流在前？
+      onLLMResponseCreated: () => {
+        const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
+          status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
+        })
+        handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
+      },
       onTextChunk: (text) => {
         accumulatedContent += text
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
@@ -288,16 +295,7 @@ const fetchAndProcessAssistantResponseImpl = async (
             content: accumulatedContent,
             status: MessageBlockStatus.STREAMING // Explicitly keep it streaming
           })
-        } else {
-          // Create a new block if the type changed or it's the first chunk
-          const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
-            status: MessageBlockStatus.STREAMING
-          })
-          // Use handleBlockTransition to manage type switching and potential finalization of previous non-text blocks
-          handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
-          // lastBlockId and lastBlockType are updated inside handleBlockTransition now
         }
-
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onThinkingChunk: (text, thinking_millsec) => {
@@ -450,11 +448,21 @@ const fetchAndProcessAssistantResponseImpl = async (
           knowledge: externalToolResult.knowledge,
           status: MessageBlockStatus.SUCCESS
         }
-        // FIXME: 不清楚lastBlockId是否准确
         if (lastBlockId) {
           dispatch(updateOneBlock({ id: lastBlockId, changes }))
           throttledDbUpdate(assistantMsgId, topicId, getState)
         }
+      },
+      onLLMWebSearchComplete(llmWebSearchResult) {
+        const citationBlock = createCitationBlock(
+          assistantMsgId,
+          {
+            response: llmWebSearchResult
+          },
+          { status: MessageBlockStatus.SUCCESS }
+        )
+        handleBlockTransition(citationBlock, MessageBlockType.CITATION)
+        throttledDbUpdate(assistantMsgId, topicId, getState)
       },
       onImageGenerated: (imageData) => {
         const imageUrl = imageData.images?.[0] || 'placeholder_image_url'

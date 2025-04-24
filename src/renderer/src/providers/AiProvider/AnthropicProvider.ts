@@ -249,6 +249,8 @@ export default class AnthropicProvider extends BaseProvider {
 
     const processStream = (body: MessageCreateParamsNonStreaming, idx: number) => {
       return new Promise<void>((resolve, reject) => {
+        // 等待接口返回流
+        onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
         let hasThinkingContent = false
         this.sdk.messages
           .stream({ ...body, stream: true }, { signal })
@@ -282,6 +284,7 @@ export default class AnthropicProvider extends BaseProvider {
           .on('finalMessage', async (message) => {
             const content = message.content[0]
             if (content && content.type === 'text') {
+              onChunk({ type: ChunkType.TEXT_COMPLETE, text: content.text })
               const toolResults = await parseAndCallTools(
                 content.text,
                 toolResponses,

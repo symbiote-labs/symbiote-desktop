@@ -1,4 +1,4 @@
-import type { ExternalToolResult, GenerateImageResponse, MCPToolResponse } from '@renderer/types'
+import type { ExternalToolResult, GenerateImageResponse, MCPToolResponse, WebSearchResponse } from '@renderer/types'
 import type { Chunk } from '@renderer/types/chunk'
 import { ChunkType } from '@renderer/types/chunk'
 import type { Response } from '@renderer/types/newMessage'
@@ -6,6 +6,8 @@ import { AssistantMessageStatus } from '@renderer/types/newMessage'
 
 // Define the structure for the callbacks that the StreamProcessor will invoke
 export interface StreamProcessorCallbacks {
+  // LLM response created
+  onLLMResponseCreated?: () => void
   // Text content chunk received
   onTextChunk?: (text: string) => void
   // Full text content received
@@ -17,8 +19,12 @@ export interface StreamProcessorCallbacks {
   onToolCallComplete?: (toolResponse: MCPToolResponse) => void
   // External tool call in progress
   onExternalToolInProgress?: () => void
-  // Citation data received (e.g., from Perplexity, OpenRouter, Knowledge Base)
+  // Citation data received (e.g., from Internet and  Knowledge Base)
   onExternalToolComplete?: (externalToolResult: ExternalToolResult) => void
+  // LLM Web search in progress
+  onLLMWebSearchInProgress?: () => void
+  // LLM Web search complete
+  onLLMWebSearchComplete?: (llmWebSearchResult: WebSearchResponse) => void
   // Image generation chunk received
   onImageGenerated?: (imageData: GenerateImageResponse) => void
   // Called when an error occurs during chunk processing
@@ -45,6 +51,9 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks = {}) 
       // 2. Process the actual ChunkCallbackData
       const data = chunk // Cast after checking for 'final'
       // Invoke callbacks based on the fields present in the chunk data
+      if (data.type === ChunkType.LLM_RESPONSE_CREATED && callbacks.onLLMResponseCreated) {
+        callbacks.onLLMResponseCreated()
+      }
       if (data.type === ChunkType.TEXT_DELTA && callbacks.onTextChunk) {
         callbacks.onTextChunk(data.text)
       }
@@ -66,7 +75,12 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks = {}) 
       if (data.type === ChunkType.EXTERNEL_TOOL_COMPLETE && callbacks.onExternalToolComplete) {
         callbacks.onExternalToolComplete(data.external_tool)
       }
-
+      if (data.type === ChunkType.LLM_WEB_SEARCH_IN_PROGRESS && callbacks.onLLMWebSearchInProgress) {
+        callbacks.onLLMWebSearchInProgress()
+      }
+      if (data.type === ChunkType.LLM_WEB_SEARCH_COMPLETE && callbacks.onLLMWebSearchComplete) {
+        callbacks.onLLMWebSearchComplete(data.llm_web_search)
+      }
       if (data.type === ChunkType.IMAGE_COMPLETE && callbacks.onImageGenerated) {
         callbacks.onImageGenerated(data.image)
       }
