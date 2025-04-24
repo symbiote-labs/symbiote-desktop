@@ -34,7 +34,6 @@ import {
 import { ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
-import type { ThoughtProcessor } from '@renderer/utils/formats'
 import { addImageFileToContents } from '@renderer/utils/formats'
 import { mcpToolCallResponseToOpenAIMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -480,8 +479,8 @@ export default class OpenAIProvider extends BaseProvider {
       let final_time_thinking_millsec = 0
       // Variable to store the last received usage object
       let lastUsage: OpenAI.CompletionUsage | undefined = undefined
-      let isThinkingInContent: ThoughtProcessor | undefined = undefined
-      const processThinkingChunk = this.handleThinkingTags()
+      // let isThinkingInContent: ThoughtProcessor | undefined = undefined
+      // const processThinkingChunk = this.handleThinkingTags()
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
@@ -508,12 +507,12 @@ export default class OpenAIProvider extends BaseProvider {
         if (delta?.content) {
           content += delta.content // Still accumulate for processToolUses
 
-          isThinkingInContent = this.findThinkingProcessor(content, model)
-          if (isThinkingInContent) {
-            processThinkingChunk(content, isThinkingInContent, onChunk)
-          } else {
-            onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
-          }
+          // isThinkingInContent = this.findThinkingProcessor(content, model)
+          // if (isThinkingInContent) {
+          //   processThinkingChunk(content, isThinkingInContent, onChunk)
+          onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
+          // } else {
+          // }
         }
         // console.log('delta?.finish_reason', delta?.finish_reason)
         if (finishReason) {

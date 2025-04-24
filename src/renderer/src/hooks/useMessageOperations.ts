@@ -120,9 +120,9 @@ export function useMessageOperations(topic: Topic) {
         return
       }
 
-      await dispatch(resendUserMessageWithEditThunk(topic, message, mainTextBlockId, editedContent, assistant))
+      await dispatch(resendUserMessageWithEditThunk(topic.id, message, mainTextBlockId, editedContent, assistant))
     },
-    [dispatch, topic] // topic object needed by thunk
+    [dispatch, topic.id] // topic object needed by thunk
   )
 
   /**

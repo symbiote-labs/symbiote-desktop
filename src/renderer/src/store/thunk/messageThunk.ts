@@ -10,13 +10,7 @@ import {
   type Topic,
   WebSearchSource
 } from '@renderer/types'
-import type {
-  CitationMessageBlock,
-  MainTextMessageBlock,
-  Message,
-  MessageBlock,
-  ToolMessageBlock
-} from '@renderer/types/newMessage'
+import type { CitationMessageBlock, Message, MessageBlock, ToolMessageBlock } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
@@ -35,7 +29,7 @@ import { throttle } from 'lodash'
 
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
-import { newMessagesActions, removeMessage, removeMessages, removeMessagesByAskId } from '../newMessage'
+import { newMessagesActions, removeMessage, removeMessagesByAskId } from '../newMessage'
 
 const handleChangeLoadingOfTopic = async (topicId: string) => {
   await waitForTopicQueue(topicId)
@@ -271,22 +265,57 @@ const fetchAndProcessAssistantResponseImpl = async (
     // --- Helper Function --- END
 
     const allMessagesForTopic = getState().messages.messagesByTopic[topicId] || []
-    // Filter messages: include up to the assistant message stub, remove 'ing' statuses
-    const assistantMessageIndex = allMessagesForTopic.findIndex((m) => m.id === assistantMsgId)
-    const messagesForContext = (
-      assistantMessageIndex !== -1 ? allMessagesForTopic.slice(0, assistantMessageIndex) : allMessagesForTopic
-    ).filter((m) => !m.status?.includes('ing'))
+    let messagesForContext: Message[] = []
+
+    // 1. Get the ID of the user message that triggered this assistant response
+    const userMessageId = assistantMessage.askId
+    // 2. Find the index of the triggering user message
+    const userMessageIndex = allMessagesForTopic.findIndex((m) => m.id === userMessageId)
+
+    if (userMessageIndex === -1) {
+      // --- Fallback if triggering user message not found (should not happen) ---
+      console.error(
+        `[fetchAndProcessAssistantResponseImpl] Triggering user message ${userMessageId} (askId of ${assistantMsgId}) not found in topic ${topicId}. Cannot determine context accurately. Falling back.`
+      )
+      const assistantMessageIndexFallback = allMessagesForTopic.findIndex((m) => m.id === assistantMsgId)
+      messagesForContext = (
+        assistantMessageIndexFallback !== -1
+          ? allMessagesForTopic.slice(0, assistantMessageIndexFallback)
+          : allMessagesForTopic
+      ).filter((m) => !m.status?.includes('ing'))
+      // --- End Fallback ---
+    } else {
+      // 3. Slice messages up to and including the triggering user message
+      const contextSlice = allMessagesForTopic.slice(0, userMessageIndex + 1)
+      console.log(
+        `[DEBUG] Context sliced up to user message ${userMessageId} (index ${userMessageIndex}). Contains ${contextSlice.length} messages initially.`
+      )
+
+      // 4. Apply status filtering to the sliced context
+      // 过滤到正在处理的消息，主要应对的是多个模型新发/重发
+      messagesForContext = contextSlice.filter((m) => {
+        const isNotIng = !m.status?.includes('ing')
+        // Optional: Log filtered out messages
+        // if (!isNotIng) {
+        //     console.log(`[DEBUG] Filtering out message ${m.id} due to status ${m.status}`);
+        // }
+        return isNotIng
+      })
+      console.log(
+        `[DEBUG] Context after filtering 'ing' statuses for message ${assistantMsgId}: ${messagesForContext.length} messages.`
+      )
+    }
     // TODO: Apply further filtering based on assistant settings (maxContextMessages, etc.) if needed
     // --- Context Message Filtering --- END
 
     callbacks = {
       // FIXME: 哪怕返回其他模态，应该也是文字流在前？
-      onLLMResponseCreated: () => {
-        const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
-          status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
-        })
-        handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
-      },
+      // onLLMResponseCreated: () => {
+      //   const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
+      //     status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
+      //   })
+      //   handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
+      // },
       onTextChunk: (text) => {
         accumulatedContent += text
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
@@ -295,6 +324,11 @@ const fetchAndProcessAssistantResponseImpl = async (
             content: accumulatedContent,
             status: MessageBlockStatus.STREAMING // Explicitly keep it streaming
           })
+        } else {
+          const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
+            status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
+          })
+          handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
         }
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
@@ -835,8 +869,8 @@ export const clearTopicMessagesThunk =
 
 /**
  * Thunk to resend a user message by regenerating its associated assistant responses.
- * This finds all assistant messages responding to the given user message,
- * resets them, and queues them for regeneration without deleting other messages.
+ * Finds all assistant messages responding to the given user message, resets them,
+ * and queues them for regeneration without deleting other messages.
  */
 export const resendMessageThunk =
   (topicId: Topic['id'], userMessageToResend: Message, assistant: Assistant) =>
@@ -852,7 +886,7 @@ export const resendMessageThunk =
       const assistantMessagesToReset = allMessages.filter(
         (m) => m.askId === userMessageToResend.id && m.role === 'assistant'
       )
-      console.log('allMessages', allMessages)
+
       if (assistantMessagesToReset.length === 0) {
         console.warn(
           `[resendMessageThunk] No assistant responses found for user message ${userMessageToResend.id}. Nothing to regenerate.`
@@ -868,7 +902,6 @@ export const resendMessageThunk =
       const resetDataList: { resetMsg: Message }[] = []
       const allBlockIdsToDelete: string[] = []
       const messagesToUpdateInRedux: { topicId: string; messageId: string; updates: Partial<Message> }[] = []
-      const messagesToUpdateInDB: Message[] = []
 
       for (const originalMsg of assistantMessagesToReset) {
         const blockIdsToDelete = [...originalMsg.blocks]
@@ -880,7 +913,6 @@ export const resendMessageThunk =
         resetDataList.push({ resetMsg })
         allBlockIdsToDelete.push(...blockIdsToDelete)
         messagesToUpdateInRedux.push({ topicId, messageId: resetMsg.id, updates: resetMsg })
-        messagesToUpdateInDB.push(resetMsg)
       }
 
       // 3. 更新redux
@@ -946,95 +978,43 @@ export const resendMessageThunk =
 
 /**
  * Thunk to resend a user message after its content has been edited.
+ * Updates the user message's text block and then triggers the regeneration
+ * of its associated assistant responses using resendMessageThunk.
  */
 export const resendUserMessageWithEditThunk =
-  (topic: Topic, originalMessage: Message, mainTextBlockId: string, editedContent: string, assistant: Assistant) =>
-  async (dispatch: AppDispatch, getState: () => RootState) => {
-    const topicId = topic.id
-    const messages = getState().messages.messagesByTopic[topicId] || []
-
-    // 1. Find the index of the message being edited/resent
-    const messageIndex = messages.findIndex((m) => m.id === originalMessage.id)
-    if (messageIndex === -1) {
-      console.error(`[resendWithEdit] Message ${originalMessage.id} not found in topic ${topicId}`)
-      return
-    }
-
-    // 2. Identify messages and blocks to remove (subsequent messages)
-    const messagesToRemove = messages.slice(messageIndex + 1)
-    const messageIdsToRemove = messagesToRemove.map((m) => m.id)
-    const blockIdsToRemove = messagesToRemove.flatMap((m) => m.blocks)
-
-    // 3. Prepare the updated user message and block
-    const updatedUserMessage: Message = {
-      ...originalMessage
-      // updatedAt property is intentionally removed based on type definition
-      // other fields remain the same initially
-    }
-    const updatedBlock: MessageBlock = {
-      ...(getState().messageBlocks.entities[mainTextBlockId] as MainTextMessageBlock), // Assert as MainTextMessageBlock
-      content: editedContent,
-      updatedAt: new Date().toISOString(),
-      status: MessageBlockStatus.SUCCESS // Assume edit makes it final
-    }
-
-    // 4. Update State and DB before sending the new request
+  (
+    topicId: Topic['id'],
+    originalMessage: Message,
+    mainTextBlockId: string,
+    editedContent: string,
+    assistant: Assistant
+  ) =>
+  async (dispatch: AppDispatch) => {
+    console.log(
+      `[resendUserMessageWithEditThunk] Updating block ${mainTextBlockId} for message ${originalMessage.id} and triggering regeneration.`
+    )
     try {
-      // Update user message and its block in Redux
-      dispatch(
-        newMessagesActions.updateMessage({ topicId, messageId: originalMessage.id, updates: updatedUserMessage })
-      )
-      dispatch(upsertOneBlock(updatedBlock))
-
-      // Remove subsequent messages/blocks from Redux
-      if (messageIdsToRemove.length > 0) {
-        dispatch(removeMessages({ topicId, messageIds: messageIdsToRemove })) // Use the new action
-      }
-      if (blockIdsToRemove.length > 0) {
-        dispatch(removeManyBlocks(blockIdsToRemove)) // Use imported action
+      // 1. Define changes for the edited block
+      const blockChanges = {
+        content: editedContent,
+        updatedAt: new Date().toISOString()
       }
 
-      // Update user message and block in Dexie DB
-      await db.message_blocks.put(updatedBlock)
-      // Remove subsequent messages/blocks from Dexie DB
-      if (blockIdsToRemove.length > 0) {
-        await db.message_blocks.bulkDelete(blockIdsToRemove)
-      }
+      // 2. Update the edited text block in Redux and DB
+      console.log('[resendUserMessageWithEditThunk] Updating edited block...')
+      dispatch(updateOneBlock({ id: mainTextBlockId, changes: blockChanges }))
+      await db.message_blocks.update(mainTextBlockId, blockChanges)
+      console.log('[resendUserMessageWithEditThunk] Edited block updated successfully.')
 
-      // Update the topic in DB: remove subsequent messages AND update the edited user message
-      const dbTopic = await db.topics.get(topicId)
-      if (dbTopic) {
-        const finalMessages = dbTopic.messages.filter((m) => !messageIdsToRemove.includes(m.id))
-        const editedMsgIndex = finalMessages.findIndex((m) => m.id === originalMessage.id)
-        if (editedMsgIndex !== -1) {
-          finalMessages[editedMsgIndex] = updatedUserMessage // Replace with the updated message object
-        }
-        await db.topics.update(topicId, { messages: finalMessages }) // Corrected update call
-      } else {
-        console.error(`[resendWithEdit] Topic ${topicId} not found in DB for update.`)
-      }
-    } catch (error) {
-      console.error(`[resendWithEdit] Failed during update/deletion for message ${originalMessage.id}:`, error)
-      // TODO: Handle potential state inconsistency
-      return
+      // 3. Trigger the regeneration logic using resendMessageThunk
+      // Pass the original message as its ID is the key (askId) for assistant responses
+      console.log('[resendUserMessageWithEditThunk] Dispatching resendMessageThunk to regenerate responses...')
+      // No need to await dispatch here, as resendMessageThunk handles its own async logic and finally block
+      dispatch(resendMessageThunk(topicId, originalMessage, assistant))
+      console.log('[resendUserMessageWithEditThunk] Regeneration process initiated by resendMessageThunk dispatch.')
+    } finally {
+      handleChangeLoadingOfTopic(topicId)
     }
-
-    // 5. Get updated context messages (up to and including the edited user message)
-    // const contextMessages = getState().messages.messagesByTopic[topicId]?.slice(0, messageIndex + 1) || []
-
-    // 6. Create, add, and save the new Assistant Message stub BEFORE calling the core logic
-    console.log('[DEBUG] Creating new assistant message stub for edited resend')
-    const assistantMessage = createAssistantMessage(assistant.id, topicId, {
-      askId: updatedUserMessage.id, // Link to the edited user message
-      model: assistant.model
-    })
-    console.log('[DEBUG] Adding new assistant message stub to store')
-    dispatch(newMessagesActions.addMessage({ topicId, message: assistantMessage }))
-    console.log('[DEBUG] Saving new assistant message stub to DB')
-    await saveMessageAndBlocksToDB(assistantMessage, []) // Save stub with empty blocks
-
-    // 7. Send New Request
-    await fetchAndProcessAssistantResponseImpl(dispatch, getState, topicId, assistant, assistantMessage)
   }
 
 // --- NEW Thunk for regenerating Assistant Response ---
