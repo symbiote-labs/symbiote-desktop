@@ -1018,29 +1018,24 @@ export default class OpenAIProvider extends BaseProvider {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
     const lastUserMessage = messages.findLast((m) => m.role === 'user')
-    const { abortController, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
+    const { abortController } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
     const response = await this.sdk.images.generate(
       {
         model: model.id,
-        prompt: getMainTextContent(lastUserMessage!) || '',
-        response_format: ['dall-e-2', 'dall-e-3', 'grok-2-image-1212'].includes(model.id) ? 'url' : undefined
+        prompt: lastUserMessage?.content || '',
+        response_format: model.id.includes('gpt-image-1') ? undefined : 'b64_json'
       },
       {
         signal
       }
     )
 
-    await signalPromise?.promise?.catch((error) => {
-      throw error
-    })
-
-    // TODO: 测试一下
     return onChunk({
-      type: ChunkType.IMAGE_COMPLETE,
-      image: {
+      text: '',
+      generateImage: {
         type: 'base64',
-        images: response.data.map((item) => item.b64_json).filter((url): url is string => url !== undefined)
+        images: response.data.map((item) => `data:image/png;base64,${item.b64_json}`)
       }
     })
   }
