@@ -2,7 +2,6 @@ import { SyncOutlined } from '@ant-design/icons'
 import { getModelUniqId } from '@renderer/services/ModelService'
 import { Model } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
-import { withMessageThought } from '@renderer/utils/formats'
 import { Flex } from 'antd'
 import { Search } from 'lucide-react'
 import React, { Fragment } from 'react'
@@ -16,9 +15,8 @@ interface Props {
   model?: Model
 }
 
-const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
+const MessageContent: React.FC<Props> = ({ message, model }) => {
   const { t } = useTranslation()
-  const message = withMessageThought(_message)
 
   // Format citations for display
   // const formattedCitations = useMemo(() => {

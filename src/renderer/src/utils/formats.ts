@@ -100,17 +100,17 @@ export function withGeminiGrounding(block: MainTextMessageBlock | TranslationMes
   return content
 }
 
-interface ThoughtProcessor {
-  canProcess: (content: string, message?: Message) => boolean
+export interface ThoughtProcessor {
+  canProcess: (content: string, model?: Model) => boolean
   process: (content: string) => { reasoning: string; content: string }
 }
 
-const glmZeroPreviewProcessor: ThoughtProcessor = {
-  canProcess: (content: string, message?: Message) => {
-    if (!message) return false
+export const glmZeroPreviewProcessor: ThoughtProcessor = {
+  canProcess: (content: string, model?: Model) => {
+    if (!model) return false
 
-    const modelId = message.modelId || ''
-    const modelName = message.model?.name || ''
+    const modelId = model.id || ''
+    const modelName = model.name || ''
     const isGLMZeroPreview =
       modelId.toLowerCase().includes('glm-zero-preview') || modelName.toLowerCase().includes('glm-zero-preview')
 
@@ -128,9 +128,9 @@ const glmZeroPreviewProcessor: ThoughtProcessor = {
   }
 }
 
-const thinkTagProcessor: ThoughtProcessor = {
-  canProcess: (content: string, message?: Message) => {
-    if (!message) return false
+export const thinkTagProcessor: ThoughtProcessor = {
+  canProcess: (content: string, model?: Model) => {
+    if (!model) return false
 
     return content.startsWith('<think>') || content.includes('</think>')
   },
@@ -167,10 +167,6 @@ const thinkTagProcessor: ThoughtProcessor = {
       content
     }
   }
-}
-
-export function withMessageThought(message: Message): Message {
-  return message
 }
 
 export function withGenerateImage(message: Message): { content: string; images?: string[] } {
