@@ -322,6 +322,10 @@ export default class OpenAIProvider extends BaseProvider {
    * @returns The completions
    */
   async completions({ messages, assistant, mcpTools, onChunk, onFilterMessages }: CompletionsParams): Promise<void> {
+    if (assistant.enableGenerateImage) {
+      await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)
+      return
+    }
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
@@ -503,7 +507,8 @@ export default class OpenAIProvider extends BaseProvider {
           content += delta.content // Still accumulate for processToolUses
           onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
         }
-        if (delta?.finish_reason) {
+        // console.log('delta?.finish_reason', delta?.finish_reason)
+        if (finishReason) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
           // 3. Web Search
           if (delta?.annotations) {
@@ -590,7 +595,6 @@ export default class OpenAIProvider extends BaseProvider {
         }
       })
 
-      // TODO: Consider if a final onChunk for cumulative usage/metrics is possible/needed here.
       // OpenAI stream typically doesn't provide a final summary chunk easily.
       // We are sending per-chunk usage if available.
     }
@@ -1001,5 +1005,34 @@ export default class OpenAIProvider extends BaseProvider {
     // copilot每次请求前需要重新获取token，因为token中附带时间戳
     const { token } = await window.api.copilot.getToken(defaultHeaders)
     this.sdk.apiKey = token
+  }
+
+  public async generateImageByChat({ messages, assistant, onChunk }: CompletionsParams): Promise<void> {
+    const defaultModel = getDefaultModel()
+    const model = assistant.model || defaultModel
+    const lastUserMessage = messages.findLast((m) => m.role === 'user')
+    const { abortController, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
+    const { signal } = abortController
+    const response = await this.sdk.images.generate(
+      {
+        model: model.id,
+        prompt: lastUserMessage?.content || ''
+      },
+      {
+        signal
+      }
+    )
+
+    await signalPromise?.promise?.catch((error) => {
+      throw error
+    })
+
+    return onChunk({
+      text: '',
+      generateImage: {
+        type: 'url',
+        images: response.data.map((item) => item.url).filter((url): url is string => url !== undefined)
+      }
+    })
   }
 }

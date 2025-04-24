@@ -9,7 +9,6 @@ import { fetchWebContents } from '@renderer/utils/fetch'
 import dayjs from 'dayjs'
 /**
  * 提供网络搜索相关功能的服务类
- * TODO:添加暂停能力
  */
 class WebSearchService {
   /**
