@@ -500,6 +500,7 @@ export default class GeminiProvider extends BaseProvider {
         // Note: parseAndCallTools inside should handle its own onChunk for tool responses
         await processToolUses(content, idx)
       }
+      onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
     }
 
     await processStream(userMessagesStream, 0).finally(cleanup)

@@ -503,7 +503,8 @@ export default class OpenAIProvider extends BaseProvider {
           content += delta.content // Still accumulate for processToolUses
           onChunk({ type: ChunkType.TEXT_DELTA, text: delta.content })
         }
-        if (delta?.finish_reason) {
+        // console.log('delta?.finish_reason', delta?.finish_reason)
+        if (finishReason) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
           // 3. Web Search
           if (delta?.annotations) {
@@ -590,7 +591,6 @@ export default class OpenAIProvider extends BaseProvider {
         }
       })
 
-      // TODO: Consider if a final onChunk for cumulative usage/metrics is possible/needed here.
       // OpenAI stream typically doesn't provide a final summary chunk easily.
       // We are sending per-chunk usage if available.
     }
