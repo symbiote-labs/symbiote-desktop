@@ -1073,6 +1073,7 @@ export default class OpenAIProvider extends BaseProvider {
     onChunk({
       type: ChunkType.IMAGE_CREATED
     })
+    const start_time_millsec = new Date().getTime()
     const response = await this.sdk.images.generate(
       {
         model: model.id,
@@ -1088,33 +1089,25 @@ export default class OpenAIProvider extends BaseProvider {
       type: ChunkType.IMAGE_COMPLETE,
       image: {
         type: 'base64',
-        images: response.data.map((item) => `data:image/png;base64,${item.b64_json}`)
+        images: response.data?.map((item) => `data:image/png;base64,${item.b64_json}`) || []
       }
     })
 
     // Create synthetic usage and metrics data for image generation
-    const time_completion_millsec = new Date().getTime() - new Date(lastUserMessage?.createdAt || Date.now()).getTime()
-
-    // For image generation, we create a synthetic usage object
-    const syntheticUsage = {
-      prompt_tokens: 100, // Approximate value for prompt
-      completion_tokens: 0, // Images don't have completion tokens
-      total_tokens: 100 // Total is just the prompt tokens
-    }
-
-    const syntheticMetrics = {
-      completion_tokens: 0,
-      time_completion_millsec,
-      time_first_token_millsec: 0
-    }
-
-    console.log('Image generation - sending synthetic usage data:', syntheticUsage)
-
+    const time_completion_millsec = new Date().getTime() - start_time_millsec
     onChunk({
       type: ChunkType.BLOCK_COMPLETE,
       response: {
-        usage: syntheticUsage,
-        metrics: syntheticMetrics
+        usage: {
+          completion_tokens: response.usage?.output_tokens || 0,
+          prompt_tokens: response.usage?.input_tokens || 0,
+          total_tokens: response.usage?.total_tokens || 0
+        },
+        metrics: {
+          completion_tokens: response.usage?.output_tokens || 0,
+          time_first_token_millsec: 0, // Non-streaming, first token time is not relevant
+          time_completion_millsec
+        }
       }
     })
     return
