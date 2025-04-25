@@ -7,7 +7,7 @@ import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
 import { IpcChannel } from '@shared/IpcChannel'
 import { MCPServer, Shortcut, ThemeMode } from '@types' // Import MCPServer here
-import { BrowserWindow, ipcMain, session, shell } from 'electron'
+import { BrowserWindow, ipcMain, session, shell, webContents } from 'electron'
 import log from 'electron-log'
 
 import { titleBarOverlayDark, titleBarOverlayLight } from './config'
@@ -189,6 +189,44 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
       return { success: true }
     } catch (error: any) {
       log.error('Failed to clear browser data:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 销毁webContents
+  ipcMain.handle('browser:destroy-webcontents', async (_, webContentsId: number) => {
+    try {
+      // 尝试通过ID获取webContents
+      const allWebContents = webContents.getAllWebContents()
+      const targetWebContents = allWebContents.find((wc) => wc.id === webContentsId)
+
+      if (targetWebContents) {
+        // 如果找到了webContents，尝试销毁它
+        if (!targetWebContents.isDestroyed()) {
+          // 先停止加载
+          targetWebContents.stop()
+
+          // 加载空白页面
+          targetWebContents.loadURL('about:blank')
+
+          // 等待一小段时间，让空白页面加载完成
+          await new Promise((resolve) => setTimeout(resolve, 100))
+
+          // 销毁webContents - 使用close方法
+          targetWebContents.close() // WebContents没有destroy方法，但有close方法
+
+          log.info(`Successfully destroyed webContents with ID: ${webContentsId}`)
+          return { success: true }
+        } else {
+          log.info(`WebContents with ID ${webContentsId} is already destroyed`)
+          return { success: true, alreadyDestroyed: true }
+        }
+      } else {
+        log.warn(`WebContents with ID ${webContentsId} not found`)
+        return { success: false, error: 'WebContents not found' }
+      }
+    } catch (error: any) {
+      log.error(`Failed to destroy webContents with ID ${webContentsId}:`, error)
       return { success: false, error: error.message }
     }
   })

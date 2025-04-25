@@ -265,6 +265,10 @@ const api = {
     getSupportedLanguages: () => ipcRenderer.invoke(IpcChannel.CodeExecutor_GetSupportedLanguages),
     executeJS: (code: string) => ipcRenderer.invoke(IpcChannel.CodeExecutor_ExecuteJS, code),
     executePython: (code: string) => ipcRenderer.invoke(IpcChannel.CodeExecutor_ExecutePython, code)
+  },
+  browser: {
+    clearData: () => ipcRenderer.invoke('browser:clear-data'),
+    destroyWebContents: (webContentsId: number) => ipcRenderer.invoke('browser:destroy-webcontents', webContentsId)
   }
 }
 

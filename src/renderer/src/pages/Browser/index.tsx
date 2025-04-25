@@ -82,16 +82,23 @@ const WebviewContainer = styled.div`
   .webview-wrapper {
     width: 100%;
     height: 100%;
-    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    visibility: hidden;
+    z-index: 1;
 
     &.active {
-      display: block;
+      visibility: visible;
+      z-index: 2;
     }
   }
 
   & webview {
     width: 100%;
     height: 100%;
+    border: none;
+    outline: none;
   }
 `
 
@@ -134,107 +141,299 @@ interface Tab {
 const Browser = () => {
   const { t } = useTranslation()
 
-  // 选项卡状态管理
-  const [tabs, setTabs] = useState<Tab[]>([
-    {
-      id: '1',
-      title: 'Google',
-      url: 'https://www.google.com',
-      isLoading: false,
-      canGoBack: false,
-      canGoForward: false
+  // 从本地存储加载选项卡状态
+  const loadTabsFromStorage = (): { tabs: Tab[]; activeTabId: string } => {
+    try {
+      const savedTabs = localStorage.getItem('browser_tabs')
+      const savedActiveTabId = localStorage.getItem('browser_active_tab_id')
+
+      if (savedTabs && savedActiveTabId) {
+        // 解析保存的选项卡
+        const parsedTabs = JSON.parse(savedTabs) as Tab[]
+
+        // 验证选项卡数据
+        const validTabs = parsedTabs.filter(
+          (tab) => tab && tab.id && tab.url && typeof tab.id === 'string' && typeof tab.url === 'string'
+        )
+
+        // 确保至少有一个选项卡
+        if (validTabs.length > 0) {
+          // 验证活动选项卡ID
+          const isActiveTabValid = validTabs.some((tab) => tab.id === savedActiveTabId)
+          const finalActiveTabId = isActiveTabValid ? savedActiveTabId : validTabs[0].id
+
+          console.log('Loaded tabs from storage:', validTabs.length, 'tabs, active tab:', finalActiveTabId)
+
+          return {
+            tabs: validTabs,
+            activeTabId: finalActiveTabId
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load tabs from storage:', error)
     }
-  ])
-  const [activeTabId, setActiveTabId] = useState('1')
+
+    // 默认选项卡
+    const defaultTabs = [
+      {
+        id: '1',
+        title: 'Google',
+        url: 'https://www.google.com',
+        isLoading: false,
+        canGoBack: false,
+        canGoForward: false
+      }
+    ]
+
+    console.log('Using default tabs')
+
+    return {
+      tabs: defaultTabs,
+      activeTabId: '1'
+    }
+  }
+
+  // 保存选项卡状态到本地存储
+  const saveTabsToStorage = (tabs: Tab[], activeTabId: string) => {
+    try {
+      // 确保只保存当前有效的选项卡
+      const validTabs = tabs.filter((tab) => tab && tab.id && tab.url)
+
+      // 确保activeTabId是有效的
+      const isActiveTabValid = validTabs.some((tab) => tab.id === activeTabId)
+      const finalActiveTabId = isActiveTabValid ? activeTabId : validTabs.length > 0 ? validTabs[0].id : ''
+
+      // 保存到localStorage
+      localStorage.setItem('browser_tabs', JSON.stringify(validTabs))
+      localStorage.setItem('browser_active_tab_id', finalActiveTabId)
+
+      console.log('Saved tabs to storage:', validTabs.length, 'tabs, active tab:', finalActiveTabId)
+    } catch (error) {
+      console.error('Failed to save tabs to storage:', error)
+    }
+  }
+
+  // 选项卡状态管理
+  const initialTabState = loadTabsFromStorage()
+  const [tabs, setTabs] = useState<Tab[]>(initialTabState.tabs)
+  const [activeTabId, setActiveTabId] = useState(initialTabState.activeTabId)
 
   // 获取当前活动选项卡
   const activeTab = tabs.find((tab) => tab.id === activeTabId) || tabs[0]
 
-  // 兼容旧代码的状态
-  const [url, setUrl] = useState(activeTab.url)
+  // 兼容旧代码的状态，只使用setter
+  const [, setUrl] = useState(activeTab.url)
   const [currentUrl, setCurrentUrl] = useState('')
   const [canGoBack, setCanGoBack] = useState(false)
   const [canGoForward, setCanGoForward] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // 使用对象存储多个webview引用
+  // 使用对象存储多个webview引用 - 使用useRef确保在组件重新渲染时保持引用
   const webviewRefs = useRef<Record<string, WebviewTag | null>>({})
+
+  // 使用useRef保存webview的会话状态
+  const webviewSessionsRef = useRef<Record<string, boolean>>({})
+
+  // 使用useRef保存事件监听器清理函数
+  const cleanupFunctionsRef = useRef<Record<string, () => void>>({})
 
   // 获取当前活动的webview引用
   const webviewRef = {
     current: webviewRefs.current[activeTabId] || null
   } as React.RefObject<WebviewTag>
 
-  useEffect(() => {
-    const webview = webviewRef.current
-    if (!webview) return
+  // 创建一个函数来设置webview的所有事件监听器
+  const setupWebviewListeners = (webview: WebviewTag, tabId: string) => {
+    console.log('Setting up event listeners for tab:', tabId)
 
+    // 处理加载开始事件
     const handleDidStartLoading = () => {
-      setIsLoading(true)
+      // 只更新当前活动标签页的UI状态
+      if (tabId === activeTabId) {
+        setIsLoading(true)
+      }
+
       // 更新选项卡状态
-      updateTabInfo(activeTabId, { isLoading: true })
+      updateTabInfo(tabId, { isLoading: true })
     }
 
+    // 处理加载结束事件
     const handleDidStopLoading = () => {
       const currentURL = webview.getURL()
-      setIsLoading(false)
-      setCurrentUrl(currentURL)
+
+      // 只更新当前活动标签页的UI状态
+      if (tabId === activeTabId) {
+        setIsLoading(false)
+        setCurrentUrl(currentURL)
+      }
 
       // 更新选项卡状态
-      updateTabInfo(activeTabId, {
+      updateTabInfo(tabId, {
         isLoading: false,
         url: currentURL,
-        title: webview.getTitle() || currentURL
+        title: webview.getTitle() || currentURL,
+        canGoBack: webview.canGoBack(),
+        canGoForward: webview.canGoForward()
       })
     }
 
+    // 处理导航事件
     const handleDidNavigate = (e: any) => {
       const canGoBackStatus = webview.canGoBack()
       const canGoForwardStatus = webview.canGoForward()
 
-      setCurrentUrl(e.url)
-      setCanGoBack(canGoBackStatus)
-      setCanGoForward(canGoForwardStatus)
+      // 只更新当前活动标签页的UI状态
+      if (tabId === activeTabId) {
+        setCurrentUrl(e.url)
+        setCanGoBack(canGoBackStatus)
+        setCanGoForward(canGoForwardStatus)
+      }
 
       // 更新选项卡状态
-      updateTabInfo(activeTabId, {
+      updateTabInfo(tabId, {
         url: e.url,
         canGoBack: canGoBackStatus,
         canGoForward: canGoForwardStatus
       })
     }
 
+    // 处理页内导航事件
     const handleDidNavigateInPage = (e: any) => {
       const canGoBackStatus = webview.canGoBack()
       const canGoForwardStatus = webview.canGoForward()
 
-      setCurrentUrl(e.url)
-      setCanGoBack(canGoBackStatus)
-      setCanGoForward(canGoForwardStatus)
+      // 只更新当前活动标签页的UI状态
+      if (tabId === activeTabId) {
+        setCurrentUrl(e.url)
+        setCanGoBack(canGoBackStatus)
+        setCanGoForward(canGoForwardStatus)
+      }
 
       // 更新选项卡状态
-      updateTabInfo(activeTabId, {
+      updateTabInfo(tabId, {
         url: e.url,
         canGoBack: canGoBackStatus,
         canGoForward: canGoForwardStatus
       })
     }
 
-    // 处理页面标题变化
+    // 处理页面标题更新事件
     const handlePageTitleUpdated = (e: any) => {
       // 更新选项卡标题
-      updateTabInfo(activeTabId, { title: e.title })
+      updateTabInfo(tabId, { title: e.title })
     }
 
-    // 处理网站图标更新
+    // 处理网站图标更新事件
     const handlePageFaviconUpdated = (e: any) => {
       // 更新选项卡图标
-      updateTabInfo(activeTabId, { favicon: e.favicons[0] })
+      updateTabInfo(tabId, { favicon: e.favicons[0] })
     }
 
-    // 检测Cloudflare验证码
+    // 处理DOM就绪事件
     const handleDomReady = () => {
       const captchaNotice = t('browser.captcha_notice')
+
+      // 注入链接点击拦截脚本
+      webview.executeJavaScript(`
+        (function() {
+          // 已经注入过脚本，不再重复注入
+          if (window.__linkInterceptorInjected) return;
+          window.__linkInterceptorInjected = true;
+
+          // 创建一个全局函数，用于在控制台中调用以打开新标签页
+          window.__openInNewTab = function(url, title) {
+            console.log('OPEN_NEW_TAB:' + JSON.stringify({url: url, title: title || url}));
+          };
+
+          // 拦截所有链接点击
+          document.addEventListener('click', function(e) {
+            // 查找被点击的链接元素
+            let target = e.target;
+            while (target && target.tagName !== 'A') {
+              target = target.parentElement;
+              if (!target) return; // 不是链接，直接返回
+            }
+
+            // 找到了链接元素
+            if (target.tagName === 'A' && target.href) {
+              // 检查是否应该在新标签页中打开
+              const inNewTab = e.ctrlKey || e.metaKey || target.target === '_blank';
+
+              // 阻止默认行为
+              e.preventDefault();
+              e.stopPropagation();
+
+              // 使用一个特殊的数据属性来标记这个链接
+              const linkData = {
+                url: target.href,
+                title: target.textContent || target.title || target.href,
+                inNewTab: inNewTab
+              };
+
+              // 将数据转换为字符串并存储在自定义属性中
+              document.body.setAttribute('data-last-clicked-link', JSON.stringify(linkData));
+
+              // 触发一个自定义事件
+              const event = new CustomEvent('link-clicked', { detail: linkData });
+              document.dispatchEvent(event);
+
+              // 使用控制台消息通知Electron
+              console.log('LINK_CLICKED:' + JSON.stringify(linkData));
+
+              if (!inNewTab) {
+                // 在当前标签页中打开链接
+                window.location.href = target.href;
+              }
+
+              return false;
+            }
+          }, true);
+
+          // 打印一条消息，确认链接拦截脚本已经注入
+          console.log('Link interceptor script injected successfully');
+
+          // 每5秒测试一次链接拦截功能
+          setInterval(function() {
+            console.log('Testing link interceptor...');
+
+            // 尝试调用全局函数
+            if (window.__openInNewTab) {
+              console.log('Link interceptor is working!');
+
+              // 创建一个测试链接
+              const testLink = document.createElement('a');
+              testLink.href = 'https://www.example.com';
+              testLink.textContent = 'Test Link';
+              testLink.target = '_blank'; // 在新标签页中打开
+
+              // 添加到DOM中
+              if (!document.getElementById('test-link-container')) {
+                const container = document.createElement('div');
+                container.id = 'test-link-container';
+                container.style.position = 'fixed';
+                container.style.top = '10px';
+                container.style.right = '10px';
+                container.style.zIndex = '9999';
+                container.style.background = 'white';
+                container.style.padding = '10px';
+                container.style.border = '1px solid black';
+                container.appendChild(testLink);
+                document.body.appendChild(container);
+              }
+
+              // 模拟点击事件
+              console.log('LINK_CLICKED:' + JSON.stringify({
+                url: 'https://www.example.com',
+                title: 'Test Link',
+                inNewTab: true
+              }));
+            } else {
+              console.log('Link interceptor is NOT working!');
+            }
+          }, 5000);
+        })();
+      `)
 
       // 注入浏览器模拟脚本
       webview.executeJavaScript(`
@@ -431,6 +630,62 @@ const Browser = () => {
       webview.executeJavaScript(finalScript)
     }
 
+    // 处理新窗口打开请求
+    const handleNewWindow = (e: any) => {
+      e.preventDefault() // 阻止默认行为
+
+      // 始终在新标签页中打开
+      openUrlInTab(e.url, true, e.frameName || 'New Tab')
+    }
+
+    // 处理将要导航的事件
+    const handleWillNavigate = (e: any) => {
+      // 更新当前标签页的URL
+      updateTabInfo(tabId, { url: e.url })
+    }
+
+    // 处理控制台消息事件 - 用于链接点击拦截
+    const handleConsoleMessage = (event: any) => {
+      // 打印所有控制台消息，便于调试
+      console.log(`[Tab ${tabId}] Console message:`, event.message)
+
+      // 处理新的链接点击消息
+      if (event.message && event.message.startsWith('LINK_CLICKED:')) {
+        try {
+          const dataStr = event.message.replace('LINK_CLICKED:', '')
+          const data = JSON.parse(dataStr)
+
+          console.log(`[Tab ${tabId}] Link clicked:`, data)
+
+          if (data.url && data.inNewTab) {
+            // 在新标签页中打开链接
+            console.log(`[Tab ${tabId}] Opening link in new tab:`, data.url)
+            openUrlInTab(data.url, true, data.title || data.url)
+          }
+        } catch (error) {
+          console.error('Failed to parse link data:', error)
+        }
+      }
+
+      // 保留对旧消息格式的支持
+      else if (event.message && event.message.startsWith('OPEN_NEW_TAB:')) {
+        try {
+          const dataStr = event.message.replace('OPEN_NEW_TAB:', '')
+          const data = JSON.parse(dataStr)
+
+          console.log(`[Tab ${tabId}] Opening link in new tab (legacy format):`, data)
+
+          if (data.url) {
+            // 在新标签页中打开链接
+            openUrlInTab(data.url, true, data.title || data.url)
+          }
+        } catch (error) {
+          console.error('Failed to parse link data:', error)
+        }
+      }
+    }
+
+    // 添加所有事件监听器
     webview.addEventListener('did-start-loading', handleDidStartLoading)
     webview.addEventListener('did-stop-loading', handleDidStopLoading)
     webview.addEventListener('did-navigate', handleDidNavigate)
@@ -438,11 +693,13 @@ const Browser = () => {
     webview.addEventListener('dom-ready', handleDomReady)
     webview.addEventListener('page-title-updated', handlePageTitleUpdated)
     webview.addEventListener('page-favicon-updated', handlePageFaviconUpdated)
+    webview.addEventListener('new-window', handleNewWindow)
+    webview.addEventListener('will-navigate', handleWillNavigate)
+    webview.addEventListener('console-message', handleConsoleMessage)
 
-    // 初始加载URL
-    webview.src = url
-
+    // 返回清理函数
     return () => {
+      console.log('Cleaning up event listeners for tab:', tabId)
       webview.removeEventListener('did-start-loading', handleDidStartLoading)
       webview.removeEventListener('did-stop-loading', handleDidStopLoading)
       webview.removeEventListener('did-navigate', handleDidNavigate)
@@ -450,8 +707,73 @@ const Browser = () => {
       webview.removeEventListener('dom-ready', handleDomReady)
       webview.removeEventListener('page-title-updated', handlePageTitleUpdated)
       webview.removeEventListener('page-favicon-updated', handlePageFaviconUpdated)
+      webview.removeEventListener('new-window', handleNewWindow)
+      webview.removeEventListener('will-navigate', handleWillNavigate)
+      webview.removeEventListener('console-message', handleConsoleMessage)
     }
-  }, [url, t, activeTabId])
+  }
+
+  // 通用的打开URL函数
+  const openUrlInTab = (url: string, inNewTab: boolean = false, title: string = 'New Tab') => {
+    if (inNewTab) {
+      // 在新标签页中打开链接
+      const newTabId = `tab-${Date.now()}`
+      const newTab: Tab = {
+        id: newTabId,
+        title: title,
+        url: url,
+        isLoading: true,
+        canGoBack: false,
+        canGoForward: false
+      }
+
+      // 创建新的选项卡数组，确保不修改原数组
+      const newTabs = [...tabs, newTab]
+
+      // 更新状态
+      setTabs(newTabs)
+      setActiveTabId(newTabId)
+
+      // 保存到本地存储
+      saveTabsToStorage(newTabs, newTabId)
+
+      console.log('Opened URL in new tab:', url, 'tab ID:', newTabId)
+    } else {
+      // 在当前标签页中打开链接
+      setUrl(url)
+
+      // 更新当前选项卡的URL
+      updateTabInfo(activeTabId, { url: url })
+    }
+  }
+
+  // 当activeTabId变化时，更新UI状态
+  useEffect(() => {
+    // 获取当前活动的webview
+    const webview = webviewRefs.current[activeTabId]
+    if (!webview) return
+
+    // 从webview获取最新状态
+    try {
+      const currentURL = webview.getURL()
+      if (currentURL && currentURL !== 'about:blank') {
+        setCurrentUrl(currentURL)
+      } else {
+        // 如果没有有效URL，使用存储的URL
+        const tab = tabs.find((tab) => tab.id === activeTabId)
+        if (tab) {
+          setCurrentUrl(tab.url)
+        }
+      }
+
+      // 更新导航状态
+      setCanGoBack(webview.canGoBack())
+      setCanGoForward(webview.canGoForward())
+      setIsLoading(webview.isLoading())
+    } catch (error) {
+      console.error('Error updating UI state:', error)
+    }
+  }, [activeTabId, tabs])
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentUrl(e.target.value)
@@ -538,59 +860,191 @@ const Browser = () => {
   }
 
   // 选项卡管理功能
-  const handleAddTab = () => {
+  const handleAddTab = (url: string = 'https://www.google.com', title: string = 'New Tab') => {
     const newTabId = `tab-${Date.now()}`
     const newTab: Tab = {
       id: newTabId,
-      title: 'New Tab',
-      url: 'https://www.google.com',
+      title: title,
+      url: url,
       isLoading: false,
       canGoBack: false,
       canGoForward: false
     }
 
-    setTabs([...tabs, newTab])
+    const newTabs = [...tabs, newTab]
+    setTabs(newTabs)
     setActiveTabId(newTabId)
-    setUrl('https://www.google.com')
+    setUrl(url)
+
+    // 保存到本地存储
+    saveTabsToStorage(newTabs, newTabId)
+
+    return newTabId
   }
 
   const handleCloseTab = (tabId: string, e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation() // 防止触发选项卡切换
+    console.log('Closing tab:', tabId)
 
     if (tabs.length === 1) {
       // 如果只有一个选项卡，创建一个新的空白选项卡
       handleAddTab()
+      return // 已经在handleAddTab中保存了状态，这里直接返回
     }
 
-    // 如果关闭的是当前活动选项卡，切换到前一个选项卡
+    // 计算新的活动选项卡ID
+    let newActiveTabId = activeTabId
     if (tabId === activeTabId) {
       const currentIndex = tabs.findIndex((tab) => tab.id === tabId)
       const newActiveIndex = currentIndex === 0 ? 1 : currentIndex - 1
-      setActiveTabId(tabs[newActiveIndex].id)
+      newActiveTabId = tabs[newActiveIndex].id
+      setActiveTabId(newActiveTabId)
     }
 
     // 从选项卡列表中移除
-    setTabs(tabs.filter((tab) => tab.id !== tabId))
+    const newTabs = tabs.filter((tab) => tab.id !== tabId)
+    setTabs(newTabs)
+
+    // 清理不再使用的webview引用和会话状态
+    if (webviewRefs.current[tabId]) {
+      // 停止加载并清理webview
+      try {
+        const webview = webviewRefs.current[tabId]
+        if (webview) {
+          // 停止加载
+          webview.stop()
+
+          // 尝试获取webContentsId
+          try {
+            const webContentsId = webview.getWebContentsId()
+            if (webContentsId && window.api && window.api.ipcRenderer) {
+              // 通过IPC请求主进程销毁webContents
+              window.api.ipcRenderer
+                .invoke('browser:destroy-webcontents', webContentsId)
+                .then(() => {
+                  console.log('Successfully requested destruction of webContents for tab:', tabId)
+                })
+                .catch((error) => {
+                  console.error('Error requesting destruction of webContents:', error)
+                })
+            }
+          } catch (e) {
+            console.error('Error getting webContentsId:', e)
+          }
+
+          // 加载空白页面，释放资源
+          webview.src = 'about:blank'
+
+          // 使用保存的清理函数移除事件监听器
+          if (cleanupFunctionsRef.current[tabId]) {
+            console.log('Calling cleanup function for tab:', tabId)
+            cleanupFunctionsRef.current[tabId]()
+            delete cleanupFunctionsRef.current[tabId]
+          }
+        }
+      } catch (error) {
+        console.error('Error cleaning up webview:', error)
+      }
+
+      // 删除引用
+      delete webviewRefs.current[tabId]
+      console.log('Removed webview reference for tab:', tabId)
+    }
+
+    // 删除会话状态
+    delete webviewSessionsRef.current[tabId]
+    console.log('Removed session state for tab:', tabId)
+
+    // 保存到本地存储 - 确保不包含已关闭的选项卡
+    saveTabsToStorage(newTabs, newActiveTabId)
+
+    console.log('Tab closed, remaining tabs:', newTabs.length)
   }
 
   const handleTabChange = (newActiveTabId: string) => {
+    console.log('Switching to tab:', newActiveTabId)
+
+    // 更新活动标签页ID
     setActiveTabId(newActiveTabId)
 
     // 更新URL和其他状态
     const newActiveTab = tabs.find((tab) => tab.id === newActiveTabId)
     if (newActiveTab) {
-      setUrl(newActiveTab.url)
-      setCurrentUrl(newActiveTab.url)
-      setCanGoBack(newActiveTab.canGoBack)
-      setCanGoForward(newActiveTab.canGoForward)
-      setIsLoading(newActiveTab.isLoading)
+      // 获取新活动的webview
+      const newWebview = webviewRefs.current[newActiveTabId]
+
+      // 如果webview存在，从webview获取最新状态
+      if (newWebview) {
+        try {
+          // 获取当前URL
+          const currentURL = newWebview.getURL()
+          if (currentURL && currentURL !== 'about:blank') {
+            // 使用webview的实际URL，而不是存储的URL
+            setUrl(currentURL)
+            setCurrentUrl(currentURL)
+
+            // 更新选项卡信息
+            updateTabInfo(newActiveTabId, { url: currentURL })
+          } else {
+            // 如果没有有效URL，使用存储的URL
+            setUrl(newActiveTab.url)
+            setCurrentUrl(newActiveTab.url)
+          }
+
+          // 更新导航状态
+          setCanGoBack(newWebview.canGoBack())
+          setCanGoForward(newWebview.canGoForward())
+          setIsLoading(newWebview.isLoading())
+        } catch (error) {
+          console.error('Error getting webview state:', error)
+
+          // 出错时使用存储的状态
+          setUrl(newActiveTab.url)
+          setCurrentUrl(newActiveTab.url)
+          setCanGoBack(newActiveTab.canGoBack)
+          setCanGoForward(newActiveTab.canGoForward)
+          setIsLoading(newActiveTab.isLoading)
+        }
+      } else {
+        // 如果webview不存在，使用存储的状态
+        setUrl(newActiveTab.url)
+        setCurrentUrl(newActiveTab.url)
+        setCanGoBack(newActiveTab.canGoBack)
+        setCanGoForward(newActiveTab.canGoForward)
+        setIsLoading(newActiveTab.isLoading)
+      }
+
+      // 保存到本地存储
+      saveTabsToStorage(tabs, newActiveTabId)
     }
   }
 
   // 更新选项卡信息
   const updateTabInfo = (tabId: string, updates: Partial<Tab>) => {
-    setTabs((prevTabs) => prevTabs.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab)))
+    setTabs((prevTabs) => {
+      const newTabs = prevTabs.map((tab) => (tab.id === tabId ? { ...tab, ...updates } : tab))
+
+      // 保存到本地存储
+      saveTabsToStorage(newTabs, activeTabId)
+
+      return newTabs
+    })
   }
+
+  // 在组件挂载和卸载时处理webview会话
+  useEffect(() => {
+    // 组件挂载时，确保webviewSessionsRef与tabs同步
+    tabs.forEach((tab) => {
+      if (!webviewSessionsRef.current[tab.id]) {
+        webviewSessionsRef.current[tab.id] = false
+      }
+    })
+
+    // 组件卸载时保存状态
+    return () => {
+      saveTabsToStorage(tabs, activeTabId)
+    }
+  }, [tabs, activeTabId])
 
   // 检测Google登录页面
   useEffect(() => {
@@ -619,6 +1073,7 @@ const Browser = () => {
     } else {
       setShowGoogleLoginTip(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUrl, activeTabId])
 
   return (
@@ -667,7 +1122,7 @@ const Browser = () => {
               <Button
                 className="add-tab-button"
                 icon={<PlusOutlined />}
-                onClick={handleAddTab}
+                onClick={() => handleAddTab()}
                 title={t('browser.new_tab')}
               />
             )
@@ -714,11 +1169,52 @@ const Browser = () => {
             <webview
               ref={(el: any) => {
                 if (el) {
-                  webviewRefs.current[tab.id] = el as WebviewTag
+                  // 检查这个webview是否已经有引用
+                  const existingWebview = webviewRefs.current[tab.id]
 
-                  // 如果是新创建的选项卡，加载初始URL
-                  if (!el.src) {
+                  // 只有在webview不存在或者是新创建的选项卡时才设置引用和加载URL
+                  if (!existingWebview) {
+                    console.log('Creating new webview for tab:', tab.id, 'URL:', tab.url)
+
+                    // 保存webview引用
+                    webviewRefs.current[tab.id] = el as WebviewTag
+
+                    // 标记为已初始化
+                    webviewSessionsRef.current[tab.id] = true
+
+                    // 设置初始URL
                     el.src = tab.url
+
+                    // 设置事件监听器并保存清理函数
+                    const cleanup = setupWebviewListeners(el as WebviewTag, tab.id)
+                    cleanupFunctionsRef.current[tab.id] = cleanup
+                  } else if (existingWebview !== el) {
+                    // 如果引用变了（React重新创建了元素），保留原来的状态
+                    console.log('Webview reference changed for tab:', tab.id, 'preserving state')
+
+                    // 先清理旧的事件监听器
+                    if (cleanupFunctionsRef.current[tab.id]) {
+                      cleanupFunctionsRef.current[tab.id]()
+                    }
+
+                    // 更新webview引用
+                    webviewRefs.current[tab.id] = el as WebviewTag
+
+                    // 不要重新设置src，这会导致页面刷新
+                    // 只有在URL明确改变时才设置src
+                    if (existingWebview.getURL() !== tab.url && tab.url !== '') {
+                      el.src = tab.url
+                    }
+
+                    // 重新设置事件监听器
+                    const cleanup = setupWebviewListeners(el as WebviewTag, tab.id)
+                    cleanupFunctionsRef.current[tab.id] = cleanup
+                  }
+                } else {
+                  // DOM元素被移除，清理事件监听器
+                  if (cleanupFunctionsRef.current[tab.id]) {
+                    cleanupFunctionsRef.current[tab.id]()
+                    delete cleanupFunctionsRef.current[tab.id]
                   }
                 }
               }}
@@ -726,7 +1222,7 @@ const Browser = () => {
               partition="persist:browser"
               useragent={userAgent}
               preload=""
-              webpreferences="contextIsolation=no, javascript=yes, webgl=yes, webaudio=yes, allowRunningInsecureContent=yes"
+              webpreferences="contextIsolation=no, javascript=yes, webgl=yes, webaudio=yes, allowRunningInsecureContent=yes, nodeIntegration=yes, enableRemoteModule=yes"
               disablewebsecurity={DISABLE_SECURITY}
               plugins={true}
             />
