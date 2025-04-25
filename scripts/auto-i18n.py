@@ -5,6 +5,19 @@
 #     "openai",
 # ]
 # ///
+#
+# Example of how to run the script:
+#
+# 1. First, set the OpenRouter API key environment variable:
+#    ```
+#    export OPENROUTER_API_KEY=your-api-key
+#    ```
+#
+# 2. Then run the script using uv:
+#    ```
+#    uv run i18n.py --dir src/renderer/src/i18n/locales "settings.mcp.autoDescription='auto set i18n', settings.mcp.autoName='auto set i18n name'"
+#    ```
+
 
 import json
 import argparse
@@ -19,11 +32,11 @@ LANGUAGES = ["en-us", "zh-cn", "ja-jp", "ru-ru", "zh-tw"]
 
 def ensure_json_files_exist(output_dir=None):
     """Ensure that all language JSON files exist with at least an empty object."""
-    output_dir = Path(output_dir) if output_dir else Path('.')
-    
+    output_dir = Path(output_dir) if output_dir else Path(".")
+
     # Create the directory if it doesn't exist
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     for lang in LANGUAGES:
         file_path = output_dir / f"{lang}.json"
         if not file_path.exists():
@@ -64,7 +77,7 @@ def set_i18n(key: str, translations: dict[str, str], output_dir=None):
         })
     """
     ensure_json_files_exist(output_dir)
-    output_dir = Path(output_dir) if output_dir else Path('.')
+    output_dir = Path(output_dir) if output_dir else Path(".")
 
     results = {}
     keys = key.split(".")
@@ -98,22 +111,26 @@ def set_i18n(key: str, translations: dict[str, str], output_dir=None):
     return results
 
 
-
-
-
 def main():
     """Main function to run the i18n translation agent."""
     # Set up command line argument parser
-    parser = argparse.ArgumentParser(description='Translate i18n JSON content')
-    parser.add_argument('content', help='JSON content to translate')
-    parser.add_argument('-m', '--model', default='gpt-4.1-mini', 
-                        help='Model to use for translation (default: gpt-4.1-mini)')
-    parser.add_argument('--dir', default=None, 
-                        help='Directory to store i18n JSON files (default: current directory)')
-    
+    parser = argparse.ArgumentParser(description="Translate i18n JSON content")
+    parser.add_argument("content", help="JSON content to translate")
+    parser.add_argument(
+        "-m",
+        "--model",
+        default="gpt-4.1-mini",
+        help="Model to use for translation (default: gpt-4.1-mini)",
+    )
+    parser.add_argument(
+        "--dir",
+        default=None,
+        help="Directory to store i18n JSON files (default: current directory)",
+    )
+
     # Parse arguments
     args = parser.parse_args()
-    
+
     # Initialize the agent with the specified model
     agent = Agent(
         model=OpenRouter(id=args.model),
@@ -126,12 +143,14 @@ def main():
     <content>
     {args.content}
     </content>
-    
+
     Use the provided directory {args.dir} for storing the i18n JSON files.
     """
 
     # Call the agent with the tools context that includes the output directory
-    agent.print_response(prompt, stream=True, tools_context={"set_i18n": {"output_dir": args.dir}})
+    agent.print_response(
+        prompt, stream=True, tools_context={"set_i18n": {"output_dir": args.dir}}
+    )
 
 
 if __name__ == "__main__":
