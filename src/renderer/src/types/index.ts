@@ -365,6 +365,7 @@ export type SidebarIcon =
   | 'projects'
   | 'workspace'
   | 'deepresearch'
+  | 'browser'
 
 export type WebSearchProvider = {
   id: string
@@ -377,6 +378,56 @@ export type WebSearchProvider = {
   usingBrowser?: boolean
   description?: string
   category?: string
+  // Jina特定参数
+  topK?: number
+  includeMetadata?: boolean
+  searchType?: 'hybrid' | 'sparse' | 'dense'
+  useReranker?: boolean
+  // 新增Jina参数
+  apiEndpoint?: 'reader' | 'search' // r.jina.ai 或 s.jina.ai
+  locale?: string
+  country?: string
+  timeout?: number
+  noCache?: boolean
+  withFavicon?: boolean
+  withLinks?: boolean
+  withImages?: boolean
+  returnFormat?: 'markdown' | 'html' | 'text' | 'screenshot' | 'pageshot'
+  engine?: 'browser' | 'direct' | 'cf-browser-rendering'
+  site?: string
+  // SERP特定参数
+  jsonResponse?: boolean
+  fetchFavicons?: boolean
+  location?: string
+  page?: number
+  num?: number
+  // Reader特定参数
+  removeSelectors?: string
+  targetSelectors?: string
+  waitForSelectors?: string
+  withGeneratedAlt?: boolean
+  withIframe?: boolean
+  tokenBudget?: number
+  retainImages?: 'all' | 'none'
+  respondWith?: string
+  proxy?: string
+  // 新增 Reader API 参数
+  dnt?: boolean
+  noGfm?: boolean
+  robotsTxt?: string
+  withShadowDom?: boolean
+  base?: string
+  mdHeadingStyle?: string
+  mdHr?: string
+  mdBulletListMarker?: string
+  mdEmDelimiter?: string
+  mdStrongDelimiter?: string
+  mdLinkStyle?: string
+  mdLinkReferenceStyle?: string
+  setCookie?: string
+  proxyUrl?: string
+  viewport?: { width: number; height: number }
+  injectPageScript?: string
 }
 
 export type WebSearchResponse = {
@@ -550,6 +601,19 @@ export interface MCPResource {
 
 export interface GetResourceResponse {
   contents: MCPResource[]
+}
+
+// Agent Task Definition
+export interface AgentTask {
+  id: string
+  title: string
+  description: string
+  status: 'pending' | 'running' | 'completed' | 'error'
+  result?: string
+  messageId: string // 添加关联的消息ID
+  toolName?: string // 添加 toolName 字段
+  toolArgs?: any // 添加 toolArgs 字段
+  toolResponse?: MCPCallToolResponse // 添加 toolResponse 字段
 }
 
 export interface QuickPhrase {

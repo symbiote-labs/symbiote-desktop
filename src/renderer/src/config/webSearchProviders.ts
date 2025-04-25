@@ -32,6 +32,12 @@ export const WEB_SEARCH_PROVIDER_CONFIG = {
       apiKey: 'https://dashboard.exa.ai/api-keys'
     }
   },
+  jina: {
+    websites: {
+      official: 'https://jina.ai',
+      apiKey: 'https://console.jina.ai/api-keys'
+    }
+  },
   'local-google': {
     websites: {
       official: 'https://www.google.com'

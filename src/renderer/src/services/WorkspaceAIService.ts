@@ -1,5 +1,6 @@
-import { selectCurrentWorkspace, selectVisibleToAIWorkspaces } from '@renderer/store/workspace'
 import store from '@renderer/store'
+import { selectCurrentWorkspace, selectVisibleToAIWorkspaces } from '@renderer/store/workspace'
+
 import WorkspaceService from './WorkspaceService'
 
 /**
@@ -15,7 +16,7 @@ export const getWorkspaceInfo = async (): Promise<string> => {
     const visibleWorkspaces = selectVisibleToAIWorkspaces(store.getState())
 
     // 检查当前工作区是否对AI可见
-    if (!activeWorkspace || !visibleWorkspaces.some(w => w.id === activeWorkspace.id)) {
+    if (!activeWorkspace || !visibleWorkspaces.some((w) => w.id === activeWorkspace.id)) {
       return ''
     }
 
@@ -41,10 +42,12 @@ export const getWorkspaceInfo = async (): Promise<string> => {
 
         if (node.children && node.children.length > 0) {
           // 按名称排序，先显示目录，再显示文件
-          const dirs = node.children.filter((child: any) => child.type === 'directory')
+          const dirs = node.children
+            .filter((child: any) => child.type === 'directory')
             .sort((a: any, b: any) => a.name.localeCompare(b.name))
 
-          const files = node.children.filter((child: any) => child.type === 'file')
+          const files = node.children
+            .filter((child: any) => child.type === 'file')
             .sort((a: any, b: any) => a.name.localeCompare(b.name))
 
           // 先列出目录

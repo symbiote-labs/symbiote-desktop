@@ -91,6 +91,32 @@ const SectionTitle = styled.h3`
 const SelectableContent = styled.div`
   user-select: text;
   padding: 0 12px;
+  overflow-x: auto;
+  max-width: 100%;
+
+  /* 添加水平滚动条样式 */
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* 确保描述项内容不溢出 */
+  .ant-descriptions-item-content {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
 `
 
 export default MCPPromptsSection

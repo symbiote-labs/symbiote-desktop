@@ -1,7 +1,7 @@
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useAppDispatch } from '@renderer/store'
-import { SidebarIcon, setSidebarIcons } from '@renderer/store/settings'
+import { setSidebarIcons, SidebarIcon } from '@renderer/store/settings'
 import { Button, message } from 'antd'
 import { Microscope } from 'lucide-react'
 import { FC } from 'react'

@@ -251,8 +251,8 @@ const KnowledgeContent: FC<KnowledgeContentProps> = ({ selectedBase }) => {
         </ModelInfo>
         <HStack gap={8} alignItems="center">
           {/* 使用selected base导致修改设置后没有响应式更新 */}
-          <NarrowIcon onClick={() => base && KnowledgeSearchPopup.show({base: base})}>
-            <Search size={18}/>
+          <NarrowIcon onClick={() => base && KnowledgeSearchPopup.show({ base: base })}>
+            <Search size={18} />
           </NarrowIcon>
           <Tooltip title={expandAll ? t('common.collapse') : t('common.expand')}>
             <Button

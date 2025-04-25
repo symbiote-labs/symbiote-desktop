@@ -188,9 +188,13 @@ const WorkspaceExplorer: React.FC<{
 
   // 加载工作区文件结构
   const loadWorkspaceFiles = async () => {
-    if (!currentWorkspace) return
+    if (!currentWorkspace) {
+      console.log('loadWorkspaceFiles: 当前没有选择工作区，无法加载文件')
+      return
+    }
 
     try {
+      console.log('loadWorkspaceFiles: 开始加载工作区文件结构:', currentWorkspace.path)
       setLoading(true)
       const folderStructure = await WorkspaceService.getWorkspaceFolderStructure(currentWorkspace.path, {
         maxDepth: 1, // 只加载根目录的直接子项
@@ -198,13 +202,17 @@ const WorkspaceExplorer: React.FC<{
         lazyLoad: true // 使用懒加载模式
       })
 
+      console.log('loadWorkspaceFiles: 获取到文件夹结构:', folderStructure)
+
       const treeNodes = [convertToTreeData(folderStructure)]
+      console.log('loadWorkspaceFiles: 转换后的树节点:', treeNodes)
       setTreeData(treeNodes)
 
       // 默认展开根节点
       setExpandedKeys([treeNodes[0].key])
+      console.log('loadWorkspaceFiles: 设置默认展开的节点:', treeNodes[0].key)
     } catch (error) {
-      console.error('Failed to load workspace files:', error)
+      console.error('loadWorkspaceFiles: 加载工作区文件失败:', error)
       message.error(t('workspace.loadError'))
     } finally {
       setLoading(false)
@@ -213,7 +221,13 @@ const WorkspaceExplorer: React.FC<{
 
   // 当工作区变化时加载文件
   useEffect(() => {
-    loadWorkspaceFiles()
+    console.log('WorkspaceExplorer: 工作区变化，当前工作区:', currentWorkspace)
+    if (currentWorkspace) {
+      console.log('WorkspaceExplorer: 开始加载工作区文件:', currentWorkspace.path)
+      loadWorkspaceFiles()
+    } else {
+      console.log('WorkspaceExplorer: 当前没有选择工作区')
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace])
 

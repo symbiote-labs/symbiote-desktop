@@ -95,40 +95,39 @@ const MessageImage: FC<Props> = ({ message }) => {
     [t]
   )
 
+  // 创建一个函数来生成工具栏渲染函数，避免在循环中使用 useCallback
+  const createToolbarRenderer = (image: string, index: number) => {
+    return (
+      _: any,
+      {
+        transform: { scale },
+        actions: { onFlipY, onFlipX, onRotateLeft, onRotateRight, onZoomOut, onZoomIn, onReset }
+      }: any
+    ) => (
+      <ToobarWrapper size={12} className="toolbar-wrapper">
+        <SwapOutlined rotate={90} onClick={onFlipY} />
+        <SwapOutlined onClick={onFlipX} />
+        <RotateLeftOutlined onClick={onRotateLeft} />
+        <RotateRightOutlined onClick={onRotateRight} />
+        <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
+        <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
+        <UndoOutlined onClick={onReset} />
+        <CopyOutlined onClick={() => onCopy(message.metadata?.generateImage?.type!, image)} />
+        <DownloadOutlined onClick={() => onDownload(image, index)} />
+      </ToobarWrapper>
+    )
+  }
+
   return (
     <Container style={{ marginBottom: 8 }}>
       {message.metadata?.generateImage!.images.map((image, index) => {
-        // 使用 useCallback 记忆化工具栏渲染函数，避免不必要的重新创建
-        const memoizedToolbarRender = useCallback(
-          (
-            _: any,
-            {
-              transform: { scale },
-              actions: { onFlipY, onFlipX, onRotateLeft, onRotateRight, onZoomOut, onZoomIn, onReset }
-            }: any
-          ) => (
-            <ToobarWrapper size={12} className="toolbar-wrapper">
-              <SwapOutlined rotate={90} onClick={onFlipY} />
-              <SwapOutlined onClick={onFlipX} />
-              <RotateLeftOutlined onClick={onRotateLeft} />
-              <RotateRightOutlined onClick={onRotateRight} />
-              <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
-              <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
-              <UndoOutlined onClick={onReset} />
-              <CopyOutlined onClick={() => onCopy(message.metadata?.generateImage?.type!, image)} />
-              <DownloadOutlined onClick={() => onDownload(image, index)} />
-            </ToobarWrapper>
-          ),
-          [image, index, onCopy, onDownload, message.metadata?.generateImage?.type]
-        )
-
         return (
           <Image
             src={image}
             key={`image-${index}`}
             width="33%"
             preview={{
-              toolbarRender: memoizedToolbarRender
+              toolbarRender: createToolbarRenderer(image, index)
             }}
           />
         )

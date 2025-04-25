@@ -81,6 +81,7 @@ export const sanitizeSchema = {
     text: ['x', 'y', 'fill', 'textAnchor', 'dominantBaseline'],
     g: ['transform', 'fill', 'stroke'],
     a: ['href', 'target', 'rel'],
+    sup: ['class', 'data-citation', 'onclick'], // 允许sup标签使用onclick和data-citation属性
     translated: ['original', 'language', 'onclick'] // 添加翻译标签的属性
   }
 }

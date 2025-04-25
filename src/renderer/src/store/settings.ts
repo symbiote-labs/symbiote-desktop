@@ -18,6 +18,7 @@ export type SidebarIcon =
   | 'projects'
   | 'workspace'
   | 'deepresearch'
+  | 'browser'
 
 export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'assistants',
@@ -28,7 +29,8 @@ export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'knowledge',
   'files',
   'workspace',
-  'deepresearch'
+  'deepresearch',
+  'browser'
 ]
 
 export interface NutstoreSyncRuntime extends WebDAVSyncState {}
@@ -64,6 +66,10 @@ export interface SettingsState {
   renderInputMessageAsMarkdown: boolean
   enableHistoricalContext: boolean // 是否启用历史对话上下文功能
   usePromptForToolCalling: boolean // 是否使用提示词而非函数调用来调用MCP工具
+  enableAgentMode: boolean // 是否启用Agent模式
+  agentModeMaxApiRequests: number // Agent模式下最大API请求次数
+  showAgentTaskList: boolean // 是否显示Agent任务列表
+  agentAutoExecutionCount: number // Agent自动执行次数
   codeShowLineNumbers: boolean
   codeCollapsible: boolean
   codeWrappable: boolean
@@ -232,6 +238,10 @@ export const initialState: SettingsState = {
   renderInputMessageAsMarkdown: false,
   enableHistoricalContext: false, // 默认禁用历史对话上下文功能
   usePromptForToolCalling: true, // 默认使用提示词而非函数调用来调用MCP工具
+  enableAgentMode: false, // 默认禁用Agent模式
+  agentModeMaxApiRequests: 20, // 默认最大API请求次数为20
+  showAgentTaskList: true, // 默认显示Agent任务列表
+  agentAutoExecutionCount: 5, // 默认Agent自动执行次数为5
   codeShowLineNumbers: false,
   codeCollapsible: false,
   codeWrappable: false,
@@ -365,6 +375,18 @@ const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    setEnableAgentMode: (state, action: PayloadAction<boolean>) => {
+      state.enableAgentMode = action.payload
+    },
+    setAgentModeMaxApiRequests: (state, action: PayloadAction<number>) => {
+      state.agentModeMaxApiRequests = action.payload
+    },
+    setShowAgentTaskList: (state, action: PayloadAction<boolean>) => {
+      state.showAgentTaskList = action.payload
+    },
+    setAgentAutoExecutionCount: (state, action: PayloadAction<number>) => {
+      state.agentAutoExecutionCount = action.payload
+    },
     setUsePromptForToolCalling: (state, action: PayloadAction<boolean>) => {
       state.usePromptForToolCalling = action.payload
     },
@@ -849,6 +871,10 @@ const settingsSlice = createSlice({
 })
 
 export const {
+  setEnableAgentMode,
+  setAgentModeMaxApiRequests,
+  setShowAgentTaskList,
+  setAgentAutoExecutionCount,
   setShowAssistants,
   toggleShowAssistants,
   setShowTopics,

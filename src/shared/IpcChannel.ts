@@ -80,6 +80,8 @@ export enum IpcChannel {
   // Windows
   Windows_SetMinimumSize = 'windows:setMinimumSize',
   Windows_ResetMinimumSize = 'windows:resetMinimumSize',
+  Windows_Minimize = 'windows:minimize',
+  Windows_Close = 'windows:close',
 
   // Gemini
   Gemini_UploadFile = 'gemini:uploadFile',

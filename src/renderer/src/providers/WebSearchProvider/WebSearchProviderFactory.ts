@@ -1,10 +1,11 @@
 import { WebSearchProvider } from '@renderer/types'
 
 import BaseWebSearchProvider from './BaseWebSearchProvider'
-import DefaultProvider from './DefaultProvider'
 import DeepResearchProvider from './DeepResearchProvider'
 import DeepSearchProvider from './DeepSearchProvider'
+import DefaultProvider from './DefaultProvider'
 import ExaProvider from './ExaProvider'
+import JinaSearchProvider from './JinaSearchProvider'
 import LocalBaiduProvider from './LocalBaiduProvider'
 import LocalBingProvider from './LocalBingProvider'
 import LocalGoogleProvider from './LocalGoogleProvider'
@@ -20,6 +21,8 @@ export default class WebSearchProviderFactory {
         return new SearxngProvider(provider)
       case 'exa':
         return new ExaProvider(provider)
+      case 'jina':
+        return new JinaSearchProvider(provider)
       case 'local-google':
         return new LocalGoogleProvider(provider)
       case 'local-baidu':

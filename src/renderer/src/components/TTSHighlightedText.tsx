@@ -58,12 +58,12 @@ const TTSHighlightedText: React.FC<TTSHighlightedTextProps> = ({ text }) => {
     TTSService.playFromSegment(index)
   }, [])
 
-  if (segments.length === 0) {
-    return <div>{text}</div>
-  }
-
   // 使用 useMemo 记忆化列表渲染结果，避免不必要的重新计算
   const renderedSegments = useMemo(() => {
+    if (segments.length === 0) {
+      return <div>{text}</div>;
+    }
+
     return segments.map((segment, index) => (
       <TextSegment
         key={index}
@@ -72,7 +72,7 @@ const TTSHighlightedText: React.FC<TTSHighlightedTextProps> = ({ text }) => {
         {segment}
       </TextSegment>
     ))
-  }, [segments, currentSegmentIndex, handleSegmentClick])
+  }, [segments, currentSegmentIndex, handleSegmentClick, text])
 
   return <TextContainer>{renderedSegments}</TextContainer>
 }

@@ -213,6 +213,21 @@
     vertical-align: baseline;
   }
 
+  sup[data-citation],
+  .citation-marker {
+    cursor: pointer;
+    color: var(--color-link);
+    background-color: rgba(0, 123, 255, 0.1);
+    padding: 0 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: rgba(0, 123, 255, 0.2);
+      text-decoration: underline;
+    }
+  }
+
   sup {
     top: -0.5em;
     border-radius: 50%;
@@ -222,6 +237,22 @@
     zoom: 0.8;
     & > span.link {
       color: var(--color-reference-text);
+    }
+
+    &[data-citation] {
+      cursor: pointer;
+      &:hover {
+        background-color: var(--color-primary);
+      }
+    }
+  }
+
+  .citation-link {
+    color: var(--color-reference-text);
+    cursor: pointer;
+    &:hover {
+      text-decoration: none;
+      opacity: 0.8;
     }
   }
 

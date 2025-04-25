@@ -1,6 +1,8 @@
-import { createHashRouter, HashRouter, Route, Routes } from 'react-router-dom'
+import Sidebar from '@renderer/components/app/Sidebar'
+import NavigationHandler from '@renderer/handler/NavigationHandler'
 import AgentsPage from '@renderer/pages/agents/AgentsPage'
 import AppsPage from '@renderer/pages/apps/AppsPage'
+import Browser from '@renderer/pages/Browser'
 import DeepResearchPage from '@renderer/pages/deepresearch/DeepResearchPage'
 import FilesPage from '@renderer/pages/files/FilesPage'
 import HomePage from '@renderer/pages/home/HomePage'
@@ -9,8 +11,7 @@ import PaintingsPage from '@renderer/pages/paintings/PaintingsPage'
 import SettingsPage from '@renderer/pages/settings/SettingsPage'
 import TranslatePage from '@renderer/pages/translate/TranslatePage'
 import WorkspacePage from '@renderer/pages/workspace'
-import NavigationHandler from '@renderer/handler/NavigationHandler'
-import Sidebar from '@renderer/components/app/Sidebar'
+import { createHashRouter, HashRouter, Route, Routes } from 'react-router-dom'
 
 // 添加React Router v7的未来标志
 export const router = createHashRouter(
@@ -52,6 +53,10 @@ export const router = createHashRouter(
       element: <DeepResearchPage />
     },
     {
+      path: '/browser',
+      element: <Browser />
+    },
+    {
       path: '/settings/*',
       element: <SettingsPage />
     }
@@ -69,7 +74,8 @@ export const router = createHashRouter(
 // 兼容现有的HashRouter实现
 export const RouterComponent = ({ children }: { children?: React.ReactNode }) => {
   return (
-    <HashRouter future={{
+    <HashRouter
+      future={{
         // @ts-ignore - v7_startTransition 在当前类型定义中不存在，但在新版本中可能存在
         v7_startTransition: true,
         v7_relativeSplatPath: true
@@ -86,6 +92,7 @@ export const RouterComponent = ({ children }: { children?: React.ReactNode }) =>
         <Route path="/apps" element={<AppsPage />} />
         <Route path="/workspace" element={<WorkspacePage />} />
         <Route path="/deepresearch" element={<DeepResearchPage />} />
+        <Route path="/browser" element={<Browser />} />
         <Route path="/settings/*" element={<SettingsPage />} />
       </Routes>
       {children}

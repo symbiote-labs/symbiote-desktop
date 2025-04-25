@@ -15,6 +15,17 @@ interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 const Link: React.FC<LinkProps> = (props) => {
   // 处理内部链接
   if (props.href?.startsWith('#')) {
+    // 检查是否是引用链接（以#citation-开头）
+    if (props.href.startsWith('#citation-')) {
+      // 如果是引用链接并且有引用数据，则使用CitationTooltip
+      if (props.citationData) {
+        return (
+          <CitationTooltip citation={props.citationData}>
+            <span className="link citation-link">{props.children}</span>
+          </CitationTooltip>
+        )
+      }
+    }
     return <span className="link">{props.children}</span>
   }
 
@@ -28,14 +39,10 @@ const Link: React.FC<LinkProps> = (props) => {
 
   // 如果是引用链接并且有引用数据，则使用CitationTooltip
   if (isCitation && props.citationData) {
+    console.log('Citation link detected in Link component:', props.citationData)
     return (
       <CitationTooltip citation={props.citationData}>
-        <a
-          {...omit(props, ['node', 'citationData'])}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-        />
+        <span className="link citation-link">{props.children}</span>
       </CitationTooltip>
     )
   }

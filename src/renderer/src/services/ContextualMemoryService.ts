@@ -283,7 +283,9 @@ class ContextualMemoryService {
       const customContextualPrompt = store.getState().memory?.contextualMemoryPrompt
 
       // 构建提示词
-      const prompt = customContextualPrompt || `
+      const prompt =
+        customContextualPrompt ||
+        `
 请分析以下对话内容，提取出关键信息和主题，以便我可以找到相关的记忆。
 
 请提供：

@@ -19,6 +19,18 @@ interface Props {
   message: Message
 }
 
+// 将 StyledUpload 组件移到组件外部
+const StyledUpload = styled(Upload)`
+  .ant-upload-list-item-name {
+    max-width: 220px;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+`
+
 const MessageAttachments: FC<Props> = ({ message }) => {
   // 使用 useCallback 记忆化复制图片函数，避免不必要的重新创建
   const handleCopyImage = useCallback(async (image: FileType) => {
@@ -28,16 +40,13 @@ const MessageAttachments: FC<Props> = ({ message }) => {
     await navigator.clipboard.write([item])
   }, [])
 
-  if (!message.files || message.files.length === 0) {
-    return null
-  }
-
   // 将文件按类型分组
-  const imageFiles = message.files.filter(file => file.type === FileTypes.IMAGE)
-  const nonImageFiles = message.files.filter(file => file.type !== FileTypes.IMAGE)
+  const imageFiles = message.files?.filter((file) => file.type === FileTypes.IMAGE) || []
+  const nonImageFiles = message.files?.filter((file) => file.type !== FileTypes.IMAGE) || []
 
   // 使用 useMemo 记忆化非图片文件列表，避免不必要的重新计算
   const memoizedFileList = useMemo(() => {
+    if (!nonImageFiles.length) return []
     return nonImageFiles.map((file) => {
       // 使用 FileManager.getFileUrl 来获取文件URL，它会处理路径问题
       const fileUrl = FileManager.getFileUrl(file)
@@ -52,16 +61,10 @@ const MessageAttachments: FC<Props> = ({ message }) => {
     })
   }, [nonImageFiles])
 
-  const StyledUpload = styled(Upload)`
-    .ant-upload-list-item-name {
-      max-width: 220px;
-      display: inline-block;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: bottom;
-    }
-  `
+  // 如果没有文件，不渲染任何内容
+  if (!message.files || message.files.length === 0) {
+    return null
+  }
 
   return (
     <Container style={{ marginBottom: 8 }}>
@@ -69,28 +72,25 @@ const MessageAttachments: FC<Props> = ({ message }) => {
       {imageFiles.length > 0 && (
         <ImageContainer>
           {imageFiles.map((image) => {
-            // 使用 useCallback 记忆化工具栏渲染函数，避免不必要的重新创建
-            const memoizedToolbarRender = useCallback(
-              (
-                _,
-                {
-                  transform: { scale },
-                  actions: { onFlipY, onFlipX, onRotateLeft, onRotateRight, onZoomOut, onZoomIn, onReset }
-                }
-              ) => (
-                <ToobarWrapper size={12} className="toolbar-wrapper">
-                  <SwapOutlined rotate={90} onClick={onFlipY} />
-                  <SwapOutlined onClick={onFlipX} />
-                  <RotateLeftOutlined onClick={onRotateLeft} />
-                  <RotateRightOutlined onClick={onRotateRight} />
-                  <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
-                  <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
-                  <UndoOutlined onClick={onReset} />
-                  <CopyOutlined onClick={() => handleCopyImage(image)} />
-                  <DownloadOutlined onClick={() => download(FileManager.getFileUrl(image))} />
-                </ToobarWrapper>
-              ),
-              [image, handleCopyImage] // 依赖于当前循环的 image 对象和 handleCopyImage 函数
+            // 创建工具栏渲染函数，不使用 useCallback
+            const toolbarRender = (
+              _: any,
+              {
+                transform: { scale },
+                actions: { onFlipY, onFlipX, onRotateLeft, onRotateRight, onZoomOut, onZoomIn, onReset }
+              }: any
+            ) => (
+              <ToobarWrapper size={12} className="toolbar-wrapper">
+                <SwapOutlined rotate={90} onClick={onFlipY} />
+                <SwapOutlined onClick={onFlipX} />
+                <RotateLeftOutlined onClick={onRotateLeft} />
+                <RotateRightOutlined onClick={onRotateRight} />
+                <ZoomOutOutlined disabled={scale === 1} onClick={onZoomOut} />
+                <ZoomInOutlined disabled={scale === 50} onClick={onZoomIn} />
+                <UndoOutlined onClick={onReset} />
+                <CopyOutlined onClick={() => handleCopyImage(image)} />
+                <DownloadOutlined onClick={() => download(FileManager.getFileUrl(image))} />
+              </ToobarWrapper>
             )
 
             return (
@@ -99,7 +99,7 @@ const MessageAttachments: FC<Props> = ({ message }) => {
                 key={image.id}
                 width="33%"
                 preview={{
-                  toolbarRender: memoizedToolbarRender // 使用记忆化的函数
+                  toolbarRender: toolbarRender // 使用普通函数
                 }}
               />
             )

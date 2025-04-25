@@ -26,7 +26,17 @@ import store, { useAppDispatch } from '@renderer/store'
 import { sendMessage as _sendMessage } from '@renderer/store/messages'
 import { setSearching } from '@renderer/store/runtime'
 import { setPdfSettings } from '@renderer/store/settings'
-import { Assistant, FileType, KnowledgeBase, KnowledgeItem, MCPServer, Message, Model, Topic } from '@renderer/types'
+import {
+  AgentTask,
+  Assistant,
+  FileType,
+  KnowledgeBase,
+  KnowledgeItem,
+  MCPServer,
+  Message,
+  Model,
+  Topic
+} from '@renderer/types'
 import { classNames, delay, formatFileSize, getFileExtension } from '@renderer/utils'
 import { getFilesFromDropEvent } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
@@ -57,6 +67,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
 import NarrowLayout from '../Messages/NarrowLayout'
+import AgentModeButton from './AgentModeButton'
 import AttachmentButton, { AttachmentButtonRef } from './AttachmentButton'
 import AttachmentPreview from './AttachmentPreview'
 import GenerateImageButton from './GenerateImageButton'
@@ -75,12 +86,21 @@ interface Props {
   setActiveTopic: (topic: Topic) => void
   topic: Topic
   onToggleWorkspacePanel?: () => void // Add prop for toggling workspace panel
+  agentTasks: AgentTask[] // 添加 agentTasks 属性
+  scrollToMessage?: (messageId: string) => void // 添加 scrollToMessage 属性
 }
 
 let _text = ''
 let _files: FileType[] = []
 
-const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic, onToggleWorkspacePanel }) => {
+const Inputbar: FC<Props> = ({
+  assistant: _assistant,
+  setActiveTopic,
+  topic,
+  onToggleWorkspacePanel,
+  agentTasks,
+  scrollToMessage // 在这里解构 scrollToMessage prop
+}) => {
   // Destructure the new prop
   const [text, setText] = useState(_text)
   // 用于存储语音识别的中间结果，不直接显示在输入框中
@@ -97,6 +117,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic, onT
     autoTranslateWithSpace,
     enableQuickPanelTriggers,
     enableBackspaceDeleteModel
+    // 移除 scrollToMessage 的解构
   } = useSettings()
   const [expended, setExpend] = useState(false)
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
@@ -1418,6 +1439,12 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic, onT
                 ToolbarButton={ToolbarButton}
                 setInputValue={setText}
                 resizeTextArea={resizeTextArea}
+              />
+              {/* 将 agentTasks 属性传递给 AgentModeButton。注意：这里暂时传递空数组，实际数据应从父组件获取并传递 */}
+              <AgentModeButton
+                ToolbarButton={ToolbarButton}
+                agentTasks={agentTasks || []}
+                scrollToMessage={scrollToMessage} // 传递 scrollToMessage prop
               />
               <GenerateImageButton
                 model={model}

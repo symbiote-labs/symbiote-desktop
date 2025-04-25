@@ -143,61 +143,191 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     // knowledge 依赖已移除，因为它在 useMemo 中没有被使用
   ])
 
+  /**
+   * 知识库索引部分：解决LLM回复中未使用的知识库引用索引问题
+   */
   // Process content to make citation numbers clickable
   const processedContent = useMemo(() => {
-    if (
-      !(
-        message.metadata?.citations ||
-        message.metadata?.webSearch ||
-        message.metadata?.webSearchInfo ||
-        message.metadata?.annotations ||
-        message.metadata?.knowledge
-      )
-    ) {
-      return message.content
-    }
+    // 元数据字段列表，用于调试目的
+    // const metadataFields = ['citations', 'webSearch', 'webSearchInfo', 'annotations', 'knowledge']
 
+    // 即使没有元数据，也尝试处理引用标记（针对二次询问的回复）
+    // 这样可以确保在二次询问的回复中也能处理引用标记
     let content = message.content
 
-    const websearchResultsCitations = message?.metadata?.webSearch?.results?.map((result) => result.url) || []
-    const knowledgeResultsCitations = message?.metadata?.knowledge?.map((result) => result.sourceUrl) || []
+    // 预先计算citations数组
+    const websearchResults = message?.metadata?.webSearch?.results?.map((result) => result.url) || []
+    const knowledgeResults = message?.metadata?.knowledge?.map((result) => result.sourceUrl) || []
+    const citations = message?.metadata?.citations || [...websearchResults, ...knowledgeResults]
+    const webSearchLength = websearchResults.length // 计算 web search 结果的数量
 
-    const searchResultsCitations = [...websearchResultsCitations, ...knowledgeResultsCitations]
-
-    const citations = message?.metadata?.citations || searchResultsCitations
-
-    // Convert [n] format to superscript numbers and make them clickable
-    // Use <sup> tag for superscript and make it a link with citation data
+    // 优化正则表达式匹配
     if (message.metadata?.webSearch || message.metadata?.knowledge) {
-      // 修复引用bug，支持[[1]]和[1]两种格式
-      content = content.replace(/\[\[(\d+)\]\]|\[(\d+)\]/g, (match, num1, num2) => {
-        const num = num1 || num2
-        const index = parseInt(num) - 1
-        if (index >= 0 && index < citations.length) {
-          const link = citations[index]
-          const isWebLink = link && (link.startsWith('http://') || link.startsWith('https://'))
-          const citationData = link ? encodeHTML(JSON.stringify(citationsData.get(link) || { url: link })) : null
-          return link && isWebLink
-            ? `[<sup data-citation='${citationData}'>${num}</sup>](${link})`
-            : `<sup>${num}</sup>`
+      const usedOriginalIndexes: number[] = []
+      // 扩展正则表达式匹配，同时匹配[[1]]、[1]和纯数字[1][2]格式
+      const citationRegex = /\[\[(\d+)\]\]|\[(\d+)\]|\[(\d+)\]\[(\d+)\]/g
+
+      // 第一步: 识别有效的原始索引
+      for (const match of content.matchAll(citationRegex)) {
+        // 处理[1][2]格式或其他格式
+        const numStr = match[1] || match[2] || match[3]
+        if (!numStr) continue
+
+        const index = parseInt(numStr) - 1
+        if (index >= webSearchLength && index < citations.length && citations[index]) {
+          if (!usedOriginalIndexes.includes(index)) {
+            usedOriginalIndexes.push(index)
+          }
         }
-        return match
+      }
+      // 对使用的原始索引进行排序，以便后续查找新索引
+      usedOriginalIndexes.sort((a, b) => a - b)
+
+      // 创建原始索引到新索引的映射
+      const originalIndexToNewIndexMap = new Map<number, number>()
+      usedOriginalIndexes.forEach((originalIndex, newIndex) => {
+        originalIndexToNewIndexMap.set(originalIndex, newIndex)
       })
+
+      // 第二步: 替换并使用新的索引编号
+      content = content.replace(
+        citationRegex,
+        (
+          match,
+          num1,
+          num2,
+          num3
+          // 移除未使用的参数 num4
+        ) => {
+          // 处理[1][2]格式或其他格式
+          const numStr = num1 || num2 || num3
+          if (!numStr) return match
+
+          const originalIndex = parseInt(numStr) - 1
+
+          // 检查索引是否有效
+          if (originalIndex < 0 || originalIndex >= citations.length || !citations[originalIndex]) {
+            return match // 无效索引，返回原文
+          }
+
+          const link = citations[originalIndex]
+          const citation = { ...(citationsData.get(link) || { url: link }) }
+          if (citation.content) {
+            citation.content = citation.content.substring(0, 200)
+          }
+
+          const citationDataHtml = encodeHTML(JSON.stringify(citation))
+
+          // 检查是否是 *被使用的知识库* 引用
+          if (originalIndexToNewIndexMap.has(originalIndex)) {
+            const newIndex = originalIndexToNewIndexMap.get(originalIndex)!
+            const newCitationNum = webSearchLength + newIndex + 1 // 重新编号的知识库引用 (从websearch index+1开始)
+
+            const isWebLink = link.startsWith('http://') || link.startsWith('https://')
+            if (!isWebLink) {
+              // 知识库引用通常不是网页链接，只显示上标数字
+              return `<sup>${newCitationNum}</sup>`
+            } else {
+              // 如果知识库源是网页链接 (特殊情况)
+              console.log('Web knowledge citation:', { newCitationNum, link, citation })
+              return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${newCitationNum}</sup>`
+            }
+          }
+          // 检查是否是 *Web搜索* 引用
+          else if (originalIndex < webSearchLength) {
+            const citationNum = originalIndex + 1 // Web搜索引用保持原编号 (从1开始)
+            console.log('Web search citation:', { citationNum, link, citation })
+            return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${citationNum}</sup>`
+          }
+          // 其他情况 (如未使用的知识库引用)，返回原文
+          else {
+            return match
+          }
+        }
+      )
+
+      // 过滤掉未使用的知识索引
+      // 注意：由于我们不能在 useMemo 中修改外部变量，
+      // 这里我们只是计算哪些知识库引用是被使用的，但不修改原始数据
+      // 实际上，这个过滤操作可能需要在组件外部进行，或者使用 useRef 来存储过滤后的结果
+      //
+      // 以下代码被注释掉，因为它创建了一个未使用的变量
+      // const filteredKnowledge = message.metadata.knowledge?.filter((_, knowledgeIndex) =>
+      //   usedOriginalIndexes.includes(knowledgeIndex + webSearchLength)
+      // )
     } else {
-      // Handle other citation formats if necessary, potentially adjusting this logic
-      // The original else block seemed specific, ensure it covers necessary cases or adjust
-      content = content.replace(/\[<sup>(\d+)<\/sup>\]\(([^)]+)\)/g, (_, num, url) => {
-        const citationData = url ? encodeHTML(JSON.stringify(citationsData.get(url) || { url })) : null
-        return `[<sup data-citation='${citationData}'>${num}</sup>](${url})`
+      // 处理非 webSearch/knowledge 的情况
+      // 首先处理标准Markdown引用格式
+      const standardCitationRegex = /\[<sup>(\d+)<\/sup>\]\(([^)]+)\)/g
+      content = content.replace(standardCitationRegex, (_, num, url) => {
+        const citation = citationsData.get(url) || { url }
+        console.log('Standard citation format detected:', { num, url, citation })
+        // 使用直接的HTML结构，确保data-citation属性正确设置
+        return `<sup class="citation-marker" data-citation='${encodeHTML(JSON.stringify(citation))}'>${num}</sup>`
       })
+
+      // 然后处理纯数字引用格式 [1][2]
+      // 使用更宽松的正则表达式，匹配各种形式的引用标记
+      const simpleCitationRegex = /\[(\d+)\](?:\[(\d+)\])?|\[\[(\d+)\]\]/g
+      content = content.replace(
+        simpleCitationRegex,
+        (
+          match,
+          num1,
+          // 移除未使用的参数 num2
+          _unused,
+          num3
+        ) => {
+          const numStr = num1 || num3 // num1是[1]格式，num3是[[1]]格式
+          if (!numStr) return match
+
+          const index = parseInt(numStr) - 1
+
+          // 检查索引是否有效
+          if (index < 0 || index >= citations.length || !citations[index]) {
+            // 对于二次询问的回复，我们可能没有元数据，但仍然需要处理引用标记
+            // 创建一个通用的引用数据，使其可点击
+            const genericCitation = {
+              url: `#citation-${numStr}`,
+              title: `引用 ${numStr}`,
+              content: `这是对原始回复中引用 ${numStr} 的引用`
+            }
+            const citationDataHtml = encodeHTML(JSON.stringify(genericCitation))
+            console.log('Generic citation created:', genericCitation)
+
+            // 使用直接的HTML结构，确保data-citation属性正确设置
+            return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${numStr}</sup>`
+
+            // 无效索引，返回原文
+            // return match
+          }
+
+          const link = citations[index]
+          const citation = { ...(citationsData.get(link) || { url: link }) }
+          // 确保URL存在
+          if (!citation.url) {
+            citation.url = link
+          }
+
+          if (citation.content) {
+            citation.content = citation.content.substring(0, 200)
+          }
+
+          const citationDataHtml = encodeHTML(JSON.stringify(citation))
+          console.log('Citation processed:', citation)
+          // 使用直接的HTML结构，确保data-citation属性正确设置
+          return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${numStr}</sup>`
+        }
+      )
     }
     return content
   }, [
     message.metadata?.citations,
     message.metadata?.webSearch,
     message.metadata?.knowledge,
-    message.metadata?.webSearchInfo,
-    message.metadata?.annotations,
+    // 移除不必要的依赖
+    // message.metadata?.webSearchInfo,
+    // message.metadata?.annotations,
     message.content,
     citationsData
   ])
@@ -578,6 +708,41 @@ try {
           .message-content-tools {
             margin-top: 5px; /* 进一步减少顶部间距 */
             margin-bottom: 2px; /* 进一步减少底部间距 */
+          }
+
+          /* 引用标记样式 */
+          sup[data-citation], .citation-marker {
+            color: var(--color-link);
+            cursor: pointer;
+            font-size: 0.75em;
+            line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+            top: -0.5em;
+            background-color: rgba(0, 123, 255, 0.1);
+            padding: 0 4px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+          }
+
+          sup[data-citation]:hover, .citation-marker:hover {
+            background-color: rgba(0, 123, 255, 0.2);
+            text-decoration: underline;
+          }
+
+          .citation-link {
+            color: var(--color-link);
+            cursor: pointer;
+          }
+
+          .highlight-citation {
+            animation: highlight-pulse 2s ease-in-out;
+          }
+
+          @keyframes highlight-pulse {
+            0% { background-color: rgba(255, 215, 0, 0.1); }
+            50% { background-color: rgba(255, 215, 0, 0.5); }
+            100% { background-color: rgba(255, 215, 0, 0.1); }
           }
         `
       document.head.appendChild(styleElement)

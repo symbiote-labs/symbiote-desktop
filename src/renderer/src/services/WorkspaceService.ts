@@ -113,6 +113,7 @@ class WorkspaceService {
    * 创建工作区
    */
   public async createWorkspace(name: string, path: string): Promise<Workspace> {
+    console.log('WorkspaceService.createWorkspace: 创建工作区', name, path)
     const workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'> = {
       name,
       path
@@ -123,14 +124,21 @@ class WorkspaceService {
 
     // 获取新创建的工作区
     const workspaces = window.store.getState().workspace.workspaces
-    return workspaces[workspaces.length - 1]
+    const newWorkspace = workspaces[workspaces.length - 1]
+    console.log('WorkspaceService.createWorkspace: 工作区创建成功', newWorkspace)
+    return newWorkspace
   }
 
   /**
    * 设置当前工作区
    */
   public setCurrentWorkspace(workspaceId: string | null): void {
+    console.log('WorkspaceService.setCurrentWorkspace: 设置当前工作区', workspaceId)
     window.store.dispatch({ type: 'workspace/setCurrentWorkspace', payload: workspaceId })
+
+    // 验证设置是否成功
+    const currentId = window.store.getState().workspace.currentWorkspaceId
+    console.log('WorkspaceService.setCurrentWorkspace: 设置后的当前工作区ID', currentId)
   }
 
   /**

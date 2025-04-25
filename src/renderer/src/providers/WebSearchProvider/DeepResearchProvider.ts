@@ -21,6 +21,9 @@ interface AnalysisConfig {
   modelId?: string
   minOutputTokens?: number // 最小输出token数
   maxInputTokens?: number // 最大输入token数
+  enableLinkRelevanceFilter?: boolean // 启用链接相关性过滤
+  linkRelevanceModelId?: string // 链接相关性评估模型ID
+  linkRelevanceThreshold?: number // 链接相关性阈值，低于此值的链接将被过滤
 }
 
 // 使用从 types/index.ts 导入的 ResearchIteration 和 ResearchReport 类型
@@ -33,6 +36,9 @@ class DeepResearchProvider extends BaseWebSearchProvider {
   private deepSearchProvider: DeepSearchProvider
   private analysisConfig: AnalysisConfig
 
+  // 存储研究过程中打开的浏览器窗口ID
+  private searchWindowIds: string[] = []
+
   constructor(provider: WebSearchProvider) {
     super(provider)
     this.deepSearchProvider = new DeepSearchProvider(provider)
@@ -42,7 +48,9 @@ class DeepResearchProvider extends BaseWebSearchProvider {
       minConfidenceScore: 0.6, // 最小可信度分数
       autoSummary: true, // 自动生成摘要
       minOutputTokens: 20000, // 最小输出20,000 tokens
-      maxInputTokens: 200000 // 最大输入200,000 tokens
+      maxInputTokens: 200000, // 最大输入200,000 tokens
+      enableLinkRelevanceFilter: true, // 默认启用链接相关性过滤
+      linkRelevanceThreshold: 0.6 // 默认链接相关性阈值
     }
   }
 
@@ -189,7 +197,20 @@ class DeepResearchProvider extends BaseWebSearchProvider {
       const searchResponse = await this.deepSearchProvider.search(currentQuery, webSearchState, currentCategory)
 
       // 限制结果数量
-      const limitedResults = searchResponse.results.slice(0, this.analysisConfig.maxResultsPerQuery)
+      let limitedResults = searchResponse.results.slice(0, this.analysisConfig.maxResultsPerQuery)
+
+      // 如果启用了链接相关性过滤，则评估链接相关性并过滤不相关的链接
+      if (this.analysisConfig.enableLinkRelevanceFilter) {
+        if (progressCallback) {
+          progressCallback(
+            iterationCount + 1,
+            `正在评估 ${limitedResults.length} 个链接的相关性...`,
+            Math.round((iterationCount / this.analysisConfig.maxIterations) * 100)
+          )
+        }
+        limitedResults = await this.filterRelevantLinks(limitedResults, query)
+        console.log(`[DeepResearch] 过滤后剩余 ${limitedResults.length} 个相关链接`)
+      }
 
       // 2. 分析搜索结果
       if (progressCallback) {
@@ -269,6 +290,10 @@ class DeepResearchProvider extends BaseWebSearchProvider {
     }
 
     console.log(`[DeepResearch] 完成深度研究，共 ${report.iterations.length} 次迭代`)
+
+    // 清理所有打开的浏览器窗口
+    await this.cleanupSearchWindows()
+
     return report
   }
 
@@ -770,6 +795,149 @@ ${allAnalyses}`
     this.analysisConfig = {
       ...this.analysisConfig,
       ...config
+    }
+  }
+
+  /**
+   * 清理所有打开的搜索窗口
+   */
+  private async cleanupSearchWindows(): Promise<void> {
+    console.log(`[DeepResearch] 开始清理 ${this.searchWindowIds.length} 个搜索窗口`)
+
+    const closePromises = this.searchWindowIds.map(async (windowId) => {
+      try {
+        await window.api.searchService.closeSearchWindow(windowId)
+        console.log(`[DeepResearch] 已关闭搜索窗口: ${windowId}`)
+      } catch (error) {
+        console.error(`[DeepResearch] 关闭搜索窗口 ${windowId} 失败:`, error)
+      }
+    })
+
+    await Promise.all(closePromises)
+
+    // 清空窗口ID列表
+    this.searchWindowIds = []
+    console.log('[DeepResearch] 所有搜索窗口已清理')
+  }
+
+  /**
+   * 评估链接相关性并过滤不相关的链接
+   * @param results 搜索结果
+   * @param query 原始查询
+   * @returns 过滤后的相关链接
+   */
+  private async filterRelevantLinks(results: WebSearchResult[], query: string): Promise<WebSearchResult[]> {
+    if (results.length === 0) {
+      return results
+    }
+
+    try {
+      console.log(`[DeepResearch] 开始评估 ${results.length} 个链接的相关性`)
+
+      // 准备批量评估
+      const batchPromises: Promise<WebSearchResult & { relevanceScore: number }>[] = results.map(
+        async (result): Promise<WebSearchResult & { relevanceScore: number }> => {
+          try {
+            // 提取链接的基本信息
+            const { title, url, content } = result
+            // 提取内容的前300个字符作为摘要
+            const summary = content.length > 300 ? content.substring(0, 300) + '...' : content
+
+            // 使用模型评估相关性
+            const relevanceScore = await this.evaluateLinkRelevance(title, summary, url, query)
+
+            return {
+              ...result,
+              relevanceScore
+            }
+          } catch (error) {
+            console.error(`[DeepResearch] 评估链接相关性失败:`, error)
+            // 如果评估失败，给一个默认的低分
+            return {
+              ...result,
+              relevanceScore: 0.1
+            }
+          }
+        }
+      )
+
+      // 等待所有评估完成
+      const scoredResults = await Promise.all(batchPromises)
+
+      // 根据相关性阈值过滤结果
+      const threshold = this.analysisConfig.linkRelevanceThreshold || 0.6
+      const filteredResults = scoredResults.filter((result) => result.relevanceScore >= threshold)
+
+      // 按相关性得分排序
+      filteredResults.sort((a, b) => b.relevanceScore - a.relevanceScore)
+
+      console.log(
+        `[DeepResearch] 链接相关性评估完成，${filteredResults.length}/${results.length} 个链接通过阈值 ${threshold}`
+      )
+
+      return filteredResults
+    } catch (error) {
+      console.error('[DeepResearch] 过滤相关链接时出错:', error)
+      return results // 出错时返回原始结果
+    }
+  }
+
+  /**
+   * 评估单个链接的相关性
+   * @param title 链接标题
+   * @param summary 内容摘要
+   * @param url 链接URL
+   * @param query 原始查询
+   * @returns 相关性得分 (0-1)
+   */
+  private async evaluateLinkRelevance(title: string, summary: string, url: string, query: string): Promise<number> {
+    try {
+      // 使用模型评估相关性
+      const { fetchGenerate } = await import('@renderer/services/ApiService')
+
+      const prompt = `你是一个专业的链接相关性评估专家，负责判断搜索结果与用户查询的相关程度。
+
+请评估以下链接与用户查询"${query}"的相关性。
+
+链接信息:
+标题: ${title}
+URL: ${url}
+内容摘要: ${summary}
+
+请根据以下标准评估相关性:
+1. 链接内容是否直接回答或讨论了用户的查询
+2. 链接内容是否提供了与查询相关的有用信息
+3. 链接内容的专业性和权威性
+4. 链接内容的时效性和准确性
+
+请给出0到1之间的相关性评分，其中:
+- 0.9-1.0: 极高相关，完全匹配用户查询需求
+- 0.7-0.9: 高度相关，提供了大量相关信息
+- 0.5-0.7: 中等相关，有一些相关信息
+- 0.3-0.5: 低相关，仅有少量相关信息
+- 0.0-0.3: 不相关，与用户查询无关
+
+只返回一个0到1之间的数字作为相关性评分，不要添加任何解释或其他文本。`
+
+      const result = await fetchGenerate({
+        prompt,
+        content: ' ', // 确保内容不为空
+        modelId: this.analysisConfig.linkRelevanceModelId || this.analysisConfig.modelId // 优先使用专门的链接相关性评估模型
+      })
+
+      // 解析结果，提取数字
+      const score = parseFloat(result.trim())
+
+      // 验证得分是否有效
+      if (isNaN(score) || score < 0 || score > 1) {
+        console.warn(`[DeepResearch] 无效的相关性评分: ${result}，使用默认值0.5`)
+        return 0.5 // 默认中等相关性
+      }
+
+      return score
+    } catch (error) {
+      console.error('[DeepResearch] 评估链接相关性失败:', error)
+      return 0.5 // 出错时返回默认中等相关性
     }
   }
 }

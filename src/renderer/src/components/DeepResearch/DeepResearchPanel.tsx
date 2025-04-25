@@ -186,7 +186,7 @@ const DeepResearchPanel: React.FC = () => {
       const deepResearchProvider = new DeepResearchProvider(provider)
       deepResearchProvider.setAnalysisConfig({
         maxIterations,
-        modelId: websearch?.deepResearchConfig?.modelId
+        ...(websearch?.deepResearchConfig?.modelId ? { modelId: websearch.deepResearchConfig.modelId } : {})
       })
 
       // 确保 websearch 存在，如果不存在则创建一个空对象

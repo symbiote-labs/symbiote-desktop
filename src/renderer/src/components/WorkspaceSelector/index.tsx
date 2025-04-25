@@ -70,7 +70,10 @@ const WorkspaceSelector: React.FC = () => {
           console.log('创建新工作区:', workspaceName, folderPath)
           const workspaceName2 = workspaceName || folderPath.split(/[\\/]/).pop() || 'Workspace'
           console.log('工作区名称:', workspaceName2)
-          await WorkspaceService.createWorkspace(workspaceName2, folderPath)
+          const newWorkspace = await WorkspaceService.createWorkspace(workspaceName2, folderPath)
+          // 将新创建的工作区设置为当前工作区
+          console.log('设置新工作区为当前工作区:', newWorkspace.id)
+          WorkspaceService.setCurrentWorkspace(newWorkspace.id)
           message.success(t('workspace.created'))
         }
         setIsModalVisible(false)

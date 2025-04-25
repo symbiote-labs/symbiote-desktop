@@ -108,7 +108,9 @@ const api = {
   window: {
     setMinimumSize: (width: number, height: number) =>
       ipcRenderer.invoke(IpcChannel.Windows_SetMinimumSize, width, height),
-    resetMinimumSize: () => ipcRenderer.invoke(IpcChannel.Windows_ResetMinimumSize)
+    resetMinimumSize: () => ipcRenderer.invoke(IpcChannel.Windows_ResetMinimumSize),
+    minimize: () => ipcRenderer.invoke(IpcChannel.Windows_Minimize),
+    close: () => ipcRenderer.invoke(IpcChannel.Windows_Close)
   },
   gemini: {
     uploadFile: (file: FileType, apiKey: string) => ipcRenderer.invoke(IpcChannel.Gemini_UploadFile, file, apiKey),

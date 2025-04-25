@@ -17,6 +17,7 @@ import BackupManager from './services/BackupManager'
 import { codeExecutorService } from './services/CodeExecutorService'
 import { configManager } from './services/ConfigManager'
 import CopilotService from './services/CopilotService'
+import { deepResearchService } from './services/DeepResearchService'
 import { ExportService } from './services/ExportService'
 import FileService from './services/FileService'
 import FileStorage from './services/FileStorage'
@@ -160,6 +161,38 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     }
   })
 
+  // 清除浏览器数据
+  ipcMain.handle('browser:clear-data', async () => {
+    const browserSession = session.fromPartition('persist:browser')
+
+    try {
+      // 清除所有类型的存储数据
+      await browserSession.clearStorageData({
+        storages: ['cookies', 'filesystem', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage'],
+        quotas: ['temporary', 'syncable']
+      })
+
+      // 清除HTTP缓存
+      await browserSession.clearCache()
+
+      // 清除主机解析器缓存
+      await browserSession.clearHostResolverCache()
+
+      // 清除授权缓存
+      await browserSession.clearAuthCache()
+
+      // 清除代码缓存
+      if (typeof browserSession.clearCodeCaches === 'function') {
+        await browserSession.clearCodeCaches({ urls: ['*'] })
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      log.error('Failed to clear browser data:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
   // check for update
   ipcMain.handle(IpcChannel.App_CheckForUpdate, async () => {
     const update = await appUpdater.autoUpdater.checkForUpdates()
@@ -173,6 +206,14 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // zip
   ipcMain.handle(IpcChannel.Zip_Compress, (_, text: string) => compress(text))
   ipcMain.handle(IpcChannel.Zip_Decompress, (_, text: Buffer) => decompress(text))
+
+  // system
+  ipcMain.handle(IpcChannel.System_GetDeviceType, () => {
+    if (isMac) return 'mac'
+    if (isWin) return 'windows'
+    return 'linux'
+  })
+  ipcMain.handle(IpcChannel.System_GetHostname, () => require('os').hostname())
 
   // backup
   ipcMain.handle(IpcChannel.Backup_Backup, backupManager.backup)
@@ -243,6 +284,21 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     const [width, height] = mainWindow?.getSize() ?? [1080, 600]
     if (width < 1080) {
       mainWindow?.setSize(1080, height)
+    }
+  })
+
+  // 添加窗口最小化和关闭处理程序
+  ipcMain.handle(IpcChannel.Windows_Minimize, () => {
+    const win = BrowserWindow.getFocusedWindow() || mainWindow
+    if (win) {
+      win.minimize()
+    }
+  })
+
+  ipcMain.handle(IpcChannel.Windows_Close, () => {
+    const win = BrowserWindow.getFocusedWindow() || mainWindow
+    if (win) {
+      win.close()
     }
   })
 
@@ -373,6 +429,19 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // PDF服务
   ipcMain.handle(IpcChannel.PDF_SplitPDF, PDFService.splitPDF.bind(PDFService))
   ipcMain.handle(IpcChannel.PDF_GetPageCount, PDFService.getPDFPageCount.bind(PDFService))
+
+  // 深度研究服务
+  deepResearchService.setMainWindow(mainWindow)
+  // 使用 IpcChannel 枚举代替硬编码字符串
+  // 注意：DeepResearch_Progress 和 DeepResearch_Complete 事件是由 DeepResearchService 发送到渲染进程的
+  // 不需要在主进程中注册处理程序
+  // 注册深度研究的处理程序
+  ipcMain.handle('deep-research:start', async (_, query: string, websearch: any) => {
+    return await deepResearchService.startResearch(query, websearch)
+  })
+  ipcMain.handle('deep-research:cancel', () => {
+    deepResearchService.cancelResearch()
+  })
 
   // 工作区服务
   const workspaceService = new WorkspaceService()

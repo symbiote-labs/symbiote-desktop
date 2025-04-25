@@ -20,6 +20,24 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ children, citation })
     hostname = citation.url
   }
 
+  // 添加点击处理函数
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log('Citation clicked:', citation)
+
+    // 如果是锚点链接，滚动到页面对应位置
+    if (citation.url.startsWith('#')) {
+      const element = document.querySelector(citation.url)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    } else {
+      // 否则打开外部链接
+      window.open(citation.url, '_blank')
+    }
+  }
+
   // 自定义悬浮卡片内容
   const tooltipContent = (
     <TooltipContentWrapper>
@@ -32,6 +50,23 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ children, citation })
     </TooltipContentWrapper>
   )
 
+  // 克隆子元素并添加点击事件
+  const childrenWithProps = React.Children.map(children, (child) => {
+    // 确保是React元素
+    if (React.isValidElement(child)) {
+      // 使用类型断言来处理 props 类型问题
+      return React.cloneElement(child, {
+        onClick: handleClick,
+        style: {
+          ...(child.props as any).style,
+          cursor: 'pointer',
+          color: 'var(--color-link)'
+        }
+      } as React.HTMLAttributes<HTMLElement>)
+    }
+    return child
+  })
+
   return (
     <StyledTooltip
       title={tooltipContent}
@@ -43,7 +78,7 @@ const CitationTooltip: React.FC<CitationTooltipProps> = ({ children, citation })
         padding: 0,
         borderRadius: '8px'
       }}>
-      {children}
+      <ClickableSpan onClick={handleClick}>{childrenWithProps}</ClickableSpan>
     </StyledTooltip>
   )
 }
@@ -105,6 +140,21 @@ const TooltipFooter = styled.div`
 
   &:hover {
     text-decoration: underline;
+  }
+`
+
+const ClickableSpan = styled.span`
+  cursor: pointer;
+  display: inline-block;
+  color: var(--color-link);
+
+  sup {
+    color: var(--color-link);
+    font-size: 0.75em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+    top: -0.5em;
   }
 `
 

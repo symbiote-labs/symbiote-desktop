@@ -1,42 +1,42 @@
 // electron.vite.config.ts
-import react from "@vitejs/plugin-react";
-import { defineConfig, externalizeDepsPlugin } from "electron-vite";
-import { resolve } from "path";
-import { visualizer } from "rollup-plugin-visualizer";
+import react from '@vitejs/plugin-react'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { resolve } from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
 var visualizerPlugin = (type) => {
-  return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : [];
-};
+  return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : []
+}
 var electron_vite_config_default = defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
         exclude: [
-          "@cherrystudio/embedjs",
-          "@cherrystudio/embedjs-openai",
-          "@cherrystudio/embedjs-loader-web",
-          "@cherrystudio/embedjs-loader-markdown",
-          "@cherrystudio/embedjs-loader-msoffice",
-          "@cherrystudio/embedjs-loader-xml",
-          "@cherrystudio/embedjs-loader-pdf",
-          "@cherrystudio/embedjs-loader-sitemap",
-          "@cherrystudio/embedjs-libsql",
-          "@cherrystudio/embedjs-loader-image",
-          "p-queue",
-          "webdav"
+          '@cherrystudio/embedjs',
+          '@cherrystudio/embedjs-openai',
+          '@cherrystudio/embedjs-loader-web',
+          '@cherrystudio/embedjs-loader-markdown',
+          '@cherrystudio/embedjs-loader-msoffice',
+          '@cherrystudio/embedjs-loader-xml',
+          '@cherrystudio/embedjs-loader-pdf',
+          '@cherrystudio/embedjs-loader-sitemap',
+          '@cherrystudio/embedjs-libsql',
+          '@cherrystudio/embedjs-loader-image',
+          'p-queue',
+          'webdav'
         ]
       }),
-      ...visualizerPlugin("main")
+      ...visualizerPlugin('main')
     ],
     resolve: {
       alias: {
-        "@main": resolve("src/main"),
-        "@types": resolve("src/renderer/src/types"),
-        "@shared": resolve("packages/shared")
+        '@main': resolve('src/main'),
+        '@types': resolve('src/renderer/src/types'),
+        '@shared': resolve('packages/shared')
       }
     },
     build: {
       rollupOptions: {
-        external: ["@libsql/client"]
+        external: ['@libsql/client']
       }
     }
   },
@@ -44,7 +44,7 @@ var electron_vite_config_default = defineConfig({
     plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
-        "@shared": resolve("packages/shared")
+        '@shared': resolve('packages/shared')
       }
     }
   },
@@ -54,7 +54,7 @@ var electron_vite_config_default = defineConfig({
         babel: {
           plugins: [
             [
-              "styled-components",
+              'styled-components',
               {
                 displayName: true,
                 // 开发环境下启用组件名称
@@ -69,12 +69,12 @@ var electron_vite_config_default = defineConfig({
           ]
         }
       }),
-      ...visualizerPlugin("renderer")
+      ...visualizerPlugin('renderer')
     ],
     resolve: {
       alias: {
-        "@renderer": resolve("src/renderer/src"),
-        "@shared": resolve("packages/shared")
+        '@renderer': resolve('src/renderer/src'),
+        '@shared': resolve('packages/shared')
       }
     },
     optimizeDeps: {
@@ -83,7 +83,7 @@ var electron_vite_config_default = defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve("src/renderer/index.html")
+          index: resolve('src/renderer/index.html')
         }
       },
       // 复制ASR服务器文件
@@ -92,7 +92,5 @@ var electron_vite_config_default = defineConfig({
       copyPublicDir: true
     }
   }
-});
-export {
-  electron_vite_config_default as default
-};
+})
+export { electron_vite_config_default as default }

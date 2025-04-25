@@ -29,7 +29,7 @@ function interleaveUserAndAssistantMessages(messages: ChatCompletionMessageParam
   for (let i = 0; i < messages.length; i++) {
     const currentMessage = { ...messages[i] }
 
-    if (i > 0 && currentMessage.role === messages[i-1].role) {
+    if (i > 0 && currentMessage.role === messages[i - 1].role) {
       // insert an empty message with the opposite role in between
       const emptyMessageRole = currentMessage.role === 'user' ? 'assistant' : 'user'
       processedMessages.push({

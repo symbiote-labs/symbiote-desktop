@@ -18,7 +18,23 @@ import {
 import { SidebarIcon } from '@renderer/store/settings'
 import { ThemeMode, TranslateLanguageVarious } from '@renderer/types'
 
-export function useSettings() {
+export function useSettings(): SettingsState & {
+  setSendMessageShortcut: (shortcut: SendMessageShortcut) => void
+  setLaunch: (isLaunchOnBoot: boolean | undefined, isLaunchToTray?: boolean | undefined) => void
+  setTray: (isShowTray: boolean | undefined, isTrayOnClose?: boolean | undefined) => void
+  setTheme: (theme: ThemeMode) => void
+  setWindowStyle: (windowStyle: 'transparent' | 'opaque') => void
+  setTargetLanguage: (targetLanguage: TranslateLanguageVarious) => void
+  setTopicPosition: (topicPosition: 'left' | 'right') => void
+  updateSidebarIcons: (icons: { visible: SidebarIcon[]; disabled: SidebarIcon[] }) => void
+  updateSidebarVisibleIcons: (icons: SidebarIcon[]) => void
+  updateSidebarDisabledIcons: (icons: SidebarIcon[]) => void
+  setAssistantIconType: (assistantIconType: AssistantIconType) => void
+  showAgentTaskList: boolean
+  agentAutoExecutionCount: number
+  setShowAgentTaskList: (show: boolean) => void
+  setAgentAutoExecutionCount: (count: number) => void
+} {
   const settings = useAppSelector((state) => state.settings)
   const dispatch = useAppDispatch()
 
@@ -74,6 +90,21 @@ export function useSettings() {
     },
     setAssistantIconType(assistantIconType: AssistantIconType) {
       dispatch(setAssistantIconType(assistantIconType))
+    },
+    // 添加 showAgentTaskList 和 agentAutoExecutionCount 属性
+    showAgentTaskList: settings.showAgentTaskList, // 使用 Redux store 中的值
+    agentAutoExecutionCount: settings.agentAutoExecutionCount, // 使用 Redux store 中的值
+
+    // 添加设置 Agent 任务列表显示状态的函数
+    setShowAgentTaskList(show: boolean) {
+      const { setShowAgentTaskList } = require('@renderer/store/settings')
+      dispatch(setShowAgentTaskList(show))
+    },
+
+    // 添加设置 Agent 自动执行次数的函数
+    setAgentAutoExecutionCount(count: number) {
+      const { setAgentAutoExecutionCount } = require('@renderer/store/settings')
+      dispatch(setAgentAutoExecutionCount(count))
     }
   }
 }

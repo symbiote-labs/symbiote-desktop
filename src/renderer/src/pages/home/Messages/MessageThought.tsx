@@ -29,10 +29,6 @@ const MessageThought: FC<Props> = ({ message }) => {
     if (!isThinking && thoughtAutoCollapse) setActiveKey('')
   }, [isThinking, thoughtAutoCollapse])
 
-  if (!message.reasoning_content) {
-    return null
-  }
-
   // 使用 useCallback 记忆化 copyThought 函数，避免不必要的重新创建
   const copyThought = useCallback(() => {
     if (message.reasoning_content) {
@@ -83,6 +79,11 @@ const MessageThought: FC<Props> = ({ message }) => {
     ],
     [isThinking, isPaused, t, thinkingTimeSeconds, copied, copyThought, fontFamily, fontSize, message.reasoning_content]
   )
+
+  // 如果没有思考内容，不渲染任何内容
+  if (!message.reasoning_content) {
+    return null
+  }
 
   return (
     <CollapseContainer

@@ -1,7 +1,7 @@
+import { createSelector } from '@reduxjs/toolkit'
 import { useMemoryService } from '@renderer/services/MemoryService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import store from '@renderer/store'
-import { createSelector } from '@reduxjs/toolkit'
 import {
   clearShortMemories,
   loadLongTermMemoryData,
@@ -44,17 +44,12 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
   const analyzeModel = useAppSelector((state) => state.memory?.analyzeModel || null)
   const shortMemoryActive = useAppSelector((state) => state.memory?.shortMemoryActive || false)
 
-  // 创建记忆化选择器
-  const selectCurrentTopicId = createSelector(
-    [(state) => state.messages?.currentTopic?.id],
-    (topicId) => topicId
-  )
+  // 直接从 Redux 获取当前话题 ID，不使用可能导致警告的选择器
+  const currentTopic = useAppSelector((state) => state.messages?.currentTopic?.id)
 
+  // 创建记忆化选择器，只保留有实际转换逻辑的选择器
   const selectMessagesForTopic = createSelector(
-    [
-      (state) => state.messages?.messagesByTopic,
-      (_state, topicId) => topicId
-    ],
+    [(state) => state.messages?.messagesByTopic, (_state, topicId) => topicId],
     (messagesByTopic, topicId) => {
       if (!topicId || !messagesByTopic) {
         return []
@@ -63,8 +58,7 @@ const MemoryProvider: FC<MemoryProviderProps> = ({ children }) => {
     }
   )
 
-  // 获取当前对话
-  const currentTopic = useAppSelector(selectCurrentTopicId)
+  // 获取当前话题的消息
   const messages = useAppSelector((state) => selectMessagesForTopic(state, currentTopic))
 
   // 存储上一次的话题ID

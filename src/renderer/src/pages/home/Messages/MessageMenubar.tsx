@@ -10,9 +10,10 @@ import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessag
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
 import { translateText } from '@renderer/services/TranslateService'
-import { RootState } from '@renderer/store'
+import store, { RootState, useAppDispatch } from '@renderer/store'
 import type { Message, Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
+import { updateMessages } from '@renderer/store/messages'
 import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL, removeTrailingDoubleSpaces } from '@renderer/utils'
 import {
   exportMarkdownToJoplin,
@@ -66,6 +67,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
   const assistantModel = assistant?.model
+  const dispatch = useAppDispatch()
   const { editMessage, setStreamMessage, deleteMessage, resendMessage, commitStreamMessage, clearStreamMessage } =
     useMessageOperations(topic)
   const loading = useTopicLoading(topic)
@@ -130,8 +132,11 @@ const MessageMenubar: FC<Props> = (props) => {
       textToEdit = processedMessage.content
     }
 
-    const editedText = await TextEditPopup.show({
+    const result = await TextEditPopup.show({
       text: textToEdit,
+      messageId: message.id,
+      topicId: topic.id,
+      index: index,
       children: (props) => {
         const onPress = () => {
           props.onOk?.()
@@ -147,7 +152,66 @@ const MessageMenubar: FC<Props> = (props) => {
       }
     })
 
-    if (editedText && editedText !== textToEdit) {
+    // 检查是否是对象类型的结果（包含回档信息）
+    const editedText = typeof result === 'object' && result !== null ? result.text : result
+
+    // 处理一键回档功能
+    if (typeof result === 'object' && result !== null && result.rollback === true) {
+      // 获取当前消息在话题中的索引
+      const messages = store.getState().messages.messagesByTopic[topic.id] || []
+      const currentIndex = messages.findIndex(m => m.id === message.id)
+
+      if (currentIndex !== -1 && currentIndex < messages.length - 1) {
+        // 获取当前消息之后的所有消息
+        const messagesToDelete = messages.slice(currentIndex + 1)
+
+        // 确认是否有消息需要删除
+        if (messagesToDelete.length > 0) {
+          // 创建新的消息数组，只包含当前消息及之前的消息
+          const newMessages = messages.slice(0, currentIndex + 1)
+
+          // 更新消息内容
+          if (editedText && editedText !== textToEdit) {
+            // 解析编辑后的文本，提取图片 URL
+            const imageRegex = /!\[image-\d+\]\((.*?)\)/g
+            const imageUrls: string[] = []
+            let match: RegExpExecArray | null
+            let content = editedText
+
+            while ((match = imageRegex.exec(editedText)) !== null) {
+              imageUrls.push(match[1])
+              content = content.replace(match[0], '')
+            }
+
+            // 更新当前消息内容
+            newMessages[currentIndex] = {
+              ...newMessages[currentIndex],
+              content: content.trim(),
+              metadata: {
+                ...message.metadata,
+                generateImage:
+                  imageUrls.length > 0
+                    ? {
+                        type: 'url',
+                        images: imageUrls
+                      }
+                    : undefined
+              }
+            }
+          }
+
+          // 更新Redux store中的消息
+          await dispatch(updateMessages(topic, newMessages))
+
+          // 显示成功提示
+          window.message.success({ content: '一键回档成功，已删除后续消息', key: 'rollback-success' })
+        } else {
+          window.message.info({ content: '没有后续消息需要删除', key: 'rollback-info' })
+        }
+      }
+    }
+    // 处理普通编辑功能
+    else if (editedText && editedText !== textToEdit) {
       // 解析编辑后的文本，提取图片 URL
       const imageRegex = /!\[image-\d+\]\((.*?)\)/g
       const imageUrls: string[] = []
@@ -190,7 +254,7 @@ const MessageMenubar: FC<Props> = (props) => {
           }
         })
     }
-  }, [message, editMessage, handleResendUserMessage, t])
+  }, [message, editMessage, handleResendUserMessage, t, topic, index, dispatch])
 
   const handleTranslate = useCallback(
     async (language: string) => {

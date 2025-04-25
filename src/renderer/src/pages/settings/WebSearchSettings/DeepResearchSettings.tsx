@@ -32,19 +32,31 @@ const DeepResearchSettings: FC = () => {
     enableQueryOptimization: true
   }
 
-  // 当前选择的模型
+  // 当前选择的主模型
   const [selectedModel, setSelectedModel] = useState<Model | null>(null)
+  // 当前选择的链接相关性评估模型
+  const [linkRelevanceModel, setLinkRelevanceModel] = useState<Model | null>(null)
 
   // 初始化时，如果有保存的模型ID，则加载对应的模型
   useEffect(() => {
-    if (deepResearchConfig.modelId) {
-      const allModels = providers.flatMap((p) => p.models)
+    const allModels = providers.flatMap((p) => p.models)
+
+    // 加载主模型
+    if (deepResearchConfig?.modelId) {
       const model = allModels.find((m) => getModelUniqId(m) === deepResearchConfig.modelId)
       if (model) {
         setSelectedModel(model)
       }
     }
-  }, [deepResearchConfig.modelId, providers])
+
+    // 加载链接相关性评估模型
+    if (deepResearchConfig?.linkRelevanceModelId) {
+      const model = allModels.find((m) => getModelUniqId(m) === deepResearchConfig.linkRelevanceModelId)
+      if (model) {
+        setLinkRelevanceModel(model)
+      }
+    }
+  }, [deepResearchConfig?.modelId, deepResearchConfig?.linkRelevanceModelId, providers])
 
   const handleMaxIterationsChange = (value: number | null) => {
     if (value !== null) {
@@ -68,6 +80,17 @@ const DeepResearchSettings: FC = () => {
     }
   }
 
+  const handleMaxReportLinksChange = (value: number | null) => {
+    if (value !== null) {
+      dispatch(
+        setDeepResearchConfig({
+          ...deepResearchConfig,
+          maxReportLinks: value
+        })
+      )
+    }
+  }
+
   const handleAutoSummaryChange = (checked: boolean) => {
     dispatch(
       setDeepResearchConfig({
@@ -86,6 +109,26 @@ const DeepResearchSettings: FC = () => {
     )
   }
 
+  const handleLinkRelevanceFilterChange = (checked: boolean) => {
+    dispatch(
+      setDeepResearchConfig({
+        ...deepResearchConfig,
+        enableLinkRelevanceFilter: checked
+      })
+    )
+  }
+
+  const handleLinkRelevanceThresholdChange = (value: number | null) => {
+    if (value !== null) {
+      dispatch(
+        setDeepResearchConfig({
+          ...deepResearchConfig,
+          linkRelevanceThreshold: value
+        })
+      )
+    }
+  }
+
   const handleOpenDeepResearch = () => {
     navigate('/deepresearch')
   }
@@ -98,6 +141,19 @@ const DeepResearchSettings: FC = () => {
         setDeepResearchConfig({
           ...deepResearchConfig,
           modelId: getModelUniqId(model)
+        })
+      )
+    }
+  }
+
+  const handleSelectLinkRelevanceModel = async () => {
+    const model = await SelectModelPopup.show({ model: linkRelevanceModel || undefined })
+    if (model) {
+      setLinkRelevanceModel(model)
+      dispatch(
+        setDeepResearchConfig({
+          ...deepResearchConfig,
+          linkRelevanceModelId: getModelUniqId(model)
         })
       )
     }
@@ -151,6 +207,19 @@ const DeepResearchSettings: FC = () => {
         />
       </SettingRow>
 
+      {/* 新增：最终报告最大链接数 */}
+      <SettingRow>
+        <SettingRowTitle>
+          {t('settings.websearch.deep_research.max_report_links', '最终报告最大链接数')}
+        </SettingRowTitle>
+        <InputNumber
+          min={1}
+          max={50} // 可以根据需要调整最大值
+          value={deepResearchConfig.maxReportLinks}
+          onChange={handleMaxReportLinksChange}
+        />
+      </SettingRow>
+
       <SettingRow>
         <SettingRowTitle>{t('settings.websearch.deep_research.auto_summary')}</SettingRowTitle>
         <Switch checked={deepResearchConfig.autoSummary} onChange={handleAutoSummaryChange} />
@@ -167,6 +236,64 @@ const DeepResearchSettings: FC = () => {
           </SubDescription>
         </SettingRowTitle>
         <Switch checked={deepResearchConfig.enableQueryOptimization} onChange={handleQueryOptimizationChange} />
+      </SettingRow>
+
+      <SettingDivider />
+
+      <SettingRow>
+        <SettingRowTitle>
+          {t('settings.websearch.deep_research.enable_link_relevance_filter', '启用链接相关性过滤')}
+          <SubDescription>
+            {t(
+              'settings.websearch.deep_research.link_relevance_filter_desc',
+              '使用 AI 评估链接与研究问题的相关性，过滤掉不相关的链接'
+            )}
+          </SubDescription>
+        </SettingRowTitle>
+        <Switch checked={deepResearchConfig.enableLinkRelevanceFilter} onChange={handleLinkRelevanceFilterChange} />
+      </SettingRow>
+
+      {deepResearchConfig.enableLinkRelevanceFilter && (
+        <SettingRow>
+          <SettingRowTitle>
+            {t('settings.websearch.deep_research.link_relevance_threshold', '链接相关性阈值')}
+            <SubDescription>
+              {t(
+                'settings.websearch.deep_research.link_relevance_threshold_desc',
+                '相关性评分低于此值的链接将被过滤掉 (0-1)'
+              )}
+            </SubDescription>
+          </SettingRowTitle>
+          <InputNumber
+            min={0}
+            max={1}
+            step={0.1}
+            value={deepResearchConfig.linkRelevanceThreshold}
+            onChange={handleLinkRelevanceThresholdChange}
+          />
+        </SettingRow>
+      )}
+
+      <SettingRow>
+        <SettingRowTitle>
+          {t('settings.websearch.deep_research.link_relevance_model', '链接相关性评估模型')}
+          <SubDescription>
+            {t(
+              'settings.websearch.deep_research.link_relevance_model_desc',
+              '用于评估链接相关性的模型，如未选择则使用主模型'
+            )}
+          </SubDescription>
+        </SettingRowTitle>
+        <Button onClick={handleSelectLinkRelevanceModel}>
+          {linkRelevanceModel ? (
+            <Space>
+              <ModelAvatar model={linkRelevanceModel} size={20} />
+              <span>{linkRelevanceModel.name}</span>
+            </Space>
+          ) : (
+            t('settings.model.select_model', '选择模型')
+          )}
+        </Button>
       </SettingRow>
     </SettingGroup>
   )

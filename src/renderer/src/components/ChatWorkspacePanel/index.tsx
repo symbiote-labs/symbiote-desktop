@@ -1,14 +1,14 @@
-import { LeftOutlined } from '@ant-design/icons'
+import { CloseOutlined, DragOutlined, LeftOutlined } from '@ant-design/icons'
 import WorkspaceExplorer from '@renderer/components/WorkspaceExplorer'
 import WorkspaceFileViewer from '@renderer/components/WorkspaceFileViewer'
 import WorkspaceSelector from '@renderer/components/WorkspaceSelector'
-import { Button, Divider, Drawer, message } from 'antd'
+import { Button, Divider, Drawer, message, Typography } from 'antd'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 const WorkspaceDrawerContent = styled.div`
-  height: 100%;
+  height: calc(100% - 40px); /* 减去顶部栏的高度 */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -48,6 +48,35 @@ const BackButton = styled(Button)`
 
 const StyledDivider = styled(Divider)`
   margin: 0;
+`
+
+const DraggableHeader = styled.div`
+  height: 40px;
+  background-color: var(--color-background-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  cursor: move;
+  -webkit-app-region: drag;
+  user-select: none;
+  border-bottom: 1px solid var(--color-border);
+`
+
+const HeaderTitle = styled(Typography.Text)`
+  font-weight: 500;
+  font-size: 14px;
+`
+
+const DragHandle = styled.div`
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+`
+
+const CloseButton = styled(Button)`
+  margin-left: 8px;
+  -webkit-app-region: no-drag;
 `
 
 interface ChatWorkspacePanelProps {
@@ -105,7 +134,7 @@ const ChatWorkspacePanel: React.FC<ChatWorkspacePanelProps> = ({
 
   return (
     <Drawer
-      title={selectedFile ? t('workspace.fileViewer') : t('workspace.title')}
+      title={null} // 移除默认标题，使用自定义标题栏
       placement="right"
       width="50vw"
       onClose={() => {
@@ -114,11 +143,28 @@ const ChatWorkspacePanel: React.FC<ChatWorkspacePanelProps> = ({
       }}
       open={visible}
       styles={{
-        header: { marginTop: '40px' },
-        body: { padding: 0, height: 'calc(100% - 95px)', overflow: 'hidden' }
+        header: { display: 'none' }, // 隐藏默认标题栏
+        body: { padding: 0, height: '100%', overflow: 'hidden' }
       }}
       closable={false}
       destroyOnClose>
+      {/* 添加可拖动的顶部栏 */}
+      <DraggableHeader>
+        <HeaderTitle>{selectedFile ? t('workspace.fileViewer') : t('workspace.title')}</HeaderTitle>
+        <DragHandle>
+          <DragOutlined style={{ marginRight: 8 }} />
+          <CloseButton
+            type="text"
+            icon={<CloseOutlined />}
+            size="small"
+            onClick={() => {
+              onClose()
+              setSelectedFile(null)
+            }}
+          />
+        </DragHandle>
+      </DraggableHeader>
+
       {selectedFile ? (
         <>
           <FileViewerHeader>

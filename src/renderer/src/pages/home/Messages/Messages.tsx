@@ -19,7 +19,7 @@ import {
   runAsyncFunction
 } from '@renderer/utils'
 import { flatten, last, take } from 'lodash'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import BeatLoader from 'react-spinners/BeatLoader'
@@ -32,13 +32,24 @@ import NarrowLayout from './NarrowLayout'
 import Prompt from './Prompt'
 import TTSStopButton from './TTSStopButton'
 
+// 定义暴露给父组件的 ref 类型
+export interface MessagesRef {
+  scrollToMessage: (messageId: string) => void
+}
+
 interface MessagesProps {
   assistant: Assistant
   topic: Topic
   setActiveTopic: (topic: Topic) => void
 }
 
-const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic }) => {
+// 使用 React.forwardRef 转发 ref
+const Messages = ({
+  ref,
+  assistant,
+  topic,
+  setActiveTopic
+}: MessagesProps & { ref?: React.RefObject<MessagesRef | null> }) => {
   const { t } = useTranslation()
   const { showTopics, topicPosition, showAssistants, messageNavigation } = useSettings()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
@@ -194,6 +205,20 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistant, dispatch, scrollToBottom, topic, isProcessingContext])
 
+  // 添加滚动到指定消息的函数
+  const scrollToMessage = useCallback((messageId: string) => {
+    const messageElement = document.getElementById(`message-${messageId}`)
+    if (containerRef.current && messageElement) {
+      // 使用 scrollIntoView 使元素可见
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [])
+
+  // 暴露 scrollToMessage 函数给父组件
+  useImperativeHandle(ref, () => ({
+    scrollToMessage
+  }))
+
   useEffect(() => {
     runAsyncFunction(async () => {
       EventEmitter.emit(EVENT_NAMES.ESTIMATED_TOKEN_COUNT, {
@@ -240,6 +265,11 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     // 处理单条消息的函数
     const processMessage = (message: Message) => {
       if (!message) return
+
+      // 跳过隐藏的消息（系统消息）
+      if (message.isHidden) {
+        return
+      }
 
       // 跳过已处理的消息ID
       if (processedIds.has(message.id)) {
@@ -299,6 +329,79 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
     ))
   }, [displayMessages, topic, assistant.settings?.hideMessages])
 
+  // 优化的消息计算函数，使用Map代替多次数组查找，提高性能
+  const computeDisplayMessages = (messages: Message[], startIndex: number, displayCount: number) => {
+    // 使用缓存避免不必要的重复计算
+    const reversedMessages = [...messages].reverse()
+
+    // 如果剩余消息数量小于 displayCount，直接返回所有剩余消息
+    if (reversedMessages.length - startIndex <= displayCount) {
+      return reversedMessages.slice(startIndex)
+    }
+
+    const userIdSet = new Set() // 用户消息 id 集合
+    const assistantIdSet = new Set() // 助手消息 askId 集合
+    const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
+    const displayMessages: Message[] = []
+    const messageIdMap = new Map<string, boolean>() // 用于快速查找消息ID是否存在
+
+    // 处理单条消息的函数
+    const processMessage = (message: Message) => {
+      if (!message) return
+
+      // 跳过隐藏的消息（系统消息）
+      if (message.isHidden) {
+        return
+      }
+
+      // 跳过已处理的消息ID
+      if (processedIds.has(message.id)) {
+        return
+      }
+
+      processedIds.add(message.id) // 标记此消息ID为已处理
+
+      // 如果是工具调用相关消息，直接添加到显示列表中
+      if (message.metadata?.isToolResultQuery || message.metadata?.isToolResultResponse) {
+        displayMessages.push(message)
+        messageIdMap.set(message.id, true)
+        return
+      }
+
+      const idSet = message.role === 'user' ? userIdSet : assistantIdSet
+      const messageId = message.role === 'user' ? message.id : message.askId
+
+      if (!idSet.has(messageId)) {
+        idSet.add(messageId)
+        displayMessages.push(message)
+        messageIdMap.set(message.id, true)
+        return
+      }
+
+      // 使用Map进行O(1)复杂度的查找，替代O(n)复杂度的数组some方法
+      if (message.role === 'assistant' && !messageIdMap.has(message.id)) {
+        displayMessages.push(message)
+        messageIdMap.set(message.id, true)
+      }
+    }
+
+    // 使用批处理方式处理消息，每次处理一批，减少循环次数
+    const batchSize = Math.min(50, displayCount) // 每批处理的消息数量
+    let processedCount = 0
+
+    for (let i = startIndex; i < reversedMessages.length && userIdSet.size + assistantIdSet.size < displayCount; i++) {
+      processMessage(reversedMessages[i])
+      processedCount++
+
+      // 每处理一批消息，检查是否已满足显示数量要求
+      if (processedCount % batchSize === 0 && userIdSet.size + assistantIdSet.size >= displayCount) {
+        break
+      }
+    }
+
+    return displayMessages
+  }
+
   return (
     <Container
       id="messages"
@@ -338,79 +441,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
       <TTSStopButton />
     </Container>
   )
-}
-
-// 优化的消息计算函数，使用Map代替多次数组查找，提高性能
-const computeDisplayMessages = (messages: Message[], startIndex: number, displayCount: number) => {
-  // 使用缓存避免不必要的重复计算
-  const reversedMessages = [...messages].reverse()
-
-  // 如果剩余消息数量小于 displayCount，直接返回所有剩余消息
-  if (reversedMessages.length - startIndex <= displayCount) {
-    return reversedMessages.slice(startIndex)
-  }
-
-  const userIdSet = new Set() // 用户消息 id 集合
-  const assistantIdSet = new Set() // 助手消息 askId 集合
-  const processedIds = new Set<string>() // 用于跟踪已处理的消息ID
-  const displayMessages: Message[] = []
-  const messageIdMap = new Map<string, boolean>() // 用于快速查找消息ID是否存在
-
-  // 处理单条消息的函数
-  const processMessage = (message: Message) => {
-    if (!message) return
-
-    // 跳过隐藏的消息（系统消息）
-    if (message.isHidden) {
-      return
-    }
-
-    // 跳过已处理的消息ID
-    if (processedIds.has(message.id)) {
-      return
-    }
-
-    processedIds.add(message.id) // 标记此消息ID为已处理
-
-    // 如果是工具调用相关消息，直接添加到显示列表中
-    if (message.metadata?.isToolResultQuery || message.metadata?.isToolResultResponse) {
-      displayMessages.push(message)
-      messageIdMap.set(message.id, true)
-      return
-    }
-
-    const idSet = message.role === 'user' ? userIdSet : assistantIdSet
-    const messageId = message.role === 'user' ? message.id : message.askId
-
-    if (!idSet.has(messageId)) {
-      idSet.add(messageId)
-      displayMessages.push(message)
-      messageIdMap.set(message.id, true)
-      return
-    }
-
-    // 使用Map进行O(1)复杂度的查找，替代O(n)复杂度的数组some方法
-    if (message.role === 'assistant' && !messageIdMap.has(message.id)) {
-      displayMessages.push(message)
-      messageIdMap.set(message.id, true)
-    }
-  }
-
-  // 使用批处理方式处理消息，每次处理一批，减少循环次数
-  const batchSize = Math.min(50, displayCount) // 每批处理的消息数量
-  let processedCount = 0
-
-  for (let i = startIndex; i < reversedMessages.length && userIdSet.size + assistantIdSet.size < displayCount; i++) {
-    processMessage(reversedMessages[i])
-    processedCount++
-
-    // 每处理一批消息，检查是否已满足显示数量要求
-    if (processedCount % batchSize === 0 && userIdSet.size + assistantIdSet.size >= displayCount) {
-      break
-    }
-  }
-
-  return displayMessages
 }
 
 const LoaderContainer = styled.div<{ $loading: boolean }>`

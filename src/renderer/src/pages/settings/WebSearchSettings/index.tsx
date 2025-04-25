@@ -2,8 +2,8 @@ import { useTheme } from '@renderer/context/ThemeProvider'
 import { useDefaultWebSearchProvider, useWebSearchProviders } from '@renderer/hooks/useWebSearchProviders'
 import { WebSearchProvider } from '@renderer/types'
 import { hasObjectKey } from '@renderer/utils'
-import { Select } from 'antd'
-import { FC, useState } from 'react'
+import { Select, Spin } from 'antd'
+import React, { FC, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '..'
@@ -12,6 +12,9 @@ import BlacklistSettings from './BlacklistSettings'
 import DeepResearchSettings from './DeepResearchSettings'
 import DeepSearchSettings from './DeepSearchSettings'
 import WebSearchProviderSetting from './WebSearchProviderSetting'
+
+// 导入Jina搜索设置组件
+const JinaSearchSettings = React.lazy(() => import('./JinaSearchSettings'))
 
 const WebSearchSettings: FC = () => {
   const { providers } = useWebSearchProviders()
@@ -57,9 +60,18 @@ const WebSearchSettings: FC = () => {
           {selectedProvider && <WebSearchProviderSetting provider={selectedProvider} />}
         </SettingGroup>
       )}
+      {/* 根据选择的提供商显示特定设置 */}
+      {selectedProvider?.id === 'jina' && (
+        <SettingGroup theme={themeMode}>
+          <Suspense fallback={<Spin />}>
+            <JinaSearchSettings providerId="jina" />
+          </Suspense>
+        </SettingGroup>
+      )}
+
       <BasicSettings />
       <BlacklistSettings />
-      <DeepSearchSettings />
+      {selectedProvider?.id !== 'deep-search' && <DeepSearchSettings />}
       <DeepResearchSettings />
     </SettingContainer>
   )

@@ -88,6 +88,8 @@ export enum IpcChannel {
 
   Windows_ResetMinimumSize = 'window:reset-minimum-size',
   Windows_SetMinimumSize = 'window:set-minimum-size',
+  Windows_Minimize = 'window:minimize',
+  Windows_Close = 'window:close',
 
   SelectionMenu_Action = 'selection-menu:action',
 
@@ -188,6 +190,10 @@ export enum IpcChannel {
   // PDF
   PDF_SplitPDF = 'pdf:split-pdf',
   PDF_GetPageCount = 'pdf:get-page-count',
+
+  // Deep Research
+  DeepResearch_Complete = 'deep-research:complete',
+  DeepResearch_Progress = 'deep-research:progress',
 
   // MCP Rerun Updates (Main -> Renderer)
   Mcp_ToolRerunUpdate = 'mcp:tool-rerun-update'

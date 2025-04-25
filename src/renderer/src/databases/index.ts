@@ -1,5 +1,5 @@
-import { FileType, KnowledgeItem, QuickPhrase, Topic, TranslateHistory } from '@renderer/types'
 import { Workspace } from '@renderer/store/workspace'
+import { FileType, KnowledgeItem, QuickPhrase, Topic, TranslateHistory } from '@renderer/types'
 import { Dexie, type EntityTable } from 'dexie'
 
 import { upgradeToV5 } from './upgrades'

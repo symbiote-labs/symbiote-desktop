@@ -429,8 +429,8 @@ const McpSettings: React.FC<Props> = ({ server }) => {
           onValuesChange={() => setIsFormChanged(true)}
           style={{
             overflowY: 'auto',
-            width: 'calc(100% + 10px)',
-            paddingRight: '10px'
+            overflowX: 'hidden',
+            width: '100%'
           }}>
           <Form.Item name="name" label={t('settings.mcp.name')} rules={[{ required: true, message: '' }]}>
             <Input placeholder={t('common.name')} disabled={server.type === 'inMemory'} />
@@ -467,7 +467,7 @@ const McpSettings: React.FC<Props> = ({ server }) => {
                 <TextArea
                   rows={3}
                   placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
-                  style={{ fontFamily: 'monospace' }}
+                  style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
                 />
               </Form.Item>
             </>
@@ -485,7 +485,7 @@ const McpSettings: React.FC<Props> = ({ server }) => {
                 <TextArea
                   rows={3}
                   placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
-                  style={{ fontFamily: 'monospace' }}
+                  style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
                 />
               </Form.Item>
             </>

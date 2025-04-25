@@ -9,37 +9,39 @@ import dayjs from 'dayjs'
  * 提供网络搜索相关功能的服务类
  */
 class WebSearchService {
-  private initialized = false;
+  private initialized = false
 
   /**
    * 确保DeepSearch供应商存在于列表中
    * @private
    */
   private ensureDeepSearchProvider(): void {
-    if (this.initialized) return;
+    if (this.initialized) return
 
     try {
-      const state = store.getState();
-      if (!state || !state.websearch) return;
+      const state = store.getState()
+      if (!state || !state.websearch) return
 
-      const { providers } = state.websearch;
-      if (!providers) return;
+      const { providers } = state.websearch
+      if (!providers) return
 
-      const deepSearchExists = providers.some(provider => provider.id === 'deep-search');
+      const deepSearchExists = providers.some((provider) => provider.id === 'deep-search')
 
       if (!deepSearchExists) {
-        console.log('[WebSearchService] 添加DeepSearch供应商到列表');
-        store.dispatch(addWebSearchProvider({
-          id: 'deep-search',
-          name: 'DeepSearch (多引擎)',
-          description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
-          contentLimit: 10000
-        }));
+        console.log('[WebSearchService] 添加DeepSearch供应商到列表')
+        store.dispatch(
+          addWebSearchProvider({
+            id: 'deep-search',
+            name: 'DeepSearch (多引擎)',
+            description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
+            contentLimit: 10000
+          })
+        )
       }
 
-      this.initialized = true;
+      this.initialized = true
     } catch (error) {
-      console.error('[WebSearchService] 初始化DeepSearch失败:', error);
+      console.error('[WebSearchService] 初始化DeepSearch失败:', error)
     }
   }
 
@@ -50,7 +52,7 @@ class WebSearchService {
    */
   private getWebSearchState(): WebSearchState {
     // 确保DeepSearch供应商存在
-    this.ensureDeepSearchProvider();
+    this.ensureDeepSearchProvider()
     return store.getState().websearch
   }
 
@@ -191,7 +193,8 @@ class WebSearchService {
     }
 
     // 提取question标签内容
-    const questionMatch = questionText.match(/<question>([\s\S]*?)<\/question>/) || text.match(/<question>([\s\S]*?)<\/question>/)
+    const questionMatch =
+      questionText.match(/<question>([\s\S]*?)<\/question>/) || text.match(/<question>([\s\S]*?)<\/question>/)
     if (!questionMatch) {
       throw new Error('Missing required <question> tag')
     }

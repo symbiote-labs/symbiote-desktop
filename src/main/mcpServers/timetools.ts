@@ -1,11 +1,6 @@
 // src/main/mcpServers/timetools.ts
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError
-} from '@modelcontextprotocol/sdk/types.js'
+import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js'
 import Logger from 'electron-log'
 
 // 定义时间工具

@@ -11,7 +11,8 @@ const longTermMemoryDataPath = path.join(getConfigDir(), 'long-term-memory-data.
 
 export class MemoryFileService {
   constructor() {
-    this.registerIpcHandlers()
+    // 注册处理函数已移至ipc.ts文件中
+    // 这里不需要在构造函数中调用注册方法
   }
 
   async loadData() {
@@ -292,10 +293,8 @@ export class MemoryFileService {
     }
   }
 
-  private registerIpcHandlers() {
-    // 注册处理函数已移至ipc.ts文件中
-    // 这里不需要重复注册
-  }
+  // 注册IPC处理程序的方法已移至ipc.ts
+  // 保留此注释作为提醒
 }
 
 // 创建并导出MemoryFileService实例

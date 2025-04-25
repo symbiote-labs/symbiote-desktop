@@ -26,6 +26,7 @@ import {
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
+import agentService from '@renderer/services/AgentService'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
 import {
@@ -36,7 +37,17 @@ import {
 import WebSearchService from '@renderer/services/WebSearchService'
 import store from '@renderer/store'
 import { getActiveServers } from '@renderer/store/mcp'
-import { Assistant, FileType, FileTypes, MCPToolResponse, Message, Model, Provider, Suggestion } from '@renderer/types' // Re-add MCPToolResponse
+import {
+  Assistant,
+  FileType,
+  FileTypes,
+  MCPCallToolResponse,
+  MCPToolResponse,
+  Message,
+  Model,
+  Provider,
+  Suggestion
+} from '@renderer/types' // Re-add MCPToolResponse
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import {
   callMCPTool, // Re-add import
@@ -335,6 +346,25 @@ export default class GeminiProvider extends BaseProvider {
     // 获取对话ID，用于关联SDK实例
     const conversationId = assistant.id || ''
 
+    // 检查是否启用了Agent模式
+    const isAgentMode = store.getState().settings.enableAgentMode
+    const maxApiRequests = store.getState().settings.agentModeMaxApiRequests
+
+    // 如果启用了Agent模式，初始化Agent服务
+    if (isAgentMode && mcpTools && mcpTools.length > 0) {
+      agentService.startAgent(maxApiRequests)
+
+      // 添加初始任务
+      const lastMessage = messages[messages.length - 1]
+      // 确保 lastMessage 存在且有 id，如果不存在则使用空字符串
+      const messageId = lastMessage?.id || ''
+      agentService.addTask(
+        '分析用户请求',
+        `分析用户的请求: "${lastMessage.content.substring(0, 100)}${lastMessage.content.length > 100 ? '...' : ''}"`,
+        messageId // 传入消息ID
+      )
+    }
+
     if (assistant.enableGenerateImage) {
       await this.generateImageExp({ messages, assistant, onFilterMessages, onChunk })
     } else {
@@ -466,8 +496,8 @@ export default class GeminiProvider extends BaseProvider {
       // Remove unused processToolUses function
       // const processToolUses = async (content: string, idx: number) => { ... }
 
-      // 添加最大工具调用次数限制，防止无限循环
-      const MAX_TOOL_CALLS = 5
+      // 从设置中获取最大工具调用次数限制，防止无限循环
+      const MAX_TOOL_CALLS = store.getState().settings.agentAutoExecutionCount
 
       /**
        * 处理响应流并递归处理工具调用
@@ -559,9 +589,41 @@ export default class GeminiProvider extends BaseProvider {
               onChunk
             )
 
-            // 执行MCP工具
-            const toolResponse = await callMCPTool(mcpToolToCall)
-            console.log('[GeminiProvider] 收到MCP工具响应:', JSON.stringify(toolResponse, null, 2))
+            // 检查是否启用了Agent模式
+            const isAgentMode = store.getState().settings.enableAgentMode
+            let toolResponse: MCPCallToolResponse
+
+            if (isAgentMode) {
+              // 在Agent模式下，添加任务并执行
+              const taskTitle = `执行工具: ${mcpToolToCall.name}`
+              const taskDescription = `使用参数: ${JSON.stringify(actualArgs, null, 2)}`
+              // 关联到最后一条用户消息的ID，如果不存在则使用空字符串
+              const userLastMessageId = userLastMessage?.id || ''
+              const taskId = agentService.addTask(taskTitle, taskDescription, userLastMessageId)
+
+              // 通过Agent服务执行工具
+              try {
+                toolResponse = await agentService.executeTask(taskId, mcpToolToCall)
+              } catch (error) {
+                console.error('[GeminiProvider] Agent执行工具出错:', error)
+                toolResponse = {
+                  isError: true,
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Error executing tool ${mcpToolToCall.name}: ${error instanceof Error ? error.message : String(error)}`
+                    }
+                  ]
+                }
+              }
+            } else {
+              // 正常模式下直接执行工具
+              toolResponse = await callMCPTool(mcpToolToCall)
+            }
+
+            // 截断工具响应内容，避免日志过长
+            const truncatedResponse = this.truncateToolResponse(toolResponse)
+            console.log('[GeminiProvider] 收到MCP工具响应:', JSON.stringify(truncatedResponse, null, 2))
 
             // --- UI更新: 标记工具为完成 ---
             upsertMCPToolResponse(
@@ -575,10 +637,14 @@ export default class GeminiProvider extends BaseProvider {
               functionCall.name,
               toolResponse
             )
-            console.log(
-              '[GeminiProvider] 格式化的FunctionResponse Part:',
-              JSON.stringify(functionResponsePart, null, 2)
-            )
+            // 截断格式化的FunctionResponse Part内容，避免日志过长
+            // 使用简单的方法：直接截断JSON字符串
+            const functionResponseStr = JSON.stringify(functionResponsePart, null, 2)
+            const truncatedStr =
+              functionResponseStr.length > 1000
+                ? functionResponseStr.substring(0, 1000) + `... [截断，完整长度: ${functionResponseStr.length}字符]`
+                : functionResponseStr
+            console.log('[GeminiProvider] 格式化的FunctionResponse Part:', truncatedStr)
 
             // --- 代理循环: 将结果发送回Gemini ---
             console.log(`[GeminiProvider] 将工具响应 #${toolCallCount + 1} 发送回Gemini...`)
@@ -627,9 +693,23 @@ export default class GeminiProvider extends BaseProvider {
             // 将工具响应添加到历史中
             history.push(toolResponseMessage)
 
-            // 打印添加到历史记录的内容，便于调试
+            // 打印添加到历史记录的内容，便于调试（截断过长内容）
             console.log('[GeminiProvider] 添加到历史的工具调用:', JSON.stringify(toolCallMessage, null, 2))
-            console.log('[GeminiProvider] 添加到历史的工具响应:', JSON.stringify(toolResponseMessage, null, 2))
+
+            // 截断工具响应消息内容，避免日志过长
+            const truncatedResponseMessage = { ...toolResponseMessage }
+            if (
+              truncatedResponseMessage.parts &&
+              truncatedResponseMessage.parts[0] &&
+              truncatedResponseMessage.parts[0].text
+            ) {
+              const text = truncatedResponseMessage.parts[0].text
+              if (text.length > 500) {
+                truncatedResponseMessage.parts[0].text =
+                  text.substring(0, 500) + `... [截断，完整长度: ${text.length}字符]`
+              }
+            }
+            console.log('[GeminiProvider] 添加到历史的工具响应:', JSON.stringify(truncatedResponseMessage, null, 2))
 
             // 打印历史记录信息，便于调试
             console.log(`[GeminiProvider] 工具调用历史记录已更新，当前历史长度: ${history.length}`)
@@ -639,6 +719,29 @@ export default class GeminiProvider extends BaseProvider {
 
             // 使用sendMessageStream进行下一次API调用
             const nextResponseStream = await updatedChat.sendMessageStream([functionResponsePart], { signal })
+
+            // 检查是否启用了Agent模式，以及是否可以继续执行
+
+            if (isAgentMode) {
+              // 检查是否达到最大API请求次数
+              if (!agentService.canContinue()) {
+                console.log('[GeminiProvider] Agent模式已达到最大API请求次数，停止处理')
+                onChunk({
+                  text: `\n\n注意：已达到最大API请求次数 (${store.getState().settings.agentModeMaxApiRequests})。任务已完成。`
+                })
+                // 停止Agent模式
+                agentService.stopAgent()
+                return
+              }
+
+              // 添加新任务：分析工具结果并决定下一步
+              // 关联到最后一条用户消息的ID，如果不存在则使用空字符串
+              agentService.addTask(
+                '分析工具结果',
+                `分析工具 ${mcpToolToCall.name} 的执行结果并决定下一步操作`,
+                userLastMessage?.id || '' // 传入消息ID
+              )
+            }
 
             // 递归处理下一个响应流，可能包含更多工具调用
             await processStreamWithToolCalls(nextResponseStream, toolCallCount + 1, false, updatedToolResponses)
@@ -664,7 +767,23 @@ export default class GeminiProvider extends BaseProvider {
       }
 
       // Start processing the initial stream
-      await processStream(userMessagesStream /* Remove unused 0 */).finally(cleanup)
+      await processStream(userMessagesStream /* Remove unused 0 */).finally(() => {
+        // 清理资源
+        cleanup()
+
+        // 如果启用了Agent模式，添加完成任务并停止Agent
+        const isAgentMode = store.getState().settings.enableAgentMode
+        if (isAgentMode) {
+          // 添加任务完成的消息
+          // 关联到最后一条用户消息的ID，如果不存在则使用空字符串
+          agentService.addTask('任务完成', '所有请求的任务已完成', userLastMessage?.id || '') // 传入消息ID
+
+          // 停止Agent模式
+          setTimeout(() => {
+            agentService.stopAgent()
+          }, 1000) // 延迟1秒停止，确保UI能够显示最终状态
+        }
+      })
     }
   }
 
@@ -1256,5 +1375,45 @@ export default class GeminiProvider extends BaseProvider {
 
     const data = await tempSdk.getGenerativeModel({ model: model.id }, this.requestOptions).embedContent('hi')
     return data.embedding.values.length
+  }
+
+  /**
+   * 截断工具响应内容，避免日志过长
+   * @param toolResponse - 工具响应
+   * @returns 截断后的工具响应
+   */
+  private truncateToolResponse(toolResponse: any): any {
+    if (!toolResponse || !toolResponse.content) {
+      return toolResponse
+    }
+
+    // 创建响应的深拷贝，避免修改原始对象
+    const truncated = JSON.parse(JSON.stringify(toolResponse))
+
+    // 最大文本长度限制
+    const MAX_TEXT_LENGTH = 500
+
+    // 处理内容数组
+    if (Array.isArray(truncated.content)) {
+      truncated.content = truncated.content.map((item: any) => {
+        // 处理文本类型内容
+        if (item.type === 'text' && item.text && item.text.length > MAX_TEXT_LENGTH) {
+          return {
+            ...item,
+            text: item.text.substring(0, MAX_TEXT_LENGTH) + `... [截断，完整长度: ${item.text.length}字符]`
+          }
+        }
+        // 处理图片类型内容
+        if (item.type === 'image' && item.data) {
+          return {
+            ...item,
+            data: '[图片数据已截断]'
+          }
+        }
+        return item
+      })
+    }
+
+    return truncated
   }
 }

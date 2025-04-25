@@ -356,6 +356,20 @@
     "docs": {
       "title": "Docs"
     },
+    "browser": {
+      "title": "Browser",
+      "address_bar": "Address Bar",
+      "back": "Back",
+      "forward": "Forward",
+      "refresh": "Refresh",
+      "home": "Home",
+      "search": "Search",
+      "url_placeholder": "Enter URL or search",
+      "devtools": "Developer Tools",
+      "captcha_notice": "Please complete the human verification to continue",
+      "open_external": "Open in external browser",
+      "clear_data": "Clear browser data"
+    },
     "deepresearch": {
       "title": "Deep Research",
       "description": "Deep Research provides comprehensive research reports through multiple rounds of search, analysis, and summarization.",
@@ -1335,6 +1349,14 @@
         "addError": "Failed to add server",
         "addServer": "Add Server",
         "addSuccess": "Server added successfully",
+        "agent_mode": {
+          "title": "Agent Mode Settings",
+          "enable": "Enable Agent Mode",
+          "enable_tooltip": "When enabled, AI can use multiple tools continuously to complete tasks, instead of using only one tool at a time.",
+          "max_api_requests": "Maximum API Requests",
+          "max_api_requests_tooltip": "Set the maximum number of API requests in Agent mode to prevent infinite loops.",
+          "description": "Agent mode allows AI to use multiple tools continuously to complete tasks, similar to an automated assistant.\nWhen this feature is enabled, AI will be able to automatically select and call tools based on task needs until the task is completed or the maximum number of API requests is reached."
+        },
         "args": "Arguments",
         "argsTooltip": "Each argument on a new line",
         "baseUrlTooltip": "Remote server base URL",
@@ -1698,13 +1720,25 @@
         "overwrite_tooltip": "Force use search service instead of LLM",
         "apikey": "API key",
         "free": "Free",
+        "jina": {
+          "title": "Jina AI Settings",
+          "top_k": "Number of Results",
+          "search_type": "Search Type",
+          "search_type_hybrid": "Hybrid Search",
+          "search_type_sparse": "Sparse Search",
+          "search_type_dense": "Dense Search",
+          "include_metadata": "Include Metadata",
+          "use_reranker": "Use Reranker",
+          "description": "Jina AI is a powerful search and reranking service that supports multiple languages and code search"
+        },
         "deep_research": {
           "title": "Deep Research",
           "max_iterations": "Maximum Iterations",
           "max_results_per_query": "Maximum Results Per Query",
           "auto_summary": "Auto Summary",
           "enable_query_optimization": "Enable Query Optimization",
-          "query_optimization_desc": "Use AI to analyze your question and generate more effective search queries"
+          "query_optimization_desc": "Use AI to analyze your question and generate more effective search queries",
+          "max_report_links": "Maximum Report Links"
         }
       },
       "quickPhrase": {
@@ -1956,6 +1990,37 @@
       "quit": "Quit",
       "show_window": "Show Window",
       "visualization": "Visualization"
+    },
+    "agent": {
+      "mode": {
+        "title": "Agent Mode",
+        "description": "Agent mode allows AI to use multiple tools continuously to complete tasks",
+        "max_requests": "Maximum Requests",
+        "max_requests_tooltip": "Set the maximum number of API requests in Agent mode",
+        "auto_execution_count": "Auto Execution Count",
+        "auto_execution_count_tooltip": "Set the maximum number of automatic executions",
+        "finish": "Finish",
+        "running": "Running"
+      },
+      "tasks": {
+        "title": "Task List",
+        "count": "Completed {{completed}}/{{total}} tasks",
+        "show_list": "Show Task List",
+        "show_list_tooltip": "Control whether to display the Agent task list",
+        "clear": "Clear Task List",
+        "clear_tooltip": "Clear all Agent tasks",
+        "no_running_tasks": "No running Agent tasks"
+      },
+      "task": {
+        "running": "Running",
+        "completed": "Completed",
+        "pending": "Pending",
+        "error": "Error"
+      },
+      "running": "Agent Mode Running",
+      "completed": "Agent Mode Completed",
+      "stop": "Stop",
+      "stop_tooltip": "Stop Agent Mode Execution"
     }
   }
 }

@@ -56,7 +56,16 @@ export async function fetchWebContent(
 
     let html: string
     if (usingBrowser) {
-      html = await window.api.searchService.openUrlInSearchWindow(`search-window-${nanoid()}`, url)
+      const windowId = `search-window-${nanoid()}`
+      html = await window.api.searchService.openUrlInSearchWindow(windowId, url)
+
+      // 关闭浏览器窗口，避免资源泄漏
+      try {
+        await window.api.searchService.closeSearchWindow(windowId)
+        console.log(`[Fetch] 已关闭搜索窗口: ${windowId}`)
+      } catch (error) {
+        console.error(`[Fetch] 关闭搜索窗口 ${windowId} 失败:`, error)
+      }
     } else {
       const response = await fetch(url, {
         headers: {

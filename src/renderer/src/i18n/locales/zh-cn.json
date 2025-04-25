@@ -183,6 +183,7 @@
       "input.web_search.button.ok": "去设置",
       "input.web_search.enable": "开启网络搜索",
       "input.web_search.enable_content": "需要先在设置中检查网络搜索连通性",
+      "input.agent_mode": "Agent模式",
       "message.speak_selection": "朗读",
       "message.new.branch": "分支",
       "message.new.branch.created": "新分支已创建",
@@ -326,6 +327,7 @@
       "edit": "编辑",
       "expand": "展开",
       "collapse": "收起",
+      "rollback": "一键回档",
       "footnote": "引用内容",
       "footnotes": "引用内容",
       "fullscreen": "已进入全屏模式，按 F11 退出",
@@ -357,6 +359,23 @@
     },
     "docs": {
       "title": "帮助文档"
+    },
+    "browser": {
+      "title": "浏览器",
+      "address_bar": "地址栏",
+      "back": "后退",
+      "forward": "前进",
+      "refresh": "刷新",
+      "home": "主页",
+      "search": "搜索",
+      "url_placeholder": "输入网址或搜索内容",
+      "devtools": "开发者工具",
+      "captcha_notice": "请完成人机验证以继续访问网站",
+      "open_external": "在外部浏览器中打开",
+      "clear_data": "清除浏览器数据",
+      "google_login_tip": "检测到Google登录页面，建议使用移动版登录页面以获得更好的体验。",
+      "new_tab": "新建标签页",
+      "close_tab": "关闭标签页"
     },
     "deepresearch": {
       "title": "深度研究",
@@ -1458,6 +1477,14 @@
         "addError": "添加服务器失败",
         "addServer": "添加服务器",
         "addSuccess": "服务器添加成功",
+        "agent_mode": {
+          "title": "Agent模式设置",
+          "enable": "启用Agent模式",
+          "enable_tooltip": "启用后，AI可以连续使用多个工具来完成任务，而不是一次只能使用一个工具。",
+          "max_api_requests": "最大API请求次数",
+          "max_api_requests_tooltip": "设置Agent模式下最大API请求次数，防止无限循环。",
+          "description": "Agent模式允许AI连续使用多个工具来完成任务，类似于自动化助手。\n启用此功能后，AI将能够根据任务需要自动选择和调用工具，直到任务完成或达到最大API请求次数。"
+        },
         "args": "参数",
         "argsTooltip": "每个参数占一行",
         "baseUrlTooltip": "远程 URL 地址",
@@ -1506,6 +1533,7 @@
         "name": "名称",
         "noServers": "未配置服务器",
         "newServer": "MCP 服务器",
+        "selectServerOrCreate": "请选择一个服务器或创建新服务器",
         "npx_list": {
           "actions": "操作",
           "description": "描述",
@@ -1780,6 +1808,45 @@
         "enhance_mode": "搜索增强模式",
         "enhance_mode_tooltip": "使用默认模型提取关键词后搜索",
         "overwrite": "覆盖服务商搜索",
+        "jina": {
+          "title": "Jina AI 设置",
+          "top_k": "返回结果数量",
+          "search_type": "搜索类型",
+          "search_type_hybrid": "混合搜索",
+          "search_type_sparse": "稀疏搜索",
+          "search_type_dense": "密集搜索",
+          "include_metadata": "包含元数据",
+          "use_reranker": "使用重排序",
+          "description": "Jina AI 是一个强大的搜索和重排序服务，支持多语言和代码搜索",
+          "api_endpoint": "API 端点",
+          "api_endpoint_search": "s.jina.ai - 搜索网络并获取SERP",
+          "api_endpoint_reader": "r.jina.ai - 获取URL并解析内容",
+          "locale": "语言",
+          "country": "国家/地区",
+          "timeout": "超时时间 (秒)",
+          "no_cache": "禁用缓存",
+          "with_favicon": "包含网站图标",
+          "with_links": "包含链接摘要",
+          "with_images": "包含图片摘要",
+          "return_format": "返回格式",
+          "engine": "引擎",
+          "engine_browser": "浏览器 (高质量)",
+          "engine_direct": "直接 (高速)",
+          "site": "站内搜索",
+          "json_response": "JSON响应",
+          "fetch_favicons": "获取网站图标",
+          "remove_selectors": "移除选择器",
+          "target_selectors": "目标选择器",
+          "wait_for_selectors": "等待选择器",
+          "with_generated_alt": "生成图片替代文本",
+          "with_iframe": "包含iframe内容",
+          "token_budget": "Token预算",
+          "retain_images": "保留图片",
+          "retain_images_all": "全部",
+          "retain_images_none": "无",
+          "respond_with": "响应处理",
+          "proxy": "代理"
+        },
         "overwrite_tooltip": "强制使用搜索服务商而不是大语言模型进行搜索",
         "get_api_key": "点击这里获取密钥",
         "no_provider_selected": "请选择搜索服务商后再检查",
@@ -1811,7 +1878,8 @@
           "max_results_per_query": "每次查询最大结果数",
           "auto_summary": "自动生成摘要",
           "enable_query_optimization": "启用查询优化",
-          "query_optimization_desc": "使用 AI 分析您的问题并生成更有效的搜索查询"
+          "query_optimization_desc": "使用 AI 分析您的问题并生成更有效的搜索查询",
+          "max_report_links": "最终报告最大链接数"
         }
       },
       "quickPhrase": {
@@ -2063,6 +2131,37 @@
       "quit": "退出",
       "show_window": "显示窗口",
       "visualization": "可视化"
+    },
+    "agent": {
+      "mode": {
+        "title": "Agent模式",
+        "description": "Agent模式允许AI连续使用多个工具来完成任务",
+        "max_requests": "最大请求数",
+        "max_requests_tooltip": "设置Agent模式下最大API请求次数",
+        "auto_execution_count": "自动执行次数",
+        "auto_execution_count_tooltip": "设置Agent自动执行的最大次数",
+        "finish": "完成",
+        "running": "运行中"
+      },
+      "tasks": {
+        "title": "任务列表",
+        "count": "已完成 {{completed}}/{{total}} 个任务",
+        "show_list": "显示任务列表",
+        "show_list_tooltip": "控制是否显示Agent任务列表",
+        "clear": "清空任务列表",
+        "clear_tooltip": "清空所有Agent任务",
+        "no_running_tasks": "没有正在运行的Agent任务"
+      },
+      "task": {
+        "running": "执行中",
+        "completed": "已完成",
+        "pending": "等待中",
+        "error": "出错"
+      },
+      "running": "Agent模式运行中",
+      "completed": "Agent模式已完成",
+      "stop": "停止",
+      "stop_tooltip": "停止Agent模式执行"
     }
   }
 }

@@ -30,6 +30,11 @@ export interface WebSearchState {
     maxResultsPerQuery?: number
     autoSummary?: boolean
     enableQueryOptimization?: boolean
+    modelId?: string
+    maxReportLinks?: number // 最终报告最大链接数
+    enableLinkRelevanceFilter?: boolean // 启用链接相关性过滤
+    linkRelevanceModelId?: string // 链接相关性评估模型ID
+    linkRelevanceThreshold?: number // 链接相关性阈值，低于此值的链接将被过滤
   }
   // DeepSearch 配置
   deepSearchConfig?: {
@@ -39,24 +44,55 @@ export interface WebSearchState {
       sogou?: boolean
       '360'?: boolean
       yisou?: boolean
+      toutiao?: boolean
+      zhihu?: boolean
 
       // 国际搜索引擎
       bing?: boolean
+      google?: boolean
       duckduckgo?: boolean
       brave?: boolean
       qwant?: boolean
+      yahoo?: boolean
 
       // 元搜索引擎
       searx?: boolean
       ecosia?: boolean
       startpage?: boolean
       mojeek?: boolean
+      yandex?: boolean
+      presearch?: boolean
 
       // 学术搜索引擎
       scholar?: boolean
       semantic?: boolean
       base?: boolean
-      cnki?: boolean
+      pubmed?: boolean
+      sciencedirect?: boolean
+      researchgate?: boolean
+      jstor?: boolean
+
+      // 技术搜索引擎
+      github?: boolean
+      stackoverflow?: boolean
+      devdocs?: boolean
+      mdn?: boolean
+      npm?: boolean
+      pypi?: boolean
+
+      // 新闻搜索引擎
+      googlenews?: boolean
+      reuters?: boolean
+      bbc?: boolean
+      xinhua?: boolean
+      cctv?: boolean
+
+      // 专业领域搜索引擎
+      arxiv?: boolean
+      uspto?: boolean
+      wolframalpha?: boolean
+      coursera?: boolean
+      khan?: boolean
     }
   }
 }
@@ -80,6 +116,13 @@ const initialState: WebSearchState = {
       apiKey: ''
     },
     {
+      id: 'jina',
+      name: 'Jina AI',
+      apiKey: '',
+      description: 'Jina AI搜索服务，支持多语言和代码搜索',
+      contentLimit: 10000
+    },
+    {
       id: 'local-google',
       name: 'Google',
       url: 'https://www.google.com/search?q=%s'
@@ -97,7 +140,7 @@ const initialState: WebSearchState = {
     {
       id: 'deep-search',
       name: 'DeepSearch (多引擎)',
-      description: '使用Baidu、Bing、DuckDuckGo、搜狗和SearX进行深度搜索',
+      description: '使用多种搜索引擎进行并行深度搜索，包括通用搜索、学术搜索、技术搜索、新闻搜索和专业领域搜索',
       contentLimit: 10000
     },
     {
@@ -113,6 +156,15 @@ const initialState: WebSearchState = {
   subscribeSources: [],
   enhanceMode: true,
   overwrite: false,
+  deepResearchConfig: {
+    maxIterations: 3,
+    maxResultsPerQuery: 50,
+    autoSummary: true,
+    enableQueryOptimization: true,
+    maxReportLinks: 10, // 最终报告最大链接数
+    enableLinkRelevanceFilter: true, // 默认启用链接相关性过滤
+    linkRelevanceThreshold: 0.6 // 默认链接相关性阈值
+  },
   deepSearchConfig: {
     enabledEngines: {
       // 中文搜索引擎
@@ -120,24 +172,55 @@ const initialState: WebSearchState = {
       sogou: true,
       '360': false,
       yisou: false,
+      toutiao: false,
+      zhihu: false,
 
       // 国际搜索引擎
       bing: true,
+      google: true,
       duckduckgo: true,
       brave: false,
       qwant: false,
+      yahoo: false,
 
       // 元搜索引擎
       searx: true,
       ecosia: false,
       startpage: false,
       mojeek: false,
+      yandex: false,
+      presearch: false,
 
       // 学术搜索引擎
       scholar: true,
       semantic: false,
       base: false,
-      cnki: false
+      pubmed: false,
+      sciencedirect: false,
+      researchgate: false,
+      jstor: false,
+
+      // 技术搜索引擎
+      github: true,
+      stackoverflow: true,
+      devdocs: false,
+      mdn: false,
+      npm: false,
+      pypi: false,
+
+      // 新闻搜索引擎
+      googlenews: false,
+      reuters: false,
+      bbc: false,
+      xinhua: false,
+      cctv: false,
+
+      // 专业领域搜索引擎
+      arxiv: false,
+      uspto: false,
+      wolframalpha: false,
+      coursera: false,
+      khan: false
     }
   }
 }
@@ -222,6 +305,10 @@ const websearchSlice = createSlice({
         autoSummary?: boolean
         enableQueryOptimization?: boolean
         modelId?: string
+        maxReportLinks?: number // 最终报告最大链接数
+        enableLinkRelevanceFilter?: boolean // 启用链接相关性过滤
+        linkRelevanceModelId?: string // 链接相关性评估模型ID
+        linkRelevanceThreshold?: number // 链接相关性阈值
       }>
     ) => {
       state.deepResearchConfig = {
@@ -233,12 +320,60 @@ const websearchSlice = createSlice({
       state,
       action: PayloadAction<{
         enabledEngines?: {
+          // 中文搜索引擎
           baidu?: boolean
-          bing?: boolean
-          duckduckgo?: boolean
           sogou?: boolean
+          '360'?: boolean
+          yisou?: boolean
+          toutiao?: boolean
+          zhihu?: boolean
+
+          // 国际搜索引擎
+          bing?: boolean
+          google?: boolean
+          duckduckgo?: boolean
+          brave?: boolean
+          qwant?: boolean
+          yahoo?: boolean
+
+          // 元搜索引擎
           searx?: boolean
+          ecosia?: boolean
+          startpage?: boolean
+          mojeek?: boolean
+          yandex?: boolean
+          presearch?: boolean
+
+          // 学术搜索引擎
           scholar?: boolean
+          semantic?: boolean
+          base?: boolean
+          pubmed?: boolean
+          sciencedirect?: boolean
+          researchgate?: boolean
+          jstor?: boolean
+
+          // 技术搜索引擎
+          github?: boolean
+          stackoverflow?: boolean
+          devdocs?: boolean
+          mdn?: boolean
+          npm?: boolean
+          pypi?: boolean
+
+          // 新闻搜索引擎
+          googlenews?: boolean
+          reuters?: boolean
+          bbc?: boolean
+          xinhua?: boolean
+          cctv?: boolean
+
+          // 专业领域搜索引擎
+          arxiv?: boolean
+          uspto?: boolean
+          wolframalpha?: boolean
+          coursera?: boolean
+          khan?: boolean
         }
       }>
     ) => {

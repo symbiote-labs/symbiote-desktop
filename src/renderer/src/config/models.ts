@@ -1565,6 +1565,126 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       provider: 'jina',
       name: 'jina-embeddings-v3',
       group: 'Jina Embeddings V3'
+    },
+    {
+      id: 'jina-reranker-v2',
+      provider: 'jina',
+      name: 'Jina Reranker V2',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-code',
+      provider: 'jina',
+      name: 'Jina Reranker V2 Code',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-zh',
+      provider: 'jina',
+      name: 'Jina Reranker V2 中文',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-es',
+      provider: 'jina',
+      name: 'Jina Reranker V2 西班牙语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-de',
+      provider: 'jina',
+      name: 'Jina Reranker V2 德语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-fr',
+      provider: 'jina',
+      name: 'Jina Reranker V2 法语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-ja',
+      provider: 'jina',
+      name: 'Jina Reranker V2 日语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-ko',
+      provider: 'jina',
+      name: 'Jina Reranker V2 韩语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-ru',
+      provider: 'jina',
+      name: 'Jina Reranker V2 俄语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-pt',
+      provider: 'jina',
+      name: 'Jina Reranker V2 葡萄牙语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-it',
+      provider: 'jina',
+      name: 'Jina Reranker V2 意大利语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-nl',
+      provider: 'jina',
+      name: 'Jina Reranker V2 荷兰语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-pl',
+      provider: 'jina',
+      name: 'Jina Reranker V2 波兰语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-tr',
+      provider: 'jina',
+      name: 'Jina Reranker V2 土耳其语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-ar',
+      provider: 'jina',
+      name: 'Jina Reranker V2 阿拉伯语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-hi',
+      provider: 'jina',
+      name: 'Jina Reranker V2 印地语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-th',
+      provider: 'jina',
+      name: 'Jina Reranker V2 泰语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-vi',
+      provider: 'jina',
+      name: 'Jina Reranker V2 越南语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-id',
+      provider: 'jina',
+      name: 'Jina Reranker V2 印尼语',
+      group: 'Jina Rerank'
+    },
+    {
+      id: 'jina-reranker-v2-table',
+      provider: 'jina',
+      name: 'Jina Reranker V2 表格数据',
+      group: 'Jina Rerank'
     }
   ],
   fireworks: [

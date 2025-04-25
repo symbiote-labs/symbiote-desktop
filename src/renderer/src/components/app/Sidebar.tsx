@@ -14,6 +14,8 @@ import {
   CircleHelp,
   FileSearch,
   Folder,
+  FolderGit,
+  Globe,
   Languages,
   LayoutGrid,
   MessageSquareQuote,
@@ -22,8 +24,7 @@ import {
   Palette,
   Settings,
   Sparkle,
-  Sun,
-  FolderGit
+  Sun
 } from 'lucide-react'
 import { FC, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -140,7 +141,8 @@ const MainMenus: FC = () => {
     knowledge: <FileSearch size={18} className="icon" />,
     files: <Folder size={17} className="icon" />,
     workspace: <FolderGit size={17} className="icon" />,
-    deepresearch: <Microscope size={18} className="icon" />
+    deepresearch: <Microscope size={18} className="icon" />,
+    browser: <Globe size={18} className="icon" />
   }
 
   const pathMap = {
@@ -152,7 +154,8 @@ const MainMenus: FC = () => {
     knowledge: '/knowledge',
     files: '/files',
     workspace: '/workspace',
-    deepresearch: '/deepresearch'
+    deepresearch: '/deepresearch',
+    browser: '/browser'
   }
 
   return sidebarIcons.visible.map((icon) => {
@@ -184,7 +187,7 @@ const SidebarOpenedMinappTabs: FC = () => {
   const { theme } = useTheme()
   const { t } = useTranslation()
 
-  const handleOnClick = (app) => {
+  const handleOnClick = (app: any) => {
     if (minappShow && currentMinappId === app.id) {
       hideMinappPopup()
     } else {

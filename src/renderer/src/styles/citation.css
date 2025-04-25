@@ -1,0 +1,20 @@
+/* 引用标记样式 */
+.citation-marker {
+  color: var(--color-link);
+  cursor: pointer;
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  top: -0.5em;
+}
+
+.citation-marker:hover {
+  text-decoration: underline;
+}
+
+/* 引用高亮样式 */
+.highlight-citation {
+  background-color: rgba(255, 255, 0, 0.3);
+  transition: background-color 0.5s ease;
+}

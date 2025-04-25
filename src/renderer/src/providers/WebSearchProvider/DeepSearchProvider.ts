@@ -13,6 +13,9 @@ interface AnalyzedResult extends WebSearchResult {
 import BaseWebSearchProvider from './BaseWebSearchProvider'
 
 export default class DeepSearchProvider extends BaseWebSearchProvider {
+  // 存储搜索过程中打开的浏览器窗口ID
+  private searchWindowIds: string[] = []
+
   // 定义默认的搜索引擎URLs
   private searchEngines = [
     // 中文搜索引擎
@@ -20,12 +23,16 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     { name: 'Sogou', url: 'https://www.sogou.com/web?query=%s', category: 'chinese' },
     { name: '360', url: 'https://www.so.com/s?q=%s', category: 'chinese' },
     { name: 'Yisou', url: 'https://yisou.com/search?q=%s', category: 'chinese' },
+    { name: 'Toutiao', url: 'https://so.toutiao.com/search?keyword=%s', category: 'chinese' },
+    { name: 'Zhihu', url: 'https://www.zhihu.com/search?type=content&q=%s', category: 'chinese' },
 
     // 国际搜索引擎
     { name: 'Bing', url: 'https://cn.bing.com/search?q=%s&ensearch=1', category: 'international' },
+    { name: 'Google', url: 'https://www.google.com/search?q=%s', category: 'international' },
     { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s&t=h_', category: 'international' },
     { name: 'Brave', url: 'https://search.brave.com/search?q=%s', category: 'international' },
     { name: 'Qwant', url: 'https://www.qwant.com/?q=%s', category: 'international' },
+    { name: 'Yahoo', url: 'https://search.yahoo.com/search?p=%s', category: 'international' },
 
     // 元搜索引擎
     {
@@ -36,12 +43,44 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
     { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s', category: 'meta' },
     { name: 'Startpage', url: 'https://www.startpage.com/do/search?q=%s', category: 'meta' },
     { name: 'Mojeek', url: 'https://www.mojeek.com/search?q=%s', category: 'meta' },
+    { name: 'Yandex', url: 'https://yandex.com/search/?text=%s', category: 'meta' },
+    { name: 'Presearch', url: 'https://presearch.com/search?q=%s', category: 'meta' },
 
     // 学术搜索引擎
     { name: 'Scholar', url: 'https://scholar.google.com/scholar?q=%s', category: 'academic' },
     { name: 'Semantic', url: 'https://www.semanticscholar.org/search?q=%s', category: 'academic' },
     { name: 'BASE', url: 'https://www.base-search.net/Search/Results?lookfor=%s', category: 'academic' },
-    { name: 'CNKI', url: 'https://kns.cnki.net/kns/brief/Default_Result.aspx?code=SCDB&kw=%s', category: 'academic' }
+
+    { name: 'PubMed', url: 'https://pubmed.ncbi.nlm.nih.gov/?term=%s', category: 'academic' },
+    { name: 'ScienceDirect', url: 'https://www.sciencedirect.com/search?qs=%s', category: 'academic' },
+    { name: 'ResearchGate', url: 'https://www.researchgate.net/search/publication?q=%s', category: 'academic' },
+    { name: 'JSTOR', url: 'https://www.jstor.org/action/doBasicSearch?Query=%s', category: 'academic' },
+
+    // 技术搜索引擎
+    { name: 'GitHub', url: 'https://github.com/search?q=%s', category: 'tech' },
+    { name: 'StackOverflow', url: 'https://stackoverflow.com/search?q=%s', category: 'tech' },
+    { name: 'DevDocs', url: 'https://devdocs.io/#q=%s', category: 'tech' },
+    { name: 'MDN', url: 'https://developer.mozilla.org/search?q=%s', category: 'tech' },
+    { name: 'NPM', url: 'https://www.npmjs.com/search?q=%s', category: 'tech' },
+    { name: 'PyPI', url: 'https://pypi.org/search/?q=%s', category: 'tech' },
+
+    // 新闻搜索引擎
+    { name: 'GoogleNews', url: 'https://news.google.com/search?q=%s', category: 'news' },
+    { name: 'Reuters', url: 'https://www.reuters.com/search/news?blob=%s', category: 'news' },
+    { name: 'BBC', url: 'https://www.bbc.co.uk/search?q=%s&page=1', category: 'news' },
+    { name: 'Xinhua', url: 'http://so.news.cn/getNews?keyword=%s', category: 'news' },
+    { name: 'CCTV', url: 'https://search.cctv.com/search.php?qtext=%s', category: 'news' },
+
+    // 专业领域搜索引擎
+    { name: 'Arxiv', url: 'https://arxiv.org/search/?query=%s&searchtype=all', category: 'professional' },
+    {
+      name: 'USPTO',
+      url: 'https://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p=1&u=%2Fnetahtml%2FPTO%2Fsearch-bool.html&r=0&f=S&l=50&TERM1=%s',
+      category: 'professional'
+    },
+    { name: 'WolframAlpha', url: 'https://www.wolframalpha.com/input/?i=%s', category: 'professional' },
+    { name: 'Coursera', url: 'https://www.coursera.org/search?query=%s', category: 'professional' },
+    { name: 'Khan', url: 'https://www.khanacademy.org/search?page_search_query=%s', category: 'professional' }
   ]
 
   // 定义URL过滤规则
@@ -184,31 +223,64 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       else if (websearch.deepSearchConfig?.enabledEngines) {
         const enabledEngines = websearch.deepSearchConfig.enabledEngines
         enginesToUse = this.searchEngines.filter((engine) => {
+          // 使用白名单模式：只使用明确启用的搜索引擎
           // 中文搜索引擎
-          if (engine.name === 'Baidu' && enabledEngines.baidu === false) return false
-          if (engine.name === 'Sogou' && enabledEngines.sogou === false) return false
-          if (engine.name === '360' && enabledEngines['360'] === false) return false
-          if (engine.name === 'Yisou' && enabledEngines.yisou === false) return false
+          if (engine.name === 'Baidu') return enabledEngines.baidu === true
+          if (engine.name === 'Sogou') return enabledEngines.sogou === true
+          if (engine.name === '360') return enabledEngines['360'] === true
+          if (engine.name === 'Yisou') return enabledEngines.yisou === true
+          if (engine.name === 'Toutiao') return enabledEngines.toutiao === true
+          if (engine.name === 'Zhihu') return enabledEngines.zhihu === true
 
           // 国际搜索引擎
-          if (engine.name === 'Bing' && enabledEngines.bing === false) return false
-          if (engine.name === 'DuckDuckGo' && enabledEngines.duckduckgo === false) return false
-          if (engine.name === 'Brave' && enabledEngines.brave === false) return false
-          if (engine.name === 'Qwant' && enabledEngines.qwant === false) return false
+          if (engine.name === 'Bing') return enabledEngines.bing === true
+          if (engine.name === 'Google') return enabledEngines.google === true
+          if (engine.name === 'DuckDuckGo') return enabledEngines.duckduckgo === true
+          if (engine.name === 'Brave') return enabledEngines.brave === true
+          if (engine.name === 'Qwant') return enabledEngines.qwant === true
+          if (engine.name === 'Yahoo') return enabledEngines.yahoo === true
 
           // 元搜索引擎
-          if (engine.name === 'SearX' && enabledEngines.searx === false) return false
-          if (engine.name === 'Ecosia' && enabledEngines.ecosia === false) return false
-          if (engine.name === 'Startpage' && enabledEngines.startpage === false) return false
-          if (engine.name === 'Mojeek' && enabledEngines.mojeek === false) return false
+          if (engine.name === 'SearX') return enabledEngines.searx === true
+          if (engine.name === 'Ecosia') return enabledEngines.ecosia === true
+          if (engine.name === 'Startpage') return enabledEngines.startpage === true
+          if (engine.name === 'Mojeek') return enabledEngines.mojeek === true
+          if (engine.name === 'Yandex') return enabledEngines.yandex === true
+          if (engine.name === 'Presearch') return enabledEngines.presearch === true
 
           // 学术搜索引擎
-          if (engine.name === 'Scholar' && enabledEngines.scholar === false) return false
-          if (engine.name === 'Semantic' && enabledEngines.semantic === false) return false
-          if (engine.name === 'BASE' && enabledEngines.base === false) return false
-          if (engine.name === 'CNKI' && enabledEngines.cnki === false) return false
+          if (engine.name === 'Scholar') return enabledEngines.scholar === true
+          if (engine.name === 'Semantic') return enabledEngines.semantic === true
+          if (engine.name === 'BASE') return enabledEngines.base === true
+          if (engine.name === 'PubMed') return enabledEngines.pubmed === true
+          if (engine.name === 'ScienceDirect') return enabledEngines.sciencedirect === true
+          if (engine.name === 'ResearchGate') return enabledEngines.researchgate === true
+          if (engine.name === 'JSTOR') return enabledEngines.jstor === true
 
-          return true
+          // 技术搜索引擎
+          if (engine.name === 'GitHub') return enabledEngines.github === true
+          if (engine.name === 'StackOverflow') return enabledEngines.stackoverflow === true
+          if (engine.name === 'DevDocs') return enabledEngines.devdocs === true
+          if (engine.name === 'MDN') return enabledEngines.mdn === true
+          if (engine.name === 'NPM') return enabledEngines.npm === true
+          if (engine.name === 'PyPI') return enabledEngines.pypi === true
+
+          // 新闻搜索引擎
+          if (engine.name === 'GoogleNews') return enabledEngines.googlenews === true
+          if (engine.name === 'Reuters') return enabledEngines.reuters === true
+          if (engine.name === 'BBC') return enabledEngines.bbc === true
+          if (engine.name === 'Xinhua') return enabledEngines.xinhua === true
+          if (engine.name === 'CCTV') return enabledEngines.cctv === true
+
+          // 专业领域搜索引擎
+          if (engine.name === 'Arxiv') return enabledEngines.arxiv === true
+          if (engine.name === 'USPTO') return enabledEngines.uspto === true
+          if (engine.name === 'WolframAlpha') return enabledEngines.wolframalpha === true
+          if (engine.name === 'Coursera') return enabledEngines.coursera === true
+          if (engine.name === 'Khan') return enabledEngines.khan === true
+
+          // 如果是未知的搜索引擎，默认不使用
+          return false
         })
 
         // 如果没有启用任何搜索引擎，则至少使用百度
@@ -217,7 +289,11 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         }
       }
 
-      console.log(`[DeepSearch] 使用${engineCategory || '所有'}类别的搜索引擎，共 ${enginesToUse.length} 个`)
+      // 记录启用的搜索引擎名称，方便调试
+      const enabledEngineNames = enginesToUse.map((engine) => engine.name)
+      console.log(
+        `[DeepSearch] 使用${engineCategory || '所有'}类别的搜索引擎，共 ${enginesToUse.length} 个: ${enabledEngineNames.join(', ')}`
+      )
 
       // 并行搜索选定的引擎
       const searchPromises = enginesToUse.map(async (engine) => {
@@ -229,6 +305,12 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
 
           // 使用搜索窗口获取搜索结果页面内容
           const content = await window.api.searchService.openUrlInSearchWindow(uid, url)
+
+          // 记录窗口ID，以便后续清理
+          if (!this.searchWindowIds.includes(uid)) {
+            this.searchWindowIds.push(uid)
+            console.log(`[DeepSearch] 跟踪搜索窗口: ${uid}，当前共 ${this.searchWindowIds.length} 个窗口`)
+          }
 
           // 解析搜索结果页面中的URL
           const searchItems = this.parseValidUrls(content)
@@ -345,6 +427,9 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
         return scoreB - scoreA
       })
 
+      // 清理搜索窗口
+      await this.cleanupSearchWindows()
+
       return {
         query: query,
         results: sortedResults.filter((result) => result.content !== noContent)
@@ -353,6 +438,28 @@ export default class DeepSearchProvider extends BaseWebSearchProvider {
       console.error('[DeepSearch] 搜索失败:', error)
       throw new Error(`DeepSearch failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
+  }
+
+  /**
+   * 清理所有打开的搜索窗口
+   */
+  private async cleanupSearchWindows(): Promise<void> {
+    console.log(`[DeepSearch] 开始清理 ${this.searchWindowIds.length} 个搜索窗口`)
+
+    const closePromises = this.searchWindowIds.map(async (windowId) => {
+      try {
+        await window.api.searchService.closeSearchWindow(windowId)
+        console.log(`[DeepSearch] 已关闭搜索窗口: ${windowId}`)
+      } catch (error) {
+        console.error(`[DeepSearch] 关闭搜索窗口 ${windowId} 失败:`, error)
+      }
+    })
+
+    await Promise.all(closePromises)
+
+    // 清空窗口ID列表
+    this.searchWindowIds = []
+    console.log('[DeepSearch] 所有搜索窗口已清理')
   }
 
   /**
