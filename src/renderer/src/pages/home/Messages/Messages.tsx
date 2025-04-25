@@ -50,7 +50,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
   const messages = useTopicMessages(topic)
-  const { displayCount, updateMessages, clearTopicMessages, deleteMessage } = useMessageOperations(topic)
+  const { displayCount, clearTopicMessages, deleteMessage } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
 
   useEffect(() => {
@@ -147,7 +147,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
 
           const clearMessage = getUserMessage({ assistant, topic, type: 'clear' })
           const newMessages = [...messages, clearMessage]
-          await updateMessages(newMessages)
+          // await updateMessages(newMessages)
 
           scrollToBottom()
         } finally {

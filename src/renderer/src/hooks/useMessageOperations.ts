@@ -3,6 +3,7 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import store, { type RootState, useAppDispatch, useAppSelector } from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import { newMessagesActions } from '@renderer/store/newMessage'
+import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import {
   clearTopicMessagesThunk,
   deleteMessageGroupThunk,
@@ -33,7 +34,7 @@ const selectMessagesState = (state: RootState) => state.messages
 
 export const selectNewTopicMessages = createSelector(
   [selectMessagesState, (state: RootState, topicId: string) => topicId],
-  (messagesState, topicId) => messagesState.messagesByTopic[topicId] || []
+  (messagesState, topicId) => messagesState.messageIdsByTopic[topicId] || []
 )
 
 export const selectNewTopicLoading = createSelector(
@@ -152,7 +153,7 @@ export function useMessageOperations(topic: Topic) {
   const pauseMessages = useCallback(async () => {
     // Use selector if preferred, but direct access is okay in callback
     const state = store.getState()
-    const topicMessages = state.messages.messagesByTopic[topic.id]
+    const topicMessages = selectMessagesForTopic(state, topic.id)
     if (!topicMessages) return
 
     // Find messages currently in progress (adjust statuses if needed)
@@ -189,9 +190,9 @@ export function useMessageOperations(topic: Topic) {
         console.warn('regenerateAssistantMessage should only be called for assistant messages.')
         return
       }
-      await dispatch(regenerateAssistantResponseThunk(topic, message, assistant))
+      await dispatch(regenerateAssistantResponseThunk(topic.id, message, assistant))
     },
-    [dispatch, topic] // topic object needed by thunk
+    [dispatch, topic.id] // topic object needed by thunk
   )
 
   return {
@@ -210,7 +211,7 @@ export function useMessageOperations(topic: Topic) {
 }
 
 export const useTopicMessages = (topic: Topic) => {
-  const messages = useAppSelector((state) => selectNewTopicMessages(state, topic.id))
+  const messages = useAppSelector((state) => selectMessagesForTopic(state, topic.id))
   return messages
 }
 

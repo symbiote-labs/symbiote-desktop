@@ -7,7 +7,6 @@ import type {
   MCPToolResponse,
   Metrics,
   Model,
-  Topic,
   Usage,
   WebSearchResponse
 } from '.'
@@ -175,14 +174,6 @@ export type Message = {
 
   // 块集合
   blocks: MessageBlock['id'][]
-}
-
-export interface MessagesState {
-  messagesByTopic: Record<string, Message[]>
-  currentTopic: Topic | null
-  loadingByTopic: Record<string, boolean>
-  displayCount: number
-  error: string | null
 }
 
 export interface Response {

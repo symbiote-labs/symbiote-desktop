@@ -5,6 +5,7 @@ import i18n from '@renderer/i18n'
 import { fetchMessagesSummary } from '@renderer/services/ApiService'
 import store from '@renderer/store'
 import { messageBlocksSelectors, removeManyBlocks } from '@renderer/store/messageBlock'
+import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Assistant, FileType, MCPServer, Model, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
@@ -250,7 +251,7 @@ export function checkRateLimit(assistant: Assistant): boolean {
   }
 
   const topicId = assistant.topics[0].id
-  const messages = store.getState().messages.messagesByTopic[topicId]
+  const messages = selectMessagesForTopic(store.getState(), topicId)
 
   if (!messages || messages.length <= 1) {
     return false
