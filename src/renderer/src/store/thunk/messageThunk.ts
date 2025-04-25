@@ -550,19 +550,19 @@ const fetchAndProcessAssistantResponseImpl = async (
           stack: error.stack // Include stack trace if available
           // Add any other relevant serializable properties from the error if needed
         }
-
+        // const errorBlock = createErrorBlock(assistantMsgId, serializableError) // Pass the serializable object
         // FIXME: 创建了错误块需要把上一个块的status设置为ERROR
-        if (lastBlockId && lastBlockType !== MessageBlockType.ERROR) {
-          // Don't try to update if the last block was already an error block
-          console.log(`[onError] Marking block ${lastBlockId} (type: ${lastBlockType}) as ERROR.`)
-          dispatch(
-            updateOneBlock({
-              id: lastBlockId,
-              changes: { status: MessageBlockStatus.ERROR }
-            })
-          )
-          // No need to reset lastBlockId here, handleBlockTransition below will update it
-        }
+        // if (lastBlockId && lastBlockType !== MessageBlockType.ERROR) {
+        //   // Don't try to update if the last block was already an error block
+        //   console.log(`[onError] Marking block ${lastBlockId} (type: ${lastBlockType}) as ERROR.`)
+        //   dispatch(
+        //     updateOneBlock({
+        //       id: lastBlockId,
+        //       changes: { status: MessageBlockStatus.ERROR }
+        //     })
+        //   )
+        //   // No need to reset lastBlockId here, handleBlockTransition below will update it
+        // }
 
         const errorBlock = createErrorBlock(assistantMsgId, serializableError, {
           status: MessageBlockStatus.SUCCESS // 错误块本身是成功的

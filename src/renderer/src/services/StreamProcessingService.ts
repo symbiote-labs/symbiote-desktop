@@ -31,7 +31,7 @@ export interface StreamProcessorCallbacks {
   // Called when an error occurs during chunk processing
   onError?: (error: any) => void
   // Called when the entire stream processing is signaled as complete (success or failure)
-  onComplete?: (status: AssistantMessageStatus, response?: Response, finalError?: any) => void
+  onComplete?: (status: AssistantMessageStatus, response?: Response) => void
 }
 
 // Function to create a stream processor instance
@@ -40,14 +40,10 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks = {}) 
   return (chunk: Chunk) => {
     try {
       // FIXME: 没有持久化保存usage和metrics
-      console.log(`[${new Date().toLocaleString()}] createStreamProcessor ${chunk.type}`)
+      console.log(`[${new Date().toLocaleString()}] createStreamProcessor ${chunk.type}`, chunk)
       // 1. Handle the manual final signal first
       if (chunk?.type === ChunkType.BLOCK_COMPLETE) {
-        if (chunk?.error) {
-          callbacks.onComplete?.(AssistantMessageStatus.ERROR, undefined, chunk?.error)
-        } else {
-          callbacks.onComplete?.(AssistantMessageStatus.SUCCESS, chunk?.response)
-        }
+        callbacks.onComplete?.(AssistantMessageStatus.SUCCESS, chunk?.response)
         return
       }
       // 2. Process the actual ChunkCallbackData

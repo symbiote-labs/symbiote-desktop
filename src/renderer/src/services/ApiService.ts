@@ -186,14 +186,14 @@ async function fetchExternalTool(
       webSearchResponseFromSearch = await searchTheWeb()
     }
     // TODO: 应该在这写search结束
-    onChunkReceived({
-      type: ChunkType.EXTERNEL_TOOL_COMPLETE,
-      external_tool: {
-        webSearch: webSearchResponseFromSearch,
-        knowledge: knowledgeReferencesFromSearch
-      }
-    })
   }
+  onChunkReceived({
+    type: ChunkType.EXTERNEL_TOOL_COMPLETE,
+    external_tool: {
+      webSearch: webSearchResponseFromSearch,
+      knowledge: knowledgeReferencesFromSearch
+    }
+  })
 
   // --- Prepare for AI Completion ---
   // Store results temporarily (e.g., using window.keyv like before)

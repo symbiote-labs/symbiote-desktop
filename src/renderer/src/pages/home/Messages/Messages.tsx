@@ -19,6 +19,7 @@ import {
   removeSpecialCharactersForFileName,
   runAsyncFunction
 } from '@renderer/utils'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { flatten, last, take } from 'lodash'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -211,7 +212,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   useShortcut('copy_last_message', () => {
     const lastMessage = last(messages)
     if (lastMessage) {
-      navigator.clipboard.writeText(lastMessage.content)
+      navigator.clipboard.writeText(getMainTextContent(lastMessage))
       window.message.success(t('message.copy.success'))
     }
   })
