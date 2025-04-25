@@ -1,6 +1,7 @@
 import db from '@renderer/databases'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
+import { estimateMessagesUsage } from '@renderer/services/TokenService'
 import store from '@renderer/store'
 import {
   type Assistant,
@@ -13,6 +14,7 @@ import {
 import type {
   CitationMessageBlock,
   ImageMessageBlock,
+  MainTextMessageBlock,
   Message,
   MessageBlock,
   ToolMessageBlock
@@ -36,7 +38,6 @@ import { throttle } from 'lodash'
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
 import { newMessagesActions, removeMessage, removeMessagesByAskId } from '../newMessage'
-import { estimateMessagesUsage } from '@renderer/services/TokenService'
 
 const handleChangeLoadingOfTopic = async (topicId: string) => {
   await waitForTopicQueue(topicId)
@@ -251,7 +252,8 @@ const fetchAndProcessAssistantResponseImpl = async (
     // 用于存储tool call id 和 block id 的映射
     // mcp-tools中使用promise.all并发调用mcp,所以onToolCallComplete可能是乱序的
     const toolCallIdToBlockIdMap = new Map<string, string>()
-
+    let citationBlockId: string | null = null
+    let mainTextBlockId: string | null = null
     // --- Context Message Filtering --- START
     // --- Helper Function --- START
     // Helper to manage state transitions when switching block types
@@ -326,8 +328,14 @@ const fetchAndProcessAssistantResponseImpl = async (
           })
         } else {
           const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
-            status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
+            status: MessageBlockStatus.PROCESSING, //主要为等待流提供spinner,
+            citationReferences: [
+              {
+                citationBlockId: citationBlockId!
+              }
+            ]
           })
+          mainTextBlockId = newBlock.id
           handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
         }
         throttledDbUpdate(assistantMsgId, topicId, getState)
@@ -471,7 +479,7 @@ const fetchAndProcessAssistantResponseImpl = async (
             status: MessageBlockStatus.PROCESSING
           }
         )
-        // lastBlockId = citationBlock.id
+        citationBlockId = citationBlock.id
         handleBlockTransition(citationBlock, MessageBlockType.CITATION)
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },
@@ -488,6 +496,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         }
       },
       onLLMWebSearchComplete(llmWebSearchResult) {
+        console.log('onLLMWebSearchComplete', llmWebSearchResult)
         const citationBlock = createCitationBlock(
           assistantMsgId,
           {
@@ -495,6 +504,18 @@ const fetchAndProcessAssistantResponseImpl = async (
           },
           { status: MessageBlockStatus.SUCCESS }
         )
+        if (mainTextBlockId) {
+          const mainTextBlock = getState().messageBlocks.entities[mainTextBlockId] as MainTextMessageBlock
+          const updatedBlock = {
+            ...mainTextBlock,
+            citationReferences: [
+              {
+                citationBlockId: citationBlock.id
+              }
+            ]
+          }
+          dispatch(updateOneBlock({ id: mainTextBlockId, changes: updatedBlock }))
+        }
         handleBlockTransition(citationBlock, MessageBlockType.CITATION)
         throttledDbUpdate(assistantMsgId, topicId, getState)
       },

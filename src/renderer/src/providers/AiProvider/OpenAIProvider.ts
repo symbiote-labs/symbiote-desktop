@@ -32,7 +32,7 @@ import {
   Usage,
   WebSearchSource
 } from '@renderer/types'
-import { ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
+import { ChunkType, LLMWebSearchCompleteChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
@@ -585,43 +585,43 @@ export default class OpenAIProvider extends BaseProvider {
           // 3. Web Search
           if (delta?.annotations) {
             onChunk({
-              type: ChunkType.WEB_SEARCH_COMPLETE,
-              web_search: {
+              type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+              llm_web_search: {
                 results: delta.annotations,
                 source: WebSearchSource.OPENAI
               }
-            } as WebSearchCompleteChunk)
+            } as LLMWebSearchCompleteChunk)
           }
 
           if (assistant.model?.provider === 'perplexity') {
             const citations = chunk.citations
             if (citations) {
               onChunk({
-                type: ChunkType.WEB_SEARCH_COMPLETE,
-                web_search: {
+                type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+                llm_web_search: {
                   results: citations,
                   source: WebSearchSource.PERPLEXITY
                 }
-              } as WebSearchCompleteChunk)
+              } as LLMWebSearchCompleteChunk)
             }
           }
           if (assistant.enableWebSearch && isZhipuModel(model) && finishReason === 'stop' && chunk?.web_search) {
             onChunk({
-              type: ChunkType.WEB_SEARCH_COMPLETE,
-              web_search: {
+              type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+              llm_web_search: {
                 results: chunk.web_search,
                 source: WebSearchSource.ZHIPU
               }
-            } as WebSearchCompleteChunk)
+            } as LLMWebSearchCompleteChunk)
           }
           if (assistant.enableWebSearch && isHunyuanSearchModel(model) && chunk?.search_info?.search_results) {
             onChunk({
-              type: ChunkType.WEB_SEARCH_COMPLETE,
-              web_search: {
+              type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+              llm_web_search: {
                 results: chunk.search_info.search_results,
                 source: WebSearchSource.HUNYUAN
               }
-            } as WebSearchCompleteChunk)
+            } as LLMWebSearchCompleteChunk)
           }
         }
 

@@ -55,11 +55,7 @@ export interface MainTextMessageBlock extends BaseMessageBlock {
   knowledgeBaseIds?: string[]
   // Citation references
   citationReferences?: {
-    citationBlockId: string
-    positions: {
-      end: number
-      citationId: string
-    }[]
+    citationBlockId?: string
   }[]
 }
 

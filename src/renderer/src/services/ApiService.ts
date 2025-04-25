@@ -60,17 +60,7 @@ async function fetchExternalTool(
     summaryAssistant.model = assistant.model || getDefaultModel()
     summaryAssistant.prompt = SEARCH_SUMMARY_PROMPT.replace('{tools}', tools.join(', '))
 
-    try {
-      const keywords = await fetchSearchSummary({
-        messages: lastAnswer ? [lastAnswer, lastUserMessage] : [lastUserMessage],
-        assistant: summaryAssistant
-      })
-      return extractInfoFromXML(keywords || '')
-    } catch (e: any) {
-      console.error('extract error', e)
-      // Fallback to using original content if extraction fails
-      if (isAbortError(e)) throw e
-
+    const getFallbackResult = (): ExtractResults => {
       const fallbackContent = getMainTextContent(lastUserMessage)
       return {
         websearch: shouldSearch
@@ -84,6 +74,19 @@ async function fetchExternalTool(
             }
           : undefined
       } as ExtractResults
+    }
+
+    try {
+      const keywords = await fetchSearchSummary({
+        messages: lastAnswer ? [lastAnswer, lastUserMessage] : [lastUserMessage],
+        assistant: summaryAssistant
+      })
+
+      return keywords ? extractInfoFromXML(keywords) : getFallbackResult()
+    } catch (e: any) {
+      console.error('extract error', e)
+      if (isAbortError(e)) throw e
+      return getFallbackResult()
     }
   }
 
@@ -158,9 +161,10 @@ async function fetchExternalTool(
 
   const shouldSearch =
     assistant.enableWebSearch && (!isWebSearchModel(assistant.model!) || WebSearchService.isOverwriteEnabled())
+
   // --- Execute Extraction and Searches ---
   const extractResults = await extract()
-  console.log('extractResults', extractResults)
+  // console.log('extractResults', extractResults)
   // Run searches potentially in parallel
 
   let webSearchResponseFromSearch: WebSearchResponse | undefined
