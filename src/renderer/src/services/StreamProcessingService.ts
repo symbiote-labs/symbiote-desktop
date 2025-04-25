@@ -39,7 +39,8 @@ export function createStreamProcessor(callbacks: StreamProcessorCallbacks = {}) 
   // The returned function processes a single chunk or a final signal
   return (chunk: Chunk) => {
     try {
-      console.log('createStreamProcessor', chunk)
+      // FIXME: 没有持久化保存usage和metrics
+      console.log(`[${new Date().toLocaleString()}] createStreamProcessor ${chunk.type}`)
       // 1. Handle the manual final signal first
       if (chunk?.type === ChunkType.BLOCK_COMPLETE) {
         if (chunk?.error) {

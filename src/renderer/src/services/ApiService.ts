@@ -46,6 +46,7 @@ async function fetchExternalTool(
   // --- Keyword/Question Extraction Function ---
   const extract = async (): Promise<ExtractResults | undefined> => {
     if (!lastUserMessage) return undefined
+    if (!shouldSearch && !hasKnowledgeBase) return undefined
 
     // Notify UI that extraction/searching is starting
     onChunkReceived({ type: ChunkType.EXTERNEL_TOOL_IN_PROGRESS })

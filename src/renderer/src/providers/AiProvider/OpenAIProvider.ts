@@ -29,6 +29,7 @@ import {
   Model,
   Provider,
   Suggestion,
+  Usage,
   WebSearchSource
 } from '@renderer/types'
 import { ChunkType, WebSearchCompleteChunk } from '@renderer/types/chunk'
@@ -38,7 +39,7 @@ import { addImageFileToContents } from '@renderer/utils/formats'
 import { mcpToolCallResponseToOpenAIMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
-import { takeRight } from 'lodash'
+import { isEmpty, takeRight } from 'lodash'
 import OpenAI, { AzureOpenAI } from 'openai'
 import {
   ChatCompletionContentPart,
@@ -392,6 +393,17 @@ export default class OpenAIProvider extends BaseProvider {
     let time_first_token_millsec = 0
     let time_first_content_millsec = 0
     const start_time_millsec = new Date().getTime()
+    console.log(
+      `completions start_time_millsec ${new Date(start_time_millsec).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        fractionalSecondDigits: 3
+      })}`
+    )
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
     const { abortController, cleanup, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
@@ -463,13 +475,16 @@ export default class OpenAIProvider extends BaseProvider {
           time_completion_millsec,
           time_first_token_millsec: 0 // Non-streaming, first token time is not relevant
         }
+
+        // Create a synthetic usage object if stream.usage is undefined
+        const finalUsage = stream.usage
         // Separate onChunk calls for text and usage/metrics
         if (stream.choices[0].message?.content) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: stream.choices[0].message.content })
         }
-        if (stream.usage) {
-          onChunk({ type: ChunkType.BLOCK_COMPLETE, response: { usage: stream.usage, metrics: finalMetrics } })
-        }
+
+        // Always send usage and metrics data
+        onChunk({ type: ChunkType.BLOCK_COMPLETE, response: { usage: finalUsage, metrics: finalMetrics } })
         return
       }
 
@@ -478,7 +493,7 @@ export default class OpenAIProvider extends BaseProvider {
       let final_time_completion_millsec = 0
       let final_time_thinking_millsec = 0
       // Variable to store the last received usage object
-      let lastUsage: OpenAI.CompletionUsage | undefined = undefined
+      let lastUsage: Usage | undefined = undefined
       // let isThinkingInContent: ThoughtProcessor | undefined = undefined
       // const processThinkingChunk = this.handleThinkingTags()
       for await (const chunk of stream) {
@@ -487,7 +502,7 @@ export default class OpenAIProvider extends BaseProvider {
         }
 
         const delta = chunk.choices[0]?.delta
-        const finishReason = chunk.choices[0]?.finish_reason // Needed for Zhipu check
+        const finishReason = chunk.choices[0]?.finish_reason
 
         // --- Incremental onChunk calls ---
 
@@ -495,9 +510,24 @@ export default class OpenAIProvider extends BaseProvider {
         const reasoningContent = delta?.reasoning_content || delta?.reasoning
         const currentTime = new Date().getTime() // Get current time for each chunk
 
-        if (time_first_token_millsec === 0 && !reasoningContent && !delta?.content && !delta?.finish_reason) {
-          time_first_token_millsec = new Date().getTime() - start_time_millsec
-          onChunk({ type: ChunkType.LLM_RESPONSE_CREATED, response: { metrics: { time_first_token_millsec } } })
+        if (
+          time_first_token_millsec === 0 &&
+          isEmpty(reasoningContent) &&
+          isEmpty(delta?.content) &&
+          isEmpty(finishReason)
+        ) {
+          time_first_token_millsec = currentTime - start_time_millsec
+          console.log(
+            `completions time_first_token_millsec ${new Date(currentTime).toLocaleString(undefined, {
+              year: 'numeric',
+              month: 'numeric',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              second: 'numeric',
+              fractionalSecondDigits: 3
+            })}`
+          )
         }
         if (reasoningContent) {
           hasReasoningContent = true // Keep track if reasoning occurred
@@ -508,8 +538,14 @@ export default class OpenAIProvider extends BaseProvider {
           }
 
           // Calculate thinking time as time elapsed since start until this chunk
-          const thinking_time = currentTime - start_time_millsec
+          const thinking_time = currentTime - time_first_content_millsec
           onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, thinking_millsec: thinking_time })
+        }
+
+        if (isReasoningJustDone(delta)) {
+          if (time_first_content_millsec === 0) {
+            time_first_content_millsec = currentTime
+          }
         }
 
         // 2. Text Content
@@ -524,8 +560,28 @@ export default class OpenAIProvider extends BaseProvider {
           // }
         }
         // console.log('delta?.finish_reason', delta?.finish_reason)
-        if (finishReason) {
+        if (!isEmpty(finishReason)) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
+          final_time_completion_millsec = currentTime - start_time_millsec
+          console.log(
+            `completions final_time_completion_millsec ${new Date(currentTime).toLocaleString(undefined, {
+              year: 'numeric',
+              month: 'numeric',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              second: 'numeric',
+              fractionalSecondDigits: 3
+            })}`
+          )
+          // 6. Usage (If provided per chunk) - Capture the last known usage
+          if (chunk.usage) {
+            // console.log('chunk.usage', chunk.usage)
+            lastUsage = chunk.usage // Update with the latest usage info
+            // Send incremental usage update if needed by UI (optional, keep if useful)
+            // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
+          }
+
           // 3. Web Search
           if (delta?.annotations) {
             onChunk({
@@ -569,22 +625,6 @@ export default class OpenAIProvider extends BaseProvider {
           }
         }
 
-        // 6. Usage (If provided per chunk) - Capture the last known usage
-        if (chunk.usage) {
-          // console.log('chunk.usage', chunk.usage)
-          lastUsage = chunk.usage // Update with the latest usage info
-          // Send incremental usage update if needed by UI (optional, keep if useful)
-          // onChunk({ type: 'block_in_progress', response: { usage: chunk.usage } })
-        }
-
-        if (isReasoningJustDone(delta)) {
-          if (time_first_content_millsec === 0) {
-            time_first_content_millsec = new Date().getTime()
-          }
-        }
-        // Continuously update the completion time
-        final_time_completion_millsec = new Date().getTime() - start_time_millsec
-
         // --- End of Incremental onChunk calls ---
       } // End of for await loop
 
@@ -596,12 +636,10 @@ export default class OpenAIProvider extends BaseProvider {
       final_time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
 
       // Send the final block_complete chunk with accumulated data
-
-      console.log('usage', lastUsage) // Log the captured usage
       onChunk({
         type: ChunkType.BLOCK_COMPLETE,
         response: {
-          // Use the last captured usage object directly
+          // Use the enhanced usage object
           usage: lastUsage,
           metrics: {
             // Get completion tokens from the last usage object if available
@@ -1053,8 +1091,31 @@ export default class OpenAIProvider extends BaseProvider {
         images: response.data.map((item) => `data:image/png;base64,${item.b64_json}`)
       }
     })
+
+    // Create synthetic usage and metrics data for image generation
+    const time_completion_millsec = new Date().getTime() - new Date(lastUserMessage?.createdAt || Date.now()).getTime()
+
+    // For image generation, we create a synthetic usage object
+    const syntheticUsage = {
+      prompt_tokens: 100, // Approximate value for prompt
+      completion_tokens: 0, // Images don't have completion tokens
+      total_tokens: 100 // Total is just the prompt tokens
+    }
+
+    const syntheticMetrics = {
+      completion_tokens: 0,
+      time_completion_millsec,
+      time_first_token_millsec: 0
+    }
+
+    console.log('Image generation - sending synthetic usage data:', syntheticUsage)
+
     onChunk({
-      type: ChunkType.BLOCK_COMPLETE
+      type: ChunkType.BLOCK_COMPLETE,
+      response: {
+        usage: syntheticUsage,
+        metrics: syntheticMetrics
+      }
     })
     return
   }

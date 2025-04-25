@@ -257,7 +257,6 @@ export default class AnthropicProvider extends BaseProvider {
           .on('text', (text) => {
             if (time_first_token_millsec == 0) {
               time_first_token_millsec = new Date().getTime() - start_time_millsec
-              onChunk({ type: ChunkType.LLM_RESPONSE_CREATED, response: { metrics: { time_first_token_millsec } } })
             }
 
             if (hasThinkingContent && time_first_content_millsec === 0) {
@@ -272,16 +271,15 @@ export default class AnthropicProvider extends BaseProvider {
 
             if (time_first_token_millsec == 0) {
               time_first_token_millsec = currentTime - start_time_millsec
-              // Potentially add LLM_RESPONSE_CREATED chunk here if needed, similar to OpenAI
             }
 
             // Set time_first_content_millsec ONLY when the first content (thinking or text) arrives
             if (time_first_content_millsec === 0) {
-              time_first_content_millsec = currentTime // Record the time of the very first content chunk
+              time_first_content_millsec = currentTime
             }
 
             // Calculate thinking time as time elapsed since start until this chunk
-            const thinking_time = currentTime - start_time_millsec
+            const thinking_time = currentTime - time_first_content_millsec
 
             onChunk({
               type: ChunkType.THINKING_DELTA,

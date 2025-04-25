@@ -5,7 +5,8 @@ import type {
   FileMessageBlock,
   ImageMessageBlock,
   MainTextMessageBlock,
-  Message
+  Message,
+  ThinkingMessageBlock
 } from '@renderer/types/newMessage'
 import { MessageBlockType } from '@renderer/types/newMessage'
 
@@ -27,6 +28,21 @@ export const findMainTextBlocks = (message: Message): MainTextMessageBlock[] => 
     }
   }
   return textBlocks
+}
+
+export const findThinkingBlocks = (message: Message): ThinkingMessageBlock[] => {
+  if (!message || !message.blocks || message.blocks.length === 0) {
+    return []
+  }
+  const state = store.getState()
+  const thinkingBlocks: ThinkingMessageBlock[] = []
+  for (const blockId of message.blocks) {
+    const block = messageBlocksSelectors.selectById(state, blockId)
+    if (block && block.type === MessageBlockType.THINKING) {
+      thinkingBlocks.push(block as ThinkingMessageBlock)
+    }
+  }
+  return thinkingBlocks
 }
 
 /**
@@ -77,6 +93,11 @@ export const findFileBlocks = (message: Message): FileMessageBlock[] => {
 export const getMainTextContent = (message: Message): string => {
   const textBlocks = findMainTextBlocks(message)
   return textBlocks.map((block) => block.content).join('\n\n')
+}
+
+export const getThinkingContent = (message: Message): string => {
+  const thinkingBlocks = findThinkingBlocks(message)
+  return thinkingBlocks.map((block) => block.content).join('\n\n')
 }
 
 /**

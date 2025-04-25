@@ -4,9 +4,13 @@ import type { Message } from '@renderer/types/newMessage'
 import { t } from 'i18next'
 import styled from 'styled-components'
 
-const MessgeTokens: React.FC<{ message: Message; isLastMessage: boolean }> = ({ message, isLastMessage }) => {
+interface MessageTokensProps {
+  message: Message
+  isLastMessage?: boolean
+}
+
+const MessgeTokens: React.FC<MessageTokensProps> = ({ message, isLastMessage }) => {
   // const { generating } = useRuntime()
-  // TODO 计算token
   const locateMessage = () => {
     EventEmitter.emit(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, false)
   }
@@ -22,11 +26,6 @@ const MessgeTokens: React.FC<{ message: Message; isLastMessage: boolean }> = ({ 
       </MessageMetadata>
     )
   }
-
-  // if (isLastMessage && generating) {
-  //   return <div />
-  // }
-  // console.log('messageTokens', message)
 
   if (message.role === 'assistant') {
     let metrixs = ''

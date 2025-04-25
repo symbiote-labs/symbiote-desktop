@@ -36,6 +36,7 @@ import { throttle } from 'lodash'
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
 import { newMessagesActions, removeMessage, removeMessagesByAskId } from '../newMessage'
+import { estimateMessagesUsage } from '@renderer/services/TokenService'
 
 const handleChangeLoadingOfTopic = async (topicId: string) => {
   await waitForTopicQueue(topicId)
@@ -315,13 +316,6 @@ const fetchAndProcessAssistantResponseImpl = async (
     // --- Context Message Filtering --- END
 
     callbacks = {
-      // FIXME: 哪怕返回其他模态，应该也是文字流在前？
-      // onLLMResponseCreated: () => {
-      //   const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
-      //     status: MessageBlockStatus.PROCESSING //主要为等待流提供spinner
-      //   })
-      //   handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
-      // },
       onTextChunk: (text) => {
         accumulatedContent += text
         if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
@@ -627,11 +621,37 @@ const fetchAndProcessAssistantResponseImpl = async (
           //     status: MessageBlockStatus.SUCCESS
           //   }))
           // dispatch(upsertManyBlocks(citationBlocks))
+          if (response && !response?.usage) {
+            const usage = await estimateMessagesUsage({
+              assistant,
+              messages: [...messagesForContext, finalAssistantMsg]
+            })
+            response.usage = usage
+          }
+          if (response && response.metrics) {
+            if (!response.metrics.completion_tokens) {
+              response = {
+                ...response,
+                metrics: {
+                  ...response.metrics,
+                  completion_tokens: response.usage?.completion_tokens
+                }
+              }
+            }
+          }
         }
         // --- End of final block status update on SUCCESS --- END
 
         // --- Update final message status ---
         const messageUpdates: Partial<Message> = { status, metrics: response?.metrics, usage: response?.usage }
+
+        // Enhanced logging to debug usage and metrics
+        console.log('Updating message with usage and metrics:', {
+          messageId: assistantMsgId,
+          status,
+          metrics: response?.metrics,
+          usage: response?.usage
+        })
 
         dispatch(
           newMessagesActions.updateMessage({
