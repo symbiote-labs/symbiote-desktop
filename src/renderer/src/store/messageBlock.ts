@@ -99,24 +99,23 @@ const formatCitationsFromBlock = (block: CitationMessageBlock | undefined): Cita
         break
       case WebSearchSource.OPENAI:
         formattedCitations =
-          (block.response.results as OpenAI.Chat.Completions.ChatCompletionMessage.Annotation.URLCitation[])?.map(
-            (url, index) => {
-              let hostname: string | undefined
-              try {
-                hostname = url.title ? undefined : new URL(url.url).hostname
-              } catch {
-                hostname = url.url
-              }
-              return {
-                number: index + 1,
-                url: url.url,
-                title: url.title,
-                hostname: hostname,
-                showFavicon: true,
-                type: 'websearch'
-              }
+          (block.response.results as OpenAI.Chat.Completions.ChatCompletionMessage.Annotation[])?.map((url, index) => {
+            const urlCitation = url.url_citation
+            let hostname: string | undefined
+            try {
+              hostname = urlCitation.title ? undefined : new URL(urlCitation.url).hostname
+            } catch {
+              hostname = urlCitation.url
             }
-          ) || []
+            return {
+              number: index + 1,
+              url: urlCitation.url,
+              title: urlCitation.title,
+              hostname: hostname,
+              showFavicon: true,
+              type: 'websearch'
+            }
+          }) || []
         break
       case WebSearchSource.OPENROUTER:
       case WebSearchSource.PERPLEXITY:

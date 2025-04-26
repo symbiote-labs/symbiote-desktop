@@ -220,6 +220,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
         files: uploadedFiles
       }
 
+      // FIXME
       baseUserMessage.usage = await estimateMessageUsage(usageParams)
 
       const { message, blocks } = getUserMessage(baseUserMessage)

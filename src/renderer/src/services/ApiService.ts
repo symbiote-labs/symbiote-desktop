@@ -46,14 +46,15 @@ async function fetchExternalTool(
   // --- Keyword/Question Extraction Function ---
   const extract = async (): Promise<ExtractResults | undefined> => {
     if (!lastUserMessage) return undefined
-    if (!shouldSearch && !hasKnowledgeBase) return undefined
+    // 如果都不需要搜索，则直接返回，不意图识别
+    if (!shouldWebSearch && !hasKnowledgeBase) return undefined
 
     // Notify UI that extraction/searching is starting
     onChunkReceived({ type: ChunkType.EXTERNEL_TOOL_IN_PROGRESS })
 
     const tools: string[] = []
 
-    if (shouldSearch) tools.push('websearch')
+    if (shouldWebSearch) tools.push('websearch')
     if (hasKnowledgeBase) tools.push('knowledge')
 
     const summaryAssistant = getDefaultAssistant()
@@ -63,7 +64,7 @@ async function fetchExternalTool(
     const getFallbackResult = (): ExtractResults => {
       const fallbackContent = getMainTextContent(lastUserMessage)
       return {
-        websearch: shouldSearch
+        websearch: shouldWebSearch
           ? {
               question: [fallbackContent || 'search']
             }
@@ -98,12 +99,7 @@ async function fetchExternalTool(
       return
     }
 
-    const shouldSearch =
-      WebSearchService.isWebSearchEnabled() &&
-      assistant.enableWebSearch &&
-      extractResults.websearch.question[0] !== 'not_needed'
-
-    if (!shouldSearch) return
+    if (!shouldWebSearch) return
 
     // Add check for assistant.model before using it
     if (!assistant.model) {
@@ -159,7 +155,7 @@ async function fetchExternalTool(
     }
   }
 
-  const shouldSearch =
+  const shouldWebSearch =
     assistant.enableWebSearch && (!isWebSearchModel(assistant.model!) || WebSearchService.isOverwriteEnabled())
 
   // --- Execute Extraction and Searches ---
@@ -185,15 +181,15 @@ async function fetchExternalTool(
     } else if (isWebSearchValid) {
       webSearchResponseFromSearch = await searchTheWeb()
     }
-    // TODO: 应该在这写search结束
+    // Search判断很准确了，可以在这写search结束
+    onChunkReceived({
+      type: ChunkType.EXTERNEL_TOOL_COMPLETE,
+      external_tool: {
+        webSearch: webSearchResponseFromSearch,
+        knowledge: knowledgeReferencesFromSearch
+      }
+    })
   }
-  onChunkReceived({
-    type: ChunkType.EXTERNEL_TOOL_COMPLETE,
-    external_tool: {
-      webSearch: webSearchResponseFromSearch,
-      knowledge: knowledgeReferencesFromSearch
-    }
-  })
 
   // --- Prepare for AI Completion ---
   // Store results temporarily (e.g., using window.keyv like before)

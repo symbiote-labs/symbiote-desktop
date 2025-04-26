@@ -36,6 +36,12 @@ import { ChunkType, LLMWebSearchCompleteChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { addImageFileToContents } from '@renderer/utils/formats'
+import {
+  convertLinks,
+  convertLinksToHunyuan,
+  convertLinksToOpenRouter,
+  convertLinksToZhipu
+} from '@renderer/utils/linkConverter'
 import { mcpToolCallResponseToOpenAIMessage, parseAndCallTools } from '@renderer/utils/mcp-tools'
 import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
@@ -496,6 +502,7 @@ export default class OpenAIProvider extends BaseProvider {
       let lastUsage: Usage | undefined = undefined
       // let isThinkingInContent: ThoughtProcessor | undefined = undefined
       // const processThinkingChunk = this.handleThinkingTags()
+      let isFirstChunk = true
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
           break
@@ -550,6 +557,24 @@ export default class OpenAIProvider extends BaseProvider {
 
         // 2. Text Content
         if (delta?.content) {
+          if (assistant.enableWebSearch) {
+            if (delta?.annotations) {
+              delta.content = convertLinks(delta.content || '', isFirstChunk)
+            } else if (assistant.model?.provider === 'openrouter') {
+              delta.content = convertLinksToOpenRouter(delta.content || '', isFirstChunk)
+            } else if (isZhipuModel(assistant.model)) {
+              delta.content = convertLinksToZhipu(delta.content || '', isFirstChunk)
+            } else if (isHunyuanSearchModel(assistant.model)) {
+              delta.content = convertLinksToHunyuan(
+                delta.content || '',
+                chunk.search_info.search_results || [],
+                isFirstChunk
+              )
+            }
+          }
+          if (isFirstChunk) {
+            isFirstChunk = false
+          }
           content += delta.content // Still accumulate for processToolUses
 
           // isThinkingInContent = this.findThinkingProcessor(content, model)
