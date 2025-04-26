@@ -722,10 +722,9 @@ export default class OpenAIProvider extends BaseProvider {
    * @param onResponse - The onResponse callback
    * @returns The translated message
    */
-  async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
+  async translate(content: string, assistant: Assistant, onResponse?: (text: string, isComplete: boolean) => void) {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
-    const content = await this.getMessageContent(message)
     const messagesForApi = content
       ? [
           { role: 'system', content: assistant.prompt },
@@ -749,7 +748,7 @@ export default class OpenAIProvider extends BaseProvider {
 
     await this.checkIsCopilot()
 
-    console.debug('[translate] reqMessages', model.id, message)
+    // console.debug('[translate] reqMessages', model.id, message)
     // @ts-ignore key is not typed
     const response = await this.sdk.chat.completions.create({
       model: model.id,
@@ -777,7 +776,7 @@ export default class OpenAIProvider extends BaseProvider {
 
         if (!isThinking) {
           text += deltaContent
-          onResponse?.(text)
+          onResponse?.(text, false)
         }
 
         if (deltaContent.includes('</think>')) {
@@ -785,9 +784,11 @@ export default class OpenAIProvider extends BaseProvider {
         }
       } else {
         text += deltaContent
-        onResponse?.(text)
+        onResponse?.(text, false)
       }
     }
+
+    onResponse?.(text, true)
 
     return text
   }

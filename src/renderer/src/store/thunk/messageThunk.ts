@@ -29,6 +29,7 @@ import {
   createMainTextBlock,
   createThinkingBlock,
   createToolBlock,
+  createTranslationBlock,
   resetAssistantMessage
 } from '@renderer/utils/messageUtils/create'
 import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
@@ -119,7 +120,7 @@ const throttledBlockUpdate = throttle((id, blockUpdate) => {
 }, 150)
 
 // 修改: 节流更新单个块的内容/状态到数据库 (仅用于 Text/Thinking Chunks)
-const throttledBlockDbUpdate = throttle(
+export const throttledBlockDbUpdate = throttle(
   async (blockId: string, blockChanges: Partial<MessageBlock>) => {
     // Check if blockId is valid before attempting update
     if (!blockId) {
@@ -995,5 +996,69 @@ export const regenerateAssistantResponseThunk =
         error
       )
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+    }
+  }
+
+// --- Thunk to initiate translation and create the initial block ---
+export const initiateTranslationThunk =
+  (
+    messageId: string,
+    topicId: string,
+    targetLanguage: string,
+    sourceBlockId?: string, // Optional: If known
+    sourceLanguage?: string // Optional: If known
+  ) =>
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<string | undefined> => {
+    // Return the new block ID
+    console.log(`[initiateTranslationThunk] Initiating translation block for message ${messageId}`)
+    try {
+      const state = getState()
+      const originalMessage = state.messages.entities[messageId]
+
+      if (!originalMessage) {
+        console.error(`[initiateTranslationThunk] Original message ${messageId} not found.`)
+        return undefined
+      }
+
+      // 1. Create the initial translation block (streaming state)
+      const newBlock = createTranslationBlock(
+        messageId,
+        '', // Start with empty content
+        targetLanguage,
+        {
+          status: MessageBlockStatus.STREAMING, // Set to STREAMING
+          sourceBlockId,
+          sourceLanguage
+        }
+      )
+
+      // 2. Update Redux State
+      const updatedBlockIds = [...(originalMessage.blocks || []), newBlock.id]
+      dispatch(upsertOneBlock(newBlock)) // Add the new block
+      dispatch(
+        newMessagesActions.updateMessage({
+          topicId,
+          messageId,
+          updates: { blocks: updatedBlockIds } // Update message's block list
+        })
+      )
+
+      // 3. Update Database
+      // Get the final message list from Redux state *after* updates
+      const finalState = getState()
+      const finalMessagesToSave = selectMessagesForTopic(finalState, topicId)
+
+      await db.transaction('rw', db.topics, db.message_blocks, async () => {
+        await db.message_blocks.put(newBlock) // Save the initial block
+        await db.topics.update(topicId, { messages: finalMessagesToSave }) // Save updated message list
+      })
+      console.log(
+        `[initiateTranslationThunk] Successfully initiated translation block ${newBlock.id} for message ${messageId}.`
+      )
+      return newBlock.id // Return the ID
+    } catch (error) {
+      console.error(`[initiateTranslationThunk] Failed for message ${messageId}:`, error)
+      return undefined
+      // Optional: Dispatch an error action or show notification
     }
   }

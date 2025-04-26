@@ -263,12 +263,12 @@ export async function fetchChatCompletion({
 }
 
 interface FetchTranslateProps {
-  message: Message
+  content: string
   assistant: Assistant
-  onResponse?: (text: string) => void
+  onResponse?: (text: string, isComplete: boolean) => void
 }
 
-export async function fetchTranslate({ message, assistant, onResponse }: FetchTranslateProps) {
+export async function fetchTranslate({ content, assistant, onResponse }: FetchTranslateProps) {
   const model = getTranslateModel()
 
   if (!model) {
@@ -284,7 +284,7 @@ export async function fetchTranslate({ message, assistant, onResponse }: FetchTr
   const AI = new AiProvider(provider)
 
   try {
-    return await AI.translate(message, assistant, onResponse)
+    return await AI.translate(content, assistant, onResponse)
   } catch (error: any) {
     return ''
   }

@@ -2,19 +2,21 @@ import { createSelector } from '@reduxjs/toolkit'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import store, { type RootState, useAppDispatch, useAppSelector } from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import { newMessagesActions } from '@renderer/store/newMessage'
-import { selectMessagesForTopic } from '@renderer/store/newMessage'
+import { updateOneBlock } from '@renderer/store/messageBlock'
+import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import {
   clearTopicMessagesThunk,
   deleteMessageGroupThunk,
   deleteSingleMessageThunk,
+  initiateTranslationThunk,
   regenerateAssistantResponseThunk,
   resendMessageThunk,
   resendUserMessageWithEditThunk
 } from '@renderer/store/thunk/messageThunk'
+import { throttledBlockDbUpdate } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, Topic } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessage'
-import { MessageBlockType } from '@renderer/types/newMessage'
+import type { Message, MessageBlock } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { abortCompletion } from '@renderer/utils/abortController'
 import { useCallback } from 'react'
 
@@ -195,6 +197,52 @@ export function useMessageOperations(topic: Topic) {
     [dispatch, topic.id] // topic object needed by thunk
   )
 
+  /**
+   * Initiates translation and returns a function to update the streaming block.
+   * @returns An async function that, when called with text chunks, updates the block.
+   *          Returns null if initiation fails.
+   */
+  const getTranslationUpdater = useCallback(
+    async (
+      messageId: string,
+      targetLanguage: string,
+      sourceBlockId?: string,
+      sourceLanguage?: string
+    ): Promise<((accumulatedText: string, isComplete?: boolean) => void) | null> => {
+      if (!topic.id) return null
+
+      // 1. Initiate the block and get its ID
+      const blockId = await dispatch(
+        initiateTranslationThunk(messageId, topic.id, targetLanguage, sourceBlockId, sourceLanguage)
+      )
+
+      if (!blockId) {
+        console.error('[getTranslationUpdater] Failed to initiate translation block.')
+        return null
+      }
+
+      // 2. Return the updater function
+      // TODO:下面这个逻辑也可以放在thunk中
+      return (accumulatedText: string, isComplete: boolean = false) => {
+        const status = isComplete ? MessageBlockStatus.SUCCESS : MessageBlockStatus.STREAMING
+        const changes: Partial<MessageBlock> = { content: accumulatedText, status: status } // Use Partial<MessageBlock>
+
+        // Dispatch update to Redux store
+        dispatch(updateOneBlock({ id: blockId, changes }))
+
+        // Throttle update to DB
+        throttledBlockDbUpdate(blockId, changes) // Use the throttled function
+
+        // if (isComplete) {
+        //   console.log(`[TranslationUpdater] Final update for block ${blockId}.`)
+        //   // Ensure the throttled function flushes if needed, or call an immediate save
+        //   // For simplicity, we rely on the throttle's trailing call for now.
+        // }
+      }
+    },
+    [dispatch, topic.id]
+  )
+
   return {
     displayCount,
     deleteMessage,
@@ -206,7 +254,8 @@ export function useMessageOperations(topic: Topic) {
     createNewContext,
     clearTopicMessages, // Export renamed function
     pauseMessages,
-    resumeMessage
+    resumeMessage,
+    getTranslationUpdater
   }
 }
 

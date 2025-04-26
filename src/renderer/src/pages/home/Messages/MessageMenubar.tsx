@@ -6,6 +6,7 @@ import { TranslateLanguageOptions } from '@renderer/config/translate'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle } from '@renderer/services/MessagesService'
+import { translateText } from '@renderer/services/TranslateService'
 import { RootState } from '@renderer/store'
 import type { Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
@@ -64,8 +65,14 @@ const MessageMenubar: FC<Props> = (props) => {
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
   const assistantModel = assistant?.model
-  const { editMessage, deleteMessage, resendMessage, regenerateAssistantMessage, resendUserMessageWithEdit } =
-    useMessageOperations(topic)
+  const {
+    editMessage,
+    deleteMessage,
+    resendMessage,
+    regenerateAssistantMessage,
+    resendUserMessageWithEdit,
+    getTranslationUpdater
+  } = useMessageOperations(topic)
   const loading = useTopicLoading(topic)
 
   const isUserMessage = message.role === 'user'
@@ -206,23 +213,23 @@ const MessageMenubar: FC<Props> = (props) => {
       // editMessage(message.id, { translatedContent: t('translate.processing') })
 
       setIsTranslating(true)
+      const messageId = message.id
+      const translationUpdater = await getTranslationUpdater(messageId, language)
+      console.log('translationUpdater', translationUpdater)
+      if (!translationUpdater) return
+      try {
+        await translateText(mainTextContent, language, translationUpdater)
 
-      // try {
-      //   await translateText(message.content, language, (text) => {
-      //     // 使用 setStreamMessage 来更新翻译内容
-      //     setStreamMessage({ ...message, translatedContent: text })
-      //   })
-
-      //   // 翻译完成后，提交流消息
-      //   commitStreamMessage(message.id)
-      // } catch (error) {
-      //   console.error('Translation failed:', error)
-      //   window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
-      //   editMessage(message.id, { translatedContent: undefined })
-      //   clearStreamMessage(message.id)
-      // } finally {
-      //   setIsTranslating(false)
-      // }
+        // 翻译完成后，提交流消息
+        // commitStreamMessage(message.id)
+      } catch (error) {
+        // console.error('Translation failed:', error)
+        // window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
+        // editMessage(message.id, { translatedContent: undefined })
+        // clearStreamMessage(message.id)
+      } finally {
+        setIsTranslating(false)
+      }
     },
     [isTranslating, message, editMessage, t]
   )

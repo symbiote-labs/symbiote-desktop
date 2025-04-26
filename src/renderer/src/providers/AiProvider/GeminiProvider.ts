@@ -506,16 +506,19 @@ export default class GeminiProvider extends BaseProvider {
    * @param onResponse - The onResponse callback
    * @returns The translated message
    */
-  public async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
+  public async translate(
+    content: string,
+    assistant: Assistant,
+    onResponse?: (text: string, isComplete: boolean) => void
+  ) {
     const defaultModel = getDefaultModel()
     const { maxTokens } = getAssistantSettings(assistant)
     const model = assistant.model || defaultModel
-    const _content = getMainTextContent(message)
 
-    const content =
+    const _content =
       isGemmaModel(model) && assistant.prompt
-        ? `<start_of_turn>user\n${assistant.prompt}<end_of_turn>\n<start_of_turn>user\n${_content}<end_of_turn>`
-        : _content
+        ? `<start_of_turn>user\n${assistant.prompt}<end_of_turn>\n<start_of_turn>user\n${content}<end_of_turn>`
+        : content
     if (!onResponse) {
       const response = await this.sdk.models.generateContent({
         model: model.id,
@@ -527,7 +530,7 @@ export default class GeminiProvider extends BaseProvider {
         contents: [
           {
             role: 'user',
-            parts: [{ text: content }]
+            parts: [{ text: _content }]
           }
         ]
       })
@@ -552,8 +555,10 @@ export default class GeminiProvider extends BaseProvider {
 
     for await (const chunk of response) {
       text += chunk.text
-      onResponse(text)
+      onResponse?.(text, false)
     }
+
+    onResponse?.(text, true)
 
     return text
   }

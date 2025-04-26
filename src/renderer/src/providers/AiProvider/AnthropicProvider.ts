@@ -350,10 +350,13 @@ export default class AnthropicProvider extends BaseProvider {
    * @param onResponse - The onResponse callback
    * @returns The translated message
    */
-  public async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
+  public async translate(
+    content: string,
+    assistant: Assistant,
+    onResponse?: (text: string, isComplete: boolean) => void
+  ) {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
-    const content = getMainTextContent(message)
 
     const messagesForApi = [{ role: 'user' as const, content: content }]
 
@@ -379,9 +382,12 @@ export default class AnthropicProvider extends BaseProvider {
         .stream({ ...body, stream: true })
         .on('text', (_text) => {
           text += _text
-          onResponse?.(text)
+          onResponse?.(text, false)
         })
-        .on('finalMessage', () => resolve(text))
+        .on('finalMessage', () => {
+          onResponse?.(text, true)
+          resolve(text)
+        })
         .on('error', (error) => reject(error))
     })
   }
