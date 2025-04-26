@@ -205,13 +205,3 @@ export const selectFormattedCitationsByBlockId = createSelector([selectBlockEnti
 // --- Selector Integration --- END
 
 export default messageBlocksSlice.reducer
-
-// 5. 使用适配器的 getSelectors 创建并导出 Selectors
-// 我们传递一个选择器函数，该函数返回 `messageBlocks` slice 的状态。
-// 导出选择器的示例用法：
-// const selectBlockById = (state: RootState, blockId: EntityId) =>
-//   messageBlockSelectors.selectById(state, blockId);
-// const selectAllBlocks = (state: RootState) =>
-//   messageBlockSelectors.selectAll(state);
-// const selectBlockEntities = (state: RootState) =>
-//   messageBlockSelectors.selectEntities(state); // 获取 { id: block } 字典

@@ -1,5 +1,6 @@
-import type { LegacyMessage as OldMessage, Topic, WebSearchResponse } from '@renderer/types'
+import type { LegacyMessage as OldMessage, Topic } from '@renderer/types'
 import { FileTypes } from '@renderer/types' // Import FileTypes enum
+import { WebSearchSource } from '@renderer/types'
 import type {
   BaseMessageBlock,
   CitationMessageBlock,
@@ -200,23 +201,40 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
         // FIXME: 我这里改了引用数据结构才发现，数据库schema迁移没改
         if (oldMessage.metadata?.groundingMetadata) {
           hasCitationData = true
-          citationDataToCreate.groundingMetadata = oldMessage.metadata.groundingMetadata
+          citationDataToCreate.response = {
+            results: oldMessage.metadata.groundingMetadata,
+            source: WebSearchSource.GEMINI
+          }
         }
         if (oldMessage.metadata?.annotations?.length) {
           hasCitationData = true
-          citationDataToCreate.annotations = oldMessage.metadata.annotations
+          citationDataToCreate.response = {
+            results: oldMessage.metadata.annotations,
+            source: WebSearchSource.OPENAI
+          }
         }
         if (oldMessage.metadata?.citations?.length) {
           hasCitationData = true
-          citationDataToCreate.citations = oldMessage.metadata.citations
+          citationDataToCreate.response = {
+            results: oldMessage.metadata.citations,
+            // 无法区分，统一为Openrouter
+            source: WebSearchSource.OPENROUTER
+          }
         }
         if (oldMessage.metadata?.webSearch) {
           hasCitationData = true
-          citationDataToCreate.webSearch = oldMessage.metadata.webSearch as WebSearchResponse
+          citationDataToCreate.response = {
+            results: oldMessage.metadata.webSearch?.results,
+            source: WebSearchSource.WEBSEARCH
+          }
         }
         if (oldMessage.metadata?.webSearchInfo) {
           hasCitationData = true
-          citationDataToCreate.webSearchInfo = oldMessage.metadata.webSearchInfo
+          citationDataToCreate.response = {
+            results: oldMessage.metadata.webSearchInfo,
+            // 无法区分，统一为zhipu
+            source: WebSearchSource.ZHIPU
+          }
         }
         if (oldMessage.metadata?.knowledge?.length) {
           hasCitationData = true
