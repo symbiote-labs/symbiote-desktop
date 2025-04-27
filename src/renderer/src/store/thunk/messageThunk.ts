@@ -116,6 +116,11 @@ const updateExistingMessageAndBlocksInDB = async (
 
 // 更新单个块的逻辑，用于更新消息中的单个块
 const throttledBlockUpdate = throttle((id, blockUpdate) => {
+  const state = store.getState()
+  const block = state.messageBlocks.entities[id]
+  // throttle是异步函数,可能会在complete事件触发后才执行
+  if (blockUpdate.status === MessageBlockStatus.STREAMING && block?.status === MessageBlockStatus.SUCCESS) return
+
   store.dispatch(updateOneBlock({ id, changes: blockUpdate }))
 }, 150)
 
@@ -127,6 +132,11 @@ export const throttledBlockDbUpdate = throttle(
       console.warn('[DB Throttle Block Update] Attempted to update with null/undefined blockId. Skipping.')
       return
     }
+    const state = store.getState()
+    const block = state.messageBlocks.entities[blockId]
+    // throttle是异步函数,可能会在complete事件触发后才执行
+    if (blockChanges.status === MessageBlockStatus.STREAMING && block?.status === MessageBlockStatus.SUCCESS) return
+
     console.log(`[DB Throttle Block Update] Updating block ${blockId} with changes:`, blockChanges)
     try {
       await db.message_blocks.update(blockId, blockChanges)
@@ -335,6 +345,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         }
       },
       onThinkingChunk: (text, thinking_millsec) => {
+        // FIXME: 没有complete事件, 无法更新状态
         accumulatedThinking += text
 
         if (lastBlockType === MessageBlockType.THINKING && lastBlockId) {
@@ -507,6 +518,15 @@ const fetchAndProcessAssistantResponseImpl = async (
           originalMessage: error.message,
           stack: error.stack
         }
+
+        // if (lastBlockId) {
+        //   // 更改上一个block的状态为ERROR
+        //   const changes: Partial<MessageBlock> = {
+        //     status: MessageBlockStatus.ERROR
+        //   }
+        //   dispatch(updateOneBlock({ id: lastBlockId, changes }))
+        //   saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
+        // }
 
         const errorBlock = createErrorBlock(assistantMsgId, serializableError, { status: MessageBlockStatus.SUCCESS })
         handleBlockTransition(errorBlock, MessageBlockType.ERROR)
@@ -864,6 +884,9 @@ export const resendMessageThunk =
       console.log(`[resendMessageThunk] Successfully queued ${resetDataList.length} regeneration tasks.`)
     } catch (error) {
       console.error(`[resendMessageThunk] Error resending user message ${userMessageToResend.id}:`, error)
+    } finally {
+      console.log('sendMessage finally', topicId)
+      handleChangeLoadingOfTopic(topicId)
     }
   }
 
@@ -992,6 +1015,9 @@ export const regenerateAssistantResponseThunk =
         error
       )
       dispatch(newMessagesActions.setTopicLoading({ topicId, loading: false }))
+    } finally {
+      console.log('sendMessage finally', topicId)
+      handleChangeLoadingOfTopic(topicId)
     }
   }
 
@@ -1148,5 +1174,8 @@ export const appendAssistantResponseThunk =
       console.error(`[appendAssistantResponseThunk] Error appending assistant response:`, error)
       // Optionally dispatch an error action or notification
       // Resetting loading state should be handled by the underlying fetchAndProcessAssistantResponseImpl
+    } finally {
+      console.log('sendMessage finally', topicId)
+      handleChangeLoadingOfTopic(topicId)
     }
   }

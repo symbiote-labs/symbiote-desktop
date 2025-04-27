@@ -198,7 +198,6 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
         }
 
         // 8. Collect Citation and Reference Data (Simplified: Independent checks)
-        // FIXME: 我这里改了引用数据结构才发现，数据库schema迁移没改
         if (oldMessage.metadata?.groundingMetadata) {
           hasCitationData = true
           citationDataToCreate.response = {

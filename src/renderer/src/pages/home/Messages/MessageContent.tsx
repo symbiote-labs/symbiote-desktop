@@ -2,7 +2,8 @@ import { getModelUniqId } from '@renderer/services/ModelService'
 import { Model } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
 import { Flex } from 'antd'
-import React, { Fragment } from 'react'
+import React from 'react'
+import { BeatLoader } from 'react-spinners'
 import styled from 'styled-components'
 
 import MessageBlockRenderer from './Blocks'
@@ -172,9 +173,7 @@ const MessageContent: React.FC<Props> = ({ message, model }) => {
 
   // if (message.status === 'pending') {
   //   return (
-  //     <MessageContentLoading>
-  //       <SyncOutlined spin size={24} />
-  //     </MessageContentLoading>
+
   //   )
   // }
 
@@ -201,7 +200,10 @@ const MessageContent: React.FC<Props> = ({ message, model }) => {
   // console.log('message', message)
 
   return (
-    <Fragment>
+    <>
+      <MessageContentLoading>
+        <BeatLoader size={8} loading={message.status === 'pending'} />
+      </MessageContentLoading>
       <Flex gap="8px" wrap style={{ marginBottom: 10 }}>
         {message.mentions?.map((model) => <MentionTag key={getModelUniqId(model)}>{'@' + model.name}</MentionTag>)}
       </Flex>
@@ -303,18 +305,18 @@ const MessageContent: React.FC<Props> = ({ message, model }) => {
 
       <MessageAttachments message={message} /> */}
       <MessageBlockRenderer blocks={message.blocks} model={model} message={message} />
-    </Fragment>
+    </>
   )
 }
 
-// const MessageContentLoading = styled.div`
-//   display: flex;
-//   flex-direction: row;
-//   align-items: center;
-//   height: 32px;
-//   margin-top: -5px;
-//   margin-bottom: 5px;
-// `
+const MessageContentLoading = styled.div`
+  display: flex;
+  flex-direction: row;
+  /* align-items: center; */
+  /* height: 32px; */
+  /* margin-top: -5px; */
+  /* margin-bottom: 5px; */
+`
 
 // const SearchingContainer = styled.div`
 //   display: flex;

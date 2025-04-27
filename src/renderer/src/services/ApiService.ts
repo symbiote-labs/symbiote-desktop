@@ -124,6 +124,7 @@ async function fetchExternalTool(
       }
     } catch (error) {
       console.error('Web search failed:', error)
+      if (isAbortError(error)) throw error
       return
     }
   }
