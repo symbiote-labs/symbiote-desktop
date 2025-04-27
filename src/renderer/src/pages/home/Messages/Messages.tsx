@@ -7,7 +7,7 @@ import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { autoRenameTopic, getTopic } from '@renderer/hooks/useTopic'
 import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
-import { getContextCount, getGroupedMessages } from '@renderer/services/MessagesService'
+import { getContextCount, getGroupedMessages, getUserMessage } from '@renderer/services/MessagesService'
 import { estimateHistoryTokens } from '@renderer/services/TokenService'
 import { useAppDispatch } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
@@ -50,8 +50,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
   const messages = useTopicMessages(topic)
-  const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch, createNewContext } =
-    useMessageOperations(topic)
+  const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
 
   useEffect(() => {
