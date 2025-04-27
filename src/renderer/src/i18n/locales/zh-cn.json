@@ -375,7 +375,9 @@
       "clear_data": "清除浏览器数据",
       "google_login_tip": "检测到Google登录页面，建议使用移动版登录页面以获得更好的体验。",
       "new_tab": "新建标签页",
-      "close_tab": "关闭标签页"
+      "close_tab": "关闭标签页",
+      "force_stop": "强制停止",
+      "stop": "停止"
     },
     "deepresearch": {
       "title": "深度研究",

@@ -1,5 +1,6 @@
 import { Workspace } from '@renderer/store/workspace'
 import { FileType, KnowledgeItem, QuickPhrase, Topic, TranslateHistory } from '@renderer/types'
+import { Bookmark, BookmarkFolder } from '@renderer/pages/Browser/types/bookmark'
 import { Dexie, type EntityTable } from 'dexie'
 
 import { upgradeToV5 } from './upgrades'
@@ -13,6 +14,8 @@ export const db = new Dexie('CherryStudio') as Dexie & {
   translate_history: EntityTable<TranslateHistory, 'id'>
   quick_phrases: EntityTable<QuickPhrase, 'id'>
   workspaces: EntityTable<Workspace, 'id'>
+  bookmarks: EntityTable<Bookmark, 'id'>
+  bookmark_folders: EntityTable<BookmarkFolder, 'id'>
 }
 
 db.version(1).stores({
@@ -67,6 +70,18 @@ db.version(7).stores({
   translate_history: '&id, sourceText, targetText, sourceLanguage, targetLanguage, createdAt',
   quick_phrases: 'id',
   workspaces: '&id, name, path, createdAt, updatedAt'
+})
+
+db.version(8).stores({
+  files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+  topics: '&id, messages',
+  settings: '&id, value',
+  knowledge_notes: '&id, baseId, type, content, created_at, updated_at',
+  translate_history: '&id, sourceText, targetText, sourceLanguage, targetLanguage, createdAt',
+  quick_phrases: 'id',
+  workspaces: '&id, name, path, createdAt, updatedAt',
+  bookmarks: '&id, title, url, parentId, createdAt, updatedAt',
+  bookmark_folders: '&id, title, parentId, createdAt, updatedAt'
 })
 
 export default db

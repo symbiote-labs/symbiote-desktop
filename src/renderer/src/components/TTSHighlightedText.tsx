@@ -61,7 +61,7 @@ const TTSHighlightedText: React.FC<TTSHighlightedTextProps> = ({ text }) => {
   // 使用 useMemo 记忆化列表渲染结果，避免不必要的重新计算
   const renderedSegments = useMemo(() => {
     if (segments.length === 0) {
-      return <div>{text}</div>;
+      return <div>{text}</div>
     }
 
     return segments.map((segment, index) => (

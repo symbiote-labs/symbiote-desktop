@@ -1,0 +1,74 @@
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=lgZ0TYM3KRXU…l1cvzRgzjWM-1745729582-1.0.1.1-_Q9WkYircZ9.sJjbmssTZZ1o3mYuv4Ow2wIMeuvsSCo'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM'
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM'
+3
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=INZqycV.To1s…ncOZ60qZVcE-1745729582-1.0.1.1-UL04FD3iguMiqRuBPofPqfu9U_q7Odl1ms9vmH6gl9c, title: 请稍候…
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: 请稍候…
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=INZqycV.To1s…ncOZ60qZVcE-1745729582-1.0.1.1-UL04FD3iguMiqRuBPofPqfu9U_q7Odl1ms9vmH6gl9c'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:382 [Tab tab-1745729188027] New window request: undefined, frameName: 未指定, linkOpenMode: newTab
+useAnimatedTabs.ts:37 [openUrlInTab] Called with url: undefined, inNewTab: true, title: 加载中...
+useAnimatedTabs.ts:41 [openUrlInTab] Called with undefined or empty URL, ignoring.
+useWebviewEvents.ts:87 [Tab tab-1745729188027] Navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM, title: Just a moment...
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: Just a moment...
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y, title: Just a moment...
+2
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+2
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM, title: 请稍候…
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: 请稍候…
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM'
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=GCNUZYaTSrE.…pVJUudhRU9E-1745729582-1.0.1.1-cOI6OFfdInZDh1SbcsdmR0TUDz5vRX_9ObN3mdFwDIM'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:382 [Tab tab-1745729188027] New window request: undefined, frameName: 未指定, linkOpenMode: newTab
+useAnimatedTabs.ts:37 [openUrlInTab] Called with url: undefined, inNewTab: true, title: 加载中...
+useAnimatedTabs.ts:41 [openUrlInTab] Called with undefined or empty URL, ignoring.
+useWebviewEvents.ts:87 [Tab tab-1745729188027] Navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y, title: Just a moment...
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: Just a moment...
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM, title: Just a moment...
+useWebviewEvents.ts:382 [Tab tab-1745721367810] New window request: undefined, frameName: 未指定, linkOpenMode: newTab
+useAnimatedTabs.ts:37 [openUrlInTab] Called with url: undefined, inNewTab: true, title: 加载中...
+useAnimatedTabs.ts:41 [openUrlInTab] Called with undefined or empty URL, ignoring.
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM'
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y, title: 请稍候…
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: 请稍候…
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=5VL.95t2wGT8…dw3BSxspj4s-1745729583-1.0.1.1-RaroI4FRyeRaDPaLSSEIpan8Rc0zq4drA9ul2Vc1.2Y'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:382 [Tab tab-1745729188027] New window request: undefined, frameName: 未指定, linkOpenMode: newTab
+useAnimatedTabs.ts:37 [openUrlInTab] Called with url: undefined, inNewTab: true, title: 加载中...
+useAnimatedTabs.ts:41 [openUrlInTab] Called with undefined or empty URL, ignoring.
+useWebviewEvents.ts:87 [Tab tab-1745729188027] Navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM, title: Just a moment...
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: Unable to load preload script: J:\Cherry\cherry-studioTTS\out\preload\index.js
+useWebviewEvents.ts:313 [Tab tab-1745729188027] handleConsoleMessage called with message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:315 [Tab tab-1745729188027] Console message: TypeError: Cannot read properties of undefined (reading 'openExternal')
+useWebviewEvents.ts:140 [Tab tab-1745729188027] Title updated: Just a moment...
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+useWebviewEvents.ts:115 [Tab tab-1745729188027] In-page navigation: https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=HspNR8z7A2YV…r7S37QRYDJc-1745729583-1.0.1.1-A2E.8KxOq117yDjAtJ1ROmjVdhUD9cjPqi3v4pq8c7M, title: Just a moment...
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM'
+storage.ts:24 Loaded tabs from storage: 5 tabs, active tab: tab-1745729188027
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=7WYUVBYXysh_…E4CM2E6FmZQ-1745729583-1.0.1.1-.NKbkenFPZsGeZTPRzYu0iV0KxQaTqvXihK.HA.OGVM'
+node:electron/js2c/isolated_bundle:2 Unexpected error while loading URL Error: Error invoking remote method 'GUEST_VIEW_MANAGER_CALL': Error: ERR_ABORTED (-3) loading 'https://accounts.x.ai/sign-in?redirect=grok-com&__cf_chl_rt_tk=HspNR8z7A2YV…r7S37QRYDJc-1745729583-1.0.1.1-A2E.8KxOq117yDjAtJ1ROmjVdhUD9cjPqi3v4pq8c7M'
+﻿

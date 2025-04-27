@@ -33,11 +33,11 @@ if (!app.requestSingleInstanceLock()) {
     // 配置浏览器会话
     const browserSession = session.fromPartition('persist:browser')
 
-    // 设置用户代理
+    // 设置用户代理 - 使用Chrome 126的用户代理字符串，但保留Chrome 134的功能
     const desktopUserAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     const mobileUserAgent =
-      'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36'
+      'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.6998.44 Mobile Safari/537.36'
 
     // 默认使用桌面用户代理
     browserSession.setUserAgent(desktopUserAgent)

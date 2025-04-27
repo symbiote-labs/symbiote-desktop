@@ -1,0 +1,129 @@
+/**
+ * Cloudflare 验证处理模块 (备份文件)
+ * 用于检测和处理 Cloudflare 的安全挑战页面
+ * 注意：此文件已被禁用，因为测试表明不需要特殊的 CF 验证处理
+ */
+
+/**
+ * 检测页面上是否存在 Cloudflare 验证码或其他验证码
+ * @returns {boolean} 是否存在验证码
+ */
+export function detectCloudflareCaptcha(): boolean {
+  return (
+    document.querySelector('iframe[src*="cloudflare"]') !== null ||
+    document.querySelector('.cf-browser-verification') !== null ||
+    document.querySelector('.cf-im-under-attack') !== null ||
+    document.querySelector('#challenge-form') !== null ||
+    document.querySelector('#challenge-running') !== null ||
+    document.querySelector('#challenge-error-title') !== null ||
+    document.querySelector('.ray-id') !== null ||
+    document.querySelector('.hcaptcha-box') !== null ||
+    document.querySelector('iframe[src*="hcaptcha"]') !== null ||
+    document.querySelector('iframe[src*="recaptcha"]') !== null
+  );
+}
+
+/**
+ * 显示验证提示
+ * @param {string} message - 提示消息
+ */
+export function showCaptchaNotification(message = '请完成人机验证以继续访问网站'): void {
+  // 创建提示元素
+  const notificationDiv = document.createElement('div');
+  notificationDiv.style.position = 'fixed';
+  notificationDiv.style.top = '10px';
+  notificationDiv.style.left = '50%';
+  notificationDiv.style.transform = 'translateX(-50%)';
+  notificationDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  notificationDiv.style.color = 'white';
+  notificationDiv.style.padding = '10px 20px';
+  notificationDiv.style.borderRadius = '5px';
+  notificationDiv.style.zIndex = '9999999';
+  notificationDiv.style.fontFamily = 'Arial, sans-serif';
+  notificationDiv.textContent = message;
+
+  // 添加到页面
+  document.body.appendChild(notificationDiv);
+
+  // 5秒后自动隐藏提示
+  setTimeout(() => {
+    notificationDiv.style.opacity = '0';
+    notificationDiv.style.transition = 'opacity 1s';
+    setTimeout(() => {
+      notificationDiv.remove();
+    }, 1000);
+  }, 5000);
+}
+
+/**
+ * 修改浏览器指纹以绕过 Cloudflare 检测
+ */
+export function modifyBrowserFingerprint(): void {
+  // 添加一些随机性，使每个浏览器实例看起来都不同
+  const randomFactor = Math.floor(Math.random() * 10);
+
+  // 修改屏幕分辨率
+  Object.defineProperty(window, 'innerWidth', {
+    get: function() { return 1920 + randomFactor; }
+  });
+
+  Object.defineProperty(window, 'innerHeight', {
+    get: function() { return 1080 + randomFactor; }
+  });
+
+  Object.defineProperty(window, 'outerWidth', {
+    get: function() { return 1920 + randomFactor; }
+  });
+
+  Object.defineProperty(window, 'outerHeight', {
+    get: function() { return 1080 + randomFactor; }
+  });
+
+  Object.defineProperty(screen, 'width', {
+    get: function() { return 1920; }
+  });
+
+  Object.defineProperty(screen, 'height', {
+    get: function() { return 1080; }
+  });
+
+  Object.defineProperty(screen, 'availWidth', {
+    get: function() { return 1920; }
+  });
+
+  Object.defineProperty(screen, 'availHeight', {
+    get: function() { return 1040; }
+  });
+
+  // 修改时区
+  Date.prototype.getTimezoneOffset = function() {
+    return -480; // 中国标准时间 (UTC+8)
+  };
+}
+
+/**
+ * 初始化 Cloudflare 验证处理
+ * 在页面加载完成后检测并处理验证码
+ */
+export function initCloudflareCaptchaHandler(): void {
+  window.addEventListener('DOMContentLoaded', () => {
+    try {
+      // 修改浏览器指纹
+      modifyBrowserFingerprint();
+      
+      // 检测是否存在验证码
+      const hasCloudflareCaptcha = detectCloudflareCaptcha();
+      
+      // 如果存在验证码，添加辅助功能
+      if (hasCloudflareCaptcha) {
+        // 显示提示
+        showCaptchaNotification();
+      }
+    } catch (e) {
+      console.error('Failed to handle Cloudflare captcha:', e);
+    }
+  });
+}
+
+// 自动初始化 (已禁用)
+// initCloudflareCaptchaHandler();

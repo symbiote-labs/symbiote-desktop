@@ -48,14 +48,6 @@ export default defineConfig({
       alias: {
         '@shared': resolve('packages/shared')
       }
-    },
-    build: {
-      rollupOptions: {
-        input: {
-          index: resolve('src/preload/index.ts'),
-          'browser-preload': resolve('src/preload/browser-preload.js')
-        }
-      }
     }
   },
   renderer: {
@@ -65,7 +57,7 @@ export default defineConfig({
           [
             '@swc/plugin-styled-components',
             {
-              displayName: process.env.NODE_ENV === 'development', // 仅在开发环境下启用组件名称
+              displayName: true, // 开发环境下启用组件名称
               fileName: false, // 不在类名中包含文件名
               pure: true, // 优化性能
               ssr: false // 不需要服务端渲染
@@ -73,14 +65,9 @@ export default defineConfig({
           ]
         ]
       }),
-      // 仅在非CI环境下启用Sentry插件
-      ...(process.env.CI
-        ? []
-        : [
-            sentryVitePlugin({
-              authToken: process.env.SENTRY_AUTH_TOKEN
-            })
-          ]),
+      sentryVitePlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN
+      }),
       ...visualizerPlugin('renderer')
     ],
     resolve: {
@@ -89,36 +76,19 @@ export default defineConfig({
         '@shared': resolve('packages/shared')
       }
     },
-    // optimizeDeps 配置已移至下方
+    optimizeDeps: {
+      exclude: []
+    },
     build: {
       rollupOptions: {
         input: {
           index: resolve('src/renderer/index.html')
-        },
-        // 减少打包时的警告输出
-        onwarn(warning, warn) {
-          // 忽略某些警告
-          if (warning.code === 'CIRCULAR_DEPENDENCY') return
-          warn(warning)
         }
       },
       // 复制ASR服务器文件
       assetsInlineLimit: 0,
       // 确保复制assets目录下的所有文件
-      copyPublicDir: true,
-      // 启用构建缓存
-      commonjsOptions: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        // 提高CommonJS模块转换性能
-        transformMixedEsModules: true
-      }
-    },
-    // 启用依赖预构建缓存
-    optimizeDeps: {
-      // 强制预构建这些依赖
-      include: ['react', 'react-dom', 'styled-components', 'antd', 'lodash'],
-      // 启用缓存
-      disabled: false
+      copyPublicDir: true
     }
   }
 })

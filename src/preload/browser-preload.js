@@ -1,160 +1,261 @@
 // 浏览器预加载脚本
 // 用于修改浏览器环境，绕过反爬虫检测
 
-// 使用更真实的用户代理字符串
-const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// 控制是否启用浏览器模拟脚本
+window.ENABLE_BROWSER_EMULATION = true
+
+// 使用Chrome 126的用户代理字符串，但保留Chrome 134的功能
+const userAgent =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 
 // 覆盖navigator.userAgent
 Object.defineProperty(navigator, 'userAgent', {
   value: userAgent,
   writable: false
-});
+})
 
 // 覆盖navigator.platform
 Object.defineProperty(navigator, 'platform', {
   value: 'Win32',
   writable: false
-});
+})
 
-// 覆盖navigator.plugins
+// Chrome 126的品牌信息
+const brands = [
+  { brand: 'Chromium', version: '126' },
+  { brand: 'Google Chrome', version: '126' },
+  { brand: 'Not-A.Brand', version: '99' }
+]
+
+// 覆盖navigator.userAgentData
+if (!navigator.userAgentData) {
+  Object.defineProperty(navigator, 'userAgentData', {
+    value: {
+      brands: brands,
+      mobile: false,
+      platform: 'Windows',
+      toJSON: function () {
+        return { brands, mobile: false, platform: 'Windows' }
+      }
+    },
+    writable: false
+  })
+} else {
+  // 如果已经存在，则修改其属性
+  Object.defineProperty(navigator.userAgentData, 'brands', {
+    value: brands,
+    writable: false
+  })
+  Object.defineProperty(navigator.userAgentData, 'platform', {
+    value: 'Windows',
+    writable: false
+  })
+}
+
+// 覆盖navigator.plugins - Chrome 134的插件列表
 Object.defineProperty(navigator, 'plugins', {
   value: [
     { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'Portable Document Format' },
+    {
+      name: 'Chrome PDF Viewer',
+      filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+      description: 'Portable Document Format'
+    },
     { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client' }
   ],
   writable: false
-});
+})
 
 // 覆盖navigator.languages
 Object.defineProperty(navigator, 'languages', {
   value: ['zh-CN', 'zh', 'en-US', 'en'],
   writable: false
-});
+})
 
-// 覆盖window.chrome
+// 覆盖window.chrome - Chrome 134的chrome对象结构
 window.chrome = {
-  runtime: {},
-  loadTimes: function() {},
-  csi: function() {},
-  app: {}
-};
+  runtime: {
+    id: undefined,
+    connect: function () {},
+    sendMessage: function () {},
+    onMessage: { addListener: function () {} }
+  },
+  loadTimes: function () {
+    return {
+      firstPaintTime: 0,
+      firstPaintAfterLoadTime: 0,
+      requestTime: Date.now() / 1000,
+      startLoadTime: Date.now() / 1000,
+      commitLoadTime: Date.now() / 1000,
+      finishDocumentLoadTime: Date.now() / 1000,
+      finishLoadTime: Date.now() / 1000,
+      navigationType: 'Other'
+    }
+  },
+  csi: function () {
+    return { startE: Date.now(), onloadT: Date.now() }
+  },
+  app: { isInstalled: false },
+  webstore: { onInstallStageChanged: {}, onDownloadProgress: {} }
+}
 
-// 添加WebGL支持检测
+// 添加WebGL支持检测 - 更新为Chrome 134的特征
 try {
-  const origGetContext = HTMLCanvasElement.prototype.getContext;
+  const origGetContext = HTMLCanvasElement.prototype.getContext
   if (origGetContext) {
-    HTMLCanvasElement.prototype.getContext = function(type, attributes) {
+    HTMLCanvasElement.prototype.getContext = function (type, attributes) {
       if (type === 'webgl' || type === 'experimental-webgl' || type === 'webgl2') {
-        const gl = origGetContext.call(this, type, attributes);
+        const gl = origGetContext.call(this, type, attributes)
         if (gl) {
-          // 修改WebGL参数以模拟真实浏览器
-          const getParameter = gl.getParameter.bind(gl);
-          gl.getParameter = function(parameter) {
+          // 修改WebGL参数以模拟Chrome 134
+          const getParameter = gl.getParameter.bind(gl)
+          gl.getParameter = function (parameter) {
             // UNMASKED_VENDOR_WEBGL
             if (parameter === 37445) {
-              return 'Google Inc. (NVIDIA)';
+              return 'Google Inc. (Intel)'
             }
             // UNMASKED_RENDERER_WEBGL
             if (parameter === 37446) {
-              return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1070 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+              return 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)'
             }
-            return getParameter(parameter);
-          };
+            // VERSION
+            if (parameter === 7938) {
+              return 'WebGL 2.0 (OpenGL ES 3.0 Chromium)'
+            }
+            // SHADING_LANGUAGE_VERSION
+            if (parameter === 35724) {
+              return 'WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)'
+            }
+            // VENDOR
+            if (parameter === 7936) {
+              return 'Google Inc.'
+            }
+            // RENDERER
+            if (parameter === 7937) {
+              return 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)'
+            }
+            return getParameter(parameter)
+          }
         }
-        return gl;
+        return gl
       }
-      return origGetContext.call(this, type, attributes);
-    };
+      return origGetContext.call(this, type, attributes)
+    }
   }
 } catch (e) {
-  console.error('Failed to patch WebGL:', e);
+  console.error('Failed to patch WebGL:', e)
 }
 
-// 添加音频上下文支持
+// 添加音频上下文支持 - Chrome 134版本
 try {
   if (typeof AudioContext !== 'undefined') {
-    const origAudioContext = AudioContext;
-    window.AudioContext = function() {
-      const context = new origAudioContext();
-      return context;
-    };
+    const origAudioContext = AudioContext
+    window.AudioContext = function () {
+      const context = new origAudioContext()
+
+      // 模拟Chrome 134的音频上下文属性
+      if (context.sampleRate) {
+        Object.defineProperty(context, 'sampleRate', {
+          value: 48000,
+          writable: false
+        })
+      }
+
+      // 模拟音频目标节点
+      const origCreateMediaElementSource = context.createMediaElementSource
+      if (origCreateMediaElementSource) {
+        context.createMediaElementSource = function (mediaElement) {
+          const source = origCreateMediaElementSource.call(this, mediaElement)
+          return source
+        }
+      }
+
+      return context
+    }
   }
 } catch (e) {
-  console.error('Failed to patch AudioContext:', e);
+  console.error('Failed to patch AudioContext:', e)
 }
 
-// 添加电池API模拟
+// 添加电池API模拟 - Chrome 134版本
 try {
   if (navigator.getBattery) {
-    navigator.getBattery = function() {
+    navigator.getBattery = function () {
       return Promise.resolve({
         charging: true,
         chargingTime: 0,
         dischargingTime: Infinity,
         level: 1.0,
-        addEventListener: function() {},
-        removeEventListener: function() {}
-      });
-    };
+        addEventListener: function (type, listener) {
+          // 实现一个简单的事件监听器
+          if (!this._listeners) this._listeners = {}
+          if (!this._listeners[type]) this._listeners[type] = []
+          this._listeners[type].push(listener)
+        },
+        removeEventListener: function (type, listener) {
+          // 实现事件监听器的移除
+          if (!this._listeners || !this._listeners[type]) return
+          const index = this._listeners[type].indexOf(listener)
+          if (index !== -1) this._listeners[type].splice(index, 1)
+        }
+      })
+    }
   }
 } catch (e) {
-  console.error('Failed to patch Battery API:', e);
+  console.error('Failed to patch Battery API:', e)
 }
 
-// 检测Cloudflare验证码
-window.addEventListener('DOMContentLoaded', () => {
-  try {
-    // 检测是否存在Cloudflare验证码或其他验证码
-    const hasCloudflareCaptcha = document.querySelector('iframe[src*="cloudflare"]') !== null || 
-                                document.querySelector('.cf-browser-verification') !== null ||
-                                document.querySelector('.cf-im-under-attack') !== null ||
-                                document.querySelector('#challenge-form') !== null ||
-                                document.querySelector('#challenge-running') !== null ||
-                                document.querySelector('#challenge-error-title') !== null ||
-                                document.querySelector('.ray-id') !== null ||
-                                document.querySelector('.hcaptcha-box') !== null ||
-                                document.querySelector('iframe[src*="hcaptcha"]') !== null ||
-                                document.querySelector('iframe[src*="recaptcha"]') !== null;
-    
-    // 如果存在验证码，添加一些辅助功能
-    if (hasCloudflareCaptcha) {
-      // 尝试自动点击"我是人类"复选框
-      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        if (checkbox.style.display !== 'none') {
-          checkbox.click();
-        }
-      });
-      
-      // 添加一个提示，告诉用户需要手动完成验证
-      const notificationDiv = document.createElement('div');
-      notificationDiv.style.position = 'fixed';
-      notificationDiv.style.top = '10px';
-      notificationDiv.style.left = '50%';
-      notificationDiv.style.transform = 'translateX(-50%)';
-      notificationDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-      notificationDiv.style.color = 'white';
-      notificationDiv.style.padding = '10px 20px';
-      notificationDiv.style.borderRadius = '5px';
-      notificationDiv.style.zIndex = '9999999';
-      notificationDiv.style.fontFamily = 'Arial, sans-serif';
-      notificationDiv.textContent = '请完成人机验证以继续访问网站';
-      
-      document.body.appendChild(notificationDiv);
-      
-      // 5秒后自动隐藏提示
-      setTimeout(() => {
-        notificationDiv.style.opacity = '0';
-        notificationDiv.style.transition = 'opacity 1s';
-        setTimeout(() => {
-          notificationDiv.remove();
-        }, 1000);
-      }, 5000);
-    }
-  } catch (e) {
-    console.error('Failed to check for captcha:', e);
-  }
-});
+// 添加硬件并发层级 - Chrome 134通常报告实际CPU核心数
+try {
+  Object.defineProperty(navigator, 'hardwareConcurrency', {
+    value: 8, // 设置为一个合理的值，如8核
+    writable: false
+  })
+} catch (e) {
+  console.error('Failed to patch hardwareConcurrency:', e)
+}
 
-console.log('Browser preload script loaded successfully');
+// 添加设备内存 - Chrome 134会报告实际内存
+try {
+  Object.defineProperty(navigator, 'deviceMemory', {
+    value: 8, // 设置为8GB
+    writable: false
+  })
+} catch (e) {
+  console.error('Failed to patch deviceMemory:', e)
+}
+
+// 添加连接信息 - Chrome 134的NetworkInformation API
+try {
+  if (!navigator.connection) {
+    Object.defineProperty(navigator, 'connection', {
+      value: {
+        effectiveType: '4g',
+        rtt: 50,
+        downlink: 10,
+        saveData: false,
+        addEventListener: function (type, listener) {
+          // 简单实现
+          if (!this._listeners) this._listeners = {}
+          if (!this._listeners[type]) this._listeners[type] = []
+          this._listeners[type].push(listener)
+        },
+        removeEventListener: function (type, listener) {
+          // 简单实现
+          if (!this._listeners || !this._listeners[type]) return
+          const index = this._listeners[type].indexOf(listener)
+          if (index !== -1) this._listeners[type].splice(index, 1)
+        }
+      },
+      writable: false
+    })
+  }
+} catch (e) {
+  console.error('Failed to patch NetworkInformation API:', e)
+}
+
+// Cloudflare 验证处理已完全移除
+// 测试表明不需要特殊的 CF 验证处理，移除后没有任何影响
+// 如果将来需要，可以参考备份文件：src\renderer\src\pages\Browser\utils\cloudflareHandler.ts.bak
+
+console.log('Browser preload script loaded successfully')

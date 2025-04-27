@@ -268,7 +268,10 @@ const api = {
   },
   browser: {
     clearData: () => ipcRenderer.invoke('browser:clear-data'),
-    destroyWebContents: (webContentsId: number) => ipcRenderer.invoke('browser:destroy-webcontents', webContentsId)
+    destroyWebContents: (webContentsId: number) => ipcRenderer.invoke('browser:destroy-webcontents', webContentsId),
+    // 暴露打开新窗口的IPC通道
+    // 暂时使用字符串字面量绕过TypeScript错误
+    openNewWindow: (args: { url: string; title?: string }) => ipcRenderer.invoke('browser:openNewWindow', args)
   }
 }
 

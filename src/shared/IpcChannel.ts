@@ -211,5 +211,9 @@ export enum IpcChannel {
   Workspace_SelectFolder = 'workspace:selectFolder',
   Workspace_GetFiles = 'workspace:getFiles',
   Workspace_ReadFile = 'workspace:readFile',
-  Workspace_GetFolderStructure = 'workspace:getFolderStructure'
+  Workspace_GetFolderStructure = 'workspace:getFolderStructure',
+
+  // Browser
+  Browser_OpenNewWindow = 'browser:openNewWindow',
+  Browser_SyncCookies = 'browser:syncCookies'
 }

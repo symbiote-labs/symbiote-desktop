@@ -742,7 +742,7 @@ const Inputbar: FC<Props> = ({
   }
 
   const onPaste = useCallback(
-    async (event: ClipboardEvent) => {
+    async (event: ClipboardEvent | React.ClipboardEvent) => {
       const clipboardText = event.clipboardData?.getData('text')
       if (clipboardText) {
         // 检查粘贴的内容是否是消息ID
@@ -781,34 +781,62 @@ const Inputbar: FC<Props> = ({
         }
         // 其他文本内容由默认事件处理
       } else {
-        for (const file of event.clipboardData?.files || []) {
-          event.preventDefault()
+        // 确保 files 是一个数组
+        const clipboardFiles = event.clipboardData?.files
+        if (clipboardFiles && clipboardFiles.length > 0) {
+          const files = Array.from(clipboardFiles) as File[]
+          for (const file of files) {
+            event.preventDefault()
 
-          if (file.path === '') {
-            if (file.type.startsWith('image/') && isVisionModel(model)) {
-              const tempFilePath = await window.api.file.create(file.name)
-              const arrayBuffer = await file.arrayBuffer()
-              const uint8Array = new Uint8Array(arrayBuffer)
-              await window.api.file.write(tempFilePath, uint8Array)
-              const selectedFile = await window.api.file.get(tempFilePath)
-              selectedFile && setFiles((prevFiles) => [...prevFiles, selectedFile])
-              break
-            } else {
-              window.message.info({
-                key: 'file_not_supported',
-                content: t('chat.input.file_not_supported')
-              })
-            }
-          }
+            try {
+              // 检查文件是否有path属性（兼容Electron 32.3.3之前的版本）
+              const hasPath = 'path' in file && typeof (file as any).path === 'string'
 
-          if (file.path) {
-            if (supportExts.includes(getFileExtension(file.path))) {
-              const selectedFile = await window.api.file.get(file.path)
-              selectedFile && setFiles((prevFiles) => [...prevFiles, selectedFile])
-            } else {
-              window.message.info({
-                key: 'file_not_supported',
-                content: t('chat.input.file_not_supported')
+              // 如果文件没有path属性或path为空（Electron 32.3.3+或从网页复制的文件）
+              if (!hasPath || (file as any).path === '') {
+                if (file.type.startsWith('image/') && isVisionModel(model)) {
+                  // 创建临时文件并写入内容
+                  const fileName = file.name
+                  const tempFilePath = await window.api.file.create(fileName)
+
+                  // 使用 FileReader 读取文件内容
+                  const reader = new FileReader()
+                  const fileContent = await new Promise<ArrayBuffer>((resolve, reject) => {
+                    reader.onload = () => resolve(reader.result as ArrayBuffer)
+                    reader.onerror = reject
+                    reader.readAsArrayBuffer(file)
+                  })
+
+                  const uint8Array = new Uint8Array(fileContent)
+                  await window.api.file.write(tempFilePath, uint8Array)
+                  const selectedFile = await window.api.file.get(tempFilePath)
+                  selectedFile && setFiles((prevFiles) => [...prevFiles, selectedFile])
+                  break
+                } else {
+                  window.message.info({
+                    key: 'file_not_supported',
+                    content: t('chat.input.file_not_supported')
+                  })
+                }
+              }
+              // 如果文件有path属性（Electron 32.3.3之前的版本）
+              else if (hasPath) {
+                const filePath = (file as any).path
+                if (supportExts.includes(getFileExtension(filePath))) {
+                  const selectedFile = await window.api.file.get(filePath)
+                  selectedFile && setFiles((prevFiles) => [...prevFiles, selectedFile])
+                } else {
+                  window.message.info({
+                    key: 'file_not_supported',
+                    content: t('chat.input.file_not_supported')
+                  })
+                }
+              }
+            } catch (error) {
+              console.error('[Inputbar] Error processing pasted file:', error)
+              window.message.error({
+                key: 'file_processing_error',
+                content: t('chat.input.file_processing_error') || 'Error processing file'
               })
             }
           }
@@ -818,7 +846,7 @@ const Inputbar: FC<Props> = ({
       if (pasteLongTextAsFile) {
         const item = event.clipboardData?.items[0]
         if (item && item.kind === 'string' && item.type === 'text/plain') {
-          item.getAsString(async (pasteText) => {
+          item.getAsString(async (pasteText: string) => {
             if (pasteText.length > pasteLongTextThreshold) {
               const tempFilePath = await window.api.file.create('pasted_text.txt')
               await window.api.file.write(tempFilePath, pasteText)
@@ -872,56 +900,72 @@ const Inputbar: FC<Props> = ({
     e.stopPropagation()
     console.log('[Inputbar] handleDrop called')
 
-    const files = await getFilesFromDropEvent(e).catch((err) => {
-      Logger.error('[src/renderer/src/pages/home/Inputbar/Inputbar.tsx] handleDrop:', err)
-      return null
-    })
+    try {
+      // 使用修改后的 getFilesFromDropEvent 函数处理拖放的文件
+      // 该函数已经被修改为兼容 Electron 32.3.3
+      const files = await getFilesFromDropEvent(e).catch((err) => {
+        Logger.error('[src/renderer/src/pages/home/Inputbar/Inputbar.tsx] handleDrop:', err)
+        return null
+      })
 
-    if (files) {
-      console.log('[Inputbar] Files from drop event:', files)
-      // 获取设置中的PDF设置，并强制初始化
-      const pdfSettings = forcePdfSettingsInitialization()
-      console.log('[Inputbar] PDF settings after initialization:', pdfSettings)
+      if (files && files.length > 0) {
+        console.log('[Inputbar] Files from drop event:', files)
+        // 获取设置中的PDF设置，并强制初始化
+        const pdfSettings = forcePdfSettingsInitialization()
+        console.log('[Inputbar] PDF settings after initialization:', pdfSettings)
 
-      for (const file of files) {
-        const fileExt = getFileExtension(file.path)
-        console.log(`[Inputbar] Processing file: ${file.path} with extension: ${fileExt}`)
+        for (const file of files) {
+          // 确保文件有 path 属性
+          if (!file.path) {
+            console.log('[Inputbar] File has no path, skipping:', file)
+            continue
+          }
 
-        // 如果是PDF文件
-        if (fileExt === '.pdf') {
-          console.log('[Inputbar] PDF file detected, checking if splitting is enabled')
-          console.log('[Inputbar] pdfSettings?.enablePdfSplitting =', pdfSettings?.enablePdfSplitting)
+          const fileExt = getFileExtension(file.path)
+          console.log(`[Inputbar] Processing file: ${file.path} with extension: ${fileExt}`)
 
-          // 如果启用了PDF分割功能
-          if (pdfSettings?.enablePdfSplitting === true) {
-            console.log('[Inputbar] PDF splitting is enabled, calling handlePdfFile')
-            // 检查attachmentButtonRef.current是否存在
-            if (attachmentButtonRef.current) {
-              console.log('[Inputbar] attachmentButtonRef.current exists, calling handlePdfFile')
-              const handled = attachmentButtonRef.current.handlePdfFile(file)
-              console.log('[Inputbar] handlePdfFile result:', handled)
-              if (handled) {
-                // 如果文件已经被处理，则跳过后面的处理
-                console.log('[Inputbar] File was handled by PDF splitter, skipping normal processing')
-                continue
+          // 如果是PDF文件
+          if (fileExt === '.pdf') {
+            console.log('[Inputbar] PDF file detected, checking if splitting is enabled')
+            console.log('[Inputbar] pdfSettings?.enablePdfSplitting =', pdfSettings?.enablePdfSplitting)
+
+            // 如果启用了PDF分割功能
+            if (pdfSettings?.enablePdfSplitting === true) {
+              console.log('[Inputbar] PDF splitting is enabled, calling handlePdfFile')
+              // 检查attachmentButtonRef.current是否存在
+              if (attachmentButtonRef.current) {
+                console.log('[Inputbar] attachmentButtonRef.current exists, calling handlePdfFile')
+                const handled = attachmentButtonRef.current.handlePdfFile(file)
+                console.log('[Inputbar] handlePdfFile result:', handled)
+                if (handled) {
+                  // 如果文件已经被处理，则跳过后面的处理
+                  console.log('[Inputbar] File was handled by PDF splitter, skipping normal processing')
+                  continue
+                }
+              } else {
+                console.log('[Inputbar] attachmentButtonRef.current is null or undefined')
               }
             } else {
-              console.log('[Inputbar] attachmentButtonRef.current is null or undefined')
+              console.log('[Inputbar] PDF splitting is disabled, processing as normal file')
             }
+          }
+          // 其他支持的文件类型
+          else if (supportExts.includes(fileExt)) {
+            console.log('[Inputbar] Adding file to files state:', file.path)
+            setFiles((prevFiles) => [...prevFiles, file])
           } else {
-            console.log('[Inputbar] PDF splitting is disabled, processing as normal file')
+            console.log('[Inputbar] File not supported or PDF splitting disabled:', file.path)
           }
         }
-        // 其他支持的文件类型
-        else if (supportExts.includes(fileExt)) {
-          console.log('[Inputbar] Adding file to files state:', file.path)
-          setFiles((prevFiles) => [...prevFiles, file])
-        } else {
-          console.log('[Inputbar] File not supported or PDF splitting disabled:', file.path)
-        }
+      } else {
+        console.log('[Inputbar] No files from drop event')
       }
-    } else {
-      console.log('[Inputbar] No files from drop event')
+    } catch (error) {
+      console.error('[Inputbar] Error in handleDrop:', error)
+      window.message.error({
+        key: 'drop_error',
+        content: t('chat.input.drop_error') || 'Error processing dropped files'
+      })
     }
   }
 
@@ -1387,7 +1431,7 @@ const Inputbar: FC<Props> = ({
             onBlur={() => setInputFocus(false)}
             onInput={onInput}
             disabled={searching}
-            onPaste={(e) => onPaste(e.nativeEvent)}
+            onPaste={(e: React.ClipboardEvent<HTMLTextAreaElement>) => onPaste(e.nativeEvent)}
             onClick={() => searching && dispatch(setSearching(false))}
           />
           <DragHandle onMouseDown={handleDragStart}>

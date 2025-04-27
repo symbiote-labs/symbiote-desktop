@@ -11,6 +11,109 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
+/**
+ * 判断文本是否可能是代码
+ * 使用更严格的条件来判断未标记语言的内容是否为代码
+ */
+function isLikelyCode(text: string): boolean {
+  if (!text) return false
+
+  // 如果文本太短，不太可能是代码
+  if (text.length < 10) return false
+
+  // 检查是否包含多行
+  const lines = text.split('\n')
+
+  // 如果只有一行，通常不是代码块（除非有明确的语言标记）
+  if (lines.length <= 1) return false
+
+  // 代码特征计数
+  let codeFeatures = 0
+
+  // 检查常见代码特征
+  const codePatterns = [
+    /\b(function|const|let|var|if|else|for|while|return|import|export|class|interface|extends|implements)\b/,
+    /[{}\[\]()]/,  // 括号
+    /\b(public|private|protected|static|final|void)\b/,
+    /\b(def|async|await|try|catch|finally)\b/,
+    /\b(int|string|bool|float|double)\b/,
+    /\s{2,}[a-zA-Z0-9_]+/,  // 缩进后跟标识符
+    /^\s*(\/\/|#|\/\*|\*|;)/  // 注释行开始
+  ]
+
+  // 检查行特征
+  let indentedLines = 0
+  let commentLines = 0
+  let codePatternLines = 0
+
+  for (const line of lines) {
+    // 跳过空行
+    if (!line.trim()) continue
+
+    // 检查缩进
+    if (line.startsWith('  ') || line.startsWith('\t')) {
+      indentedLines++
+    }
+
+    // 检查注释
+    if (line.trim().startsWith('//') || line.trim().startsWith('#') ||
+        line.trim().startsWith('/*') || line.trim().startsWith('*')) {
+      commentLines++
+    }
+
+    // 检查代码模式
+    for (const pattern of codePatterns) {
+      if (pattern.test(line)) {
+        codePatternLines++
+        break
+      }
+    }
+  }
+
+  // 计算特征比例
+  const nonEmptyLines = lines.filter(line => line.trim()).length
+  if (nonEmptyLines === 0) return false
+
+  const indentRatio = indentedLines / nonEmptyLines
+  const commentRatio = commentLines / nonEmptyLines
+  const patternRatio = codePatternLines / nonEmptyLines
+
+  // 如果有足够的缩进行或代码模式行，可能是代码
+  if (indentRatio > 0.3 || patternRatio > 0.3) {
+    return true
+  }
+
+  // 如果同时有缩进和注释，可能是代码
+  if (indentRatio > 0.1 && commentRatio > 0.1) {
+    return true
+  }
+
+  // 检查是否包含多个连续的特殊字符，这在代码中很常见
+  if (/[{}\[\]()<>:;=+\-*/%&|^!~]+/.test(text)) {
+    codeFeatures++
+  }
+
+  // 检查是否有明显的代码结构（如缩进模式）
+  let hasIndentPattern = false
+  let prevIndent = -1
+  for (const line of lines) {
+    if (!line.trim()) continue
+    const indent = line.search(/\S/)
+    if (prevIndent !== -1 && indent > prevIndent) {
+      hasIndentPattern = true
+      break
+    }
+    prevIndent = indent
+  }
+
+  if (hasIndentPattern) {
+    codeFeatures++
+  }
+
+  // 如果满足足够多的代码特征，则认为是代码
+  return codeFeatures >= 1
+}
+
 import Artifacts from './Artifacts'
 import Mermaid from './Mermaid'
 import { isValidPlantUML, PlantUML } from './PlantUML'
@@ -23,9 +126,15 @@ interface CodeBlockProps {
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = ({ children, className }) => {
-  const match = /language-(\w+)/.exec(className || '') || children?.includes('\n')
+  // 改进代码判断逻辑
+  const languageMatch = /language-(\w+)/.exec(className || '')
   const { codeShowLineNumbers, fontSize, codeCollapsible, codeWrappable } = useSettings()
-  const language = match?.[1] ?? 'text'
+
+  // 判断是否为代码块的更严格条件
+  // 1. 如果有明确的语言标记，则认为是代码块
+  // 2. 如果没有语言标记，则需要满足更严格的条件才被视为代码块
+  const isCodeBlock = !!languageMatch || isLikelyCode(children)
+  const language = languageMatch?.[1] ?? 'text'
   // const [html, setHtml] = useState<string>('')
   const { codeToHtml } = useSyntaxHighlighter()
   const [isExpanded, setIsExpanded] = useState(!codeCollapsible)
@@ -126,7 +235,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ children, className }) => {
     )
   }
 
-  return match ? (
+  return isCodeBlock ? (
     <CodeBlockWrapper className="code-block">
       <CodeHeader>
         <CodeLanguage>{'<' + language.toUpperCase() + '>'}</CodeLanguage>
@@ -177,9 +286,9 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ children, className }) => {
       {language === 'html' && children?.includes('</html>') && <Artifacts html={children} />}
     </CodeBlockWrapper>
   ) : (
-    <code className={className} style={{ textWrap: 'wrap' }}>
+    <WrappedCode className={className}>
       {children}
-    </code>
+    </WrappedCode>
   )
 }
 
@@ -445,6 +554,10 @@ const StickyWrapper = styled.div`
   position: sticky;
   top: 28px;
   z-index: 10;
+`
+
+const WrappedCode = styled.code`
+  text-wrap: wrap;
 `
 
 export default memo(CodeBlock)

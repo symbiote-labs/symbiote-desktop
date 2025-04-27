@@ -2,6 +2,7 @@ import './services/MemoryFileService'
 
 import fs from 'node:fs'
 import { arch } from 'node:os'
+import { join } from 'node:path'
 
 import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
@@ -291,6 +292,57 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // open path
   ipcMain.handle(IpcChannel.Open_Path, async (_, path: string) => {
     await shell.openPath(path)
+  })
+
+  // browser
+  ipcMain.handle('browser:openNewWindow', async (_, args: { url: string; title?: string }) => {
+    log.info('Received IPC call to open new window:', args) // 添加日志
+    const { url, title } = args
+
+    // 获取浏览器会话
+    const browserSession = session.fromPartition('persist:browser')
+
+    // 创建新的浏览器窗口，使用相同的会话
+    const newWindow = new BrowserWindow({
+      width: 1000,
+      height: 800,
+      title: title || 'New Window',
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false,
+        nodeIntegration: false,
+        contextIsolation: true,
+        session: browserSession // 使用与内置浏览器相同的会话
+      }
+    })
+
+    // 加载URL
+    await newWindow.loadURL(url)
+
+    // 当窗口关闭时，通知渲染进程同步cookie
+    newWindow.on('closed', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('browser-window-closed')
+      }
+    })
+  })
+
+  // 同步cookie
+  ipcMain.handle('browser:syncCookies', async () => {
+    try {
+      // 获取浏览器会话
+      const browserSession = session.fromPartition('persist:browser')
+
+      // 获取所有cookie
+      const cookies = await browserSession.cookies.get({})
+
+      log.info(`[Cookie Sync] Found ${cookies.length} cookies in browser session`)
+
+      return { success: true, message: `Synced ${cookies.length} cookies` }
+    } catch (error: any) {
+      log.error('[Cookie Sync] Error syncing cookies:', error)
+      return { success: false, message: `Error: ${error.message}` }
+    }
   })
 
   // shortcuts

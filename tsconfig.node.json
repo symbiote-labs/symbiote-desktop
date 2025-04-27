@@ -14,6 +14,7 @@
       "electron-vite/node"
     ],
     "baseUrl": ".",
+    "esModuleInterop": true,
     "paths": {
       "@main/*": ["src/main/*"],
       "@types": ["src/renderer/src/types/index.ts"],

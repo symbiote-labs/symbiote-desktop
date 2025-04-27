@@ -35,13 +35,6 @@ files:
   # - '!node_modules/@tavily/core/node_modules/js-tiktoken'
   - '!node_modules/pdf-parse/lib/pdf.js/{v1.9.426,v1.10.88,v2.0.550}'
   - '!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}'
-  # 排除不需要的开发工具和测试库
-  - '!node_modules/@vitest'
-  - '!node_modules/vitest'
-  - '!node_modules/eslint*'
-  - '!node_modules/prettier'
-  - '!node_modules/husky'
-  - '!node_modules/lint-staged'
 asarUnpack: # Removed ASR server rules from 'files' section
   - resources/**
   - '**/*.{metal,exp,lib}'
@@ -107,9 +100,6 @@ publish:
   url: https://releases.cherry-ai.com
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
-compression: maximum # 使用最大压缩以减小包体积
-buildDependenciesFromSource: false # 不从源码构建依赖，加快构建速度
-forceCodeSigning: false # 不强制代码签名，加快构建速度
 afterPack: scripts/after-pack.js
 afterSign: scripts/notarize.js
 artifactBuildCompleted: scripts/artifact-build-completed.js

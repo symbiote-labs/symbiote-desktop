@@ -11,9 +11,9 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getMessageTitle, resetAssistantMessage } from '@renderer/services/MessagesService'
 import { translateText } from '@renderer/services/TranslateService'
 import store, { RootState, useAppDispatch } from '@renderer/store'
+import { updateMessages } from '@renderer/store/messages'
 import type { Message, Model } from '@renderer/types'
 import type { Assistant, Topic } from '@renderer/types'
-import { updateMessages } from '@renderer/store/messages'
 import { captureScrollableDivAsBlob, captureScrollableDivAsDataURL, removeTrailingDoubleSpaces } from '@renderer/utils'
 import {
   exportMarkdownToJoplin,
@@ -159,7 +159,7 @@ const MessageMenubar: FC<Props> = (props) => {
     if (typeof result === 'object' && result !== null && result.rollback === true) {
       // 获取当前消息在话题中的索引
       const messages = store.getState().messages.messagesByTopic[topic.id] || []
-      const currentIndex = messages.findIndex(m => m.id === message.id)
+      const currentIndex = messages.findIndex((m) => m.id === message.id)
 
       if (currentIndex !== -1 && currentIndex < messages.length - 1) {
         // 获取当前消息之后的所有消息

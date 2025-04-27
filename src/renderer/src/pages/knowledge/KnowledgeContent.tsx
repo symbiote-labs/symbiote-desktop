@@ -88,21 +88,41 @@ const KnowledgeContent: FC<KnowledgeContentProps> = ({ selectedBase }) => {
     }
 
     if (files) {
-      const _files: FileType[] = files
-        .map((file) => ({
-          id: file.name,
-          name: file.name,
-          path: file.path,
-          size: file.size,
-          ext: `.${file.name.split('.').pop()}`.toLowerCase(),
-          count: 1,
-          origin_name: file.name,
-          type: file.type as FileTypes,
-          created_at: new Date().toISOString()
-        }))
-        .filter(({ ext }) => fileTypes.includes(ext))
-      const uploadedFiles = await FileManager.uploadFiles(_files)
-      addFiles(uploadedFiles)
+      try {
+        const _files: FileType[] = files
+          .map((file) => {
+            // 检查文件是否有path属性（兼容Electron 32.3.3之前的版本）
+            const filePath = 'path' in file ? (file as any).path : ''
+
+            return {
+              id: file.name,
+              name: file.name,
+              path: filePath, // 使用检查后的路径
+              size: file.size,
+              ext: `.${file.name.split('.').pop()}`.toLowerCase(),
+              count: 1,
+              origin_name: file.name,
+              type: file.type as FileTypes,
+              created_at: new Date().toISOString()
+            }
+          })
+          .filter(({ ext, path }) => {
+            // 只处理有路径且扩展名符合要求的文件
+            return path && fileTypes.includes(ext)
+          })
+
+        // 如果没有有效文件，显示提示并返回
+        if (_files.length === 0) {
+          message.info(t('knowledge.no_valid_files'))
+          return
+        }
+
+        const uploadedFiles = await FileManager.uploadFiles(_files)
+        addFiles(uploadedFiles)
+      } catch (error) {
+        console.error('[KnowledgeContent] Error processing files:', error)
+        message.error(t('knowledge.file_processing_error') || 'Error processing files')
+      }
     }
   }
 

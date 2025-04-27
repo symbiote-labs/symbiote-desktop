@@ -23,7 +23,8 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { useTheme } from '@renderer/context/ThemeProvider'
-import { ThemeMode } from '@renderer/types'
+import { useSettings } from '@renderer/hooks/useSettings'
+import { CodeStyleVarious, ThemeMode } from '@renderer/types'
 import { useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import styled from 'styled-components'
 
@@ -100,6 +101,18 @@ interface CodeMirrorEditorProps {
   height?: string
 }
 
+// 获取CodeMirror主题扩展
+const getThemeExtension = (codeStyle: CodeStyleVarious, isDarkMode: boolean) => {
+  // 目前只支持 oneDark 主题，其他主题需要安装相应的包
+  // 如果是暗色模式且是 auto 或特定主题，则使用 oneDark 主题
+  if (isDarkMode && (codeStyle === 'auto' || String(codeStyle) === 'one-dark')) {
+    return oneDark
+  }
+
+  // 其他情况返回 null，使用默认主题
+  return null
+}
+
 const getLanguageExtension = (language: string) => {
   switch (language.toLowerCase()) {
     case 'javascript':
@@ -161,11 +174,20 @@ const CodeMirrorEditor = ({
   const editorRef = useRef<HTMLDivElement>(null)
   const editorViewRef = useRef<EditorView | null>(null)
   const { theme } = useTheme()
+  const { codeStyle } = useSettings()
 
-  // 根据当前主题选择高亮样式
+  // 根据当前主题和代码风格选择高亮样式
   const highlightStyle = useMemo(() => {
+    // 如果代码风格设置为auto或未设置，则根据主题选择默认样式
+    if (!codeStyle || codeStyle === 'auto') {
+      return theme === ThemeMode.dark ? darkThemeHighlightStyle : lightThemeHighlightStyle
+    }
+
+    // 目前仍使用默认样式，因为需要为每种代码风格创建对应的CodeMirror高亮样式
+    // 这里可以根据codeStyle的值选择不同的高亮样式
+    // 未来可以扩展更多的主题支持
     return theme === ThemeMode.dark ? darkThemeHighlightStyle : lightThemeHighlightStyle
-  }, [theme])
+  }, [theme, codeStyle])
 
   // 暴露撤销/重做方法和获取内容方法
   useImperativeHandle(ref, () => ({
@@ -271,8 +293,9 @@ const CodeMirrorEditor = ({
     }
 
     // 添加主题
-    if (theme === ThemeMode.dark) {
-      extensions.push(oneDark)
+    const themeExtension = getThemeExtension(codeStyle, theme === ThemeMode.dark)
+    if (themeExtension) {
+      extensions.push(themeExtension)
     }
 
     const state = EditorState.create({
@@ -290,7 +313,7 @@ const CodeMirrorEditor = ({
     return () => {
       view.destroy()
     }
-  }, [code, language, onChange, readOnly, showLineNumbers, theme, fontSize, height])
+  }, [code, language, onChange, readOnly, showLineNumbers, theme, codeStyle, highlightStyle, fontSize, height])
 
   return <EditorContainer ref={editorRef} />
 }
