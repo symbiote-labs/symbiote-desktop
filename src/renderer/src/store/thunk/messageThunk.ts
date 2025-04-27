@@ -310,6 +310,7 @@ const fetchAndProcessAssistantResponseImpl = async (
     } else {
       const contextSlice = allMessagesForTopic.slice(0, userMessageIndex + 1)
       messagesForContext = contextSlice.filter((m) => m && !m.status?.includes('ing'))
+      console.log('messagesForContext', messagesForContext)
       console.log(`[DEBUG] Context for message ${assistantMsgId}: ${messagesForContext.length} messages.`)
     }
 
@@ -688,14 +689,14 @@ export const deleteSingleMessageThunk =
     const blockIdsToDelete = messageToDelete.blocks || []
 
     try {
+      console.log('deleteSingleMessageThunk', messageToDelete)
       dispatch(newMessagesActions.removeMessage({ topicId, messageId }))
       dispatch(removeManyBlocks(blockIdsToDelete))
       await db.message_blocks.bulkDelete(blockIdsToDelete)
       const topic = await db.topics.get(topicId)
       if (topic) {
-        const finalTopicMessageIds = currentState.messages.messageIdsByTopic[topicId] || []
-        const finalEntities = currentState.messages.entities
-        const finalMessagesToSave = finalTopicMessageIds.map((id) => finalEntities[id]).filter((m) => !!m)
+        const finalMessagesToSave = selectMessagesForTopic(getState(), topicId)
+        console.log('finalMessagesToSave', finalMessagesToSave)
         await db.topics.update(topicId, { messages: finalMessagesToSave })
       }
     } catch (error) {
@@ -740,9 +741,7 @@ export const deleteMessageGroupThunk =
       await db.message_blocks.bulkDelete(blockIdsToDelete)
       const topic = await db.topics.get(topicId)
       if (topic) {
-        const finalTopicMessageIds = currentState.messages.messageIdsByTopic[topicId] || []
-        const finalEntities = currentState.messages.entities
-        const finalMessagesToSave = finalTopicMessageIds.map((id) => finalEntities[id]).filter((m): m is Message => !!m)
+        const finalMessagesToSave = selectMessagesForTopic(getState(), topicId)
         await db.topics.update(topicId, { messages: finalMessagesToSave })
       }
     } catch (error) {
@@ -841,9 +840,7 @@ export const resendMessageThunk =
           await db.message_blocks.bulkDelete(allBlockIdsToDelete)
           console.log(`[resendMessageThunk] Removed ${allBlockIdsToDelete.length} old blocks from DB.`)
         }
-        const finalTopicMessageIds = state.messages.messageIdsByTopic[topicId] || []
-        const finalEntities = state.messages.entities
-        const finalMessagesToSave = finalTopicMessageIds.map((id) => finalEntities[id]).filter((m): m is Message => !!m)
+        const finalMessagesToSave = selectMessagesForTopic(getState(), topicId)
         await db.topics.update(topicId, { messages: finalMessagesToSave })
         console.log(`[resendMessageThunk] Updated DB topic ${topicId} with latest messages from Redux state.`)
       } catch (dbError) {
@@ -959,9 +956,8 @@ export const regenerateAssistantResponseThunk =
 
       // 7. Update DB: Save the reset message state within the topic and delete old blocks
       // Fetch the current state *after* Redux updates to get the latest message list
-      const finalState = getState()
       // Use the selector to get the final ordered list of messages for the topic
-      const finalMessagesToSave = selectMessagesForTopic(finalState, topicId)
+      const finalMessagesToSave = selectMessagesForTopic(getState(), topicId)
 
       await db.transaction('rw', db.topics, db.message_blocks, async () => {
         // Use the result from the selector to update the DB
@@ -1045,8 +1041,7 @@ export const initiateTranslationThunk =
 
       // 3. Update Database
       // Get the final message list from Redux state *after* updates
-      const finalState = getState()
-      const finalMessagesToSave = selectMessagesForTopic(finalState, topicId)
+      const finalMessagesToSave = selectMessagesForTopic(getState(), topicId)
 
       await db.transaction('rw', db.topics, db.message_blocks, async () => {
         await db.message_blocks.put(newBlock) // Save the initial block
@@ -1060,5 +1055,98 @@ export const initiateTranslationThunk =
       console.error(`[initiateTranslationThunk] Failed for message ${messageId}:`, error)
       return undefined
       // Optional: Dispatch an error action or show notification
+    }
+  }
+
+/**
+ * Thunk to append a new assistant response (using a potentially different model)
+ * in reply to the same user query as an existing assistant message.
+ */
+export const appendAssistantResponseThunk =
+  (
+    topicId: Topic['id'],
+    existingAssistantMessageId: string, // ID of the assistant message the user interacted with
+    newModel: Model, // The new model selected by the user
+    assistant: Assistant // Base assistant configuration
+  ) =>
+  async (dispatch: AppDispatch, getState: () => RootState) => {
+    console.log(
+      `[appendAssistantResponseThunk] Appending response for topic ${topicId} based on message ${existingAssistantMessageId} with new model ${newModel.id}`
+    )
+    try {
+      const state = getState()
+
+      // 1. Find the existing assistant message to get the original askId
+      const existingAssistantMsg = state.messages.entities[existingAssistantMessageId]
+      if (!existingAssistantMsg) {
+        console.error(
+          `[appendAssistantResponseThunk] Existing assistant message ${existingAssistantMessageId} not found.`
+        )
+        return // Stop if the reference message doesn't exist
+      }
+      if (existingAssistantMsg.role !== 'assistant') {
+        console.error(
+          `[appendAssistantResponseThunk] Message ${existingAssistantMessageId} is not an assistant message.`
+        )
+        return // Ensure it's an assistant message
+      }
+      const askId = existingAssistantMsg.askId
+      if (!askId) {
+        console.error(
+          `[appendAssistantResponseThunk] Existing assistant message ${existingAssistantMessageId} does not have an askId.`
+        )
+        return // Stop if askId is missing
+      }
+
+      // (Optional but recommended) Verify the original user query exists
+      if (!state.messages.entities[askId]) {
+        console.warn(
+          `[appendAssistantResponseThunk] Original user query (askId: ${askId}) not found in entities. Proceeding, but state might be inconsistent.`
+        )
+        // Decide whether to proceed or return based on requirements
+      }
+
+      // 2. Create the new assistant message stub
+      console.log(
+        `[appendAssistantResponseThunk] Creating new assistant message stub for askId ${askId} with model ${newModel.id}`
+      )
+      const newAssistantStub = createAssistantMessage(assistant.id, topicId, {
+        askId: askId, // Crucial: Use the original askId
+        model: newModel,
+        modelId: newModel.id
+      })
+
+      // 3. Update Redux Store
+      console.log(`[appendAssistantResponseThunk] Adding new stub ${newAssistantStub.id} to Redux.`)
+      dispatch(newMessagesActions.addMessage({ topicId, message: newAssistantStub }))
+
+      // 4. Update Database (Save the stub to the topic's message list)
+      console.log(`[appendAssistantResponseThunk] Saving new stub ${newAssistantStub.id} to DB.`)
+      await saveMessageAndBlocksToDB(newAssistantStub, [])
+
+      // 5. Prepare and queue the processing task
+      const assistantConfigForThisCall = {
+        ...assistant,
+        model: newModel
+      }
+      const queue = getTopicQueue(topicId)
+      console.log(`[appendAssistantResponseThunk] Adding task to queue for new stub ${newAssistantStub.id}`)
+      queue.add(async () => {
+        await fetchAndProcessAssistantResponseImpl(
+          dispatch,
+          getState,
+          topicId,
+          assistantConfigForThisCall,
+          newAssistantStub // Pass the newly created stub
+        )
+      })
+
+      console.log(
+        `[appendAssistantResponseThunk] Successfully queued processing for new assistant message ${newAssistantStub.id}`
+      )
+    } catch (error) {
+      console.error(`[appendAssistantResponseThunk] Error appending assistant response:`, error)
+      // Optionally dispatch an error action or notification
+      // Resetting loading state should be handled by the underlying fetchAndProcessAssistantResponseImpl
     }
   }

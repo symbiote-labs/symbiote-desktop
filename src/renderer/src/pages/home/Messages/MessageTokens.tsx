@@ -9,7 +9,7 @@ interface MessageTokensProps {
   isLastMessage?: boolean
 }
 
-const MessgeTokens: React.FC<MessageTokensProps> = ({ message, isLastMessage }) => {
+const MessgeTokens: React.FC<MessageTokensProps> = ({ message }) => {
   // const { generating } = useRuntime()
   const locateMessage = () => {
     EventEmitter.emit(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, false)

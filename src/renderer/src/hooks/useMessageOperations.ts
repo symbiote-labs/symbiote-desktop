@@ -5,6 +5,7 @@ import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import { updateOneBlock } from '@renderer/store/messageBlock'
 import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import {
+  appendAssistantResponseThunk,
   clearTopicMessagesThunk,
   deleteMessageGroupThunk,
   deleteSingleMessageThunk,
@@ -14,7 +15,7 @@ import {
   resendUserMessageWithEditThunk
 } from '@renderer/store/thunk/messageThunk'
 import { throttledBlockDbUpdate } from '@renderer/store/thunk/messageThunk'
-import type { Assistant, Topic } from '@renderer/types'
+import type { Assistant, Model, Topic } from '@renderer/types'
 import type { Message, MessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { abortCompletion } from '@renderer/utils/abortController'
@@ -50,15 +51,15 @@ export const selectNewDisplayCount = createSelector(
 )
 
 /**
- *
- * @param topic 当前主题
- * @returns 一组消息操作方法
+ * Hook 提供针对特定主题的消息操作方法。 / Hook providing various operations for messages within a specific topic.
+ * @param topic 当前主题对象。 / The current topic object.
+ * @returns 包含消息操作函数的对象。 / An object containing message operation functions.
  */
 export function useMessageOperations(topic: Topic) {
   const dispatch = useAppDispatch()
 
   /**
-   * 删除单个消息
+   * 删除单个消息。 / Deletes a single message.
    * Dispatches deleteSingleMessageThunk.
    */
   const deleteMessage = useCallback(
@@ -69,7 +70,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 删除一组消息（基于askId）
+   * 删除一组消息（基于 askId）。 / Deletes a group of messages (based on askId).
    * Dispatches deleteMessageGroupThunk.
    */
   const deleteGroupMessages = useCallback(
@@ -80,8 +81,8 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 编辑消息 (Uses newMessagesActions.updateMessage)
-   * TODO: Token recalculation logic needs adding if required.
+   * 编辑消息。（目前仅更新 Redux state）。 / Edits a message. (Currently only updates Redux state).
+   * 使用 newMessagesActions.updateMessage.
    */
   const editMessage = useCallback(
     async (messageId: string, updates: Partial<Message>) => {
@@ -101,7 +102,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 重新发送消息
+   * 重新发送用户消息，触发其所有助手回复的重新生成。 / Resends a user message, triggering regeneration of all its assistant responses.
    * Dispatches resendMessageThunk.
    */
   const resendMessage = useCallback(
@@ -112,7 +113,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 重新发送用户消息（编辑后）
+   * 在用户消息的主文本块被编辑后重新发送该消息。 / Resends a user message after its main text block has been edited.
    * Dispatches resendUserMessageWithEditThunk.
    */
   const resendUserMessageWithEdit = useCallback(
@@ -129,7 +130,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 清除会话消息
+   * 清除当前或指定主题的所有消息。 / Clears all messages for the current or specified topic.
    * Dispatches clearTopicMessagesThunk.
    */
   const clearTopicMessages = useCallback(
@@ -141,7 +142,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 创建新的上下文（clear message）
+   * 发出事件以表示创建新上下文（清空消息 UI）。 / Emits an event to signal creating a new context (clearing messages UI).
    */
   const createNewContext = useCallback(async () => {
     EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)
@@ -150,7 +151,7 @@ export function useMessageOperations(topic: Topic) {
   const displayCount = useAppSelector(selectNewDisplayCount)
 
   /**
-   * 暂停消息流
+   * 暂停当前主题正在进行的消息生成。 / Pauses ongoing message generation for the current topic.
    */
   const pauseMessages = useCallback(async () => {
     // Use selector if preferred, but direct access is okay in callback
@@ -171,8 +172,7 @@ export function useMessageOperations(topic: Topic) {
   }, [topic.id, dispatch])
 
   /**
-   * 恢复/重发消息
-   * Reuses resendMessage logic.
+   * 恢复/重发用户消息（目前复用 resendMessage 逻辑）。 / Resumes/Resends a user message (currently reuses resendMessage logic).
    */
   const resumeMessage = useCallback(
     async (message: Message, assistant: Assistant) => {
@@ -183,7 +183,7 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * 重新生成助手消息
+   * 重新生成指定的助手消息回复。 / Regenerates a specific assistant message response.
    * Dispatches regenerateAssistantResponseThunk.
    */
   const regenerateAssistantMessage = useCallback(
@@ -198,9 +198,31 @@ export function useMessageOperations(topic: Topic) {
   )
 
   /**
-   * Initiates translation and returns a function to update the streaming block.
-   * @returns An async function that, when called with text chunks, updates the block.
-   *          Returns null if initiation fails.
+   * 使用指定模型追加一个新的助手回复，回复与现有助手消息相同的用户查询。 / Appends a new assistant response using a specified model, replying to the same user query as an existing assistant message.
+   * Dispatches appendAssistantResponseThunk.
+   */
+  const appendAssistantResponse = useCallback(
+    async (existingAssistantMessage: Message, newModel: Model, assistant: Assistant) => {
+      if (existingAssistantMessage.role !== 'assistant') {
+        console.error('appendAssistantResponse should only be called for an existing assistant message.')
+        return
+      }
+      if (!existingAssistantMessage.askId) {
+        console.error('Cannot append response: The existing assistant message is missing its askId.')
+        return
+      }
+      await dispatch(appendAssistantResponseThunk(topic.id, existingAssistantMessage.id, newModel, assistant))
+    },
+    [dispatch, topic.id] // Dependencies
+  )
+
+  /**
+   * 初始化翻译块并返回一个更新函数。 / Initiates a translation block and returns an updater function.
+   * @param messageId 要翻译的消息 ID。 / The ID of the message to translate.
+   * @param targetLanguage 目标语言代码。 / The target language code.
+   * @param sourceBlockId (可选) 源块的 ID。 / (Optional) The ID of the source block.
+   * @param sourceLanguage (可选) 源语言代码。 / (Optional) The source language code.
+   * @returns 用于更新翻译块的异步函数，如果初始化失败则返回 null。 / An async function to update the translation block, or null if initiation fails.
    */
   const getTranslationUpdater = useCallback(
     async (
@@ -248,11 +270,12 @@ export function useMessageOperations(topic: Topic) {
     deleteMessage,
     deleteGroupMessages,
     editMessage,
-    resendMessage, // Export renamed function
-    regenerateAssistantMessage, // Export the new function
+    resendMessage,
+    regenerateAssistantMessage,
     resendUserMessageWithEdit,
+    appendAssistantResponse,
     createNewContext,
-    clearTopicMessages, // Export renamed function
+    clearTopicMessages,
     pauseMessages,
     resumeMessage,
     getTranslationUpdater

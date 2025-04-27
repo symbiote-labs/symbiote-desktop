@@ -64,14 +64,15 @@ const MessageMenubar: FC<Props> = (props) => {
   const [isTranslating, setIsTranslating] = useState(false)
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false)
-  const assistantModel = assistant?.model
+  // const assistantModel = assistant?.model
   const {
     editMessage,
     deleteMessage,
     resendMessage,
     regenerateAssistantMessage,
     resendUserMessageWithEdit,
-    getTranslationUpdater
+    getTranslationUpdater,
+    appendAssistantResponse
   } = useMessageOperations(topic)
   const loading = useTopicLoading(topic)
 
@@ -231,7 +232,7 @@ const MessageMenubar: FC<Props> = (props) => {
         setIsTranslating(false)
       }
     },
-    [isTranslating, message, editMessage, t]
+    [isTranslating, message, getTranslationUpdater, mainTextContent]
   )
 
   const dropdownItems = useMemo(
@@ -242,7 +243,7 @@ const MessageMenubar: FC<Props> = (props) => {
         icon: <Save size={16} />,
         onClick: () => {
           const fileName = dayjs(message.createdAt).format('YYYYMMDDHHmm') + '.md'
-          window.api.file.save(fileName, message.content)
+          window.api.file.save(fileName, mainTextContent)
         }
       },
       {
@@ -371,7 +372,7 @@ const MessageMenubar: FC<Props> = (props) => {
     if (loading) return
     const selectedModel = await SelectModelPopup.show({ model })
     if (!selectedModel) return
-    resendMessage(message, { ...assistant, model: selectedModel }, true)
+    appendAssistantResponse(message, selectedModel, { ...assistant, model: selectedModel })
   }
 
   const onUseful = useCallback(
@@ -437,12 +438,13 @@ const MessageMenubar: FC<Props> = (props) => {
                 label: item.emoji + ' ' + item.label,
                 key: item.value,
                 onClick: () => handleTranslate(item.value)
-              })),
-              {
-                label: '✖ ' + t('translate.close'),
-                key: 'translate-close',
-                onClick: () => editMessage(message.id, { translatedContent: undefined })
-              }
+              }))
+              // {
+              // TODO 删除翻译块可以放在翻译块内
+              //   label: '✖ ' + t('translate.close'),
+              //   key: 'translate-close',
+              //   onClick: () => editMessage(message.id, { translatedContent: undefined })
+              // }
             ],
             onClick: (e) => e.domEvent.stopPropagation()
           }}
