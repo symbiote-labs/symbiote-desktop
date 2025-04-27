@@ -3,16 +3,11 @@ import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import { estimateMessagesUsage } from '@renderer/services/TokenService'
 import store from '@renderer/store'
-import {
-  type Assistant,
-  ExternalToolResult,
-  type MCPToolResponse,
-  type Model,
-  type Topic,
-  WebSearchSource
-} from '@renderer/types'
+import type { Assistant, ExternalToolResult, FileType, MCPToolResponse, Model, Topic } from '@renderer/types'
+import { WebSearchSource } from '@renderer/types'
 import type {
   CitationMessageBlock,
+  FileMessageBlock,
   ImageMessageBlock,
   Message,
   MessageBlock,
@@ -34,6 +29,7 @@ import {
 } from '@renderer/utils/messageUtils/create'
 import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
 import { throttle } from 'lodash'
+import { v4 as uuidv4 } from 'uuid'
 
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
@@ -1178,5 +1174,137 @@ export const appendAssistantResponseThunk =
     } finally {
       console.log('sendMessage finally', topicId)
       handleChangeLoadingOfTopic(topicId)
+    }
+  }
+
+/**
+ * Clones messages from a source topic up to a specified index into a *pre-existing* new topic.
+ * Generates new unique IDs for all cloned messages and blocks.
+ * Updates the DB and Redux message/block state for the new topic.
+ * Assumes the newTopic object already exists in Redux topic state and DB.
+ * @param sourceTopicId The ID of the topic to branch from.
+ * @param branchPointIndex The index *after* which messages should NOT be copied (slice endpoint).
+ * @param newTopic The newly created Topic object (created and added to Redux/DB by the caller).
+ */
+export const cloneMessagesToNewTopicThunk =
+  (
+    sourceTopicId: string,
+    branchPointIndex: number,
+    newTopic: Topic // Receive newTopic object
+  ) =>
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<boolean> => {
+    // Return success status
+    console.log(
+      `[cloneMessagesToNewTopicThunk] Cloning messages from topic ${sourceTopicId} to new topic ${newTopic.id} at index ${branchPointIndex}`
+    )
+    if (!newTopic || !newTopic.id) {
+      console.error(`[cloneMessagesToNewTopicThunk] Invalid newTopic provided.`)
+      return false
+    }
+    try {
+      const state = getState()
+      const sourceMessages = selectMessagesForTopic(state, sourceTopicId) // Get ordered messages
+
+      if (!sourceMessages || sourceMessages.length === 0) {
+        console.error(`[cloneMessagesToNewTopicThunk] Source topic ${sourceTopicId} not found or is empty.`)
+        return false
+      }
+
+      // 1. Slice messages to clone
+      const messagesToClone = sourceMessages.slice(0, branchPointIndex)
+      if (messagesToClone.length === 0) {
+        console.warn(`[cloneMessagesToNewTopicThunk] No messages to branch (index ${branchPointIndex}).`)
+        return true // Nothing to clone, operation considered successful but did nothing.
+      }
+
+      // 2. Prepare for cloning: Maps and Arrays
+      const clonedMessages: Message[] = []
+      const clonedBlocks: MessageBlock[] = []
+      const oldMsgIdToNewMsgIdMap = new Map<string, string>()
+      const oldBlockIdToNewBlockIdMap = new Map<string, string>()
+      const filesToUpdateCount: FileType[] = [] // Array of FileType
+
+      // 3. Clone Messages and Blocks with New IDs
+      for (const oldMessage of messagesToClone) {
+        const newMsgId = uuidv4()
+        const newBlockIds: string[] = []
+
+        if (oldMessage.blocks && oldMessage.blocks.length > 0) {
+          for (const oldBlockId of oldMessage.blocks) {
+            const oldBlock = state.messageBlocks.entities[oldBlockId]
+            if (oldBlock) {
+              const newBlockId = uuidv4()
+
+              const newBlock: MessageBlock = {
+                ...oldBlock,
+                id: newBlockId,
+                messageId: newMsgId // Link block to the NEW message ID
+              }
+              clonedBlocks.push(newBlock)
+              newBlockIds.push(newBlockId)
+
+              if (newBlock.type === MessageBlockType.FILE || newBlock.type === MessageBlockType.IMAGE) {
+                const fileInfo = (newBlock as FileMessageBlock | ImageMessageBlock).file
+                if (fileInfo) {
+                  filesToUpdateCount.push(fileInfo)
+                }
+              }
+            } else {
+              console.warn(
+                `[cloneMessagesToNewTopicThunk] Block ${oldBlockId} not found in state for message ${oldMessage.id}. Skipping block clone.`
+              )
+            }
+          }
+        }
+
+        const newMessage: Message = {
+          ...oldMessage,
+          id: newMsgId,
+          topicId: newTopic.id, // Use the NEW topic ID provided
+          blocks: newBlockIds // Use the NEW block IDs
+        }
+        clonedMessages.push(newMessage)
+      }
+
+      // 4. Update Database (Atomic Transaction)
+      console.log(
+        `[cloneMessagesToNewTopicThunk] Saving ${clonedMessages.length} cloned messages and ${clonedBlocks.length} blocks to DB for topic ${newTopic.id}`
+      )
+      await db.transaction('rw', db.topics, db.message_blocks, db.files, async () => {
+        // Update the NEW topic with the cloned messages
+        // Assumes topic entry was added by caller, so we UPDATE.
+        await db.topics.put({ id: newTopic.id, messages: clonedMessages })
+
+        // Add the NEW blocks
+        if (clonedBlocks.length > 0) {
+          await db.message_blocks.bulkAdd(clonedBlocks)
+        }
+        // Update file counts
+        const uniqueFiles = [...new Map(filesToUpdateCount.map((f) => [f.id, f])).values()]
+        for (const file of uniqueFiles) {
+          await db.files
+            .where('id')
+            .equals(file.id)
+            .modify((f) => {
+              f.count = (f.count || 0) + 1
+            })
+        }
+      })
+      console.log(`[cloneMessagesToNewTopicThunk] DB update complete for topic ${newTopic.id}.`)
+
+      // 5. Update Redux State (Messages and Blocks for the NEW topic ONLY)
+      console.log(`[cloneMessagesToNewTopicThunk] Updating Redux message/block state for new topic ${newTopic.id}.`)
+      // NOTE: The caller should have already dispatched addTopic(newTopic)
+      dispatch(newMessagesActions.messagesReceived({ topicId: newTopic.id, messages: clonedMessages }))
+      if (clonedBlocks.length > 0) {
+        dispatch(upsertManyBlocks(clonedBlocks))
+      }
+      // NOTE: The caller should handle setActiveTopic(newTopic) if needed
+
+      console.log(`[cloneMessagesToNewTopicThunk] Message cloning successful for topic ${newTopic.id}`)
+      return true // Indicate success
+    } catch (error) {
+      console.error(`[cloneMessagesToNewTopicThunk] Failed to clone messages:`, error)
+      return false // Indicate failure
     }
   }

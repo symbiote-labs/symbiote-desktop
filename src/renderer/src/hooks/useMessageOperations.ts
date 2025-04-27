@@ -7,6 +7,7 @@ import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newM
 import {
   appendAssistantResponseThunk,
   clearTopicMessagesThunk,
+  cloneMessagesToNewTopicThunk,
   deleteMessageGroupThunk,
   deleteSingleMessageThunk,
   initiateTranslationThunk,
@@ -260,6 +261,22 @@ export function useMessageOperations(topic: Topic) {
     [dispatch, topic.id]
   )
 
+  /**
+   * 创建一个主题分支，克隆消息到新主题。
+   * Creates a topic branch by cloning messages to a new topic.
+   * @param sourceTopicId 源主题ID / Source topic ID
+   * @param branchPointIndex 分支点索引，此索引之前的消息将被克隆 / Branch point index, messages before this index will be cloned
+   * @param newTopic 新的主题对象，必须已经创建并添加到Redux store中 / New topic object, must be already created and added to Redux store
+   * @returns 操作是否成功 / Whether the operation was successful
+   */
+  const createTopicBranch = useCallback(
+    (sourceTopicId: string, branchPointIndex: number, newTopic: Topic) => {
+      console.log(`Cloning messages from topic ${sourceTopicId} to new topic ${newTopic.id}`)
+      return dispatch(cloneMessagesToNewTopicThunk(sourceTopicId, branchPointIndex, newTopic))
+    },
+    [dispatch]
+  )
+
   return {
     displayCount,
     deleteMessage,
@@ -273,7 +290,8 @@ export function useMessageOperations(topic: Topic) {
     clearTopicMessages,
     pauseMessages,
     resumeMessage,
-    getTranslationUpdater
+    getTranslationUpdater,
+    createTopicBranch
   }
 }
 

@@ -216,13 +216,10 @@ const MessageMenubar: FC<Props> = (props) => {
       setIsTranslating(true)
       const messageId = message.id
       const translationUpdater = await getTranslationUpdater(messageId, language)
-      console.log('translationUpdater', translationUpdater)
+      // console.log('translationUpdater', translationUpdater)
       if (!translationUpdater) return
       try {
         await translateText(mainTextContent, language, translationUpdater)
-
-        // 翻译完成后，提交流消息
-        // commitStreamMessage(message.id)
       } catch (error) {
         // console.error('Translation failed:', error)
         // window.message.error({ content: t('translate.error.failed'), key: 'translate-message' })
