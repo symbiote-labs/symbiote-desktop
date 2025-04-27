@@ -7,7 +7,8 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelName } from '@renderer/services/ModelService'
 import { useAppDispatch } from '@renderer/store'
-import { updateMessageThunk } from '@renderer/store/legacy_messages'
+import { newMessagesActions } from '@renderer/store/newMessage'
+// import { updateMessageThunk } from '@renderer/store/thunk/messageThunk'
 import type { Message } from '@renderer/types/newMessage'
 import { isEmoji, removeLeadingEmoji } from '@renderer/utils'
 import { getMainTextContent } from '@renderer/utils/messageUtils/find'
@@ -100,7 +101,9 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
       const groupMessages = messages.filter((m) => m.askId === message.askId)
       if (groupMessages.length > 1) {
         for (const m of groupMessages) {
-          dispatch(updateMessageThunk(m.topicId, m.id, { foldSelected: m.id === message.id }))
+          dispatch(
+            newMessagesActions.updateMessage({ topicId: m.topicId, messageId: m.id, updates: { foldSelected: true } })
+          )
         }
 
         setTimeout(() => {

@@ -648,7 +648,7 @@ export const loadTopicMessagesThunk =
     }
 
     dispatch(newMessagesActions.setTopicLoading({ topicId, loading: true }))
-
+    dispatch(newMessagesActions.setCurrentTopicId(topicId))
     try {
       const topic = await db.topics.get(topicId)
       const messagesFromDB = topic?.messages || []
