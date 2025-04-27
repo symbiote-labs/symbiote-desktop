@@ -8,7 +8,8 @@ import {
   isReasoningModel,
   isSupportedModel,
   isVisionModel,
-  isZhipuModel
+  isZhipuModel,
+  OPENAI_NO_SUPPORT_DEV_ROLE_MODELS
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
@@ -80,7 +81,8 @@ export default class OpenAIProvider extends BaseProvider {
       baseURL: this.getBaseURL(),
       defaultHeaders: {
         ...this.defaultHeaders(),
-        ...(this.provider.id === 'copilot' ? { 'editor-version': 'vscode/1.97.2' } : {})
+        ...(this.provider.id === 'copilot' ? { 'editor-version': 'vscode/1.97.2' } : {}),
+        ...(this.provider.id === 'copilot' ? { 'copilot-vision-request': 'true' } : {})
       }
     })
   }
@@ -338,7 +340,7 @@ export default class OpenAIProvider extends BaseProvider {
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
     messages = addImageFileToContents(messages)
     let systemMessage = { role: 'system', content: assistant.prompt || '' }
-    if (isOpenAIoSeries(model)) {
+    if (isOpenAIoSeries(model) && !OPENAI_NO_SUPPORT_DEV_ROLE_MODELS.includes(model.id)) {
       systemMessage = {
         role: 'developer',
         content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`
