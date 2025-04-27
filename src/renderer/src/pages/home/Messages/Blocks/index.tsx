@@ -11,7 +11,7 @@ import type {
   ThinkingMessageBlock,
   TranslationMessageBlock
 } from '@renderer/types/newMessage'
-import { MessageBlockType } from '@renderer/types/newMessage'
+import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import React from 'react'
 import { useSelector } from 'react-redux'
 
@@ -19,6 +19,7 @@ import CitationBlock from './CitationBlock'
 import ErrorBlock from './ErrorBlock'
 import FileBlock from './FileBlock'
 import ImageBlock from './ImageBlock'
+import loadingBlock from './LoadingBlock'
 import MainTextBlock from './MainTextBlock'
 import ThinkingBlock from './ThinkingBlock'
 import ToolBlock from './ToolBlock'
@@ -47,10 +48,10 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
         // if (block.status === MessageBlockStatus.ERROR) {
         //   return null
         // }
-        // if (block.status === MessageBlockStatus.PROCESSING) {
-        //   const LoadingComponent = loadingBlock(block)
-        //   if (LoadingComponent) return <LoadingComponent key={block.id} />
-        // }
+        if (block.status === MessageBlockStatus.PROCESSING) {
+          const LoadingComponent = loadingBlock(block)
+          if (LoadingComponent) return <LoadingComponent key={block.id} />
+        }
 
         switch (block.type) {
           case MessageBlockType.MAIN_TEXT:

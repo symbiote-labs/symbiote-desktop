@@ -398,6 +398,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         if (toolResponse.status === 'invoking') {
           const toolBlock = createToolBlock(assistantMsgId, toolResponse.id, {
             toolName: toolResponse.tool.name,
+            status: MessageBlockStatus.PROCESSING,
             metadata: { rawMcpToolResponse: toolResponse }
           })
           handleBlockTransition(toolBlock, MessageBlockType.TOOL)
