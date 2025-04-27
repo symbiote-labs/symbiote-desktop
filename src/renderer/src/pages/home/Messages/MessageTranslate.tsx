@@ -26,7 +26,7 @@ const MessageTranslate: FC<Props> = ({ block }) => {
       {block.content === t('translate.processing') ? (
         <BeatLoader color="var(--color-text-2)" size="10" style={{ marginBottom: 15 }} />
       ) : (
-        <Markdown block={block} role="assistant" />
+        <Markdown block={block} />
       )}
     </Fragment>
   )

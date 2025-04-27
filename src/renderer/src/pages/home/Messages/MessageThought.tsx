@@ -80,7 +80,7 @@ const MessageThought: FC<Props> = ({ message }) => {
           children: (
             //  FIXME: 临时兼容
             <div style={{ fontFamily, fontSize }}>
-              <Markdown block={{ ...message, content: message.content }} role="assistant" />
+              <Markdown block={{ ...message, content: message.content }} />
             </div>
           )
         }

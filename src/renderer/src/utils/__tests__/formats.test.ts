@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   escapeBrackets,
@@ -8,14 +8,15 @@ import {
   // withMessageThought
 } from '../formats'
 
-// 模拟依赖
-vi.mock('@renderer/config/models', () => ({
-  isReasoningModel: vi.fn()
-}))
+// // 模拟依赖
+// vi.mock('@renderer/config/models', () => ({
+//   isReasoningModel: vi.fn(),
+//   SYSTEM_MODELS: []
+// }))
 
-vi.mock('@renderer/services/AssistantService', () => ({
-  getAssistantById: vi.fn()
-}))
+// vi.mock('@renderer/services/AssistantService', () => ({
+//   getAssistantById: vi.fn()
+// }))
 
 describe('formats', () => {
   describe('escapeDollarNumber', () => {
