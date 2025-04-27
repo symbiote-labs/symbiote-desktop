@@ -11,6 +11,7 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { getContextCount, getGroupedMessages, getUserMessage } from '@renderer/services/MessagesService'
 import { estimateHistoryTokens } from '@renderer/services/TokenService'
 import { useAppDispatch } from '@renderer/store'
+import { newMessagesActions } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
 import {
@@ -145,9 +146,8 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
             return
           }
 
-          const clearMessage = getUserMessage({ assistant, topic, type: 'clear' })
-          const newMessages = [...messages, clearMessage]
-          // await updateMessages(newMessages)
+          const { message: clearMessage } = getUserMessage({ assistant, topic, type: 'clear' })
+          dispatch(newMessagesActions.addMessage({ topicId: topic.id, message: clearMessage }))
 
           scrollToBottom()
         } finally {
