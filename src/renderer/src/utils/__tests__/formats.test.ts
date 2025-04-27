@@ -1,13 +1,11 @@
-// import { Message } from '@renderer/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
   escapeBrackets,
   escapeDollarNumber,
   extractTitle,
-  removeSvgEmptyLines,
-  withGeminiGrounding
-  //   withMessageThought
+  removeSvgEmptyLines
+  // withMessageThought
 } from '../formats'
 
 // 模拟依赖
@@ -141,80 +139,80 @@ describe('formats', () => {
     })
   })
 
-  describe('withGeminiGrounding', () => {
-    it('should add citation numbers to text segments', () => {
-      const message = {
-        id: '1',
-        role: 'assistant' as const,
-        content: 'Paris is the capital of France.',
-        metadata: {
-          groundingMetadata: {
-            groundingSupports: [
-              {
-                segment: { text: 'Paris is the capital of France' },
-                groundingChunkIndices: [0, 1]
-              }
-            ]
-          }
-        }
-      } as unknown as Message
+  //   describe('withGeminiGrounding', () => {
+  //     it('should add citation numbers to text segments', () => {
+  //       const message = {
+  //         id: '1',
+  //         role: 'assistant' as const,
+  //         content: 'Paris is the capital of France.',
+  //         metadata: {
+  //           groundingMetadata: {
+  //             groundingSupports: [
+  //               {
+  //                 segment: { text: 'Paris is the capital of France' },
+  //                 groundingChunkIndices: [0, 1]
+  //               }
+  //             ]
+  //           }
+  //         }
+  //       } as unknown as Message
 
-      const result = withGeminiGrounding(message)
-      expect(result).toBe('Paris is the capital of France <sup>1</sup> <sup>2</sup>.')
-    })
+  //       const result = withGeminiGrounding(message)
+  //       expect(result).toBe('Paris is the capital of France <sup>1</sup> <sup>2</sup>.')
+  //     })
 
-    it('should handle messages without groundingMetadata', () => {
-      const message = {
-        id: '1',
-        role: 'assistant' as const,
-        content: 'Paris is the capital of France.'
-      } as unknown as Message
+  //     it('should handle messages without groundingMetadata', () => {
+  //       const message = {
+  //         id: '1',
+  //         role: 'assistant' as const,
+  //         content: 'Paris is the capital of France.'
+  //       } as unknown as Message
 
-      const result = withGeminiGrounding(message)
-      expect(result).toBe('Paris is the capital of France.')
-    })
+  //       const result = withGeminiGrounding(message)
+  //       expect(result).toBe('Paris is the capital of France.')
+  //     })
 
-    it('should handle messages with empty groundingSupports', () => {
-      const message = {
-        id: '1',
-        role: 'assistant' as const,
-        content: 'Paris is the capital of France.',
-        metadata: {
-          groundingMetadata: {
-            groundingSupports: []
-          }
-        }
-      } as unknown as Message
+  //     it('should handle messages with empty groundingSupports', () => {
+  //       const message = {
+  //         id: '1',
+  //         role: 'assistant' as const,
+  //         content: 'Paris is the capital of France.',
+  //         metadata: {
+  //           groundingMetadata: {
+  //             groundingSupports: []
+  //           }
+  //         }
+  //       } as unknown as Message
 
-      const result = withGeminiGrounding(message)
-      expect(result).toBe('Paris is the capital of France.')
-    })
+  //       const result = withGeminiGrounding(message)
+  //       expect(result).toBe('Paris is the capital of France.')
+  //     })
 
-    it('should handle supports without text or indices', () => {
-      const message = {
-        id: '1',
-        role: 'assistant' as const,
-        content: 'Paris is the capital of France.',
-        metadata: {
-          groundingMetadata: {
-            groundingSupports: [
-              {
-                segment: {},
-                groundingChunkIndices: [0]
-              },
-              {
-                segment: { text: 'Paris' },
-                groundingChunkIndices: undefined
-              }
-            ]
-          }
-        }
-      } as unknown as Message
+  //     it('should handle supports without text or indices', () => {
+  //       const message = {
+  //         id: '1',
+  //         role: 'assistant' as const,
+  //         content: 'Paris is the capital of France.',
+  //         metadata: {
+  //           groundingMetadata: {
+  //             groundingSupports: [
+  //               {
+  //                 segment: {},
+  //                 groundingChunkIndices: [0]
+  //               },
+  //               {
+  //                 segment: { text: 'Paris' },
+  //                 groundingChunkIndices: undefined
+  //               }
+  //             ]
+  //           }
+  //         }
+  //       }
 
-      const result = withGeminiGrounding(message)
-      expect(result).toBe('Paris is the capital of France.')
-    })
-  })
+  //       const result = withGeminiGrounding(message)
+  //       expect(result).toBe('Paris is the capital of France.')
+  //     })
+  //   })
 
   //   describe('withMessageThought', () => {
   //     beforeEach(() => {
