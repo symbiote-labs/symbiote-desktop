@@ -8,8 +8,9 @@ import { getMessageModelId } from '@renderer/services/MessagesService'
 import { getModelName } from '@renderer/services/ModelService'
 import { useAppDispatch } from '@renderer/store'
 import { updateMessageThunk } from '@renderer/store/legacy_messages'
-import type { Message } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessage'
 import { isEmoji, removeLeadingEmoji } from '@renderer/utils'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { Avatar } from 'antd'
 import { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -195,6 +196,7 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
           const size = 10 + calculateValueByDistance(message.id, 20)
           const avatarSource = getAvatarSource(isLocalAi, getMessageModelId(message))
           const username = removeLeadingEmoji(getUserName(message))
+          const content = getMainTextContent(message)
 
           return (
             <MessageItem
@@ -209,7 +211,7 @@ const MessageAnchorLine: FC<MessageLineProps> = ({ messages }) => {
               onClick={() => scrollToMessage(message)}>
               <MessageItemContainer style={{ transform: ` scale(${scale})` }}>
                 <MessageItemTitle>{username}</MessageItemTitle>
-                <MessageItemContent>{message.content.substring(0, 50)}</MessageItemContent>
+                <MessageItemContent>{content.substring(0, 50)}</MessageItemContent>
               </MessageItemContainer>
 
               {message.role === 'assistant' ? (

@@ -1,5 +1,7 @@
-// import type { Annotation as OpenAIAnnotation } from 'openai/resources/chat/completions' // REMOVED
+import { CompletionUsage } from 'openai/resources'
+
 import type {
+  Assistant,
   FileType,
   GenerateImageResponse,
   KnowledgeReference,
@@ -7,6 +9,7 @@ import type {
   MCPToolResponse,
   Metrics,
   Model,
+  Topic,
   Usage,
   WebSearchResponse
 } from '.'
@@ -188,3 +191,14 @@ export interface Response {
 }
 
 export type ResponseError = Record<string, any>
+
+export interface MessageInputBaseParams {
+  assistant: Assistant
+  topic: Topic
+  content?: string
+  files?: FileType[]
+  knowledgeBaseIds?: string[]
+  mentions?: Model[]
+  enabledMCPs?: MCPServer[]
+  usage?: CompletionUsage
+}

@@ -35,13 +35,8 @@ const findMainTextBlockId = (message: Message): string | undefined => {
 
 const selectMessagesState = (state: RootState) => state.messages
 
-export const selectNewTopicMessages = createSelector(
-  [selectMessagesState, (state: RootState, topicId: string) => topicId],
-  (messagesState, topicId) => messagesState.messageIdsByTopic[topicId] || []
-)
-
 export const selectNewTopicLoading = createSelector(
-  [selectMessagesState, (state: RootState, topicId: string) => topicId],
+  [selectMessagesState, (_, topicId: string) => topicId],
   (messagesState, topicId) => messagesState.loadingByTopic[topicId] || false
 )
 

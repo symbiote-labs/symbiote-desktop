@@ -1,4 +1,4 @@
-import type { FileMessageBlock, Message } from '@renderer/types/newMessage'
+import type { FileMessageBlock } from '@renderer/types/newMessage'
 import React from 'react'
 
 import MessageAttachments from '../MessageAttachments'
@@ -8,20 +8,7 @@ interface Props {
 }
 
 const FileBlock: React.FC<Props> = ({ block }) => {
-  // 创建一个最小的Message对象以便复用MessageAttachments组件
-  const minimalMessage: Partial<Message> = {
-    id: block.messageId,
-    role: 'assistant',
-    files: [block.file],
-    assistantId: '',
-    topicId: '',
-    createdAt: '',
-    status: 'success',
-    type: 'text',
-    blocks: [block.id]
-  } as unknown as Message
-
-  return <MessageAttachments message={minimalMessage} />
+  return <MessageAttachments block={block} />
 }
 
 export default React.memo(FileBlock)

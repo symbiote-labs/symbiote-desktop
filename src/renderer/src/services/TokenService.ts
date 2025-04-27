@@ -1,5 +1,5 @@
 import { Assistant, FileType, FileTypes, Usage } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessage'
+import type { Message, MessageInputBaseParams } from '@renderer/types/newMessage'
 import { findFileBlocks, getMainTextContent, getThinkingContent } from '@renderer/utils/messageUtils/find'
 import { flatten, takeRight } from 'lodash'
 import { approximateTokenSize } from 'tokenx'
@@ -56,19 +56,34 @@ export function estimateImageTokens(file: FileType) {
   return Math.floor(file.size / 100)
 }
 
-export async function estimateMessageUsage(message: Message): Promise<Usage> {
+export async function estimateMessageUsage(message: Partial<Message>, params?: MessageInputBaseParams): Promise<Usage> {
   let imageTokens = 0
-  const files = findFileBlocks(message)
+  let files: FileType[] = []
+  if (params?.files) {
+    files = params.files
+  } else {
+    const fileBlocks = findFileBlocks(message as Message)
+    files = fileBlocks.map((f) => f.file)
+  }
+
   if (files.length > 0) {
-    const images = files.filter((f) => f.file.type === FileTypes.IMAGE)
+    const images = files.filter((f) => f.type === FileTypes.IMAGE)
     if (images.length > 0) {
       for (const image of images) {
-        imageTokens = estimateImageTokens(image.file) + imageTokens
+        imageTokens = estimateImageTokens(image) + imageTokens
       }
     }
   }
-  const content = getMainTextContent(message)
-  const reasoningContent = getThinkingContent(message)
+  let content = ''
+  if (params?.content) {
+    content = params.content
+  } else {
+    content = getMainTextContent(message as Message)
+  }
+  let reasoningContent = ''
+  if (!params) {
+    reasoningContent = getThinkingContent(message as Message)
+  }
   const combinedContent = [content, reasoningContent].filter((s) => s !== undefined).join(' ')
   const tokens = estimateTextTokens(combinedContent)
 

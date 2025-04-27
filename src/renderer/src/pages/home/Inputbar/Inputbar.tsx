@@ -22,7 +22,8 @@ import WebSearchService from '@renderer/services/WebSearchService'
 import { useAppDispatch } from '@renderer/store'
 import { setSearching } from '@renderer/store/runtime'
 import { sendMessage as _sendMessage } from '@renderer/store/thunk/messageThunk'
-import { Assistant, FileType, KnowledgeBase, KnowledgeItem, MCPServer, Model, Topic } from '@renderer/types'
+import { Assistant, FileType, KnowledgeBase, KnowledgeItem, Model, Topic } from '@renderer/types'
+import type { MessageInputBaseParams } from '@renderer/types/newMessage'
 import { classNames, delay, formatFileSize, getFileExtension } from '@renderer/utils'
 import { getFilesFromDropEvent } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
@@ -47,7 +48,7 @@ import {
   Upload,
   Zap
 } from 'lucide-react'
-import { CompletionUsage } from 'openai/resources'
+// import { CompletionUsage } from 'openai/resources'
 import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -183,16 +184,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
       // Dispatch the sendMessage action with all options
       const uploadedFiles = await FileManager.uploadFiles(files)
 
-      const baseUserMessage: {
-        assistant: Assistant
-        topic: Topic
-        content?: string
-        files?: FileType[]
-        knowledgeBaseIds?: string[]
-        mentions?: Model[]
-        enabledMCPs?: MCPServer[]
-        usage?: CompletionUsage
-      } = { assistant, topic, content: text }
+      const baseUserMessage: MessageInputBaseParams = { assistant, topic, content: text }
 
       // getUserMessage()
       if (uploadedFiles) {
@@ -214,14 +206,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
         )
       }
 
-      const usageParams = {
-        content: text,
-        reasoning_content: '',
-        files: uploadedFiles
-      }
-
-      // FIXME
-      baseUserMessage.usage = await estimateMessageUsage(usageParams)
+      baseUserMessage.usage = await estimateMessageUsage(baseUserMessage)
 
       const { message, blocks } = getUserMessage(baseUserMessage)
 

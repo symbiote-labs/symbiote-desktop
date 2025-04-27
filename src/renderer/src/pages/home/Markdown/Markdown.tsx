@@ -4,14 +4,9 @@ import 'katex/dist/contrib/mhchem'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type {
-  MainTextMessageBlock,
-  Message,
-  ThinkingMessageBlock,
-  TranslationMessageBlock
-} from '@renderer/types/newMessage'
+import type { MainTextMessageBlock, ThinkingMessageBlock, TranslationMessageBlock } from '@renderer/types/newMessage'
 import { parseJSON } from '@renderer/utils'
-import { escapeBrackets, removeSvgEmptyLines, withGeminiGrounding } from '@renderer/utils/formats'
+import { escapeBrackets, removeSvgEmptyLines } from '@renderer/utils/formats'
 import { findCitationInChildren } from '@renderer/utils/markdown'
 import { isEmpty } from 'lodash'
 import { type FC, useMemo } from 'react'
@@ -36,12 +31,11 @@ const DISALLOWED_ELEMENTS = ['iframe']
 interface Props {
   // message: Message & { content: string }
   block: MainTextMessageBlock | TranslationMessageBlock | ThinkingMessageBlock
-  role: Message['role']
 }
 
-const Markdown: FC<Props> = ({ block, role }) => {
+const Markdown: FC<Props> = ({ block }) => {
   const { t } = useTranslation()
-  const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
+  const { mathEngine } = useSettings()
 
   const remarkPlugins = useMemo(() => {
     const plugins = [remarkGfm, remarkCjkFriendly]
@@ -54,7 +48,7 @@ const Markdown: FC<Props> = ({ block, role }) => {
   const messageContent = useMemo(() => {
     const empty = isEmpty(block.content)
     const paused = block.status === 'paused'
-    const content = empty && paused ? t('message.chat.completion.paused') : withGeminiGrounding(block)
+    const content = empty && paused ? t('message.chat.completion.paused') : block.content
     return removeSvgEmptyLines(escapeBrackets(content))
   }, [block, t])
 
@@ -81,9 +75,9 @@ const Markdown: FC<Props> = ({ block, role }) => {
     return baseComponents
   }, [])
 
-  if (role === 'user' && !renderInputMessageAsMarkdown) {
-    return <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}>{messageContent}</p>
-  }
+  // if (role === 'user' && !renderInputMessageAsMarkdown) {
+  //   return <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}>{messageContent}</p>
+  // }
 
   if (messageContent.includes('<style>')) {
     components.style = MarkdownShadowDOMRenderer as any

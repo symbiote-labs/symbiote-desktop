@@ -6,18 +6,18 @@ import MessageErrorBoundary from '@renderer/pages/home/Messages/MessageErrorBoun
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getDefaultAssistant, getDefaultModel } from '@renderer/services/AssistantService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
-import { Message } from '@renderer/types'
+import { LegacyMessage } from '@renderer/types'
 import { isMiniWindow } from '@renderer/utils'
 import { Dispatch, FC, memo, SetStateAction, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 interface Props {
-  message: Message
+  message: LegacyMessage
   index?: number
   total: number
   route: string
-  onGetMessages?: () => Message[]
-  onSetMessages?: Dispatch<SetStateAction<Message[]>>
+  onGetMessages?: () => LegacyMessage[]
+  onSetMessages?: Dispatch<SetStateAction<LegacyMessage[]>>
 }
 
 const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolean) =>
