@@ -134,7 +134,6 @@ export const throttledBlockDbUpdate = throttle(
     const block = state.messageBlocks.entities[blockId]
     // throttle是异步函数,可能会在complete事件触发后才执行
     if (blockChanges.status === MessageBlockStatus.STREAMING && block?.status === MessageBlockStatus.SUCCESS) return
-
     console.log(`[DB Throttle Block Update] Updating block ${blockId} with changes:`, blockChanges)
     try {
       await db.message_blocks.update(blockId, blockChanges)
@@ -562,6 +561,14 @@ const fetchAndProcessAssistantResponseImpl = async (
           message: error.message || 'Stream processing error',
           originalMessage: error.message,
           stack: error.stack
+        }
+        if (lastBlockId) {
+          // 更改上一个block的状态为ERROR
+          const changes: Partial<MessageBlock> = {
+            status: MessageBlockStatus.ERROR
+          }
+          dispatch(updateOneBlock({ id: lastBlockId, changes }))
+          saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
         }
 
         const errorBlock = createErrorBlock(assistantMsgId, serializableError, { status: MessageBlockStatus.SUCCESS })
