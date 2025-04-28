@@ -43,6 +43,8 @@ function initAutoSync() {
   }, 2000)
 }
 
+
+
 initSpinner()
 initKeyv()
 initAutoSync()

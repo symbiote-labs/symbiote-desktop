@@ -100,13 +100,13 @@ export const SUPPORTED_REANK_PROVIDERS = ['silicon', 'jina', 'voyageai']
 export const PROVIDER_CONFIG = {
   openai: {
     api: {
-      url: 'https://api.openai.com'
+      url: 'https://api.siliconflow.cn'
     },
     websites: {
-      official: 'https://openai.com/',
-      apiKey: 'https://platform.openai.com/api-keys',
-      docs: 'https://platform.openai.com/docs',
-      models: 'https://platform.openai.com/docs/models'
+      official: 'https://www.siliconflow.cn',
+      apiKey: 'https://cloud.siliconflow.cn/i/d1nTBKXU',
+      docs: 'https://docs.siliconflow.cn/',
+      models: 'https://docs.siliconflow.cn/docs/model-names'
     }
   },
   o3: {
@@ -148,7 +148,7 @@ export const PROVIDER_CONFIG = {
       url: 'https://api.siliconflow.cn'
     },
     websites: {
-      official: 'https://www.siliconflow.cn/',
+      official: 'https://www.siliconflow.cn',
       apiKey: 'https://cloud.siliconflow.cn/i/d1nTBKXU',
       docs: 'https://docs.siliconflow.cn/',
       models: 'https://docs.siliconflow.cn/docs/model-names'

@@ -531,6 +531,14 @@ ${state.extractedThinking}`
   }
 
   /**
+   * 通过聊天生成图像
+   */
+  public async generateImageByChat(params: CompletionsParams): Promise<void> {
+    // 使用目标模型通过聊天生成图像
+    return this.targetProvider.generateImageByChat(params)
+  }
+
+  /**
    * 获取嵌入维度
    */
   public async getEmbeddingDimensions(model: Model): Promise<number> {

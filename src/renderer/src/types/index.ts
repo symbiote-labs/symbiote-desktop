@@ -633,3 +633,5 @@ export type TTSProvider = {
   voice?: string
   model?: string
 }
+
+export type MathEngine = 'KaTeX' | 'MathJax' | 'none'

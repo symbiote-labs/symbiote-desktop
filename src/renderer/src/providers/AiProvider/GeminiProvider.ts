@@ -1416,4 +1416,8 @@ export default class GeminiProvider extends BaseProvider {
 
     return truncated
   }
+
+  public generateImageByChat(): Promise<void> {
+    throw new Error('Method not implemented.')
+  }
 }

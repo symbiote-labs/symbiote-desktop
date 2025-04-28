@@ -1,0 +1,239 @@
+# MCP 工具内联渲染修改说明
+
+本文件提供了将 MCP 工具调用从消息顶部固定位置改为内联渲染的修改步骤。您需要修改以下两个文件：
+
+1.  `src/renderer/src/pages/home/Messages/MessageContent.tsx`
+2.  `src/renderer/src/pages/home/Markdown/Markdown.tsx`
+
+**重要提示：** 在进行修改之前，请确保您已经备份了这两个文件。
+
+## 步骤 1: 修改 `src/renderer/src/pages/home/Messages/MessageContent.tsx`
+
+这个文件主要负责处理消息内容的整体布局和数据准备。我们需要在这里：
+
+*   移除 MCP 工具块的顶部容器。
+*   将 MCP 工具的相关状态（如 `activeKeys`, `copiedMap`, `editingToolId`, `editedParams`）和处理函数（如 `copyContent`, `handleRerun`, `handleEdit`, `handleCancelEdit`, `handleSaveEdit`, `handleParamsChange`）移动或传递给 `Markdown` 组件。
+*   修改 `processedContent` 的生成逻辑，将工具 XML 标记替换为自定义的占位符，以便 `Markdown` 组件能够识别并在正确的位置渲染工具块。
+
+以下是需要修改的部分：
+
+1.  **移除 `MessageTools` 导入和相关的 JSX：**
+    找到并删除以下导入：
+    ```typescript
+    import { default as MessageTools } from './MessageTools' // Change to named import (using default alias)
+    ```
+    找到并删除以下 JSX 结构：
+    ```jsx
+    <div className="message-content-tools">
+      {/* Only display thought info at the top */}
+      <MessageThought message={message} />
+      {/* Render MessageTools to display tool blocks based on metadata */}
+      <MessageTools message={message} />
+    </div>
+    ```
+    保留 `MessageThought` 组件，它应该独立于工具块渲染。
+
+2.  **将工具相关的状态和处理函数移动或传递：**
+    将 `MessageTools.tsx` 中的以下状态和处理函数定义复制到 `MessageContent.tsx` 中：
+    *   `activeKeys` state 和 `setActiveKeys`
+    *   `copiedMap` state 和 `setCopiedMap`
+    *   `editingToolId` state 和 `setEditingToolId`
+    *   `editedParams` state 和 `setEditedParams`
+    *   `localToolResponses` state 和 `setLocalToolResponses`
+    *   `useEffect` 钩子，用于同步 `localToolResponses`
+    *   `copyContent` useCallback
+    *   `handleRerun` useCallback
+    *   `handleEdit` useCallback
+    *   `handleCancelEdit` useCallback
+    *   `handleSaveEdit` useCallback
+    *   `handleParamsChange` useCallback
+    *   监听 `onToolRerunUpdate` 的 `useEffect` 钩子
+
+    这些状态和函数需要作为 props 传递给 `Markdown` 组件。
+
+3.  **修改 `processedContent` 逻辑：**
+    在 `processedContent` 的 `useMemo` 钩子中，在处理引用标记之后，添加逻辑来查找 `<tool_use>...</tool_use>` 标记，并将其替换为自定义的占位符，例如 `<tool-block id="[tool_call_id]"></tool-block>`。
+
+    首先，在文件顶部导入 `MCPToolResponse` 类型：
+    ```typescript
+    import { Message, Model, MCPToolResponse } from '@renderer/types'
+    ```
+
+    然后，在 `processedContent` 的 `useMemo` 内部，在处理完引用标记后，添加以下代码：
+
+    ```typescript
+    // ... (之前的引用标记处理逻辑)
+
+    // 处理 MCP 工具调用标记
+    const toolResponses = message.metadata?.mcpTools || [];
+    if (toolResponses.length > 0) {
+      toolResponses.forEach(toolCall => {
+        const toolTagRegex = new RegExp(`<tool_use>(?:[^<]*?${toolCall.id}[\\s\\S]*?)<\\/tool_use>`, 'gi');
+        content = content.replace(toolTagRegex, `<tool-block id="${toolCall.id}"></tool-block>`);
+      });
+    }
+
+    return content;
+    ```
+    请注意，这里的正则表达式 `toolTagRegex` 是一个示例，您可能需要根据实际的工具 XML 格式进行调整，以确保能够准确匹配包含特定 `toolCall.id` 的 `<tool_use>` 标记。
+
+4.  **更新 `Markdown` 组件的 props：**
+    在渲染 `Markdown` 组件的地方，将新移动过来的状态和处理函数作为 props 传递下去：
+
+    ```jsx
+    <Markdown
+      message={{ ...message, content: processedContent }} // 传递包含占位符的内容
+      toolResponses={message.metadata?.mcpTools || []} // 传递工具响应数据
+      activeToolKeys={activeKeys} // 传递 activeKeys 状态
+      copiedToolMap={copiedMap} // 传递 copiedMap 状态
+      editingToolId={editingToolId} // 传递 editingToolId 状态
+      editedToolParamsString={editedParams} // 传递 editedParams 状态
+      onToolToggle={setActiveKeys} // 传递 setActiveKeys 函数
+      onToolCopy={copyContent} // 传递 copyContent 函数
+      onToolRerun={handleRerun} // 传递 handleRerun 函数
+      onToolEdit={handleEdit} // 传递 handleEdit 函数
+      onToolSave={handleSaveEdit} // 传递 handleSaveEdit 函数
+      onToolCancel={handleCancelEdit} // 传递 handleCancelEdit 函数
+      onToolParamsChange={handleParamsChange} // 传递 handleParamsChange 函数
+    />
+    ```
+    请注意，我在这里使用了新的 prop 名称（例如 `toolResponses`, `activeToolKeys` 等），以避免与 `Markdown` 组件内部可能已有的 props 冲突。您需要在 `Markdown.tsx` 中接收这些新的 props。
+
+## 步骤 2: 修改 `src/renderer/src/pages/home/Markdown/Markdown.tsx`
+
+这个文件负责将 Markdown 内容渲染为 HTML。我们需要在这里：
+
+*   接收从 `MessageContent` 传递过来的工具相关 props。
+*   添加一个自定义的渲染器，用于处理我们在步骤 1 中创建的 `<tool-block>` 占位符。
+*   在自定义渲染器中，根据占位符中的 `id` 查找对应的工具响应数据，并渲染 `SingleToolCallBlock` 组件。
+
+以下是需要修改的部分：
+
+1.  **更新 Props 接口：**
+    修改 `Props` 接口，添加从 `MessageContent` 传递过来的新 props：
+
+    ```typescript
+    import { MCPToolResponse, Message } from '@renderer/types' // 导入 MCPToolResponse
+
+    interface Props {
+      message: Message
+      toolResponses: MCPToolResponse[] // 添加工具响应数据 prop
+      activeToolKeys: string[] // 添加 activeKeys prop
+      copiedToolMap: Record<string, boolean> // 添加 copiedMap prop
+      editingToolId: string | null // 添加 editingToolId prop
+      editedToolParamsString: string // 添加 editedParams prop
+      onToolToggle: React.Dispatch<React.SetStateAction<string[]>> // 添加 onToolToggle prop
+      onToolCopy: (content: string, toolId: string) => void // 添加 onToolCopy prop
+      onToolRerun: (toolCall: MCPToolResponse, currentParamsString: string) => void // 添加 onToolRerun prop
+      onToolEdit: (toolCall: MCPToolResponse) => void // 添加 onToolEdit prop
+      onToolSave: (toolCall: MCPToolResponse) => void // 添加 onToolSave prop
+      onToolCancel: () => void // 添加 onToolCancel prop
+      onToolParamsChange: (newParams: string) => void // 添加 onToolParamsChange prop
+    }
+    ```
+
+2.  **导入 `SingleToolCallBlock` 组件：**
+    在文件顶部导入 `SingleToolCallBlock` 组件：
+    ```typescript
+    import SingleToolCallBlock from '../Messages/SingleToolCallBlock' // 导入 SingleToolCallBlock
+    ```
+
+3.  **添加自定义渲染器：**
+    在 `components` 的 `useMemo` 钩子中，添加一个针对 `tool-block` 标签的渲染器：
+
+    ```typescript
+    const components = useMemo(() => {
+      const baseComponents = {
+        // ... (其他现有渲染器)
+
+        // 添加 tool-block 渲染器
+        'tool-block': (props: any) => {
+          const toolCallId = props.id; // 获取占位符中的 id
+          const toolResponse = toolResponses.find(tr => tr.id === toolCallId); // 查找对应的工具响应数据
+
+          if (!toolResponse) {
+            return null; // 如果找不到对应的工具响应，则不渲染
+          }
+
+          // 渲染 SingleToolCallBlock 组件，并传递必要的 props
+          return (
+            <SingleToolCallBlock
+              toolResponse={toolResponse}
+              isActive={activeToolKeys.includes(toolCallId)}
+              isCopied={copiedToolMap[toolCallId] || false}
+              isEditing={editingToolId === toolCallId}
+              editedParamsString={editedToolParamsString}
+              fontFamily={messageFont === 'serif' ? 'serif' : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans","Helvetica Neue", sans-serif'} // 传递字体样式
+              t={t} // 传递翻译函数
+              onToggle={() => onToolToggle(prev => prev.includes(toolCallId) ? prev.filter(k => k !== toolCallId) : [...prev, toolCallId])} // 传递 onToolToggle 函数
+              onCopy={onToolCopy} // 传递 onToolCopy 函数
+              onRerun={onToolRerun} // 传递 onToolRerun 函数
+              onEdit={onToolEdit} // 传递 onToolEdit 函数
+              onSave={onToolSave} // 传递 onToolSave 函数
+              onCancel={onToolCancel} // 传递 onToolCancel 函数
+              onParamsChange={onToolParamsChange} // 传递 onToolParamsChange 函数
+            />
+          );
+        },
+      } as Partial<Components>;
+      return baseComponents;
+    }, [
+      // ... (其他现有依赖)
+      toolResponses, // 添加 toolResponses 依赖
+      activeToolKeys, // 添加 activeToolKeys 依赖
+      copiedToolMap, // 添加 copiedToolMap 依赖
+      editingToolId, // 添加 editingToolId 依赖
+      editedToolParamsString, // 添加 editedToolParamsString 依赖
+      onToolToggle, // 添加 onToolToggle 依赖
+      onToolCopy, // 添加 onToolCopy 依赖
+      onToolRerun, // 添加 onToolRerun 依赖
+      onToolEdit, // 添加 onToolEdit 依赖
+      onToolSave, // 添加 onToolSave 依赖
+      onToolCancel, // 添加 onToolCancel 依赖
+      onToolParamsChange, // 添加 onToolParamsChange 依赖
+      t, // 添加 t 依赖
+      messageFont // 添加 messageFont 依赖
+    ]);
+    ```
+    请确保在 `useMemo` 的依赖数组中包含了所有使用到的外部变量和函数。
+
+## 步骤 3: 修改 `src/renderer/src/pages/home/Messages/MessageTools.tsx`
+
+这个文件将不再负责渲染工具块，它的主要作用将变为处理工具相关的状态和逻辑。
+
+1.  **移除渲染工具块的 JSX：**
+    找到并删除 `MessageTools` 组件中的以下 JSX 结构：
+
+    ```jsx
+    return (
+      <>
+        <ToolsContainer className="message-tools-container">
+          {collapseItems.map((item) => (
+            <CustomCollapse
+              key={item.key}
+              id={item.key as string}
+              title={item.label}
+              isActive={activeKeys.includes(item.key as string)}
+              onToggle={() => {
+                setActiveKeys((prev) =>
+                  prev.includes(item.key as string) ? prev.filter((k) => k !== item.key) : [...prev, item.key as string]
+                )
+              }}>
+              {item.children}
+            </CustomCollapse>
+          ))}
+        </ToolsContainer>
+      </>
+    )
+    ```
+    以及相关的 `ToolsContainer` 样式定义。
+
+2.  **保留工具相关的状态和逻辑：**
+    保留 `MessageTools` 组件中所有与工具相关的状态（`activeKeys`, `copiedMap`, `editingToolId`, `editedParams`, `localToolResponses`）和处理函数（`copyContent`, `handleRerun`, `handleEdit`, `handleCancelEdit`, `handleSaveEdit`, `handleParamsChange`），以及监听 `onToolRerunUpdate` 的 `useEffect` 钩子。这些状态和逻辑将需要被提升到 `MessageContent.tsx` 中。
+
+3.  **修改 `MessageTools` 组件的用途：**
+    `MessageTools` 组件可能不再需要作为一个 React 组件存在，或者可以修改其用途，例如只包含工具相关的逻辑和状态管理，并通过钩子或上下文提供给其他组件使用。考虑到您希望自己修改，您可以选择将这些逻辑完全移动到 `MessageContent.tsx` 中，然后删除 `MessageTools.tsx` 文件。
+
+完成以上修改后，重新运行您的应用程序，MCP 工具块应该会以内联的方式显示在消息内容中对应的位置。
+
+请仔细按照步骤进行修改，并根据您的实际代码结构进行调整。如果在修改过程中遇到任何问题，或者需要进一步的帮助，请随时告诉我。

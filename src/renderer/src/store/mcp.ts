@@ -100,6 +100,13 @@ export const builtinMCPServers: MCPServer[] = [
   },
   {
     id: nanoid(),
+    name: '@cherry/dify-knowledge',
+    type: 'inMemory',
+    description: 'Dify 的 MCP 服务器实现，提供了一个简单的 API 来与 Dify 进行交互',
+    isActive: false
+  },
+  {
+    id: nanoid(),
     name: '@cherry/simpleremember',
     type: 'inMemory',
     description:
@@ -122,6 +129,13 @@ export const builtinMCPServers: MCPServer[] = [
     name: '@cherry/timetools',
     type: 'inMemory',
     description: '时间工具，提供获取当前系统时间的功能，允许AI随时知道当前日期和时间。',
+    isActive: true
+  },
+  {
+    id: nanoid(),
+    name: '@cherry/calculator',
+    type: 'inMemory',
+    description: '万能科学计算器，提供数学表达式计算、单位转换、统计计算等功能，支持复杂的科学计算和数据分析。',
     isActive: true
   }
 ]

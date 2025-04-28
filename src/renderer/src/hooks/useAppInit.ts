@@ -118,7 +118,12 @@ export function useAppInit() {
   }, [customCss])
 
   useEffect(() => {
-    enableDataCollection ? initAnalytics() : disableAnalytics()
+    if (enableDataCollection) {
+      initAnalytics()
+      // TODO: init data collection
+    } else {
+      disableAnalytics()
+    }
   }, [enableDataCollection])
 
   // 自动启动ASR服务器

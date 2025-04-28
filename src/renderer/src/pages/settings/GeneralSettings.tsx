@@ -2,7 +2,7 @@ import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { useAppDispatch } from '@renderer/store'
-import { setEnableDataCollection, setLanguage } from '@renderer/store/settings'
+import { setLanguage } from '@renderer/store/settings'
 import { setProxyMode, setProxyUrl as _setProxyUrl } from '@renderer/store/settings'
 import { LanguageVarious } from '@renderer/types'
 import { isValidProxyUrl } from '@renderer/utils'
@@ -25,7 +25,8 @@ const GeneralSettings: FC = () => {
     trayOnClose,
     tray,
     proxyMode: storeProxyMode,
-    enableDataCollection
+    enableDataCollection,
+    setEnableDataCollection
   } = useSettings()
   const [proxyUrl, setProxyUrl] = useState<string | undefined>(storeProxyUrl)
   const { theme: themeMode } = useTheme()
@@ -185,7 +186,13 @@ const GeneralSettings: FC = () => {
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{t('settings.privacy.enable_privacy_mode')}</SettingRowTitle>
-          <Switch value={enableDataCollection} onChange={(v) => dispatch(setEnableDataCollection(v))} />
+          <Switch
+            checked={enableDataCollection}
+            onChange={(v) => {
+              setEnableDataCollection(v)
+              window.api.sentry.init()
+            }}
+          />
         </SettingRow>
       </SettingGroup>
     </SettingContainer>

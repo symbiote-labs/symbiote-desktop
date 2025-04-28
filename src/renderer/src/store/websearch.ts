@@ -16,6 +16,8 @@ export interface WebSearchState {
   searchWithTime: boolean
   // 搜索结果的最大数量
   maxResults: number
+  // 搜索结果内容的最大长度
+  contentLimit?: number
   // 要排除的域名列表
   excludeDomains: string[]
   // 订阅源列表
@@ -152,6 +154,7 @@ const initialState: WebSearchState = {
   ],
   searchWithTime: true,
   maxResults: 100,
+  contentLimit: 10000,
   excludeDomains: [],
   subscribeSources: [],
   enhanceMode: true,

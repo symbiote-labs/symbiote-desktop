@@ -63,14 +63,16 @@ export const MARKDOWN_ALLOWED_TAGS = [
   'sub',
   'sup',
   'think',
-  'translated' // 添加自定义翻译标签
+  'translated', // 添加自定义翻译标签
+  'tool-block' // 添加自定义工具块标签
 ]
 
 // rehype-sanitize配置
 export const sanitizeSchema = {
-  tagNames: MARKDOWN_ALLOWED_TAGS,
+  tagNames: [...MARKDOWN_ALLOWED_TAGS, 'tool-block'], // 确保 tool-block 在允许的标签中
   attributes: {
     '*': ['className', 'style', 'id', 'title', 'data-*'],
+    'tool-block': ['id'], // 允许 tool-block 标签使用 id 属性
     svg: ['viewBox', 'width', 'height', 'xmlns', 'fill', 'stroke'],
     path: ['d', 'fill', 'stroke', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin'],
     circle: ['cx', 'cy', 'r', 'fill', 'stroke'],

@@ -1173,6 +1173,7 @@
       "messages.input.enable_delete_model": "バックスペースキーでモデル/添付ファイルを削除します。",
       "messages.markdown_rendering_input_message": "Markdownで入力メッセージをレンダリング",
       "messages.math_engine": "数式エンジン",
+      "messages.math_engine.none": "なし",
       "messages.metrics": "最初のトークンまでの時間 {{time_first_token_millsec}}ms | トークン速度 {{token_speed}} tok/sec",
       "messages.model.title": "モデル設定",
       "messages.navigation": "メッセージナビゲーション",
@@ -1237,10 +1238,16 @@
         "api_key": "APIキー",
         "api_key.tip": "複数のキーはカンマで区切ります",
         "api_version": "APIバージョン",
-        "charge": "充電",
+        "charge": "残高充電",
+        "bills": "費用帳單",
         "check": "チェック",
         "check_all_keys": "すべてのキーをチェック",
         "check_multiple_keys": "複数のAPIキーをチェック",
+        "oauth": {
+          "button": "{{provider}} アカウントでログイン",
+          "description": "本サービスは<website>{{provider}}</website>によって提供されます",
+          "official_website": "公式サイト"
+        },
         "copilot": {
           "auth_failed": "Github Copilotの認証に失敗しました。",
           "auth_success": "Github Copilotの認証が成功しました",

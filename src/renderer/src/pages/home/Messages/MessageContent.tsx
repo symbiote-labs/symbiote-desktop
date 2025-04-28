@@ -2,13 +2,13 @@ import { SyncOutlined, TranslationOutlined } from '@ant-design/icons'
 import TTSHighlightedText from '@renderer/components/TTSHighlightedText'
 import { isOpenAIWebSearch } from '@renderer/config/models'
 import { getModelUniqId } from '@renderer/services/ModelService'
-import { Message, Model } from '@renderer/types'
+import { MCPToolResponse, Message, Model } from '@renderer/types' // Import MCPToolResponse
 import { getBriefInfo } from '@renderer/utils'
 import { withMessageThought } from '@renderer/utils/formats'
 import { Collapse, Divider, Flex } from 'antd'
 import { clone } from 'lodash'
 import { Search } from 'lucide-react'
-import React, { Fragment, useEffect, useMemo, useState } from 'react'
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react' // Import useCallback
 import { useTranslation } from 'react-i18next'
 import BarLoader from 'react-spinners/BarLoader'
 import BeatLoader from 'react-spinners/BeatLoader'
@@ -20,7 +20,6 @@ import MessageAttachments from './MessageAttachments'
 import MessageError from './MessageError'
 import MessageImage from './MessageImage'
 import MessageThought from './MessageThought'
-import { default as MessageTools } from './MessageTools' // Change to named import (using default alias)
 
 interface Props {
   message: Message
@@ -32,6 +31,214 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   const message = withMessageThought(clone(_message))
   const isWebCitation = model && (isOpenAIWebSearch(model) || model.provider === 'openrouter')
   const [isSegmentedPlayback, setIsSegmentedPlayback] = useState(false)
+
+  // MCP Tool related states and handlers moved from MessageTools.tsx
+  const [activeKeys, setActiveKeys] = useState<string[]>([])
+  const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({})
+  const [editingToolId, setEditingToolId] = useState<string | null>(null)
+  const [editedParams, setEditedParams] = useState<string>('')
+
+  // Local state for immediate UI updates, synced with message metadata
+  const [localToolResponses, setLocalToolResponses] = useState<MCPToolResponse[]>(message.metadata?.mcpTools || [])
+
+  // Effect to sync local state when message metadata changes externally
+  useEffect(() => {
+    // Only update local state if the incoming metadata is actually different
+    // This prevents unnecessary re-renders if the message object reference changes but content doesn't
+    const incomingTools = message.metadata?.mcpTools || []
+    if (JSON.stringify(incomingTools) !== JSON.stringify(localToolResponses)) {
+      setLocalToolResponses(incomingTools)
+    }
+  }, [message.metadata?.mcpTools, localToolResponses])
+
+  const copyContent = useCallback(
+    (content: string, toolId: string) => {
+      navigator.clipboard.writeText(content)
+      window.message.success({ content: t('message.copied'), key: 'copy-message' })
+      setCopiedMap((prev) => ({ ...prev, [toolId]: true }))
+      setTimeout(() => setCopiedMap((prev) => ({ ...prev, [toolId]: false })), 2000)
+    },
+    [t]
+  )
+
+  // --- Handlers for Edit/Rerun ---
+  const handleRerun = useCallback(
+    (toolCall: MCPToolResponse, currentParamsString: string) => {
+      console.log('Rerunning tool:', toolCall.id, 'with params:', currentParamsString)
+      try {
+        const paramsToRun = JSON.parse(currentParamsString)
+
+        // Proactively update local state for immediate UI feedback
+        setLocalToolResponses((prevResponses) =>
+          prevResponses.map((tc) =>
+            tc.id === toolCall.id ? { ...tc, args: paramsToRun, status: 'invoking', response: undefined } : tc
+          )
+        )
+
+        const serverConfig = message.enabledMCPs?.find((server) => server.id === toolCall.tool.serverId)
+        if (!serverConfig) {
+          console.error(`[MessageContent] Server config not found for ID ${toolCall.tool.serverId}`)
+          window.message.error({ content: t('common.rerun_failed_server_not_found'), key: 'rerun-tool' })
+          return
+        }
+
+        window.api.mcp
+          .rerunTool(message.id, toolCall.id, serverConfig, toolCall.tool.name, paramsToRun)
+          .then(() => window.message.success({ content: t('common.rerun_started'), key: 'rerun-tool' }))
+          .catch((err) => {
+            console.error('Rerun failed:', err)
+            window.message.error({ content: t('common.rerun_failed'), key: 'rerun-tool' })
+            // Optionally revert local state on failure
+            setLocalToolResponses(
+              (prevResponses) => prevResponses.map((tc) => (tc.id === toolCall.id ? { ...tc, status: 'done' } : tc)) // Revert status
+            )
+          })
+      } catch (e) {
+        console.error('Invalid JSON parameters for rerun:', e)
+        window.message.error(t('common.invalid_json'))
+        // Revert local state if JSON parsing fails
+        setLocalToolResponses(
+          (prevResponses) => prevResponses.map((tc) => (tc.id === toolCall.id ? { ...tc, status: 'done' } : tc)) // Revert status
+        )
+      }
+    },
+    [message.id, message.enabledMCPs, t]
+  )
+
+  const handleEdit = useCallback((toolCall: MCPToolResponse) => {
+    setEditingToolId(toolCall.id)
+    setEditedParams(JSON.stringify(toolCall.args || {}, null, 2))
+  }, [])
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingToolId(null)
+    setEditedParams('')
+  }, [])
+
+  const handleSaveEdit = useCallback(
+    (toolCall: MCPToolResponse) => {
+      handleRerun(toolCall, editedParams)
+      setEditingToolId(null)
+      setEditedParams('')
+    },
+    [editedParams, handleRerun]
+  )
+
+  const handleParamsChange = useCallback((newParams: string) => {
+    setEditedParams(newParams)
+  }, [])
+  // --- End Handlers ---
+
+  // --- Listener for Rerun Updates & Persistence ---
+  useEffect(() => {
+    const cleanupListener = window.api.mcp.onToolRerunUpdate((update) => {
+      if (update.messageId !== message.id) return // Ignore updates for other messages
+
+      console.log('[MessageContent] Received rerun update:', update)
+
+      // --- Update Local State for Immediate UI Feedback ---
+      setLocalToolResponses((currentLocalResponses) => {
+        return currentLocalResponses.map((toolCall) => {
+          if (toolCall.id === update.toolCallId) {
+            let updatedCall: MCPToolResponse
+            switch (update.status) {
+              case 'rerunning':
+                // Note: 'rerunning' status from IPC translates to 'invoking' in UI
+                updatedCall = { ...toolCall, status: 'invoking', args: update.args, response: undefined }
+                break
+              case 'done':
+                updatedCall = {
+                  ...toolCall,
+                  status: 'done',
+                  response: update.response,
+                  // Persist the args used for the successful rerun
+                  args: update.args !== undefined ? update.args : toolCall.args
+                }
+                break
+              case 'error':
+                updatedCall = {
+                  ...toolCall,
+                  status: 'done', // Keep UI status as 'done' even on error
+                  response: { content: [{ type: 'text', text: update.error }], isError: true },
+                  // Persist the args used for the failed rerun
+                  args: update.args !== undefined ? update.args : toolCall.args
+                }
+                break
+              default:
+                updatedCall = toolCall // Should not happen
+            }
+            return updatedCall
+          }
+          return toolCall
+        })
+      })
+      // --- End Local State Update ---
+
+      // --- Persist Changes to Global Store and DB (only on final states) ---
+      if (update.status === 'done' || update.status === 'error') {
+        // IMPORTANT: Use the message prop directly to get the state *before* this update cycle
+        const previousMcpTools = message.metadata?.mcpTools || []
+        console.log(
+          '[MessageContent Persistence] Previous MCP Tools from message.metadata:',
+          JSON.stringify(previousMcpTools, null, 2)
+        ) // Log previous state
+
+        const updatedMcpToolsForPersistence = previousMcpTools.map((toolCall) => {
+          if (toolCall.id === update.toolCallId) {
+            console.log(
+              `[MessageContent Persistence] Updating tool ${toolCall.id} with status ${update.status}, args:`,
+              update.args,
+              'response:',
+              update.response || update.error
+            ) // Log update details
+            // Apply the final state directly from the update object
+            return {
+              ...toolCall, // Keep existing id, tool info
+              status: 'done', // Final status is always 'done' for persistence
+              args: update.args !== undefined ? update.args : toolCall.args, // Persist the args used for the rerun
+              response:
+                update.status === 'error'
+                  ? { content: [{ type: 'text', text: update.error }], isError: true } // Create error response object
+                  : update.response // Use the successful response
+            }
+          }
+          return toolCall // Keep other tool calls as they were
+        })
+
+        console.log(
+          '[MessageContent Persistence] Calculated MCP Tools for Persistence:',
+          JSON.stringify(updatedMcpToolsForPersistence, null, 2)
+        ) // Log calculated state
+
+        // Dispatch the thunk to update the message globally
+        // Ensure we have the necessary IDs
+        if (message.topicId && message.id) {
+          console.log(
+            `[MessageContent Persistence] Dispatching updateMessageThunk for message ${message.id} in topic ${message.topicId}`
+          ) // Log dispatch attempt
+          window.api.store.dispatch(
+            window.api.store.updateMessageThunk(message.topicId, message.id, {
+              metadata: {
+                ...message.metadata, // Keep other metadata
+                mcpTools: updatedMcpToolsForPersistence // Provide the correctly calculated final array
+              }
+            })
+          )
+          console.log(
+            '[MessageContent] Dispatched updateMessageThunk with calculated persistence data for tool:',
+            update.toolCallId
+          )
+        } else {
+          console.error('[MessageContent] Missing topicId or messageId, cannot dispatch update.')
+        }
+      }
+      // --- End Persistence Logic ---
+    })
+
+    return () => cleanupListener()
+    // Ensure all necessary dependencies are included
+  }, [message.id, message.topicId, message.metadata]) // message.metadata is crucial here
+  // --- End Listener ---
 
   // 监听分段播放状态变化
   useEffect(() => {
@@ -101,12 +308,16 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
   }, [message.metadata?.citations, message.metadata?.annotations, model])
 
   // 获取引用数据
+  // https://github.com/CherryHQ/cherry-studio/issues/5234#issuecomment-2824704499
   const citationsData = useMemo(() => {
+    const citationUrls =
+      Array.isArray(message.metadata?.citations) &&
+      (message?.metadata?.annotations?.map((annotation) => annotation.url_citation) ?? [])
     const searchResults =
       message?.metadata?.webSearch?.results ||
       message?.metadata?.webSearchInfo ||
       message?.metadata?.groundingMetadata?.groundingChunks?.map((chunk) => chunk?.web) ||
-      message?.metadata?.annotations?.map((annotation) => annotation.url_citation) ||
+      citationUrls ||
       []
     const citationsUrls = formattedCitations || []
 
@@ -139,7 +350,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     message?.metadata?.annotations,
     message?.metadata?.groundingMetadata?.groundingChunks,
     message?.metadata?.webSearch?.results,
-    message?.metadata?.webSearchInfo
+    message?.metadata?.webSearchInfo,
+    message.metadata?.citations // Added missing dependency
     // knowledge 依赖已移除，因为它在 useMemo 中没有被使用
   ])
 
@@ -320,14 +532,40 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
         }
       )
     }
+
+    // 处理 MCP 工具调用标记
+    // 处理 MCP 工具调用标记
+    // 处理 MCP 工具调用标记
+    console.log('[MessageContent] Original message content:', message.content) // Log original content
+    const toolResponses = message.metadata?.mcpTools || []
+    console.log('[MessageContent] Tool responses from metadata:', toolResponses) // Log tool responses
+    if (toolResponses.length > 0) {
+      let toolIndex = 0
+      // 使用更通用的正则表达式匹配 <tool_use>...</tool_use> 块
+      const toolTagRegex = /<tool_use>[\s\S]*?<\/tool_use>/gi
+      const matches = Array.from(content.matchAll(toolTagRegex)) // Get all matches
+      console.log('[MessageContent] Regex matches for tool tags:', matches) // Log matches
+
+      content = content.replace(toolTagRegex, (match) => {
+        if (toolIndex < toolResponses.length) {
+          const toolCall = toolResponses[toolIndex]
+          toolIndex++
+          console.log(`[MessageContent] Replacing match ${toolIndex} with tool-block id="${toolCall.id}"`) // Log replacement
+          return `<tool-block id="${toolCall.id}"></tool-block>`
+        }
+        // 如果工具响应数量与标记数量不匹配，记录警告并返回原始匹配
+        console.warn('[MessageContent] Mismatch between tool tags and tool responses. Returning original tag:', match)
+        return match
+      })
+      console.log('[MessageContent] Content after tool tag replacement:', content) // Log content after replacement
+    }
+
     return content
   }, [
     message.metadata?.citations,
     message.metadata?.webSearch,
     message.metadata?.knowledge,
-    // 移除不必要的依赖
-    // message.metadata?.webSearchInfo,
-    // message.metadata?.annotations,
+    message.metadata?.mcpTools, // Add mcpTools as dependency
     message.content,
     citationsData
   ])
@@ -356,7 +594,23 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
 
   if (message.type === '@' && model) {
     const content = `[@${model.name}](#)  ${getBriefInfo(message.content)}`
-    return <Markdown message={{ ...message, content }} />
+    return (
+      <Markdown
+        message={{ ...message, content, metadata: message.metadata || {} }} // Ensure metadata is included
+        toolResponses={localToolResponses} // 传递工具响应数据 (使用 local state)
+        activeToolKeys={activeKeys} // 传递 activeKeys 状态
+        copiedToolMap={copiedMap} // 传递 copiedMap 状态
+        editingToolId={editingToolId} // 传递 editingToolId 状态
+        editedToolParamsString={editedParams} // 传递 editedParams 状态
+        onToolToggle={setActiveKeys} // 传递 setActiveKeys 函数
+        onToolCopy={copyContent} // 传递 copyContent 函数
+        onToolRerun={handleRerun} // 传递 handleRerun 函数
+        onToolEdit={handleEdit} // 传递 handleEdit 函数
+        onToolSave={handleSaveEdit} // 传递 handleSaveEdit 函数
+        onToolCancel={handleCancelEdit} // 传递 handleCancelEdit 函数
+        onToolParamsChange={handleParamsChange} // 传递 onToolParamsChange 函数
+      />
+    )
   }
 
   // --- MODIFIED LINE BELOW ---
@@ -461,18 +715,28 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
           ]}
         />
       )}
-      <div className="message-content-tools">
-        {/* Only display thought info at the top */}
-        <MessageThought message={message} />
-        {/* Render MessageTools to display tool blocks based on metadata */}
-        <MessageTools message={message} />
-      </div>
+      {/* Only display thought info at the top */}
+      <MessageThought message={message} />
       {isSegmentedPlayback ? (
         // Apply regex replacement here for TTS
         <TTSHighlightedText text={processedContent.replace(tagsToRemoveRegex, '')} />
       ) : (
-        // Remove tool_use XML tags before rendering Markdown
-        <Markdown message={{ ...message, content: processedContent.replace(tagsToRemoveRegex, '') }} />
+        // Render Markdown with tool blocks
+        <Markdown
+          message={{ ...message, content: processedContent }} // 传递包含占位符的内容
+          toolResponses={localToolResponses} // 传递工具响应数据 (使用 local state)
+          activeToolKeys={activeKeys} // 传递 activeKeys 状态
+          copiedToolMap={copiedMap} // 传递 copiedMap 状态
+          editingToolId={editingToolId} // 传递 editingToolId 状态
+          editedToolParamsString={editedParams} // 传递 editedParams 状态
+          onToolToggle={setActiveKeys} // 传递 setActiveKeys 函数
+          onToolCopy={copyContent} // 传递 copyContent 函数
+          onToolRerun={handleRerun} // 传递 handleRerun 函数
+          onToolEdit={handleEdit} // 传递 handleEdit 函数
+          onToolSave={handleSaveEdit} // 传递 handleSaveEdit 函数
+          onToolCancel={handleCancelEdit} // 传递 handleCancelEdit 函数
+          onToolParamsChange={handleParamsChange} // 传递 onToolParamsChange 函数
+        />
       )}
       {message.metadata?.generateImage && <MessageImage message={message} />}
       {message.translatedContent && (
@@ -484,7 +748,21 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
             <BeatLoader color="var(--color-text-2)" size="10" style={{ marginBottom: 5 }} />
           ) : (
             // Render translated content (assuming it doesn't need tag removal, adjust if needed)
-            <Markdown message={{ ...message, content: message.translatedContent }} />
+            <Markdown
+              message={{ ...message, content: message.translatedContent }}
+              toolResponses={localToolResponses} // 传递工具响应数据 (使用 local state)
+              activeToolKeys={activeKeys} // 传递 activeKeys 状态
+              copiedToolMap={copiedMap} // 传递 copiedMap 状态
+              editingToolId={editingToolId} // 传递 editingToolId 状态
+              editedToolParamsString={editedParams} // 传递 editedParams 状态
+              onToolToggle={setActiveKeys} // 传递 setActiveKeys 函数
+              onToolCopy={copyContent} // 传递 copyContent 函数
+              onToolRerun={handleRerun} // 传递 handleRerun 函数
+              onToolEdit={handleEdit} // 传递 handleEdit 函数
+              onToolSave={handleSaveEdit} // 传递 handleSaveEdit 函数
+              onToolCancel={handleCancelEdit} // 传递 handleCancelEdit 函数
+              onToolParamsChange={handleParamsChange} // 传递 onToolParamsChange 函数
+            />
           )}
         </Fragment>
       )}

@@ -26,21 +26,21 @@ const Container = styled.div`
 `
 
 const LeftColumn = styled.div`
-  width: 10%;
-  border-right: 1px solid var(--color-border);
-  overflow-y: auto;
-  background-color: var(--color-background-soft);
-`
-
-const MiddleColumn = styled.div`
   width: 20%;
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
   background-color: var(--color-background-soft);
 `
 
-const RightColumn = styled.div`
+const MiddleColumn = styled.div`
   width: 70%;
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  background-color: var(--color-background-soft);
+`
+
+const RightColumn = styled.div`
+  width: 10%;
   overflow-y: auto;
   padding: 20px;
   background-color: var(--color-background-soft);

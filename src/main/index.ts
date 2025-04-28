@@ -126,7 +126,7 @@ if (!app.requestSingleInstanceLock()) {
         callback({
           responseHeaders: {
             ...details.responseHeaders,
-            'Content-Security-Policy': ["default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"]
+            'Content-Security-Policy': ["default-src * 'unsafe-inline' 'unsafe-eval' data: blob: sentry-ipc:;"]
           }
         })
       })

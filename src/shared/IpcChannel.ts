@@ -106,6 +106,7 @@ export enum IpcChannel {
   Mcp_RestartServer = 'mcp:restartServer',
   Mcp_StopServer = 'mcp:stopServer',
   Mcp_ListTools = 'mcp:listTools',
+  Mcp_ResetToolsList = 'mcp:resetToolsList',
   Mcp_CallTool = 'mcp:callTool',
   Mcp_ListPrompts = 'mcp:listPrompts',
   Mcp_GetPrompt = 'mcp:getPrompt',

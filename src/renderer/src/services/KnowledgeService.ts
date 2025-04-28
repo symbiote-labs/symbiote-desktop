@@ -4,7 +4,7 @@ import { getEmbeddingMaxContext } from '@renderer/config/embedings'
 import AiProvider from '@renderer/providers/AiProvider'
 import store from '@renderer/store'
 import { FileType, KnowledgeBase, KnowledgeBaseParams, KnowledgeReference, Message } from '@renderer/types'
-import { isEmpty, take } from 'lodash'
+import { isEmpty } from 'lodash'
 
 import { getProviderByModel } from './AssistantService'
 import FileManager from './FileManager'
@@ -117,8 +117,11 @@ export const getKnowledgeBaseReference = async (base: KnowledgeBase, message: Me
 
   const documentCount = base.documentCount || DEFAULT_KNOWLEDGE_DOCUMENT_COUNT
 
+  // 确保在处理后再截取结果，这样可以保证返回最相关的结果
+  const limitedResults = processdResults.length > 0 ? processdResults.slice(0, documentCount) : processdResults
+
   const references = await Promise.all(
-    take(processdResults, documentCount).map(async (item, index) => {
+    limitedResults.map(async (item, index) => {
       const baseItem = base.items.find((i) => i.uniqueId === item.metadata.uniqueLoaderId)
       return {
         id: index + 1,

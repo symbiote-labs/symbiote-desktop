@@ -2,6 +2,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import Logger from 'electron-log'
 
 import BraveSearchServer from './brave-search'
+import CalculatorServer from './calculator'
+import DifyKnowledgeServer from './dify-knowledge'
 import FetchServer from './fetch'
 import FileSystemServer from './filesystem'
 import MemoryServer from './memory'
@@ -32,6 +34,10 @@ export async function createInMemoryMCPServer(
     }
     case '@cherry/filesystem': {
       return new FileSystemServer(args).server
+    }
+    case '@cherry/dify-knowledge': {
+      const difyKey = envs.DIFY_KEY
+      return new DifyKnowledgeServer(difyKey, args).server
     }
     case '@cherry/simpleremember': {
       const envPath = envs.SIMPLEREMEMBER_FILE_PATH
@@ -71,6 +77,21 @@ export async function createInMemoryMCPServer(
         return server
       } catch (error) {
         Logger.error('[MCP] Error creating TimeToolsServer instance:', error)
+        throw error
+      }
+    }
+    case '@cherry/calculator': {
+      Logger.info('[MCP] Creating CalculatorServer instance')
+      try {
+        // 创建计算器服务器实例
+        const calculatorServer = new CalculatorServer()
+
+        // 返回服务器实例
+        // 注意：初始化过程已经在构造函数中启动，会异步完成
+        Logger.info('[MCP] CalculatorServer instance created successfully')
+        return calculatorServer.server
+      } catch (error) {
+        Logger.error('[MCP] Error creating CalculatorServer instance:', error)
         throw error
       }
     }

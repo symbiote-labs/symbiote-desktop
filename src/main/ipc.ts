@@ -110,6 +110,11 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     configManager.setTrayOnClose(isActive)
   })
 
+  // 设置数据收集
+  ipcMain.handle('app:setEnableDataCollection', (_, isActive: boolean) => {
+    configManager.setEnableDataCollection(isActive)
+  })
+
   ipcMain.handle(IpcChannel.App_RestartTray, () => TrayService.getInstance().restartTray())
 
   ipcMain.handle(IpcChannel.Config_Set, (_, key: string, value: any) => {
@@ -419,6 +424,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.Mcp_RestartServer, mcpService.restartServer)
   ipcMain.handle(IpcChannel.Mcp_StopServer, mcpService.stopServer)
   ipcMain.handle(IpcChannel.Mcp_ListTools, mcpService.listTools)
+  ipcMain.handle(IpcChannel.Mcp_ResetToolsList, mcpService.resetToolsList)
   ipcMain.handle(IpcChannel.Mcp_CallTool, mcpService.callTool)
   ipcMain.handle(IpcChannel.Mcp_ListPrompts, mcpService.listPrompts)
   ipcMain.handle(IpcChannel.Mcp_GetPrompt, mcpService.getPrompt)

@@ -68,7 +68,9 @@ export class WindowService {
         sandbox: false,
         webSecurity: false,
         webviewTag: true,
-        allowRunningInsecureContent: true
+        allowRunningInsecureContent: true,
+        // 添加 Sentry IPC 协议到 CSP
+        additionalArguments: ['--disable-features=OutOfBlinkCors', '--allow-file-access-from-files']
       }
     })
 
@@ -191,9 +193,11 @@ export class WindowService {
 
       const oauthProviderUrls = [
         'https://account.siliconflow.cn/oauth',
+        'https://cloud.siliconflow.cn/bills',
         'https://cloud.siliconflow.cn/expensebill',
         'https://aihubmix.com/token',
-        'https://aihubmix.com/topup'
+        'https://aihubmix.com/topup',
+        'https://aihubmix.com/statistics'
       ]
 
       if (oauthProviderUrls.some((link) => url.startsWith(link))) {

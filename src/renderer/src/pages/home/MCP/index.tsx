@@ -1,5 +1,5 @@
-import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons'
-import { Card, Empty, Flex, Input, Radio, Tag, Typography } from 'antd'
+import { AppstoreOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design/icons'
+import { Button, Card, Empty, Flex, Input, Radio, Tag, Typography } from 'antd'
 import { isEmpty } from 'lodash'
 import { Search, SquareTerminal } from 'lucide-react'
 import React, { FC, useEffect, useState } from 'react'
@@ -23,23 +23,40 @@ const MCPPage: FC = () => {
   const [viewMode, setViewMode] = useState<MCPViewMode>('list')
 
   // 获取所有可用工具
-  useEffect(() => {
-    const fetchTools = async () => {
-      setLoading(true)
-      const allTools: MCPTool[] = []
-      for (const server of mcpServers.filter((s) => s.isActive)) {
-        try {
-          // @ts-ignore - window.api is defined in preload
-          const serverTools = await window.api.mcp.listTools(server)
-          allTools.push(...serverTools)
-        } catch (error) {
-          console.error(`Error fetching tools for server ${server.name}:`, error)
-        }
+  const fetchTools = async () => {
+    setLoading(true)
+    const allTools: MCPTool[] = []
+    for (const server of mcpServers.filter((s) => s.isActive)) {
+      try {
+        // @ts-ignore - window.api is defined in preload
+        const serverTools = await window.api.mcp.listTools(server)
+        allTools.push(...serverTools)
+      } catch (error) {
+        console.error(`Error fetching tools for server ${server.name}:`, error)
       }
-      setTools(allTools)
-      setLoading(false)
     }
+    setTools(allTools)
+    setLoading(false)
+  }
 
+  // 重置工具列表
+  const resetToolsList = async () => {
+    setLoading(true)
+    const allTools: MCPTool[] = []
+    for (const server of mcpServers.filter((s) => s.isActive)) {
+      try {
+        // @ts-ignore - window.api is defined in preload
+        const serverTools = await window.api.mcp.resetToolsList(server)
+        allTools.push(...serverTools)
+      } catch (error) {
+        console.error(`Error resetting tools for server ${server.name}:`, error)
+      }
+    }
+    setTools(allTools)
+    setLoading(false)
+  }
+
+  useEffect(() => {
     if (mcpServers.length > 0) {
       fetchTools()
     } else {
@@ -85,6 +102,15 @@ const MCPPage: FC = () => {
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
             />
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              size="small"
+              onClick={resetToolsList}
+              loading={loading}
+              style={{ marginLeft: 8 }}>
+              {t('settings.mcp.tools.resetToolsList') || '重置工具列表'}
+            </Button>
           </Flex>
           <Spacer />
         </StyledNavbarCenter>

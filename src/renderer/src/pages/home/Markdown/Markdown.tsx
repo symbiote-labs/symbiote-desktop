@@ -6,10 +6,10 @@ import '@renderer/styles/citation.css'
 
 import MarkdownShadowDOMRenderer from '@renderer/components/MarkdownShadowDOMRenderer'
 import { useSettings } from '@renderer/hooks/useSettings'
-import type { Message } from '@renderer/types'
+import type { MCPToolResponse, Message } from '@renderer/types' // Import MCPToolResponse
 import { parseJSON } from '@renderer/utils'
 import { escapeBrackets, removeSvgEmptyLines, withGeminiGrounding } from '@renderer/utils/formats'
-import { findCitationInChildren, sanitizeSchema } from '@renderer/utils/markdown'
+import { findCitationInChildren } from '@renderer/utils/markdown'
 import { isEmpty } from 'lodash'
 import React, { type FC, memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,26 +19,57 @@ import rehypeKatex from 'rehype-katex'
 import rehypeMathjax from 'rehype-mathjax'
 import rehypeRaw from 'rehype-raw'
 // @ts-ignore next-line
-import rehypeSanitize from 'rehype-sanitize'
 import remarkCjkFriendly from 'remark-cjk-friendly'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 
+import SingleToolCallBlock from '../Messages/SingleToolCallBlock' // 导入 SingleToolCallBlock
 import CitationTooltip from './CitationTooltip'
-// Removed InlineToolBlock import
 import EditableCodeBlock from './EditableCodeBlock'
 import ImagePreview from './ImagePreview'
 import Link from './Link'
 
 interface Props {
   message: Message
+  toolResponses: MCPToolResponse[] // 添加工具响应数据 prop
+  activeToolKeys: string[] // 添加 activeKeys prop
+  copiedToolMap: Record<string, boolean> // 添加 copiedMap prop
+  editingToolId: string | null // 添加 editingToolId prop
+  editedToolParamsString: string // 添加 editedParams prop
+  onToolToggle: React.Dispatch<React.SetStateAction<string[]>> // 添加 onToolToggle prop
+  onToolCopy: (content: string, toolId: string) => void // 添加 onToolCopy prop
+  onToolRerun: (toolCall: MCPToolResponse, currentParamsString: string) => void // 添加 onToolRerun prop
+  onToolEdit: (toolCall: MCPToolResponse) => void // 添加 onToolEdit prop
+  onToolSave: (toolCall: MCPToolResponse) => void // 添加 onToolSave prop
+  onToolCancel: () => void // 添加 onToolCancel prop
+  onToolParamsChange: (newParams: string) => void // 添加 onToolParamsChange prop
 }
 
-const remarkPlugins = [remarkMath, remarkGfm, remarkCjkFriendly]
-
-const Markdown: FC<Props> = ({ message }) => {
+const Markdown: FC<Props> = ({
+  message,
+  toolResponses,
+  activeToolKeys,
+  copiedToolMap,
+  editingToolId,
+  editedToolParamsString,
+  onToolToggle,
+  onToolCopy,
+  onToolRerun,
+  onToolEdit,
+  onToolSave,
+  onToolCancel,
+  onToolParamsChange
+}) => {
   const { t } = useTranslation()
-  const { renderInputMessageAsMarkdown, mathEngine } = useSettings()
+  const { renderInputMessageAsMarkdown, messageFont, mathEngine } = useSettings() // Add messageFont
+
+  const remarkPlugins = useMemo(() => {
+    const plugins = [remarkGfm, remarkCjkFriendly]
+    if (mathEngine && mathEngine !== 'none') {
+      plugins.push(remarkMath)
+    }
+    return plugins
+  }, [mathEngine])
 
   const messageContent = useMemo(() => {
     // 检查消息内容是否为空或未定义
@@ -53,8 +84,19 @@ const Markdown: FC<Props> = ({ message }) => {
   }, [message, t])
 
   const rehypePlugins = useMemo(() => {
-    return [rehypeRaw, [rehypeSanitize, sanitizeSchema], mathEngine === 'KaTeX' ? rehypeKatex : rehypeMathjax]
-  }, [mathEngine])
+    const plugins: any[] = []
+    // Check if messageContent contains any of the allowed raw HTML tags
+    const rawTagsRegex = /<(style|translated|think|tool-block)[\s>]/i
+    if (rawTagsRegex.test(messageContent)) {
+      plugins.push(rehypeRaw)
+    }
+    if (mathEngine === 'KaTeX') {
+      plugins.push(rehypeKatex as any)
+    } else if (mathEngine === 'MathJax') {
+      plugins.push(rehypeMathjax as any)
+    }
+    return plugins
+  }, [mathEngine, messageContent])
 
   // Remove processToolUse function as it's based on XML tags in content,
   // which won't exist with native function calling.
@@ -130,11 +172,71 @@ const Markdown: FC<Props> = ({ message }) => {
             {props.children}
           </span>
         )
+      },
+      // 添加 tool-block 渲染器
+      'tool-block': (props: any) => {
+        console.log('[Markdown] Tool block renderer called with props:', props) // Log renderer call and props
+        const toolCallId = props.id // 获取占位符中的 id
+        console.log('[Markdown] Extracted toolCallId:', toolCallId) // Log extracted ID
+        const toolResponse = toolResponses.find((tr) => tr.id === toolCallId) // 查找对应的工具响应数据
+        console.log('[Markdown] Found toolResponse:', toolResponse) // Log found tool response
+
+        if (!toolResponse) {
+          return null // 如果找不到对应的工具响应，则不渲染
+        }
+
+        if (!toolResponse) {
+          console.warn('[Markdown] Tool response not found for id:', toolCallId) // Warn if not found
+          return null // 如果找不到对应的工具响应，则不渲染
+        }
+
+        console.log('[Markdown] Rendering SingleToolCallBlock for toolCallId:', toolCallId) // Log rendering SingleToolCallBlock
+        // 渲染 SingleToolCallBlock 组件，并传递必要的 props
+        return (
+          <SingleToolCallBlock
+            toolResponse={toolResponse}
+            isActive={activeToolKeys.includes(toolCallId)}
+            isCopied={copiedToolMap[toolCallId] || false}
+            isEditing={editingToolId === toolCallId}
+            editedParamsString={editedToolParamsString}
+            fontFamily={
+              messageFont === 'serif'
+                ? 'serif'
+                : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans","Helvetica Neue", sans-serif'
+            } // 传递字体样式
+            t={t} // 传递翻译函数
+            onToggle={() =>
+              onToolToggle((prev) =>
+                prev.includes(toolCallId) ? prev.filter((k) => k !== toolCallId) : [...prev, toolCallId]
+              )
+            } // 传递 onToolToggle 函数
+            onCopy={onToolCopy} // 传递 onToolCopy 函数
+            onRerun={onToolRerun} // 传递 onToolRerun 函数
+            onEdit={onToolEdit} // 传递 onToolEdit 函数
+            onSave={() => toolResponse && onToolSave(toolResponse)} // 传递 onToolSave 函数
+            onCancel={onToolCancel} // 传递 onToolCancel 函数
+            onParamsChange={onToolParamsChange} // 传递 onToolParamsChange 函数
+          />
+        )
       }
-      // Removed custom div renderer for tool markers
-    } as Partial<Components> // Keep Components type here
+    } as Partial<Components>
     return baseComponents
-  }, []) // Removed message.metadata dependency as it's no longer used here
+  }, [
+    toolResponses, // 添加 toolResponses 依赖
+    activeToolKeys, // 添加 activeToolKeys 依赖
+    copiedToolMap, // 添加 copiedToolMap 依赖
+    editingToolId, // 添加 editingToolId 依赖
+    editedToolParamsString, // 添加 editedToolParamsString 依赖
+    onToolToggle, // 添加 onToolToggle 依赖
+    onToolCopy, // 添加 onToolCopy 依赖
+    onToolRerun, // 添加 onToolRerun 依赖
+    onToolEdit, // 添加 onToolEdit 依赖
+    onToolSave, // 添加 onToolSave 依赖
+    onToolCancel, // 添加 onToolCancel 依赖
+    onToolParamsChange, // 添加 onToolParamsChange 依赖
+    t, // 添加 t 依赖
+    messageFont // 添加 messageFont 依赖
+  ])
 
   // 使用useEffect在渲染后添加事件处理
   React.useEffect(() => {

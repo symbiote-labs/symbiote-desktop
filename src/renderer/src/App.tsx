@@ -8,6 +8,7 @@ import DeepClaudeProvider from './components/DeepClaudeProvider'
 import GeminiInitializer from './components/GeminiInitializer'
 import MemoryProvider from './components/MemoryProvider'
 import PDFSettingsInitializer from './components/PDFSettingsInitializer'
+import SentryInitializer from './components/SentryInitializer'
 import TopViewContainer from './components/TopView'
 import WebSearchInitializer from './components/WebSearchInitializer'
 import WorkspaceInitializer from './components/WorkspaceInitializer'
@@ -29,6 +30,7 @@ function App(): React.ReactElement {
                   <DeepClaudeProvider />
                   <GeminiInitializer />
                   <PDFSettingsInitializer />
+                  <SentryInitializer />
                   <WebSearchInitializer />
                   <WorkspaceInitializer />
                   <TopViewContainer>

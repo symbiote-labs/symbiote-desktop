@@ -3,6 +3,7 @@ import {
   AssistantIconType,
   SendMessageShortcut,
   setAssistantIconType,
+  setEnableDataCollection as _setEnableDataCollection,
   setLaunchOnBoot,
   setLaunchToTray,
   setSendMessageShortcut as _setSendMessageShortcut,
@@ -30,6 +31,7 @@ export function useSettings(): SettingsState & {
   updateSidebarVisibleIcons: (icons: SidebarIcon[]) => void
   updateSidebarDisabledIcons: (icons: SidebarIcon[]) => void
   setAssistantIconType: (assistantIconType: AssistantIconType) => void
+  setEnableDataCollection: (enabled: boolean) => void
   showAgentTaskList: boolean
   agentAutoExecutionCount: number
   setShowAgentTaskList: (show: boolean) => void
@@ -90,6 +92,12 @@ export function useSettings(): SettingsState & {
     },
     setAssistantIconType(assistantIconType: AssistantIconType) {
       dispatch(setAssistantIconType(assistantIconType))
+    },
+
+    setEnableDataCollection(enabled: boolean) {
+      dispatch(_setEnableDataCollection(enabled))
+      // 同步到主进程
+      window.api.invoke('app:setEnableDataCollection', enabled)
     },
     // 添加 showAgentTaskList 和 agentAutoExecutionCount 属性
     showAgentTaskList: settings.showAgentTaskList, // 使用 Redux store 中的值

@@ -26,6 +26,7 @@ const api = {
   setLaunchToTray: (isActive: boolean) => ipcRenderer.invoke(IpcChannel.App_SetLaunchToTray, isActive),
   setTray: (isActive: boolean) => ipcRenderer.invoke(IpcChannel.App_SetTray, isActive),
   setTrayOnClose: (isActive: boolean) => ipcRenderer.invoke(IpcChannel.App_SetTrayOnClose, isActive),
+  setEnableDataCollection: (isActive: boolean) => ipcRenderer.invoke('app:setEnableDataCollection', isActive),
   restartTray: () => ipcRenderer.invoke(IpcChannel.App_RestartTray),
   setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IpcChannel.App_SetTheme, theme),
   openWebsite: (url: string) => ipcRenderer.invoke(IpcChannel.Open_Website, url),
@@ -149,6 +150,7 @@ const api = {
     restartServer: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_RestartServer, server),
     stopServer: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_StopServer, server),
     listTools: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListTools, server),
+    resetToolsList: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ResetToolsList, server),
     callTool: ({ server, name, args }: { server: MCPServer; name: string; args?: Record<string, any> }) =>
       ipcRenderer.invoke(IpcChannel.Mcp_CallTool, { server, name, args }),
     listPrompts: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListPrompts, server),

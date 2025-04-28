@@ -27,7 +27,18 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
   // 将文件夹数据转换为树形结构
   useEffect(() => {
-    if (!folders) return
+    if (!folders || !Array.isArray(folders)) {
+      // 如果 folders 不存在或不是数组，设置默认的根目录选项
+      setTreeData([
+        {
+          title: 'Bookmarks Bar',
+          value: null,
+          key: 'root',
+          icon: <FolderOutlined />
+        }
+      ]);
+      return;
+    }
 
     // 构建文件夹树
     const buildFolderTree = (
@@ -35,14 +46,18 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
       parentId: string | null = null
     ): any[] => {
       return items
-        .filter((item) => item.parentId === parentId)
-        .map((item) => ({
-          title: item.title,
-          value: item.id,
-          key: item.id,
-          icon: <FolderOutlined />,
-          children: buildFolderTree(items, item.id)
-        }))
+        .filter((item) => item && item.parentId === parentId)
+        .map((item) => {
+          if (!item) return null;
+          return {
+            title: item.title || 'Unnamed Folder',
+            value: item.id,
+            key: item.id,
+            icon: <FolderOutlined />,
+            children: buildFolderTree(items, item.id)
+          };
+        })
+        .filter(Boolean); // 过滤掉 null 项
     }
 
     // 添加根目录选项
@@ -120,13 +135,14 @@ const AddBookmarkDialog: React.FC<AddBookmarkDialogProps> = ({
 
         <Form.Item name="folderId" label="Save to">
           <TreeSelect
-            treeData={treeData}
+            treeData={treeData || []}
             placeholder="Select a folder"
             loading={loading}
             treeDefaultExpandAll
             showSearch
             allowClear
             treeNodeFilterProp="title"
+            fieldNames={{ label: 'title', value: 'value', children: 'children' }}
           />
         </Form.Item>
       </Form>

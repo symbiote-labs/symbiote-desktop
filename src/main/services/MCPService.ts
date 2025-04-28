@@ -94,6 +94,7 @@ class McpService {
     this.restartServer = this.restartServer.bind(this)
     this.stopServer = this.stopServer.bind(this)
     this.cleanup = this.cleanup.bind(this)
+    this.resetToolsList = this.resetToolsList.bind(this)
   }
 
   async initClient(server: MCPServer): Promise<Client> {
@@ -339,6 +340,21 @@ class McpService {
     const serverKey = this.getServerKey(server)
     await this.closeClient(serverKey)
     await this.initClient(server)
+  }
+
+  /**
+   * 重置工具列表缓存，强制刷新工具列表
+   */
+  async resetToolsList(_: Electron.IpcMainInvokeEvent, server: MCPServer) {
+    Logger.info(`[MCP] Resetting tools list for server: ${server.name}`)
+    const serverKey = this.getServerKey(server)
+
+    // 清除工具列表缓存
+    CacheService.remove(`mcp:list_tool:${serverKey}`)
+    Logger.info(`[MCP] Cleared tools list cache for server: ${serverKey}`)
+
+    // 重新获取工具列表
+    return this.listToolsImpl(server)
   }
 
   async cleanup() {

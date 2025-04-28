@@ -126,7 +126,7 @@ const MCPSettings: FC = () => {
 
   return (
     <Container>
-      <ThreeColumnLayout leftColumn={renderNavMenu()} middleColumn={renderServerList()} rightColumn={renderContent()} />
+      <ThreeColumnLayout leftColumn={renderServerList()} middleColumn={renderContent()} rightColumn={renderNavMenu()} />
     </Container>
   )
 }

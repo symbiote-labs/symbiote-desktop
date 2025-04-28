@@ -1130,7 +1130,8 @@
           "inputSchema": "輸入模式",
           "availableTools": "可用工具",
           "noToolsAvailable": "無可用工具",
-          "loadError": "獲取工具失敗"
+          "loadError": "獲取工具失敗",
+          "resetToolsList": "重置工具列表"
         },
         "prompts": {
           "availablePrompts": "可用提示",
@@ -1172,7 +1173,8 @@
       "messages.input.enable_quick_triggers": "啟用 '/' 和 '@' 觸發快捷選單",
       "messages.input.enable_delete_model": "啟用刪除鍵刪除模型/附件",
       "messages.markdown_rendering_input_message": "Markdown 渲染輸入訊息",
-      "messages.math_engine": "Markdown 渲染輸入訊息",
+      "messages.math_engine": "數學公式引擎",
+      "messages.math_engine.none": "無",
       "messages.metrics": "首字延遲 {{time_first_token_millsec}}ms | 每秒 {{token_speed}} tokens",
       "messages.model.title": "模型設定",
       "messages.navigation": "訊息導航",
@@ -1241,6 +1243,11 @@
         "check": "檢查",
         "check_all_keys": "檢查所有金鑰",
         "check_multiple_keys": "檢查多個 API 金鑰",
+        "oauth": {
+          "button": "使用{{provider}}登入",
+          "description": "此服務由<website>{{provider}}</website>提供",
+          "official_website": "官方網站"
+        },
         "copilot": {
           "auth_failed": "Github Copilot認證失敗",
           "auth_success": "Github Copilot 認證成功",

@@ -14,7 +14,8 @@ enum ConfigKeys {
   ZoomFactor = 'ZoomFactor',
   Shortcuts = 'shortcuts',
   ClickTrayToShowQuickAssistant = 'clickTrayToShowQuickAssistant',
-  EnableQuickAssistant = 'enableQuickAssistant'
+  EnableQuickAssistant = 'enableQuickAssistant',
+  EnableDataCollection = 'enableDataCollection'
 }
 
 export class ConfigManager {
@@ -126,6 +127,14 @@ export class ConfigManager {
 
   setEnableQuickAssistant(value: boolean) {
     this.set(ConfigKeys.EnableQuickAssistant, value)
+  }
+
+  getEnableDataCollection(): boolean {
+    return this.get(ConfigKeys.EnableDataCollection, false)
+  }
+
+  setEnableDataCollection(value: boolean) {
+    this.set(ConfigKeys.EnableDataCollection, value)
   }
 
   set(key: string, value: unknown) {

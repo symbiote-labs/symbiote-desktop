@@ -1,4 +1,4 @@
-import { DeleteOutlined, SaveOutlined } from '@ant-design/icons'
+import { DeleteOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
 import MCPDescription from '@renderer/pages/settings/MCPSettings/McpDescription'
 import { MCPPrompt, MCPResource, MCPServer, MCPTool } from '@renderer/types'
@@ -595,6 +595,14 @@ const McpSettings: React.FC<Props> = ({ server }) => {
               loading={loadingServer === server.id}
               onChange={onToggleActive}
             />
+            {server.isActive && ( // Only show refresh button if server is active
+              <Button
+                icon={<ReloadOutlined />} // Add ReloadOutlined icon
+                onClick={fetchTools} // Call fetchTools on click
+                loading={loadingServer === server.id} // Use loadingServer state
+                type="text"
+              />
+            )}
             <Button
               type="primary"
               icon={<SaveOutlined />}

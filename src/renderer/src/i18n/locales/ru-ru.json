@@ -1176,6 +1176,7 @@
       "messages.input.enable_delete_model": "Включите удаление модели/вложения с помощью клавиши Backspace",
       "messages.markdown_rendering_input_message": "Отображение ввода в формате Markdown",
       "messages.math_engine": "Математический движок",
+      "messages.math_engine.none": "Нет",
       "messages.metrics": "{{time_first_token_millsec}}ms до первого токена | {{token_speed}} tok/sec",
       "messages.model.title": "Настройки модели",
       "messages.navigation": "Навигация сообщений",
@@ -1240,10 +1241,16 @@
         "api_key": "Ключ API",
         "api_key.tip": "Несколько ключей, разделенных запятыми",
         "api_version": "Версия API",
-        "charge": "Пополнить",
+        "charge": "Пополнить баланс",
+        "bills": "Счета за услуги",
         "check": "Проверить",
         "check_all_keys": "Проверить все ключи",
         "check_multiple_keys": "Проверить несколько ключей API",
+        "oauth": {
+          "button": "Войти с {{provider}}",
+          "description": "Сервис предоставляется <website>{{provider}}</website>",
+          "official_website": "Официальный сайт"
+        },
         "copilot": {
           "auth_failed": "Github Copilot认证失败",
           "auth_success": "Github Copilot认证成功",
