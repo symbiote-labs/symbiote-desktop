@@ -32,6 +32,7 @@ import { processKnowledgeSearch } from './KnowledgeService'
 import { filterContextMessages, filterMessages, filterUsefulMessages } from './MessagesService'
 import WebSearchService from './WebSearchService'
 
+// TODO：考虑拆开
 async function fetchExternalTool(
   lastUserMessage: Message,
   assistant: Assistant,

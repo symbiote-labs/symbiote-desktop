@@ -16,6 +16,7 @@ import type {
 
 // MessageBlock 类型枚举 - 根据实际API返回特性优化
 export enum MessageBlockType {
+  UNKNOWN = 'unknown', // 未知类型，用于返回之前
   MAIN_TEXT = 'main_text', // 主要文本内容
   THINKING = 'thinking', // 思考过程（Claude、OpenAI-o系列等）
   TRANSLATION = 'translation', // Re-added
@@ -29,8 +30,8 @@ export enum MessageBlockType {
 
 // 块状态定义
 export enum MessageBlockStatus {
-  //   PENDING = 'pending', // 等待处理
-  PROCESSING = 'processing', // 正在处理 用于tool block需要等待处理的状态
+  PENDING = 'pending', // 等待处理
+  PROCESSING = 'processing', // 正在处理，等待接收
   STREAMING = 'streaming', // 正在流式接收
   SUCCESS = 'success', // 处理成功
   ERROR = 'error', // 处理错误
@@ -48,6 +49,10 @@ export interface BaseMessageBlock {
   model?: Model // 使用的模型
   metadata?: Record<string, any> // 通用元数据
   error?: Record<string, any> // Added optional error field to base
+}
+
+export interface PlaceholderMessageBlock extends BaseMessageBlock {
+  type: MessageBlockType.UNKNOWN
 }
 
 // 主文本块 - 核心内容
@@ -126,6 +131,7 @@ export interface ErrorMessageBlock extends BaseMessageBlock {
 
 // MessageBlock 联合类型
 export type MessageBlock =
+  | PlaceholderMessageBlock
   | MainTextMessageBlock
   | ThinkingMessageBlock
   | TranslationMessageBlock

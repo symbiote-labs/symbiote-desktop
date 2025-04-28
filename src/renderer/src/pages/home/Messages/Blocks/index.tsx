@@ -8,6 +8,7 @@ import type {
   MainTextMessageBlock,
   Message,
   MessageBlock,
+  PlaceholderMessageBlock,
   ThinkingMessageBlock,
   TranslationMessageBlock
 } from '@renderer/types/newMessage'
@@ -19,8 +20,8 @@ import CitationBlock from './CitationBlock'
 import ErrorBlock from './ErrorBlock'
 import FileBlock from './FileBlock'
 import ImageBlock from './ImageBlock'
-import loadingBlock from './LoadingBlock'
 import MainTextBlock from './MainTextBlock'
+import PlaceholderBlock from './PlaceholderBlock'
 import ThinkingBlock from './ThinkingBlock'
 import ToolBlock from './ToolBlock'
 import TranslationBlock from './TranslationBlock'
@@ -42,18 +43,12 @@ const MessageBlockRenderer: React.FC<Props> = ({ blocks, model, message }) => {
   return (
     <>
       {renderedBlocks.map((block) => {
-        // if (block.status === MessageBlockStatus.PROCESSING) {
-        //   return <SearchingSpinner key={block.id} text="message.processing" />
-        // }
-        // if (block.status === MessageBlockStatus.ERROR) {
-        //   return null
-        // }
-        if (block.status === MessageBlockStatus.PROCESSING) {
-          const LoadingComponent = loadingBlock(block)
-          if (LoadingComponent) return <LoadingComponent key={block.id} />
-        }
-
         switch (block.type) {
+          case MessageBlockType.UNKNOWN:
+            if (block.status === MessageBlockStatus.PROCESSING) {
+              return <PlaceholderBlock key={block.id} block={block as PlaceholderMessageBlock} />
+            }
+            return null
           case MessageBlockType.MAIN_TEXT:
           case MessageBlockType.CODE: {
             const mainTextBlock = block as MainTextMessageBlock

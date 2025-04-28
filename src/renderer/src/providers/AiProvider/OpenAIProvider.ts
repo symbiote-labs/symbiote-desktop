@@ -399,6 +399,7 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     let time_first_token_millsec = 0
+    let time_first_token_millsec_delta = 0
     let time_first_content_millsec = 0
     const start_time_millsec = new Date().getTime()
     console.log(
@@ -497,9 +498,10 @@ export default class OpenAIProvider extends BaseProvider {
       }
 
       let content = '' // Accumulate content for tool processing if needed
-      // Declare variables to accumulate final results
-      let final_time_completion_millsec = 0
-      let final_time_thinking_millsec = 0
+      let thinkingContent = ''
+      // 记录最终的完成时间差
+      let final_time_completion_millsec_delta = 0
+      let final_time_thinking_millsec_delta = 0
       // Variable to store the last received usage object
       let lastUsage: Usage | undefined = undefined
       // let isThinkingInContent: ThoughtProcessor | undefined = undefined
@@ -525,7 +527,10 @@ export default class OpenAIProvider extends BaseProvider {
           isEmpty(delta?.content) &&
           isEmpty(finishReason)
         ) {
-          time_first_token_millsec = currentTime - start_time_millsec
+          // 记录第一个token的时间
+          time_first_token_millsec = currentTime
+          // 记录第一个token的时间差
+          time_first_token_millsec_delta = currentTime - start_time_millsec
           console.log(
             `completions time_first_token_millsec ${new Date(currentTime).toLocaleString(undefined, {
               year: 'numeric',
@@ -539,21 +544,23 @@ export default class OpenAIProvider extends BaseProvider {
           )
         }
         if (reasoningContent) {
+          thinkingContent += reasoningContent
           hasReasoningContent = true // Keep track if reasoning occurred
 
-          // Set time_first_content_millsec ONLY when the first content (reasoning or text) arrives
-          if (time_first_content_millsec === 0) {
-            time_first_content_millsec = currentTime
-          }
-
           // Calculate thinking time as time elapsed since start until this chunk
-          const thinking_time = currentTime - time_first_content_millsec
+          const thinking_time = currentTime - time_first_token_millsec
           onChunk({ type: ChunkType.THINKING_DELTA, text: reasoningContent, thinking_millsec: thinking_time })
         }
 
         if (isReasoningJustDone(delta)) {
           if (time_first_content_millsec === 0) {
             time_first_content_millsec = currentTime
+            final_time_thinking_millsec_delta = time_first_content_millsec - time_first_token_millsec
+            onChunk({
+              type: ChunkType.THINKING_COMPLETE,
+              text: thinkingContent,
+              thinking_millsec: final_time_thinking_millsec_delta
+            })
           }
         }
 
@@ -589,7 +596,7 @@ export default class OpenAIProvider extends BaseProvider {
         // console.log('delta?.finish_reason', delta?.finish_reason)
         if (!isEmpty(finishReason)) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
-          final_time_completion_millsec = currentTime - start_time_millsec
+          final_time_completion_millsec_delta = currentTime - start_time_millsec
           console.log(
             `completions final_time_completion_millsec ${new Date(currentTime).toLocaleString(undefined, {
               year: 'numeric',
@@ -659,9 +666,6 @@ export default class OpenAIProvider extends BaseProvider {
       // Note: parseAndCallTools inside processToolUses should handle its own onChunk for tool responses
       await processToolUses(content, idx)
 
-      // Calculate final thinking time
-      final_time_thinking_millsec = time_first_content_millsec ? time_first_content_millsec - start_time_millsec : 0
-
       // Send the final block_complete chunk with accumulated data
       onChunk({
         type: ChunkType.BLOCK_COMPLETE,
@@ -671,9 +675,9 @@ export default class OpenAIProvider extends BaseProvider {
           metrics: {
             // Get completion tokens from the last usage object if available
             completion_tokens: lastUsage?.completion_tokens,
-            time_completion_millsec: final_time_completion_millsec,
-            time_first_token_millsec: time_first_token_millsec, // Use the recorded first token time
-            time_thinking_millsec: final_time_thinking_millsec
+            time_completion_millsec: final_time_completion_millsec_delta,
+            time_first_token_millsec: time_first_token_millsec_delta,
+            time_thinking_millsec: final_time_thinking_millsec_delta
           }
         }
       })

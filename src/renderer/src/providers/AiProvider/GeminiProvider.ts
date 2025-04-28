@@ -38,6 +38,7 @@ import {
   Model,
   Provider,
   Suggestion,
+  Usage,
   WebSearchSource
 } from '@renderer/types'
 import { BlockCompleteChunk, ChunkType, LLMWebSearchCompleteChunk } from '@renderer/types/chunk'
@@ -116,6 +117,7 @@ export default class GeminiProvider extends BaseProvider {
    * @returns The message contents
    */
   private async getMessageContents(message: Message): Promise<Content> {
+    console.log('getMessageContents', message)
     const role = message.role === 'user' ? 'user' : 'model'
     const parts: Part[] = [{ text: await this.getMessageContent(message) }]
     // Add any generated images from previous responses
@@ -410,7 +412,8 @@ export default class GeminiProvider extends BaseProvider {
 
     const processStream = async (stream: AsyncGenerator<GenerateContentResponse>, idx: number) => {
       let content = ''
-      let chunk_id = 0
+      let final_time_completion_millsec = 0
+      let lastUsage: Usage | undefined = undefined
       for await (const chunk of stream) {
         if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
@@ -418,40 +421,22 @@ export default class GeminiProvider extends BaseProvider {
         if (time_first_token_millsec == 0 && chunk.text !== undefined) {
           // Update based on text arrival
           time_first_token_millsec = new Date().getTime() - start_time_millsec
-          onChunk({
-            type: ChunkType.LLM_RESPONSE_CREATED,
-            response: {
-              metrics: {
-                time_first_token_millsec,
-                time_completion_millsec: new Date().getTime() - start_time_millsec
-              }
-            }
-          })
         }
 
         // 1. Text Content
         if (chunk.text !== undefined) {
           content += chunk.text
-          onChunk({ type: ChunkType.TEXT_DELTA, text: chunk.text, chunk_id: chunk_id++ })
+          onChunk({ type: ChunkType.TEXT_DELTA, text: chunk.text })
         }
 
         // 2. Usage Data
         if (chunk.usageMetadata) {
-          onChunk({
-            type: ChunkType.LLM_RESPONSE_IN_PROGRESS,
-            response: {
-              text: content,
-              metrics: {
-                completion_tokens: chunk.usageMetadata.candidatesTokenCount,
-                time_completion_millsec: new Date().getTime() - start_time_millsec
-              },
-              usage: {
-                prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
-                completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
-                total_tokens: chunk.usageMetadata.totalTokenCount || 0
-              }
-            }
-          })
+          lastUsage = {
+            prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
+            completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
+            total_tokens: chunk.usageMetadata.totalTokenCount || 0
+          }
+          final_time_completion_millsec = new Date().getTime() - start_time_millsec
         }
 
         // 3. Grounding/Search Metadata
@@ -474,8 +459,18 @@ export default class GeminiProvider extends BaseProvider {
 
         if (chunk.candidates?.[0]?.finishReason && chunk.text) {
           onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
+          onChunk({
+            type: ChunkType.BLOCK_COMPLETE,
+            response: {
+              metrics: {
+                completion_tokens: lastUsage?.completion_tokens,
+                time_completion_millsec: final_time_completion_millsec,
+                time_first_token_millsec
+              },
+              usage: lastUsage
+            }
+          })
         }
-
         // --- End Incremental onChunk calls ---
 
         // Call processToolUses AFTER potentially processing text content in this chunk

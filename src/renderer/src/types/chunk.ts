@@ -163,9 +163,9 @@ export interface ThinkingCompleteChunk {
   text: string
 
   /**
-   * The ID of the chunk
+   * The thinking time of the chunk
    */
-  chunk_id?: number
+  thinking_millsec?: number
 
   /**
    * The type of the chunk
@@ -349,7 +349,7 @@ export type Chunk =
   | MCPToolInProgressChunk // MCP工具调用中
   | MCPToolCompleteChunk // MCP工具调用完成
   | ExternalToolCompleteChunk // 外部工具调用完成，外部工具包含搜索互联网，知识库，MCP服务器
-  | LLMResponseCreatedChunk // 大模型响应创建
+  | LLMResponseCreatedChunk // 大模型响应创建，返回即将创建的块类型
   | LLMResponseInProgressChunk // 大模型响应进行中
   | TextDeltaChunk // 文本内容生成中
   | TextCompleteChunk // 文本内容生成完成

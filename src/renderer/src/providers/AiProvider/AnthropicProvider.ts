@@ -206,6 +206,8 @@ export default class AnthropicProvider extends BaseProvider {
 
     let time_first_token_millsec = 0
     let time_first_content_millsec = 0
+    let checkThinkingContent = false
+    let thinking_content = ''
     const start_time_millsec = new Date().getTime()
 
     if (!streamOutput) {
@@ -255,6 +257,10 @@ export default class AnthropicProvider extends BaseProvider {
         this.sdk.messages
           .stream({ ...body, stream: true }, { signal })
           .on('text', (text) => {
+            if (hasThinkingContent && !checkThinkingContent) {
+              checkThinkingContent = true
+              onChunk({ type: ChunkType.THINKING_COMPLETE, text: thinking_content, thinking_millsec: 0 })
+            }
             if (time_first_token_millsec == 0) {
               time_first_token_millsec = new Date().getTime() - start_time_millsec
             }
@@ -263,7 +269,7 @@ export default class AnthropicProvider extends BaseProvider {
               time_first_content_millsec = new Date().getTime()
             }
 
-            onChunk({ type: ChunkType.TEXT_DELTA, text, chunk_id: idx })
+            onChunk({ type: ChunkType.TEXT_DELTA, text })
           })
           .on('thinking', (thinking) => {
             hasThinkingContent = true
@@ -286,6 +292,7 @@ export default class AnthropicProvider extends BaseProvider {
               text: thinking,
               thinking_millsec: thinking_time
             })
+            thinking_content += thinking
           })
           .on('finalMessage', async (message) => {
             const content = message.content[0]

@@ -11,6 +11,7 @@ import type {
   ImageMessageBlock,
   Message,
   MessageBlock,
+  PlaceholderMessageBlock,
   ToolMessageBlock
 } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
@@ -18,6 +19,7 @@ import { Response } from '@renderer/types/newMessage'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
 import {
   createAssistantMessage,
+  createBaseMessageBlock,
   createCitationBlock,
   createErrorBlock,
   createImageBlock,
@@ -321,43 +323,41 @@ const fetchAndProcessAssistantResponseImpl = async (
     }
 
     callbacks = {
+      onLLMResponseCreated: () => {
+        const baseBlock = createBaseMessageBlock(assistantMsgId, MessageBlockType.UNKNOWN, {
+          status: MessageBlockStatus.PROCESSING
+        })
+        handleBlockTransition(baseBlock as PlaceholderMessageBlock, MessageBlockType.UNKNOWN)
+      },
       onTextChunk: (text) => {
         accumulatedContent += text
-
-        if (lastBlockType === MessageBlockType.MAIN_TEXT && lastBlockId) {
-          const blockChanges: Partial<MessageBlock> = {
-            content: accumulatedContent,
-            status: MessageBlockStatus.STREAMING
+        if (lastBlockId) {
+          if (lastBlockType === MessageBlockType.UNKNOWN) {
+            const initialChanges: Partial<MessageBlock> = {
+              type: MessageBlockType.MAIN_TEXT,
+              content: accumulatedContent,
+              status: MessageBlockStatus.STREAMING,
+              citationReferences: citationBlockId ? [{ citationBlockId }] : []
+            }
+            mainTextBlockId = lastBlockId
+            lastBlockType = MessageBlockType.MAIN_TEXT
+            dispatch(updateOneBlock({ id: lastBlockId, changes: initialChanges }))
+            saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
+          } else if (lastBlockType === MessageBlockType.MAIN_TEXT) {
+            const blockChanges: Partial<MessageBlock> = {
+              content: accumulatedContent,
+              status: MessageBlockStatus.STREAMING
+            }
+            throttledBlockUpdate(lastBlockId, blockChanges)
+            throttledBlockDbUpdate(lastBlockId, blockChanges)
+          } else {
+            const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
+              status: MessageBlockStatus.STREAMING,
+              citationReferences: citationBlockId ? [{ citationBlockId }] : []
+            })
+            handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
+            mainTextBlockId = newBlock.id
           }
-          throttledBlockUpdate(lastBlockId, blockChanges)
-          throttledBlockDbUpdate(lastBlockId, blockChanges)
-        } else {
-          const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
-            status: MessageBlockStatus.PROCESSING,
-            citationReferences: citationBlockId ? [{ citationBlockId }] : []
-          })
-          mainTextBlockId = newBlock.id
-          handleBlockTransition(newBlock, MessageBlockType.MAIN_TEXT)
-        }
-      },
-      onThinkingChunk: (text, thinking_millsec) => {
-        // FIXME: 没有complete事件, 无法更新状态
-        accumulatedThinking += text
-
-        if (lastBlockType === MessageBlockType.THINKING && lastBlockId) {
-          const blockChanges: Partial<MessageBlock> = {
-            content: accumulatedThinking,
-            status: MessageBlockStatus.STREAMING,
-            thinking_millsec: thinking_millsec
-          }
-          throttledBlockUpdate(lastBlockId, blockChanges)
-          throttledBlockDbUpdate(lastBlockId, blockChanges)
-        } else {
-          const newBlock = createThinkingBlock(assistantMsgId, accumulatedThinking, {
-            status: MessageBlockStatus.STREAMING,
-            thinking_millsec: thinking_millsec
-          })
-          handleBlockTransition(newBlock, MessageBlockType.THINKING)
         }
       },
       onTextComplete: (finalText) => {
@@ -387,6 +387,54 @@ const fetchAndProcessAssistantResponseImpl = async (
         } else {
           console.warn(
             `[onTextComplete] Received text.complete but last block was not MAIN_TEXT (was ${lastBlockType}) or lastBlockId is null.`
+          )
+        }
+      },
+      onThinkingChunk: (text, thinking_millsec) => {
+        accumulatedThinking += text
+        if (lastBlockId) {
+          if (lastBlockType === MessageBlockType.UNKNOWN) {
+            // First chunk for this block: Update type and status immediately
+            lastBlockType = MessageBlockType.THINKING
+            const initialChanges: Partial<MessageBlock> = {
+              type: MessageBlockType.THINKING,
+              content: accumulatedThinking,
+              status: MessageBlockStatus.STREAMING
+            }
+            dispatch(updateOneBlock({ id: lastBlockId, changes: initialChanges }))
+            saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
+            console.log(`[onThinkingChunk] Saved initial THINKING block ${lastBlockId} to DB.`)
+          } else if (lastBlockType === MessageBlockType.THINKING) {
+            const blockChanges: Partial<MessageBlock> = {
+              content: accumulatedThinking,
+              status: MessageBlockStatus.STREAMING,
+              thinking_millsec: thinking_millsec
+            }
+            throttledBlockUpdate(lastBlockId, blockChanges)
+            throttledBlockDbUpdate(lastBlockId, blockChanges)
+          } else {
+            const newBlock = createThinkingBlock(assistantMsgId, accumulatedThinking, {
+              status: MessageBlockStatus.STREAMING,
+              thinking_millsec: thinking_millsec
+            })
+            handleBlockTransition(newBlock, MessageBlockType.THINKING)
+          }
+        }
+      },
+      onThinkingComplete: (finalText, final_thinking_millsec) => {
+        if (lastBlockType === MessageBlockType.THINKING && lastBlockId) {
+          console.log(`[onThinkingComplete] Marking THINKING block ${lastBlockId} as SUCCESS.`)
+          const changes = {
+            type: MessageBlockType.THINKING,
+            content: finalText,
+            status: MessageBlockStatus.SUCCESS,
+            thinking_millsec: final_thinking_millsec
+          }
+          dispatch(updateOneBlock({ id: lastBlockId, changes }))
+          saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
+        } else {
+          console.warn(
+            `[onThinkingComplete] Received thinking.complete but last block was not THINKING (was ${lastBlockType}) or lastBlockId is null.`
           )
         }
       },
@@ -516,22 +564,13 @@ const fetchAndProcessAssistantResponseImpl = async (
           stack: error.stack
         }
 
-        // if (lastBlockId) {
-        //   // 更改上一个block的状态为ERROR
-        //   const changes: Partial<MessageBlock> = {
-        //     status: MessageBlockStatus.ERROR
-        //   }
-        //   dispatch(updateOneBlock({ id: lastBlockId, changes }))
-        //   saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
-        // }
-
         const errorBlock = createErrorBlock(assistantMsgId, serializableError, { status: MessageBlockStatus.SUCCESS })
         handleBlockTransition(errorBlock, MessageBlockType.ERROR)
 
         const messageErrorUpdate = { status: AssistantMessageStatus.ERROR }
         dispatch(newMessagesActions.updateMessage({ topicId, messageId: assistantMsgId, updates: messageErrorUpdate }))
 
-        saveUpdatesToDB(assistantMsgId, topicId, messageErrorUpdate, [errorBlock])
+        saveUpdatesToDB(assistantMsgId, topicId, messageErrorUpdate, [])
       },
       onComplete: async (status: AssistantMessageStatus, response?: Response) => {
         const finalStateOnComplete = getState()
@@ -641,7 +680,7 @@ export const sendMessage =
     } catch (error) {
       console.error('Error in sendMessage thunk:', error)
     } finally {
-      console.log('sendMessage finally', topicId)
+      console.log('sendMessage finally', userMessage)
       handleChangeLoadingOfTopic(topicId)
     }
   }
@@ -960,6 +999,7 @@ export const regenerateAssistantResponseThunk =
       const resetAssistantMsg = resetAssistantMessage(messageToResetEntity, {
         status: AssistantMessageStatus.PENDING
       })
+      console.log('resetAssistantMsg', resetAssistantMsg)
       dispatch(
         newMessagesActions.updateMessage({
           topicId,
@@ -1220,8 +1260,6 @@ export const cloneMessagesToNewTopicThunk =
       // 2. Prepare for cloning: Maps and Arrays
       const clonedMessages: Message[] = []
       const clonedBlocks: MessageBlock[] = []
-      const oldMsgIdToNewMsgIdMap = new Map<string, string>()
-      const oldBlockIdToNewBlockIdMap = new Map<string, string>()
       const filesToUpdateCount: FileType[] = [] // Array of FileType
 
       // 3. Clone Messages and Blocks with New IDs

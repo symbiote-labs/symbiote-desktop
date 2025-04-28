@@ -7,14 +7,14 @@ interface Props {
   text: string
 }
 
-export default function SearchingSpinner({ text }: Props) {
+export default function Spinner({ text }: Props) {
   const { t } = useTranslation()
   return (
-    <SearchingContainer>
+    <Container>
       <Search size={24} />
-      <SearchingText>{t(text)}</SearchingText>
+      <StatusText>{t(text)}</StatusText>
       <BarLoader color="#1677ff" />
-    </SearchingContainer>
+    </Container>
   )
 }
 
@@ -24,7 +24,7 @@ const baseContainer = css`
   align-items: center;
 `
 
-const SearchingContainer = styled.div`
+const Container = styled.div`
   ${baseContainer}
   background-color: var(--color-background-mute);
   padding: 10px;
@@ -33,7 +33,7 @@ const SearchingContainer = styled.div`
   gap: 10px;
 `
 
-const SearchingText = styled.div`
+const StatusText = styled.div`
   font-size: 14px;
   line-height: 1.6;
   text-decoration: none;
