@@ -46,3 +46,6 @@ local
 .aider*
 .cursorrules
 .cursor/rules
+
+# Ignore Electron build output executable
+release/*/win-unpacked/electron.exe
