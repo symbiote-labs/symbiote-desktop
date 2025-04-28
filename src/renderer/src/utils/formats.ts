@@ -1,5 +1,5 @@
 import { Model } from '@renderer/types'
-import type { MainTextMessageBlock, Message, TranslationMessageBlock } from '@renderer/types/newMessage'
+import type { Message } from '@renderer/types/newMessage'
 
 import { findImageBlocks, getMainTextContent } from './messageUtils/find'
 
@@ -71,33 +71,33 @@ export function removeSvgEmptyLines(text: string): string {
   })
 }
 
-export function withGeminiGrounding(block: MainTextMessageBlock | TranslationMessageBlock): string {
-  // TODO
-  // const citationBlock = findCitationBlockWithGrounding(block)
-  // const groundingSupports = citationBlock?.groundingMetadata?.groundingSupports
+// export function withGeminiGrounding(block: MainTextMessageBlock | TranslationMessageBlock): string {
+//   // TODO
+//   // const citationBlock = findCitationBlockWithGrounding(block)
+//   // const groundingSupports = citationBlock?.groundingMetadata?.groundingSupports
 
-  const content = block.content
+//   const content = block.content
 
-  // if (!groundingSupports || groundingSupports.length === 0) {
-  //   return content
-  // }
+//   // if (!groundingSupports || groundingSupports.length === 0) {
+//   //   return content
+//   // }
 
-  // groundingSupports.forEach((support) => {
-  //   const text = support?.segment?.text
-  //   const indices = support?.groundingChunkIndices
+//   // groundingSupports.forEach((support) => {
+//   //   const text = support?.segment?.text
+//   //   const indices = support?.groundingChunkIndices
 
-  //   if (!text || !indices) return
+//   //   if (!text || !indices) return
 
-  //   const nodes = indices.reduce((acc, index) => {
-  //     acc.push(`<sup>${index + 1}</sup>`)
-  //     return acc
-  //   }, [] as string[])
+//   //   const nodes = indices.reduce((acc, index) => {
+//   //     acc.push(`<sup>${index + 1}</sup>`)
+//   //     return acc
+//   //   }, [] as string[])
 
-  //   content = content.replace(text, `${text} ${nodes.join(' ')}`)
-  // })
+//   //   content = content.replace(text, `${text} ${nodes.join(' ')}`)
+//   // })
 
-  return content
-}
+//   return content
+// }
 
 export interface ThoughtProcessor {
   canProcess: (content: string, model?: Model) => boolean
@@ -174,7 +174,7 @@ export function withGenerateImage(message: Message): { content: string; images?:
   const images: string[] = []
   let processedContent = originalContent
 
-  processedContent = originalContent.replace(imagePattern, (match, url) => {
+  processedContent = originalContent.replace(imagePattern, (_, url) => {
     if (url) {
       images.push(url)
     }

@@ -6,18 +6,21 @@ import MessageErrorBoundary from '@renderer/pages/home/Messages/MessageErrorBoun
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { getDefaultAssistant, getDefaultModel } from '@renderer/services/AssistantService'
 import { getMessageModelId } from '@renderer/services/MessagesService'
-import { LegacyMessage } from '@renderer/types'
+import { Chunk, ChunkType } from '@renderer/types/chunk'
+// import { LegacyMessage } from '@renderer/types'
+import type { Message } from '@renderer/types/newMessage'
+import { AssistantMessageStatus } from '@renderer/types/newMessage'
 import { isMiniWindow } from '@renderer/utils'
 import { Dispatch, FC, memo, SetStateAction, useEffect, useMemo, useRef, useState } from 'react'
 import styled from 'styled-components'
 
 interface Props {
-  message: LegacyMessage
+  message: Message
   index?: number
   total: number
   route: string
-  onGetMessages?: () => LegacyMessage[]
-  onSetMessages?: Dispatch<SetStateAction<LegacyMessage[]>>
+  onGetMessages?: () => Message[]
+  onSetMessages?: Dispatch<SetStateAction<Message[]>>
 }
 
 const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolean) =>
@@ -42,10 +45,9 @@ const MessageItem: FC<Props> = ({ message: _message, index, total, route, onSetM
 
   useEffect(() => {
     if (onGetMessages && onSetMessages) {
-      if (message.status === 'sending') {
+      if (message.status === AssistantMessageStatus.PROCESSING) {
         const messages = onGetMessages()
         fetchChatCompletion({
-          message,
           messages: messages
             .filter((m) => !m.status.includes('ing'))
             .slice(
@@ -53,12 +55,20 @@ const MessageItem: FC<Props> = ({ message: _message, index, total, route, onSetM
               messages.findIndex((m) => m.id === message.id)
             ),
           assistant: { ...getDefaultAssistant(), model: getDefaultModel() },
-          onResponse: (msg) => {
-            setMessage(msg)
-            if (msg.status !== 'pending') {
-              const _messages = messages.map((m) => (m.id === msg.id ? msg : m))
-              onSetMessages(_messages)
+          onChunkReceived: (chunk: Chunk) => {
+            if (chunk.type === ChunkType.TEXT_DELTA) {
+              setMessage(chunk.text)
             }
+            // if (chunk.type === ChunkType.LLM_RESPONSE_CREATED) {
+            //   setMessage(chunk.response?.message)
+            // }
+            // if (chunk.type === ChunkType.LLM_RESPONSE_IN_PROGRESS) {
+            //   setMessage(chunk.response?.message)
+            // }
+            // if (chunk.type === ChunkType.LLM_RESPONSE_COMPLETE) {
+            //   const _messages = messages.map((m) => (m.id === chunk.response?.message.id ? chunk.response?.message : m))
+            //   onSetMessages(_messages)
+            // }
           }
         })
       }
