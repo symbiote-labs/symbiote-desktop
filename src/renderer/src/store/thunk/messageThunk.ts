@@ -1220,8 +1220,6 @@ export const cloneMessagesToNewTopicThunk =
       // 2. Prepare for cloning: Maps and Arrays
       const clonedMessages: Message[] = []
       const clonedBlocks: MessageBlock[] = []
-      const oldMsgIdToNewMsgIdMap = new Map<string, string>()
-      const oldBlockIdToNewBlockIdMap = new Map<string, string>()
       const filesToUpdateCount: FileType[] = [] // Array of FileType
 
       // 3. Clone Messages and Blocks with New IDs

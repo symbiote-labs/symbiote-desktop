@@ -28,7 +28,6 @@ const Suggestions: FC<Props> = ({ assistant, messages }) => {
     const { message: userMessage, blocks } = getUserMessage({
       assistant,
       topic: assistant.topics[0],
-      type: 'text',
       content
     })
 

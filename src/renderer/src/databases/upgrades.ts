@@ -282,7 +282,7 @@ export async function upgradeToV7(tx: Transaction): Promise<void> {
           enabledMCPs: oldMessage.enabledMCPs,
           usage: oldMessage.usage,
           metrics: oldMessage.metrics,
-          multiModelMessageStyle: oldMessage.multiModelMessageStyle as NewMessage['multiModelMessageStyle'],
+          multiModelMessageStyle: oldMessage.multiModelMessageStyle,
           foldSelected: oldMessage.foldSelected,
           blocks: messageBlockIds
         }

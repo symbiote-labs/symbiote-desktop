@@ -174,7 +174,7 @@ export function withGenerateImage(message: Message): { content: string; images?:
   const images: string[] = []
   let processedContent = originalContent
 
-  processedContent = originalContent.replace(imagePattern, (match, url) => {
+  processedContent = originalContent.replace(imagePattern, (_, url) => {
     if (url) {
       images.push(url)
     }

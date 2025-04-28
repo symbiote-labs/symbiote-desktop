@@ -1,5 +1,4 @@
-import { ExternalToolResult, KnowledgeReference, MCPToolResponse, WebSearchResponse } from '@types'
-
+import { ExternalToolResult, KnowledgeReference, MCPToolResponse, WebSearchResponse } from '.'
 import { Response, ResponseError } from './newMessage'
 
 // Define Enum for Chunk Types
