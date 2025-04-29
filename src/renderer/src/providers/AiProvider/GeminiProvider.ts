@@ -14,7 +14,7 @@ import {
   ToolListUnion
 } from '@google/genai'
 import {
-  isGemini25ReasoningModel,
+  isGeminiReasoningModel,
   isGemmaModel,
   isGenerateImageModel,
   isVisionModel,
@@ -53,8 +53,6 @@ import OpenAI from 'openai'
 
 import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
-
-type ReasoningEffort = 'low' | 'medium' | 'high'
 
 export default class GeminiProvider extends BaseProvider {
   private sdk: GoogleGenAI
@@ -213,32 +211,25 @@ export default class GeminiProvider extends BaseProvider {
    * @param model - The model
    * @returns The reasoning effort
    */
-  private getReasoningEffort(assistant: Assistant, model: Model) {
-    if (isGemini25ReasoningModel(model)) {
-      const effortRatios: Record<ReasoningEffort, number> = {
-        high: 1,
-        medium: 0.5,
-        low: 0.2
-      }
-      const effort = assistant?.settings?.reasoning_effort as ReasoningEffort
-      const effortRatio = effortRatios[effort]
-      const maxBudgetToken = 24576 // https://ai.google.dev/gemini-api/docs/thinking
-      const budgetTokens = Math.max(1024, Math.trunc(maxBudgetToken * effortRatio))
-      if (!effortRatio) {
-        return {
-          thinkingConfig: {
-            thinkingBudget: 0
-          } as ThinkingConfig
-        }
+  private getBudgetToken(assistant: Assistant, model: Model) {
+    if (isGeminiReasoningModel(model)) {
+      // 检查thinking_budget是否明确设置
+      const thinkingBudget = assistant?.settings?.thinking_budget
+
+      // 如果thinking_budget是undefined，使用模型的默认行为
+      if (thinkingBudget === undefined) {
+        return {} // 返回空对象以使用模型默认值
       }
 
+      // 如果thinking_budget是明确设置的值（包括0），使用该值
       return {
         thinkingConfig: {
-          thinkingBudget: budgetTokens,
+          thinkingBudget: thinkingBudget,
           includeThoughts: true
         } as ThinkingConfig
       }
     }
+
     return {}
   }
 
@@ -310,7 +301,7 @@ export default class GeminiProvider extends BaseProvider {
       topP: assistant?.settings?.topP,
       maxOutputTokens: maxTokens,
       tools: tools,
-      ...this.getReasoningEffort(assistant, model),
+      ...this.getBudgetToken(assistant, model),
       ...this.getCustomParameters(assistant)
     }
 

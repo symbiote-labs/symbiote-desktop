@@ -1,15 +1,17 @@
-import { DEFAULT_MAX_TOKENS } from '@renderer/config/constant'
 import {
   getOpenAIWebSearchParams,
   isGrokReasoningModel,
   isHunyuanSearchModel,
-  isOpenAIoSeries,
   isOpenAIWebSearch,
   isReasoningModel,
   isSupportedModel,
+  isSupportedReasoningEffortModel,
+  isSupportedReasoningEffortOpenAIModel,
+  isSupportedThinkingTokenClaudeModel,
+  isSupportedThinkingTokenModel,
+  isSupportedThinkingTokenQwenModel,
   isVisionModel,
-  isZhipuModel,
-  OPENAI_NO_SUPPORT_DEV_ROLE_MODELS
+  isZhipuModel
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
@@ -56,8 +58,6 @@ import {
 
 import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
-
-type ReasoningEffort = 'low' | 'medium' | 'high'
 
 export default class OpenAIProvider extends BaseProvider {
   private sdk: OpenAI
@@ -262,9 +262,26 @@ export default class OpenAIProvider extends BaseProvider {
 
     if (isReasoningModel(model)) {
       if (model.provider === 'openrouter') {
-        return {
-          reasoning: {
-            effort: assistant?.settings?.reasoning_effort
+        if (isSupportedReasoningEffortModel(model)) {
+          return {
+            reasoning_effort: assistant?.settings?.reasoning_effort
+          }
+        } else if (isSupportedThinkingTokenModel(model)) {
+          return {
+            max_tokens: assistant?.settings?.thinking_budget
+          }
+        }
+      }
+      const enableThinking = assistant?.enableThinking
+      if (isSupportedThinkingTokenQwenModel(model)) {
+        if (enableThinking) {
+          return {
+            enable_thinking: true,
+            thinking_budget: assistant?.settings?.thinking_budget
+          }
+        } else {
+          return {
+            enable_thinking: false
           }
         }
       }
@@ -275,33 +292,17 @@ export default class OpenAIProvider extends BaseProvider {
         }
       }
 
-      if (isOpenAIoSeries(model)) {
+      if (isSupportedReasoningEffortOpenAIModel(model)) {
         return {
           reasoning_effort: assistant?.settings?.reasoning_effort
         }
       }
 
-      if (model.id.includes('claude-3.7-sonnet') || model.id.includes('claude-3-7-sonnet')) {
-        const effortRatios: Record<ReasoningEffort, number> = {
-          high: 0.8,
-          medium: 0.5,
-          low: 0.2
-        }
-
-        const effort = assistant?.settings?.reasoning_effort as ReasoningEffort
-        const effortRatio = effortRatios[effort]
-
-        if (!effortRatio) {
-          return {}
-        }
-
-        const maxTokens = assistant?.settings?.maxTokens || DEFAULT_MAX_TOKENS
-        const budgetTokens = Math.trunc(Math.max(Math.min(maxTokens * effortRatio, 32000), 1024))
-
+      if (isSupportedThinkingTokenClaudeModel(model)) {
         return {
           thinking: {
             type: 'enabled',
-            budget_tokens: budgetTokens
+            budget_tokens: assistant?.settings?.thinking_budget
           }
         }
       }
@@ -341,7 +342,7 @@ export default class OpenAIProvider extends BaseProvider {
     const isEnabledWebSearch = assistant.enableWebSearch || !!assistant.webSearchProviderId
     messages = addImageFileToContents(messages)
     let systemMessage = { role: 'system', content: assistant.prompt || '' }
-    if (isOpenAIoSeries(model) && !OPENAI_NO_SUPPORT_DEV_ROLE_MODELS.includes(model.id)) {
+    if (isSupportedReasoningEffortOpenAIModel(model)) {
       systemMessage = {
         role: 'developer',
         content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`

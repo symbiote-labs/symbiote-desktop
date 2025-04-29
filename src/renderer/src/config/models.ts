@@ -2218,12 +2218,32 @@ export function isVisionModel(model: Model): boolean {
   return VISION_REGEX.test(model.id) || model.type?.includes('vision') || false
 }
 
-export function isOpenAIoSeries(model: Model): boolean {
+export function isOpenAIReasoningModel(model: Model): boolean {
   return model.id.includes('o1') || model.id.includes('o3') || model.id.includes('o4')
+}
+
+export function isSupportedReasoningEffortOpenAIModel(model: Model): boolean {
+  return (
+    (model.id.includes('o1') && !(model.id.includes('o1-preview') || model.id.includes('o1-mini'))) ||
+    model.id.includes('o3') ||
+    model.id.includes('o4')
+  )
 }
 
 export function isOpenAIWebSearch(model: Model): boolean {
   return model.id.includes('gpt-4o-search-preview') || model.id.includes('gpt-4o-mini-search-preview')
+}
+
+export function isSupportedThinkingTokenModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+
+  return (
+    isSupportedThinkingTokenGeminiModel(model) ||
+    isSupportedThinkingTokenQwenModel(model) ||
+    isSupportedThinkingTokenClaudeModel(model)
+  )
 }
 
 export function isSupportedReasoningEffortModel(model?: Model): boolean {
@@ -2231,17 +2251,7 @@ export function isSupportedReasoningEffortModel(model?: Model): boolean {
     return false
   }
 
-  if (
-    model.id.includes('claude-3-7-sonnet') ||
-    model.id.includes('claude-3.7-sonnet') ||
-    isOpenAIoSeries(model) ||
-    isGrokReasoningModel(model) ||
-    isGemini25ReasoningModel(model)
-  ) {
-    return true
-  }
-
-  return false
+  return isSupportedReasoningEffortOpenAIModel(model) || isSupportedReasoningEffortGrokModel(model)
 }
 
 export function isGrokModel(model?: Model): boolean {
@@ -2263,7 +2273,9 @@ export function isGrokReasoningModel(model?: Model): boolean {
   return false
 }
 
-export function isGemini25ReasoningModel(model?: Model): boolean {
+export const isSupportedReasoningEffortGrokModel = isGrokReasoningModel
+
+export function isGeminiReasoningModel(model?: Model): boolean {
   if (!model) {
     return false
   }
@@ -2275,6 +2287,53 @@ export function isGemini25ReasoningModel(model?: Model): boolean {
   return false
 }
 
+export const isSupportedThinkingTokenGeminiModel = isGeminiReasoningModel
+
+export function isQwenReasoningModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+
+  if (isSupportedThinkingTokenQwenModel(model)) {
+    return true
+  }
+
+  if (model.id.includes('qwq')) {
+    return true
+  }
+
+  return false
+}
+
+export function isSupportedThinkingTokenQwenModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+
+  return (
+    model.id.includes('qwen3') ||
+    model.id.includes('qwq') ||
+    model.id.includes('qvq') ||
+    [
+      'qwen-plus-latest',
+      'qwen-plus-0428',
+      'qwen-plus-2025-04-28',
+      'qwen-turbo-latest',
+      'qwen-turbo-0428',
+      'qwen-turbo-2025-04-28'
+    ].includes(model.id)
+  )
+}
+
+export function isClaudeReasoningModel(model?: Model): boolean {
+  if (!model) {
+    return false
+  }
+  return model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
+}
+
+export const isSupportedThinkingTokenClaudeModel = isClaudeReasoningModel
+
 export function isReasoningModel(model?: Model): boolean {
   if (!model) {
     return false
@@ -2284,15 +2343,14 @@ export function isReasoningModel(model?: Model): boolean {
     return REASONING_REGEX.test(model.name) || model.type?.includes('reasoning') || false
   }
 
-  if (model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet') || isOpenAIoSeries(model)) {
-    return true
-  }
-
-  if (isGemini25ReasoningModel(model)) {
-    return true
-  }
-
-  if (model.id.includes('glm-z1')) {
+  if (
+    isClaudeReasoningModel(model) ||
+    isOpenAIReasoningModel(model) ||
+    isGeminiReasoningModel(model) ||
+    isQwenReasoningModel(model) ||
+    isGrokReasoningModel(model) ||
+    model.id.includes('glm-z1')
+  ) {
     return true
   }
 

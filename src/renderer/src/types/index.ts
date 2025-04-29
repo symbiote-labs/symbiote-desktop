@@ -22,6 +22,7 @@ export type Assistant = {
   enableWebSearch?: boolean
   webSearchProviderId?: WebSearchProvider['id']
   enableGenerateImage?: boolean
+  enableThinking?: boolean
   mcpServers?: MCPServer[]
 }
 
@@ -47,6 +48,7 @@ export type AssistantSettings = {
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort?: 'low' | 'medium' | 'high'
+  thinking_budget?: number
 }
 
 export type Agent = Omit<Assistant, 'model'> & {
