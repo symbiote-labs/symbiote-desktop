@@ -319,9 +319,7 @@ export function createMessage(
 export function createAssistantMessage(
   assistantId: Assistant['id'],
   topicId: Topic['id'],
-  overrides: Partial<
-    Omit<Message, 'id' | 'role' | 'assistantId' | 'topicId' | 'createdAt' | 'type' | 'status' | 'blocks'>
-  > = {}
+  overrides: Partial<Omit<Message, 'id' | 'role' | 'assistantId' | 'topicId' | 'createdAt' | 'type' | 'status'>> = {}
 ): Message {
   const now = new Date().toISOString()
   const messageId = uuidv4()
