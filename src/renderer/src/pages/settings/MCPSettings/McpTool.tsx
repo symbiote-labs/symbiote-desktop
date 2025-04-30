@@ -97,39 +97,39 @@ const MCPToolsSection = ({ tools, server, onToggleTool }: MCPToolsSectionProps) 
     <Section>
       <SectionTitle>{t('settings.mcp.tools.availableTools')}</SectionTitle>
       {tools.length > 0 ? (
-        <Collapse bordered={false} ghost>
-          {tools.map((tool) => (
-            <Collapse.Panel
-              key={tool.id}
-              header={
-                <Flex justify="space-between" align="center" style={{ width: '100%' }}>
-                  <Flex vertical align="flex-start">
-                    <Flex align="center" style={{ width: '100%' }}>
-                      <Typography.Text strong>{tool.name}</Typography.Text>
-                      {/* Display toolKey instead of the random id */}
-                      <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
-                        {tool.toolKey}
-                      </Typography.Text>
-                    </Flex>
-                    {tool.description && (
-                      <Typography.Text type="secondary" style={{ fontSize: '13px', marginTop: 4 }}>
-                        {tool.description.length > 100 ? `${tool.description.substring(0, 100)}...` : tool.description}
-                      </Typography.Text>
-                    )}
+        <Collapse
+          bordered={false}
+          ghost
+          items={tools.map((tool) => ({
+            key: tool.id,
+            label: (
+              <Flex justify="space-between" align="center" style={{ width: '100%' }}>
+                <Flex vertical align="flex-start">
+                  <Flex align="center" style={{ width: '100%' }}>
+                    <Typography.Text strong>{tool.name}</Typography.Text>
+                    {/* Display toolKey instead of the random id */}
+                    <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
+                      {tool.toolKey}
+                    </Typography.Text>
                   </Flex>
-                  <Switch
-                    checked={isToolEnabled(tool)}
-                    onChange={(checked, event) => {
-                      event?.stopPropagation()
-                      handleToggle(tool, checked)
-                    }}
-                  />
+                  {tool.description && (
+                    <Typography.Text type="secondary" style={{ fontSize: '13px', marginTop: 4 }}>
+                      {tool.description.length > 100 ? `${tool.description.substring(0, 100)}...` : tool.description}
+                    </Typography.Text>
+                  )}
                 </Flex>
-              }>
-              <SelectableContent>{renderToolProperties(tool)}</SelectableContent>
-            </Collapse.Panel>
-          ))}
-        </Collapse>
+                <Switch
+                  checked={isToolEnabled(tool)}
+                  onChange={(checked, event) => {
+                    event?.stopPropagation()
+                    handleToggle(tool, checked)
+                  }}
+                />
+              </Flex>
+            ),
+            children: <SelectableContent>{renderToolProperties(tool)}</SelectableContent>
+          }))}
+        />
       ) : (
         <Empty description={t('settings.mcp.tools.noToolsAvailable')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       )}

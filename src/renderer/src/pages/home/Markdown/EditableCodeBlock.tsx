@@ -44,12 +44,12 @@ function isLikelyCode(text: string): boolean {
   // 检查常见代码特征
   const codePatterns = [
     /\b(function|const|let|var|if|else|for|while|return|import|export|class|interface|extends|implements)\b/,
-    /[{}\[\]()]/,  // 括号
+    /[{}\[\]()]/, // 括号
     /\b(public|private|protected|static|final|void)\b/,
     /\b(def|async|await|try|catch|finally)\b/,
     /\b(int|string|bool|float|double)\b/,
-    /\s{2,}[a-zA-Z0-9_]+/,  // 缩进后跟标识符
-    /^\s*(\/\/|#|\/\*|\*|;)/  // 注释行开始
+    /\s{2,}[a-zA-Z0-9_]+/, // 缩进后跟标识符
+    /^\s*(\/\/|#|\/\*|\*|;)/ // 注释行开始
   ]
 
   // 检查行特征
@@ -67,8 +67,12 @@ function isLikelyCode(text: string): boolean {
     }
 
     // 检查注释
-    if (line.trim().startsWith('//') || line.trim().startsWith('#') ||
-        line.trim().startsWith('/*') || line.trim().startsWith('*')) {
+    if (
+      line.trim().startsWith('//') ||
+      line.trim().startsWith('#') ||
+      line.trim().startsWith('/*') ||
+      line.trim().startsWith('*')
+    ) {
       commentLines++
     }
 
@@ -82,7 +86,7 @@ function isLikelyCode(text: string): boolean {
   }
 
   // 计算特征比例
-  const nonEmptyLines = lines.filter(line => line.trim()).length
+  const nonEmptyLines = lines.filter((line) => line.trim()).length
   if (nonEmptyLines === 0) return false
 
   const indentRatio = indentedLines / nonEmptyLines
@@ -239,7 +243,7 @@ const EditableCodeBlock: React.FC<EditableCodeBlockProps> = ({ children, classNa
     return (
       <CodeBlockWrapper className="code-block">
         <CodeHeader>
-          <CodeLanguage>{'<SVG>'}</CodeLanguage>
+          <CodeLanguage>{language.toUpperCase()}</CodeLanguage>
           <CopyButton text={children} />
         </CodeHeader>
         <SvgPreview>{children}</SvgPreview>
@@ -250,7 +254,7 @@ const EditableCodeBlock: React.FC<EditableCodeBlockProps> = ({ children, classNa
   return isCodeBlock ? (
     <CodeBlockWrapper className="code-block">
       <CodeHeader>
-        <CodeLanguage>{'<' + language.toUpperCase() + '>'}</CodeLanguage>
+        <CodeLanguage>{language.toUpperCase()}</CodeLanguage>
       </CodeHeader>
       <StickyWrapper>
         <HStack
@@ -464,8 +468,13 @@ const CodeHeader = styled.div`
 
 const CodeLanguage = styled.span`
   font-family: monospace;
-  font-size: 0.8em;
-  color: var(--color-text-3);
+  font-size: 0.9em;
+  color: #000000;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.9);
+  font-weight: bold;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 `
 
 const StickyWrapper = styled.div`

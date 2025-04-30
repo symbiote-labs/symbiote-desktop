@@ -3,7 +3,7 @@ import agentService from '@renderer/services/AgentService'
 import { useAppDispatch } from '@renderer/store'
 import { setAgentModeMaxApiRequests, setEnableAgentMode } from '@renderer/store/settings'
 import { Button, Flex, InputNumber, Space, Switch, Tooltip } from 'antd' // Import Switch and Tooltip
-import { FC, useState } from 'react'
+import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -37,6 +37,26 @@ const AgentModePanel: FC<Props> = ({
   const { agentModeMaxApiRequests } = useSettings()
   const [maxRequests, setMaxRequests] = useState(agentModeMaxApiRequests)
 
+  // 添加调试日志，监控AgentModePanel的props和渲染条件
+  useEffect(() => {
+    console.log('AgentModePanel 渲染检查:', {
+      tasksLength: tasks.length,
+      taskStatuses: tasks.map((t) => t.status),
+      showAgentTaskList,
+      isRunning,
+      渲染条件: showAgentTaskList && tasks.length > 0
+    })
+  }, [tasks, showAgentTaskList, isRunning])
+
+  // 在每次渲染时记录渲染条件
+  useEffect(() => {
+    console.log('任务列表渲染条件检查:', {
+      showAgentTaskList,
+      tasksLength: tasks.length,
+      应该渲染: showAgentTaskList && tasks.length > 0
+    })
+  }, [showAgentTaskList, tasks.length])
+
   const handleMaxRequestsChange = (value: any) => {
     // 确保值是数字
     const numValue = typeof value === 'number' ? value : agentModeMaxApiRequests
@@ -60,6 +80,7 @@ const AgentModePanel: FC<Props> = ({
 
   // 处理 Agent 任务列表显示开关变化
   const handleShowTaskListChange = (checked: boolean) => {
+    console.log('显示任务列表状态变更:', checked)
     onSetShowAgentTaskList(checked)
   }
 
@@ -72,6 +93,7 @@ const AgentModePanel: FC<Props> = ({
 
   // 处理清空任务列表
   const handleClearTasks = () => {
+    console.log('清空任务列表')
     // 调用 agentService 的 clearTasks 方法清空任务列表
     agentService.clearTasks()
   }
@@ -100,6 +122,12 @@ const AgentModePanel: FC<Props> = ({
           </Flex>
           <AgentTaskList tasks={tasks} onTaskClick={handleTaskClick} scrollToMessage={scrollToMessage} />
         </>
+      )}
+      {/* 如果应该显示但没有任务，显示提示信息 */}
+      {showAgentTaskList && tasks.length === 0 && (
+        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-2)' }}>
+          {t('agent.tasks.no_running_tasks')}
+        </div>
       )}
       <ControlPanel>
         <Flex justify="space-between" align="center">

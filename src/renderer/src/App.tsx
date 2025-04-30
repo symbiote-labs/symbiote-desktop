@@ -7,6 +7,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import DeepClaudeProvider from './components/DeepClaudeProvider'
 import GeminiInitializer from './components/GeminiInitializer'
 import MemoryProvider from './components/MemoryProvider'
+import ModuleRegistryInitializer from './components/ModuleRegistryInitializer'
 import PDFSettingsInitializer from './components/PDFSettingsInitializer'
 import SentryInitializer from './components/SentryInitializer'
 import TopViewContainer from './components/TopView'
@@ -29,6 +30,7 @@ function App(): React.ReactElement {
                 <MemoryProvider>
                   <DeepClaudeProvider />
                   <GeminiInitializer />
+                  <ModuleRegistryInitializer />
                   <PDFSettingsInitializer />
                   <SentryInitializer />
                   <WebSearchInitializer />

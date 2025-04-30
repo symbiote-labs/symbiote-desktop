@@ -80,7 +80,7 @@ function useModelStatusRendering() {
         return (
           <div>
             <strong>{statusTitle}</strong>
-            {status.error && <div style={{ marginTop: 5, color: STATUS_COLORS.error }}>{status.error}</div>}
+            {status.error && <ErrorText>{status.error}</ErrorText>}
           </div>
         )
       }
@@ -89,25 +89,23 @@ function useModelStatusRendering() {
       return (
         <div>
           {statusTitle}
-          {status.error && <div style={{ marginTop: 5, marginBottom: 5 }}>{status.error}</div>}
-          <div style={{ marginTop: 5 }}>
-            <ul style={{ maxHeight: '300px', overflowY: 'auto', margin: 0, padding: 0, listStyleType: 'none' }}>
+          {status.error && <ErrorMargin>{status.error}</ErrorMargin>}
+          <TopMarginDiv>
+            <ResultsList>
               {status.keyResults.map((kr, idx) => {
                 // Mask API key for security
                 const maskedKey = maskApiKey(kr.key)
 
                 return (
-                  <li
-                    key={idx}
-                    style={{ marginBottom: '5px', color: kr.isValid ? STATUS_COLORS.success : STATUS_COLORS.error }}>
+                  <ResultsListItem key={idx} isValid={kr.isValid}>
                     {maskedKey}: {kr.isValid ? t('settings.models.check.passed') : t('settings.models.check.failed')}
                     {kr.error && !kr.isValid && ` (${kr.error})`}
                     {kr.latency && kr.isValid && ` (${formatLatency(kr.latency)})`}
-                  </li>
+                  </ResultsListItem>
                 )
               })}
-            </ul>
-          </div>
+            </ResultsList>
+          </TopMarginDiv>
         </div>
       )
     },
@@ -249,7 +247,7 @@ const ModelList: React.FC<ModelListProps> = ({ providerId, modelStatuses = [], s
             key={group}
             label={
               <Flex align="center" gap={10}>
-                <span style={{ fontWeight: 600 }}>{group}</span>
+                <GroupTitleText>{group}</GroupTitleText>
               </Flex>
             }
             extra={
@@ -263,17 +261,15 @@ const ModelList: React.FC<ModelListProps> = ({ providerId, modelStatuses = [], s
                 />
               </Tooltip>
             }>
-            <Flex gap={10} vertical style={{ marginTop: 10 }}>
+            <ModelListMargin gap={10} vertical>
               {sortedModelGroups[group].map((model) => {
                 const modelStatus = modelStatuses.find((status) => status.model.id === model.id)
                 const isChecking = modelStatus?.checking === true
 
                 return (
                   <ListItem key={model.id}>
-                    <HStack alignItems="center" gap={10} style={{ flex: 1 }}>
-                      <Avatar src={getModelLogo(model.id)} style={{ width: 26, height: 26 }}>
-                        {model?.name?.[0]?.toUpperCase()}
-                      </Avatar>
+                    <FullWidthFlex alignItems="center" gap={10}>
+                      <ModelAvatar src={getModelLogo(model.id)}>{model?.name?.[0]?.toUpperCase()}</ModelAvatar>
                       <ListItemName>
                         <Tooltip
                           styles={{
@@ -283,17 +279,13 @@ const ModelList: React.FC<ModelListProps> = ({ providerId, modelStatuses = [], s
                             }
                           }}
                           destroyTooltipOnHide
-                          title={
-                            <Typography.Text style={{ color: 'white' }} copyable={{ text: model.id }}>
-                              {model.id}
-                            </Typography.Text>
-                          }
+                          title={<WhiteText copyable={{ text: model.id }}>{model.id}</WhiteText>}
                           placement="top">
                           <span>{model.name}</span>
                         </Tooltip>
                         <ModelTagsWithLabel model={model} size={11} />
                       </ListItemName>
-                    </HStack>
+                    </FullWidthFlex>
                     <Flex gap={4} align="center">
                       {renderLatencyText(modelStatus)}
                       {renderStatusIndicator(modelStatus)}
@@ -313,7 +305,7 @@ const ModelList: React.FC<ModelListProps> = ({ providerId, modelStatuses = [], s
                   </ListItem>
                 )
               })}
-            </Flex>
+            </ModelListMargin>
           </CustomCollapse>
         ))}
         {docsWebsite && (
@@ -331,14 +323,14 @@ const ModelList: React.FC<ModelListProps> = ({ providerId, modelStatuses = [], s
           </SettingHelpTextRow>
         )}
       </Flex>
-      <Flex gap={10} style={{ marginTop: '10px' }}>
+      <TopMarginFlex gap={10}>
         <Button type="primary" onClick={onManageModel} icon={<ListCheck size={18} />}>
           {t('button.manage')}
         </Button>
         <Button type="default" onClick={onAddModel} icon={<PlusOutlined />}>
           {t('button.add')}
         </Button>
-      </Flex>
+      </TopMarginFlex>
       {models.map((model) => (
         <ModelEditContent
           model={model}
@@ -424,6 +416,58 @@ const ModelLatencyText = styled(Typography.Text)`
   margin-left: 10px;
   color: var(--color-text-secondary);
   font-size: 12px;
+`
+
+const ErrorText = styled.div`
+  margin-top: 5px;
+  color: ${STATUS_COLORS.error};
+`
+
+const ErrorMargin = styled.div`
+  margin-top: 5px;
+  margin-bottom: 5px;
+`
+
+const ResultsList = styled.ul`
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+`
+
+const ResultsListItem = styled.li<{ isValid: boolean }>`
+  margin-bottom: 5px;
+  color: ${(props) => (props.isValid ? STATUS_COLORS.success : STATUS_COLORS.error)};
+`
+
+const GroupTitleText = styled.span`
+  font-weight: 600;
+`
+
+const ModelListMargin = styled(Flex)`
+  margin-top: 10px;
+`
+
+const FullWidthFlex = styled(HStack)`
+  flex: 1;
+`
+
+const ModelAvatar = styled(Avatar)`
+  width: 26px;
+  height: 26px;
+`
+
+const WhiteText = styled(Typography.Text)`
+  color: white;
+`
+
+const TopMarginFlex = styled(Flex)`
+  margin-top: 10px;
+`
+
+const TopMarginDiv = styled.div`
+  margin-top: 5px;
 `
 
 export default memo(ModelList)

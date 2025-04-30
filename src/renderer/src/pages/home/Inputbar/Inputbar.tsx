@@ -70,7 +70,6 @@ import NarrowLayout from '../Messages/NarrowLayout'
 import AgentModeButton from './AgentModeButton'
 import AttachmentButton, { AttachmentButtonRef } from './AttachmentButton'
 import AttachmentPreview from './AttachmentPreview'
-import GenerateImageButton from './GenerateImageButton'
 import KnowledgeBaseButton, { KnowledgeBaseButtonRef } from './KnowledgeBaseButton'
 import KnowledgeBaseInput from './KnowledgeBaseInput'
 import MCPToolsButton, { MCPToolsButtonRef } from './MCPToolsButton'
@@ -1317,9 +1316,10 @@ const Inputbar: FC<Props> = ({
     updateAssistant({ ...assistant, enableWebSearch: !assistant.enableWebSearch })
   }
 
-  const onEnableGenerateImage = () => {
-    updateAssistant({ ...assistant, enableGenerateImage: !assistant.enableGenerateImage })
-  }
+  // 图像生成功能切换函数，暂未在界面使用，但保留以供未来使用
+  // const onEnableGenerateImage = () => {
+  //   updateAssistant({ ...assistant, enableGenerateImage: !assistant.enableGenerateImage })
+  // }
 
   useEffect(() => {
     if (!isWebSearchModel(model) && !WebSearchService.isWebSearchEnabled() && assistant.enableWebSearch) {
@@ -1327,6 +1327,9 @@ const Inputbar: FC<Props> = ({
     }
     if (!isGenerateImageModel(model) && assistant.enableGenerateImage) {
       updateAssistant({ ...assistant, enableGenerateImage: false })
+    }
+    if (isGenerateImageModel(model) && !assistant.enableGenerateImage) {
+      updateAssistant({ ...assistant, enableGenerateImage: true })
     }
   }, [assistant, model, updateAssistant])
 
@@ -1489,12 +1492,6 @@ const Inputbar: FC<Props> = ({
                 ToolbarButton={ToolbarButton}
                 agentTasks={agentTasks || []}
                 scrollToMessage={scrollToMessage} // 传递 scrollToMessage prop
-              />
-              <GenerateImageButton
-                model={model}
-                assistant={assistant}
-                onEnableGenerateImage={onEnableGenerateImage}
-                ToolbarButton={ToolbarButton}
               />
               <MentionModelsButton
                 ref={mentionModelsButtonRef}

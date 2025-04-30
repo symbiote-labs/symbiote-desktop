@@ -6,6 +6,7 @@ import {
 } from '@renderer/config/models'
 import { SEARCH_SUMMARY_PROMPT } from '@renderer/config/prompts'
 import i18n from '@renderer/i18n'
+import agentService from '@renderer/services/AgentService'
 import store from '@renderer/store'
 import { setGenerating } from '@renderer/store/runtime'
 import { Assistant, MCPTool, Message, Model, Provider, Suggestion, WebSearchResponse } from '@renderer/types'
@@ -360,7 +361,46 @@ export async function fetchChatCompletion({
 
       // 执行工具调用
       const toolResponses = []
-      await executeToolCalls(toolCalls, toolResponses, () => {}, 0)
+
+      // 检查是否启用了Agent模式
+      const isAgentMode = store.getState().settings.enableAgentMode
+
+      if (isAgentMode && toolCalls && toolCalls.length > 0) {
+        console.log('[MCP] Agent模式已启用，通过AgentService执行工具调用')
+
+        // 在Agent模式下，为每个工具调用创建任务
+        for (const toolCall of toolCalls) {
+          const taskTitle = `执行工具: ${toolCall.tool.name}`
+
+          // 检查工具参数是否存在
+          const toolArgs = toolCall.tool.inputSchema || {}
+
+          // 创建更简洁的描述，不包含完整参数（参数会单独显示）
+          const taskDescription = `执行工具 ${toolCall.tool.name}`
+
+          // 使用最后一条用户消息的ID
+          const userLastMessageId = lastUserMessage?.id || ''
+
+          // 创建任务
+          const taskId = agentService.addTask(taskTitle, taskDescription, userLastMessageId)
+
+          // 更新任务，添加工具名称和参数
+          agentService.updateTask(taskId, {
+            toolName: toolCall.tool.name,
+            toolArgs: toolArgs
+          })
+
+          // 通过Agent服务执行工具
+          try {
+            await agentService.executeTask(taskId, toolCall.tool)
+          } catch (error) {
+            console.error('[ApiService] Agent执行工具出错:', error)
+          }
+        }
+      } else {
+        // 非Agent模式下直接执行工具调用
+        await executeToolCalls(toolCalls, toolResponses, () => {}, 0)
+      }
 
       // 工具调用已执行，不创建新的消息
 

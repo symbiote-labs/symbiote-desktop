@@ -1,6 +1,6 @@
+import { Bookmark, BookmarkFolder } from '@renderer/pages/Browser/types/bookmark'
 import { Workspace } from '@renderer/store/workspace'
 import { FileType, KnowledgeItem, QuickPhrase, Topic, TranslateHistory } from '@renderer/types'
-import { Bookmark, BookmarkFolder } from '@renderer/pages/Browser/types/bookmark'
 import { Dexie, type EntityTable } from 'dexie'
 
 import { upgradeToV5 } from './upgrades'

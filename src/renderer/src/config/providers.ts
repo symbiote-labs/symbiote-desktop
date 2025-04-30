@@ -1,6 +1,7 @@
 import ZhinaoProviderLogo from '@renderer/assets/images/models/360.png'
 import HunyuanProviderLogo from '@renderer/assets/images/models/hunyuan.png'
 import AzureProviderLogo from '@renderer/assets/images/models/microsoft.png'
+import MidjourneyProviderLogo from '@renderer/assets/images/models/midjourney.png'
 import AiHubMixProviderLogo from '@renderer/assets/images/providers/aihubmix.webp'
 import AlayaNewProviderLogo from '@renderer/assets/images/providers/alayanew.webp'
 import AnthropicProviderLogo from '@renderer/assets/images/providers/anthropic.png'
@@ -88,7 +89,8 @@ const PROVIDER_LOGO_MAP = {
   gpustack: GPUStackProviderLogo,
   alayanew: AlayaNewProviderLogo,
   voyageai: VoyageAIProviderLogo,
-  qiniu: QiniuProviderLogo
+  qiniu: QiniuProviderLogo,
+  midjourney: MidjourneyProviderLogo
 } as const
 
 export function getProviderLogo(providerId: string) {
@@ -579,7 +581,7 @@ export const PROVIDER_CONFIG = {
     },
     websites: {
       official: 'https://qiniu.com',
-      apiKey: 'https://marketing.qiniu.com/activity/2025_newspring?cps_key=1h4vzfbkxobiq#deepseek-title',
+      apiKey: 'https://portal.qiniu.com/ai-inference/api-key?cps_key=1h4vzfbkxobiq',
       docs: 'https://developer.qiniu.com/aitokenapi',
       models: 'https://developer.qiniu.com/aitokenapi/12883/model-list'
     }

@@ -11,8 +11,10 @@ import { useAppDispatch } from '@renderer/store'
 import { setSidebarIcons } from '@renderer/store/settings'
 import { message } from 'antd'
 import {
+  Calendar,
   Folder,
   FolderGit,
+  Globe,
   Languages,
   LayoutGrid,
   LibraryBig,
@@ -127,7 +129,9 @@ const SidebarIconsManager: FC<SidebarIconsManagerProps> = ({
       knowledge: <LibraryBig size={16} />,
       files: <Folder size={15} />,
       workspace: <FolderGit size={15} />,
-      deepresearch: <Microscope size={16} />
+      deepresearch: <Microscope size={16} />,
+      browser: <Globe size={16} />,
+      calendar: <Calendar size={16} />
     }),
     []
   )

@@ -1,8 +1,36 @@
-import { DeleteOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons'
+import {
+  ApiOutlined,
+  ClockCircleOutlined,
+  CodeOutlined,
+  DeleteOutlined,
+  GlobalOutlined,
+  InfoCircleOutlined,
+  LinkOutlined,
+  PictureOutlined,
+  ReloadOutlined,
+  SaveOutlined,
+  SettingOutlined,
+  TagsOutlined
+} from '@ant-design/icons'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
 import MCPDescription from '@renderer/pages/settings/MCPSettings/McpDescription'
 import { MCPPrompt, MCPResource, MCPServer, MCPTool } from '@renderer/types'
-import { Button, Flex, Form, Input, Radio, Switch, Tabs } from 'antd'
+import {
+  Button,
+  Card,
+  Col,
+  Collapse,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Row,
+  Space,
+  Switch,
+  Tabs,
+  Tooltip
+} from 'antd'
 import TextArea from 'antd/es/input/TextArea'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -29,6 +57,11 @@ interface MCPFormValues {
   env?: string
   isActive: boolean
   headers?: string
+  timeout?: number
+  provider?: string
+  providerUrl?: string
+  logoUrl?: string
+  tags?: string
 }
 
 interface Registry {
@@ -71,6 +104,7 @@ const McpSettings: React.FC<Props> = ({ server }) => {
   const [isFormChanged, setIsFormChanged] = useState(false)
   const [loadingServer, setLoadingServer] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabKey>('settings')
+  const [expandAdvanced, setExpandAdvanced] = useState<boolean>(false)
 
   const [tools, setTools] = useState<MCPTool[]>([])
   const [prompts, setPrompts] = useState<MCPPrompt[]>([])
@@ -123,7 +157,12 @@ const McpSettings: React.FC<Props> = ({ server }) => {
         ? Object.entries(server.headers)
             .map(([key, value]) => `${key}=${value}`)
             .join('\n')
-        : ''
+        : '',
+      timeout: server.timeout,
+      provider: server.provider,
+      providerUrl: server.providerUrl,
+      logoUrl: server.logoUrl,
+      tags: server.tags ? server.tags.join('\n') : ''
     })
   }, [server, form])
 
@@ -232,6 +271,26 @@ const McpSettings: React.FC<Props> = ({ server }) => {
 
       if (values.headers) {
         mcpServer.headers = parseKeyValueString(values.headers)
+      }
+
+      if (values.timeout) {
+        mcpServer.timeout = values.timeout
+      }
+
+      if (values.provider) {
+        mcpServer.provider = values.provider
+      }
+
+      if (values.providerUrl) {
+        mcpServer.providerUrl = values.providerUrl
+      }
+
+      if (values.logoUrl) {
+        mcpServer.logoUrl = values.logoUrl
+      }
+
+      if (values.tags) {
+        mcpServer.tags = values.tags.split('\n').filter((tag) => tag.trim() !== '')
       }
 
       try {
@@ -430,123 +489,272 @@ const McpSettings: React.FC<Props> = ({ server }) => {
           style={{
             overflowY: 'auto',
             overflowX: 'hidden',
-            width: '100%'
+            width: '100%',
+            flex: 1
           }}>
-          <Form.Item name="name" label={t('settings.mcp.name')} rules={[{ required: true, message: '' }]}>
-            <Input placeholder={t('common.name')} disabled={server.type === 'inMemory'} />
-          </Form.Item>
-          <Form.Item name="description" label={t('settings.mcp.description')}>
-            <TextArea rows={2} placeholder={t('common.description')} />
-          </Form.Item>
+          <Card
+            title={
+              <Flex align="center" gap={8}>
+                <InfoCircleOutlined />
+                {t('settings.mcp.basicInfo')}
+              </Flex>
+            }
+            bordered={false}
+            style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="name" label={t('settings.mcp.name')} rules={[{ required: true, message: '' }]}>
+                  <Input
+                    placeholder={t('common.name')}
+                    disabled={server.type === 'inMemory'}
+                    prefix={<CodeOutlined style={{ color: 'var(--color-text-3)' }} />}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item name="description" label={t('settings.mcp.description')}>
+                  <TextArea rows={2} placeholder={t('common.description')} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
           {server.type !== 'inMemory' && (
-            <Form.Item
-              name="serverType"
-              label={t('settings.mcp.type')}
-              rules={[{ required: true }]}
-              initialValue="stdio">
-              <Radio.Group
-                onChange={(e) => setServerType(e.target.value)}
-                options={[
-                  { label: t('settings.mcp.stdio'), value: 'stdio' },
-                  { label: t('settings.mcp.sse'), value: 'sse' },
-                  { label: t('settings.mcp.streamableHttp'), value: 'streamableHttp' }
-                ]}
-              />
-            </Form.Item>
-          )}
-          {serverType === 'sse' && (
-            <>
+            <Card
+              title={
+                <Flex align="center" gap={8}>
+                  <ApiOutlined />
+                  {t('settings.mcp.connectionSettings')}
+                </Flex>
+              }
+              bordered={false}
+              style={{ marginBottom: 16 }}>
               <Form.Item
-                name="baseUrl"
-                label={t('settings.mcp.url')}
-                rules={[{ required: serverType === 'sse', message: '' }]}
-                tooltip={t('settings.mcp.baseUrlTooltip')}>
-                <Input placeholder="http://localhost:3000/sse" />
-              </Form.Item>
-              <Form.Item name="headers" label={t('settings.mcp.headers')} tooltip={t('settings.mcp.headersTooltip')}>
-                <TextArea
-                  rows={3}
-                  placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
-                  style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                name="serverType"
+                label={t('settings.mcp.type')}
+                rules={[{ required: true }]}
+                initialValue="stdio">
+                <Radio.Group
+                  onChange={(e) => setServerType(e.target.value)}
+                  optionType="button"
+                  buttonStyle="solid"
+                  style={{ width: '100%' }}
+                  options={[
+                    { label: t('settings.mcp.stdio'), value: 'stdio' },
+                    { label: t('settings.mcp.sse'), value: 'sse' },
+                    { label: t('settings.mcp.streamableHttp'), value: 'streamableHttp' }
+                  ]}
                 />
-              </Form.Item>
-            </>
-          )}
-          {serverType === 'streamableHttp' && (
-            <>
-              <Form.Item
-                name="baseUrl"
-                label={t('settings.mcp.url')}
-                rules={[{ required: serverType === 'streamableHttp', message: '' }]}
-                tooltip={t('settings.mcp.baseUrlTooltip')}>
-                <Input placeholder="http://localhost:3000/mcp" />
-              </Form.Item>
-              <Form.Item name="headers" label={t('settings.mcp.headers')} tooltip={t('settings.mcp.headersTooltip')}>
-                <TextArea
-                  rows={3}
-                  placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
-                  style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                />
-              </Form.Item>
-            </>
-          )}
-          {serverType === 'stdio' && (
-            <>
-              <Form.Item
-                name="command"
-                label={t('settings.mcp.command')}
-                rules={[{ required: serverType === 'stdio', message: '' }]}>
-                <Input placeholder="uvx or npx" onChange={(e) => handleCommandChange(e.target.value)} />
               </Form.Item>
 
-              {isShowRegistry && registry && (
-                <Form.Item
-                  name="registryUrl"
-                  label={t('settings.mcp.registry')}
-                  tooltip={t('settings.mcp.registryTooltip')}>
-                  <Radio.Group>
-                    <Radio
-                      key="no-proxy"
-                      value=""
-                      onChange={(e) => {
-                        onSelectRegistry(e.target.value)
-                      }}>
-                      {t('settings.mcp.registryDefault')}
-                    </Radio>
-                    {registry.map((reg) => (
-                      <Radio
-                        key={reg.url}
-                        value={reg.url}
-                        onChange={(e) => {
-                          onSelectRegistry(e.target.value)
-                        }}>
-                        {reg.name}
-                      </Radio>
-                    ))}
-                  </Radio.Group>
-                </Form.Item>
+              {serverType === 'sse' && (
+                <>
+                  <Form.Item
+                    name="baseUrl"
+                    label={t('settings.mcp.url')}
+                    rules={[{ required: serverType === 'sse', message: '' }]}
+                    tooltip={t('settings.mcp.baseUrlTooltip')}>
+                    <Input
+                      placeholder="http://localhost:3000/sse"
+                      prefix={<LinkOutlined style={{ color: 'var(--color-text-3)' }} />}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="headers"
+                    label={t('settings.mcp.headers')}
+                    tooltip={t('settings.mcp.headersTooltip')}>
+                    <TextArea
+                      rows={3}
+                      placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
+                      style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    />
+                  </Form.Item>
+                </>
               )}
 
-              <Form.Item name="args" label={t('settings.mcp.args')} tooltip={t('settings.mcp.argsTooltip')}>
-                <TextArea rows={3} placeholder={`arg1\narg2`} style={{ fontFamily: 'monospace' }} />
-              </Form.Item>
+              {serverType === 'streamableHttp' && (
+                <>
+                  <Form.Item
+                    name="baseUrl"
+                    label={t('settings.mcp.url')}
+                    rules={[{ required: serverType === 'streamableHttp', message: '' }]}
+                    tooltip={t('settings.mcp.baseUrlTooltip')}>
+                    <Input
+                      placeholder="http://localhost:3000/mcp"
+                      prefix={<LinkOutlined style={{ color: 'var(--color-text-3)' }} />}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="headers"
+                    label={t('settings.mcp.headers')}
+                    tooltip={t('settings.mcp.headersTooltip')}>
+                    <TextArea
+                      rows={3}
+                      placeholder={`Content-Type=application/json\nAuthorization=Bearer token`}
+                      style={{ fontFamily: 'monospace', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                    />
+                  </Form.Item>
+                </>
+              )}
 
-              <Form.Item name="env" label={t('settings.mcp.env')} tooltip={t('settings.mcp.envTooltip')}>
-                <TextArea rows={3} placeholder={`KEY1=value1\nKEY2=value2`} style={{ fontFamily: 'monospace' }} />
-              </Form.Item>
-            </>
-          )}
-          {serverType === 'inMemory' && (
-            <>
-              <Form.Item name="args" label={t('settings.mcp.args')} tooltip={t('settings.mcp.argsTooltip')}>
-                <TextArea rows={3} placeholder={`arg1\narg2`} style={{ fontFamily: 'monospace' }} />
-              </Form.Item>
+              {serverType === 'stdio' && (
+                <>
+                  <Form.Item
+                    name="command"
+                    label={t('settings.mcp.command')}
+                    rules={[{ required: serverType === 'stdio', message: '' }]}>
+                    <Input
+                      placeholder="uvx or npx"
+                      onChange={(e) => handleCommandChange(e.target.value)}
+                      prefix={<CodeOutlined style={{ color: 'var(--color-text-3)' }} />}
+                    />
+                  </Form.Item>
 
-              <Form.Item name="env" label={t('settings.mcp.env')} tooltip={t('settings.mcp.envTooltip')}>
-                <TextArea rows={3} placeholder={`KEY1=value1\nKEY2=value2`} style={{ fontFamily: 'monospace' }} />
-              </Form.Item>
-            </>
+                  {isShowRegistry && registry && (
+                    <Form.Item
+                      name="registryUrl"
+                      label={t('settings.mcp.registry')}
+                      tooltip={t('settings.mcp.registryTooltip')}>
+                      <Radio.Group>
+                        <Space direction="vertical">
+                          <Radio
+                            key="no-proxy"
+                            value=""
+                            onChange={(e) => {
+                              onSelectRegistry(e.target.value)
+                            }}>
+                            {t('settings.mcp.registryDefault')}
+                          </Radio>
+                          {registry.map((reg) => (
+                            <Radio
+                              key={reg.url}
+                              value={reg.url}
+                              onChange={(e) => {
+                                onSelectRegistry(e.target.value)
+                              }}>
+                              {reg.name}
+                            </Radio>
+                          ))}
+                        </Space>
+                      </Radio.Group>
+                    </Form.Item>
+                  )}
+
+                  <Form.Item name="args" label={t('settings.mcp.args')} tooltip={t('settings.mcp.argsTooltip')}>
+                    <TextArea rows={2} placeholder={`arg1\narg2`} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+
+                  <Form.Item name="env" label={t('settings.mcp.env')} tooltip={t('settings.mcp.envTooltip')}>
+                    <TextArea rows={3} placeholder={`KEY1=value1\nKEY2=value2`} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+                </>
+              )}
+
+              {serverType === 'inMemory' && (
+                <>
+                  <Form.Item name="args" label={t('settings.mcp.args')} tooltip={t('settings.mcp.argsTooltip')}>
+                    <TextArea rows={2} placeholder={`arg1\narg2`} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+
+                  <Form.Item name="env" label={t('settings.mcp.env')} tooltip={t('settings.mcp.envTooltip')}>
+                    <TextArea rows={3} placeholder={`KEY1=value1\nKEY2=value2`} style={{ fontFamily: 'monospace' }} />
+                  </Form.Item>
+                </>
+              )}
+            </Card>
           )}
+
+          {/* 高级设置区域 */}
+          <Collapse
+            bordered={false}
+            style={{ marginBottom: 16 }}
+            activeKey={expandAdvanced ? ['advanced'] : []}
+            onChange={(key) => setExpandAdvanced(key.includes('advanced'))}>
+            <Collapse.Panel
+              header={
+                <Flex align="center" gap={8}>
+                  <SettingOutlined />
+                  {t('settings.mcp.advancedSettings')}
+                </Flex>
+              }
+              key="advanced">
+              <Card bordered={false} bodyStyle={{ padding: '8px 0' }}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      name="timeout"
+                      label={
+                        <Flex align="center" gap={6}>
+                          <ClockCircleOutlined />
+                          {t('settings.mcp.timeout')}
+                          <Tooltip title={t('settings.mcp.timeoutTooltip')}>
+                            <InfoCircleOutlined style={{ color: 'var(--color-text-3)' }} />
+                          </Tooltip>
+                        </Flex>
+                      }>
+                      <InputNumber min={1} max={300} defaultValue={60} style={{ width: '100%' }} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={12}>
+                    <Form.Item
+                      name="provider"
+                      label={
+                        <Flex align="center" gap={6}>
+                          <ApiOutlined />
+                          {t('settings.mcp.provider')}
+                        </Flex>
+                      }>
+                      <Input placeholder={t('settings.mcp.providerPlaceholder')} />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={12}>
+                    <Form.Item
+                      name="providerUrl"
+                      label={
+                        <Flex align="center" gap={6}>
+                          <GlobalOutlined />
+                          {t('settings.mcp.providerUrl')}
+                        </Flex>
+                      }>
+                      <Input placeholder="https://example.com" />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={12}>
+                    <Form.Item
+                      name="logoUrl"
+                      label={
+                        <Flex align="center" gap={6}>
+                          <PictureOutlined />
+                          {t('settings.mcp.logoUrl')}
+                        </Flex>
+                      }>
+                      <Input placeholder="https://example.com/logo.png" />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={24}>
+                    <Form.Item
+                      name="tags"
+                      label={
+                        <Flex align="center" gap={6}>
+                          <TagsOutlined />
+                          {t('settings.mcp.tags')}
+                        </Flex>
+                      }>
+                      <TextArea
+                        rows={2}
+                        placeholder={t('settings.mcp.tagsPlaceholder')}
+                        style={{ fontFamily: 'monospace' }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Card>
+            </Collapse.Panel>
+          </Collapse>
         </Form>
       )
     }
@@ -585,23 +793,52 @@ const McpSettings: React.FC<Props> = ({ server }) => {
       <SettingGroup style={{ marginBottom: 0 }}>
         <SettingTitle>
           <Flex justify="space-between" align="center" gap={5} style={{ marginRight: 10 }}>
-            <ServerName className="text-nowrap">{server?.name}</ServerName>
-            <Button danger icon={<DeleteOutlined />} type="text" onClick={() => onDeleteMcpServer(server)} />
-          </Flex>
-          <Flex align="center" gap={16}>
-            <Switch
-              value={server.isActive}
-              key={server.id}
-              loading={loadingServer === server.id}
-              onChange={onToggleActive}
+            <ServerName className="text-nowrap">
+              {server.logoUrl ? (
+                <img
+                  src={server.logoUrl}
+                  alt={server.name}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    marginRight: 8,
+                    borderRadius: 4,
+                    verticalAlign: 'middle'
+                  }}
+                />
+              ) : (
+                <CodeOutlined style={{ marginRight: 8 }} />
+              )}
+              {server?.name}
+            </ServerName>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              type="text"
+              onClick={() => onDeleteMcpServer(server)}
+              style={{ margin: '0 8px' }}
             />
-            {server.isActive && ( // Only show refresh button if server is active
-              <Button
-                icon={<ReloadOutlined />} // Add ReloadOutlined icon
-                onClick={fetchTools} // Call fetchTools on click
-                loading={loadingServer === server.id} // Use loadingServer state
-                type="text"
+          </Flex>
+          <Flex align="center" gap={8}>
+            <Tooltip title={server.isActive ? t('settings.mcp.deactivate') : t('settings.mcp.activate')}>
+              <Switch
+                checked={server.isActive}
+                key={server.id}
+                loading={loadingServer === server.id}
+                onChange={onToggleActive}
               />
+            </Tooltip>
+            {server.isActive && (
+              <Tooltip title={t('settings.mcp.refresh')}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={fetchTools}
+                  loading={loadingServer === server.id}
+                  type="default"
+                  size="middle"
+                  shape="circle"
+                />
+              </Tooltip>
             )}
             <Button
               type="primary"

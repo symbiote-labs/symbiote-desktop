@@ -25,7 +25,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, defaultT
   const [_theme, _setTheme] = useState(theme)
 
   const toggleTheme = () => {
-    setTheme(theme === ThemeMode.dark ? ThemeMode.light : ThemeMode.dark)
+    if (theme === ThemeMode.light) {
+      setTheme(ThemeMode.dark)
+    } else if (theme === ThemeMode.dark) {
+      setTheme(ThemeMode.auto)
+    } else {
+      setTheme(ThemeMode.light)
+    }
   }
 
   useEffect((): any => {
@@ -43,7 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, defaultT
   useEffect(() => {
     document.body.setAttribute('theme-mode', _theme)
     // 移除迷你窗口的条件判断，让所有窗口都能设置主题
-    window.api?.setTheme(_theme === ThemeMode.dark ? 'dark' : 'light')
+    window.api?.setTheme(theme)
   }, [_theme])
 
   useEffect(() => {

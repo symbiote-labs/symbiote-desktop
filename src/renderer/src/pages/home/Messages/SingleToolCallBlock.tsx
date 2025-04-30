@@ -197,6 +197,13 @@ const TitleContent = styled.div`
 const ToolName = styled.span`
   font-weight: 600;
   color: var(--color-primary);
+  border: 1px solid var(--color-primary-light, #40a9ff);
+  border-radius: 4px;
+  padding: 2px 8px;
+  background-color: var(--color-bg-1);
+  font-size: 13px;
+  display: inline-block;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 `
 
 const StatusIndicator = styled.span<{ $isInvoking?: boolean; $hasError?: boolean }>`

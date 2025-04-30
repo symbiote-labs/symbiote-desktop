@@ -76,6 +76,7 @@ const Artboard: FC<ArtboardProps> = ({
                   maxHeight: '70vh',
                   objectFit: 'contain',
                   backgroundColor: 'var(--color-background-soft)',
+aspectRatio: painting.aspectRatio || '1:1',
                   cursor: 'pointer'
                 }}
               />

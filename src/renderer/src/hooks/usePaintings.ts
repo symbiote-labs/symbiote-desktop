@@ -25,7 +25,8 @@ export function usePaintings() {
         seed: generateRandomSeed(),
         steps: 25,
         guidanceScale: 4.5,
-        promptEnhancement: true
+        promptEnhancement: true,
+aspectRatio: '1:1'
       }
       dispatch(addPainting(newPainting))
       return newPainting

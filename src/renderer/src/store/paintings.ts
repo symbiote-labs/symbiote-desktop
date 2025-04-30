@@ -18,7 +18,8 @@ export const DEFAULT_PAINTING: Painting = {
   seed: '',
   steps: 25,
   guidanceScale: 4.5,
-  model: TEXT_TO_IMAGES_MODELS[0].id
+  model: TEXT_TO_IMAGES_MODELS[0].id,
+  aspectRatio: '1:1'
 }
 
 const initialState: PaintingsState = {

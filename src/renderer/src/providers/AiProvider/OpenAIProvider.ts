@@ -8,7 +8,8 @@ import {
   isReasoningModel,
   isSupportedModel,
   isVisionModel,
-  isZhipuModel
+  isZhipuModel,
+  OPENAI_NO_SUPPORT_DEV_ROLE_MODELS
 } from '@renderer/config/models'
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
@@ -71,7 +72,8 @@ export default class OpenAIProvider extends BaseProvider {
       baseURL: this.getBaseURL(),
       defaultHeaders: {
         ...this.defaultHeaders(),
-        ...(this.provider.id === 'copilot' ? { 'editor-version': 'vscode/1.97.2' } : {})
+        ...(this.provider.id === 'copilot' ? { 'editor-version': 'vscode/1.97.2' } : {}),
+        ...(this.provider.id === 'copilot' ? { 'copilot-vision-request': 'true' } : {})
       }
     })
   }
@@ -327,7 +329,7 @@ export default class OpenAIProvider extends BaseProvider {
     )
 
     let systemMessage = { role: 'system', content: enhancedPrompt }
-    if (isOpenAIoSeries(model)) {
+    if (isOpenAIoSeries(model) && !OPENAI_NO_SUPPORT_DEV_ROLE_MODELS.includes(model.id)) {
       systemMessage = {
         role: 'developer',
         content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`
@@ -1169,27 +1171,28 @@ export default class OpenAIProvider extends BaseProvider {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
     const lastUserMessage = messages.findLast((m) => m.role === 'user')
-    const { abortController, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
+    const { abortController } = this.createAbortController(lastUserMessage?.id, true)
     const { signal } = abortController
+
+    console.log('[OpenAIProvider.generateImageByChat] 开始生成图像，模型:', model.id)
+    console.log('[OpenAIProvider.generateImageByChat] 用户消息:', lastUserMessage?.content)
+
     const response = await this.sdk.images.generate(
       {
         model: model.id,
-        prompt: lastUserMessage?.content || ''
+        prompt: lastUserMessage?.content || '',
+        response_format: model.id.includes('gpt-image-1') ? undefined : 'b64_json'
       },
       {
         signal
       }
     )
 
-    await signalPromise?.promise?.catch((error) => {
-      throw error
-    })
-
     return onChunk({
       text: '',
       generateImage: {
-        type: 'url',
-        images: response.data.map((item) => item.url).filter((url): url is string => url !== undefined)
+        type: 'base64',
+        images: response.data.map((item) => `data:image/png;base64,${item.b64_json}`)
       }
     })
   }

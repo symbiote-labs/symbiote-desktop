@@ -108,54 +108,420 @@ const glmZeroPreviewProcessor: ThoughtProcessor = {
     const isGLMZeroPreview =
       modelId.toLowerCase().includes('glm-zero-preview') || modelName.toLowerCase().includes('glm-zero-preview')
 
-    return isGLMZeroPreview && content.includes('###Thinking')
+    // 增强检测能力，支持更多格式
+    return (
+      isGLMZeroPreview &&
+      (content.includes('###Thinking') ||
+        content.includes('### Thinking') ||
+        content.includes('###思考') ||
+        content.includes('### 思考'))
+    )
   },
   process: (content: string) => {
-    const parts = content.split('###')
-    const thinkingMatch = parts.find((part) => part.trim().startsWith('Thinking'))
-    const responseMatch = parts.find((part) => part.trim().startsWith('Response'))
+    // 支持多种分隔符格式
+    const separators = ['###', '### ']
+    let parts: string[] = []
+
+    // 尝试使用不同的分隔符分割内容
+    for (const separator of separators) {
+      if (content.includes(separator)) {
+        parts = content.split(separator)
+        break
+      }
+    }
+
+    if (parts.length === 0) {
+      parts = content.split('###') // 默认分隔符
+    }
+
+    // 支持英文和中文的思考和回应标记
+    const thinkingKeywords = ['Thinking', '思考', '推理']
+    const responseKeywords = ['Response', '回应', '回复', '回答']
+
+    // 查找思考部分
+    let thinkingMatch: string | undefined = undefined
+    for (const keyword of thinkingKeywords) {
+      const match = parts.find((part) => part && typeof part === 'string' && part.trim().startsWith(keyword))
+      if (match) {
+        thinkingMatch = match
+        break
+      }
+    }
+
+    // 查找回应部分
+    let responseMatch: string | undefined = undefined
+    for (const keyword of responseKeywords) {
+      const match = parts.find((part) => part && typeof part === 'string' && part.trim().startsWith(keyword))
+      if (match) {
+        responseMatch = match
+        break
+      }
+    }
+
+    // 提取思考内容和回应内容
+    let reasoning = ''
+    if (thinkingMatch) {
+      // 移除开头的关键词
+      for (const keyword of thinkingKeywords) {
+        if (thinkingMatch.trim().startsWith(keyword)) {
+          reasoning = thinkingMatch.replace(keyword, '').trim()
+          break
+        }
+      }
+    }
+
+    let finalContent = ''
+    if (responseMatch) {
+      // 移除开头的关键词
+      for (const keyword of responseKeywords) {
+        if (responseMatch.trim().startsWith(keyword)) {
+          finalContent = responseMatch.replace(keyword, '').trim()
+          break
+        }
+      }
+    }
 
     return {
-      reasoning: thinkingMatch ? thinkingMatch.replace('Thinking', '').trim() : '',
-      content: responseMatch ? responseMatch.replace('Response', '').trim() : ''
+      reasoning: reasoning,
+      content: finalContent || content // 如果没有找到回应部分，返回原始内容
     }
   }
 }
 
 const thinkTagProcessor: ThoughtProcessor = {
+  canProcess: (_content: string, message?: Message) => {
+    if (!message) return false
+
+    // 大幅放宽检测能力，支持更多格式
+    return true // 尝试处理所有消息，让process方法决定是否能提取思考过程
+  },
+  process: (content: string) => {
+    // 1. 处理正常闭合的 think 标签 - 支持多行匹配
+    const thinkPatterns = [
+      /<think>([\s\S]*?)<\/think>/,
+      /<thinking>([\s\S]*?)<\/thinking>/,
+      /<thoughts>([\s\S]*?)<\/thoughts>/,
+      /<thought>([\s\S]*?)<\/thought>/,
+      /<reasoning>([\s\S]*?)<\/reasoning>/,
+      /<reason>([\s\S]*?)<\/reason>/,
+      /<analysis>([\s\S]*?)<\/analysis>/,
+      /<reflection>([\s\S]*?)<\/reflection>/
+    ]
+
+    // 尝试匹配所有支持的标签格式
+    for (const pattern of thinkPatterns) {
+      const matches = content.match(pattern)
+      if (matches) {
+        return {
+          reasoning: matches[1].trim(),
+          content: content.replace(pattern, '').trim()
+        }
+      }
+    }
+
+    // 2. 处理只有结束标签的情况
+    const endTags = [
+      '</think>',
+      '</thinking>',
+      '</thoughts>',
+      '</thought>',
+      '</reasoning>',
+      '</reason>',
+      '</analysis>',
+      '</reflection>'
+    ]
+    for (const endTag of endTags) {
+      if (content.includes(endTag)) {
+        const parts = content.split(endTag)
+        return {
+          reasoning: parts[0].trim(),
+          content: parts.slice(1).join(endTag).trim()
+        }
+      }
+    }
+
+    // 3. 处理只有开始标签的情况
+    const startTags = [
+      '<think>',
+      '<thinking>',
+      '<thoughts>',
+      '<thought>',
+      '<reasoning>',
+      '<reason>',
+      '<analysis>',
+      '<reflection>'
+    ]
+    for (const startTag of startTags) {
+      if (content.includes(startTag)) {
+        const parts = content.split(startTag)
+        if (parts.length > 1) {
+          return {
+            reasoning: parts[1].trim(), // 跳过标签前的内容
+            content: parts[0].trim()
+          }
+        }
+      }
+    }
+
+    // 4. 处理各种中文思考过程标记格式
+    const thinkingLabelPatterns = [
+      /(思考过程[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(推理过程[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(思考[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(分析[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(推理[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(分析思考[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(思路[:：])([\s\S]*?)(?=\n\n|$)/
+    ]
+
+    // 尝试匹配所有支持的中文标记格式
+    for (const pattern of thinkingLabelPatterns) {
+      const matches = content.match(pattern)
+      if (matches) {
+        return {
+          reasoning: matches[2].trim(),
+          content: content.replace(pattern, '').trim()
+        }
+      }
+    }
+
+    // 5. 处理英文思考过程标记格式
+    const englishLabelPatterns = [
+      /(Thinking[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(Reasoning[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(Analysis[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(Thought Process[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(Thoughts[:：])([\s\S]*?)(?=\n\n|$)/,
+      /(Let me think[:：])([\s\S]*?)(?=\n\n|$)/
+    ]
+
+    // 尝试匹配所有支持的英文标记格式
+    for (const pattern of englishLabelPatterns) {
+      const matches = content.match(pattern)
+      if (matches) {
+        return {
+          reasoning: matches[2].trim(),
+          content: content.replace(pattern, '').trim()
+        }
+      }
+    }
+
+    // 6. 处理Markdown格式的思考过程
+    const markdownPatterns = [
+      /```思考\n([\s\S]*?)```/,
+      /```thinking\n([\s\S]*?)```/,
+      /```thoughts\n([\s\S]*?)```/,
+      /```reasoning\n([\s\S]*?)```/,
+      /```analysis\n([\s\S]*?)```/
+    ]
+
+    // 尝试匹配所有支持的Markdown格式
+    for (const pattern of markdownPatterns) {
+      const matches = content.match(pattern)
+      if (matches) {
+        return {
+          reasoning: matches[1].trim(),
+          content: content.replace(pattern, '').trim()
+        }
+      }
+    }
+
+    // 7. 处理特殊分隔符格式
+    const separatorPatterns = [
+      /###\s*思考\s*###([\s\S]*?)(?=###|$)/,
+      /###\s*Thinking\s*###([\s\S]*?)(?=###|$)/,
+      /===\s*思考\s*===([\s\S]*?)(?====|$)/,
+      /===\s*Thinking\s*===([\s\S]*?)(?====|$)/,
+      /\*\*\*\s*思考\s*\*\*\*([\s\S]*?)(?=\*\*\*|$)/,
+      /\*\*\*\s*Thinking\s*\*\*\*([\s\S]*?)(?=\*\*\*|$)/
+    ]
+
+    // 尝试匹配所有支持的分隔符格式
+    for (const pattern of separatorPatterns) {
+      const matches = content.match(pattern)
+      if (matches) {
+        return {
+          reasoning: matches[1].trim(),
+          content: content.replace(pattern, '').trim()
+        }
+      }
+    }
+
+    // 如果没有找到任何匹配，返回原始内容
+    return {
+      reasoning: '',
+      content
+    }
+  }
+}
+
+// 添加一个新的处理器，专门处理OpenAI格式的JSON流式输出
+const openaiJsonProcessor: ThoughtProcessor = {
   canProcess: (content: string, message?: Message) => {
     if (!message) return false
 
-    return content.startsWith('<think>') || content.includes('</think>')
+    // 检查是否包含OpenAI格式的JSON流式输出特征
+    return (
+      content.includes('data: {"id":"chatcmpl-') || content.includes('data: {"id":') || content.includes('data: [DONE]')
+    )
   },
   process: (content: string) => {
-    // 处理正常闭合的 think 标签
-    const thinkPattern = /^<think>(.*?)<\/think>/s
-    const matches = content.match(thinkPattern)
-    if (matches) {
-      return {
-        reasoning: matches[1].trim(),
-        content: content.replace(thinkPattern, '').trim()
+    try {
+      // 分割行并提取JSON内容
+      const lines = content.split('\n')
+      let combinedText = ''
+
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const jsonStr = line.substring(6)
+            const jsonData = JSON.parse(jsonStr)
+
+            if (
+              jsonData.choices &&
+              jsonData.choices[0] &&
+              jsonData.choices[0].delta &&
+              jsonData.choices[0].delta.content
+            ) {
+              combinedText += jsonData.choices[0].delta.content
+            }
+          } catch (e) {
+            // 忽略JSON解析错误
+            console.log('[openaiJsonProcessor] JSON解析错误，跳过此行:', e)
+          }
+        }
       }
+
+      // 如果成功提取了文本，处理思考过程
+      if (combinedText) {
+        // 使用与 thinkTagProcessor 相同的处理逻辑来提取思考过程
+        // 处理正常闭合的 think 标签 - 支持多行匹配
+        const thinkPatterns = [
+          /<think>([\s\S]*?)<\/think>/,
+          /<thinking>([\s\S]*?)<\/thinking>/,
+          /<thoughts>([\s\S]*?)<\/thoughts>/,
+          /<thought>([\s\S]*?)<\/thought>/,
+          /<reasoning>([\s\S]*?)<\/reasoning>/,
+          /<reason>([\s\S]*?)<\/reason>/,
+          /<analysis>([\s\S]*?)<\/analysis>/,
+          /<reflection>([\s\S]*?)<\/reflection>/
+        ]
+
+        // 尝试匹配所有支持的标签格式
+        for (const pattern of thinkPatterns) {
+          const matches = combinedText.match(pattern)
+          if (matches) {
+            // 完全移除思考标签及其内容，确保不会在内容中重复显示
+            const tagRegex = new RegExp(pattern.source, 'g')
+            return {
+              reasoning: matches[1].trim(),
+              content: combinedText.replace(tagRegex, '').trim()
+            }
+          }
+        }
+
+        // 处理只有结束标签的情况
+        const endTags = [
+          '</think>',
+          '</thinking>',
+          '</thoughts>',
+          '</thought>',
+          '</reasoning>',
+          '</reason>',
+          '</analysis>',
+          '</reflection>'
+        ]
+        for (const endTag of endTags) {
+          if (combinedText.includes(endTag)) {
+            const parts = combinedText.split(endTag)
+            return {
+              reasoning: parts[0].trim(),
+              content: parts.slice(1).join('').trim() // 完全移除结束标签
+            }
+          }
+        }
+
+        // 处理只有开始标签的情况
+        const startTags = [
+          '<think>',
+          '<thinking>',
+          '<thoughts>',
+          '<thought>',
+          '<reasoning>',
+          '<reason>',
+          '<analysis>',
+          '<reflection>'
+        ]
+        for (const startTag of startTags) {
+          if (combinedText.includes(startTag)) {
+            const parts = combinedText.split(startTag)
+            if (parts.length > 1) {
+              return {
+                reasoning: parts[1].trim(), // 跳过标签前的内容
+                content: parts[0].trim() // 只保留标签前的内容
+              }
+            }
+          }
+        }
+
+        // 处理各种中文思考过程标记格式
+        const thinkingLabelPatterns = [
+          /(思考过程[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(推理过程[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(思考[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(分析[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(推理[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(分析思考[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(思路[:：])([\s\S]*?)(?=\n\n|$)/
+        ]
+
+        // 尝试匹配所有支持的中文标记格式
+        for (const pattern of thinkingLabelPatterns) {
+          const matches = combinedText.match(pattern)
+          if (matches) {
+            // 完全移除思考标记及其内容
+            const fullMatch = matches[0]
+            return {
+              reasoning: matches[2].trim(),
+              content: combinedText.replace(fullMatch, '').trim()
+            }
+          }
+        }
+
+        // 处理英文思考过程标记格式
+        const englishLabelPatterns = [
+          /(Thinking[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(Reasoning[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(Analysis[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(Thought Process[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(Thoughts[:：])([\s\S]*?)(?=\n\n|$)/,
+          /(Let me think[:：])([\s\S]*?)(?=\n\n|$)/
+        ]
+
+        // 尝试匹配所有支持的英文标记格式
+        for (const pattern of englishLabelPatterns) {
+          const matches = combinedText.match(pattern)
+          if (matches) {
+            // 完全移除思考标记及其内容
+            const fullMatch = matches[0]
+            return {
+              reasoning: matches[2].trim(),
+              content: combinedText.replace(fullMatch, '').trim()
+            }
+          }
+        }
+
+        // 如果没有找到思考标记，返回原始内容
+        return {
+          reasoning: '',
+          content: combinedText
+        }
+      }
+    } catch (error) {
+      console.error('[openaiJsonProcessor] 处理OpenAI JSON输出时出错:', error)
     }
 
-    // 处理只有结束标签的情况
-    if (content.includes('</think>') && !content.startsWith('<think>')) {
-      const parts = content.split('</think>')
-      return {
-        reasoning: parts[0].trim(),
-        content: parts.slice(1).join('</think>').trim()
-      }
-    }
-
-    // 处理只有开始标签的情况
-    if (content.startsWith('<think>')) {
-      return {
-        reasoning: content.slice(7).trim(), // 跳过 '<think>' 标签
-        content: ''
-      }
-    }
-
+    // 如果处理失败，返回原始内容
     return {
       reasoning: '',
       content
@@ -184,13 +550,21 @@ export function withMessageThought(message: Message) {
   }
 
   const content = message.content.trim()
-  const processors: ThoughtProcessor[] = [glmZeroPreviewProcessor, thinkTagProcessor]
+  // 添加新的处理器到处理器列表
+  const processors: ThoughtProcessor[] = [openaiJsonProcessor, glmZeroPreviewProcessor, thinkTagProcessor]
 
-  const processor = processors.find((p) => p.canProcess(content, message))
-  if (processor) {
-    const { reasoning, content: processedContent } = processor.process(content)
-    message.reasoning_content = reasoning
-    message.content = processedContent
+  // 尝试使用所有处理器提取思考过程
+  for (const processor of processors) {
+    if (processor.canProcess(content, message)) {
+      const { reasoning, content: processedContent } = processor.process(content)
+
+      // 只有当成功提取到思考过程时才更新消息
+      if (reasoning) {
+        message.reasoning_content = reasoning
+        message.content = processedContent
+        break // 一旦找到匹配的处理器并成功提取，就停止处理
+      }
+    }
   }
 
   return message

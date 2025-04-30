@@ -544,6 +544,36 @@ export default class GeminiProvider extends BaseProvider {
           if (functionCalls && functionCalls.length > 0) {
             // 存储函数调用部分以供后续处理
             functionCallParts = [{ functionCall: functionCalls[0] }]
+            
+            // 在文本中插入XML标记，以便MessageContent可以识别和渲染
+            const functionCall = functionCalls[0];
+            // 获取函数名称
+            const toolName = functionCall.name;
+            // 创建像Claude那样的XML格式工具调用标记
+            const toolXML = "<tool_use><name>" + toolName + "</name><arguments>" + JSON.stringify(functionCall.args || {}) + "</arguments></tool_use>";
+            
+            // 在原始文本后添加工具XML
+            const textWithToolXML = chunkText + toolXML;
+            
+            // 发送带有工具XML的文本块
+            onChunk({
+              text: textWithToolXML,
+              usage: {
+                prompt_tokens: chunk.usageMetadata?.promptTokenCount || 0,
+                completion_tokens: chunk.usageMetadata?.candidatesTokenCount || 0,
+                total_tokens: chunk.usageMetadata?.totalTokenCount || 0
+              },
+              metrics: {
+                completion_tokens: chunk.usageMetadata?.candidatesTokenCount,
+                time_completion_millsec,
+                time_first_token_millsec
+              },
+              search: chunk.candidates?.[0]?.groundingMetadata,
+              mcpToolResponse: toolResponses // 传递更新的工具响应到UI
+            });
+            
+            // 已经发送了带工具XML的文本块，不需要再次发送
+            continue;
           }
 
           // 发送文本块到UI

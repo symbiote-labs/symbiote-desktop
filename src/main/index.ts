@@ -1,4 +1,5 @@
 import './services/MemoryFileService'
+import './services/ModuleFileManager'
 
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { replaceDevtoolsFont } from '@main/utils/windowUtil'
@@ -162,6 +163,10 @@ if (!app.requestSingleInstanceLock()) {
     registerShortcuts(mainWindow)
 
     registerIpc(mainWindow, app)
+
+    // 初始化模块文件管理器
+    // 注意：ModuleFileManager 已经是一个初始化好的实例
+    // 导入时就已经调用了 getInstance()
 
     // 注意: MsTTS IPC处理程序已在ipc.ts中注册
     // 不需要再次调用registerMsTTSIpcHandlers()

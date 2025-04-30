@@ -81,6 +81,11 @@ const FullHeightTabs = styled(Tabs)`
   height: 100%;
   overflow: hidden;
 
+  .ant-tabs-nav {
+    /* 定位到标签页头部 */
+    padding-left: 16px; /* 添加左侧内边距 */
+  }
+
   .ant-tabs-content-holder {
     flex: 1;
     overflow: hidden;
@@ -112,14 +117,12 @@ const RawScrollContainer = styled(ScrollContainerBase)<RawScrollContainerProps>`
   padding: 16px;
   white-space: pre-wrap;
   word-break: break-all;
-  /* 尝试使用不同的背景色和字体来强制区分 */
-  background-color: ${(props) =>
-    props.isDark ? '#1e1e1e' : props.token.colorFillTertiary}; /* 暗色用#1e1e1e, 亮色用稍暗的填充色 */
-  color: ${(props) => (props.isDark ? '#d4d4d4' : props.token.colorText)}; /* 暗色用#d4d4d4, 亮色用标准文本色 */
-  /* 使用标准字体，而不是代码字体，提供视觉区别 */
-  font-family: ${(props) => props.token.fontFamily};
-  font-size: ${(props) => props.token.fontSize}px; /* 使用标准字体大小 */
-  line-height: ${(props) => props.token.lineHeight}; /* 使用标准行高 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: ${(props) => (props.isDark ? '#2a2a2a' : '#f9f9f9')}; /* 更明显的背景色差异 */
+  color: ${(props) => (props.isDark ? '#d4d4d4' : '#333333')};
+  font-size: 14px;
+  line-height: 1.6;
+  border-top: 3px solid ${(props) => (props.isDark ? '#444' : '#ddd')}; /* 添加顶部边框增加区分度 */
 `
 
 const ActionBar = styled.div<StyledPropsWithToken>`
@@ -142,6 +145,16 @@ const EditorTextArea = styled(TextArea)<{ isDark: boolean }>`
   line-height: 1.5;
   background-color: ${(props) => (props.isDark ? '#1e1e1e' : '#f5f5f5')};
   color: ${(props) => (props.isDark ? '#d4d4d4' : '#333')};
+`
+
+// 添加一个新的样式组件用于原始内容视图的标题
+const RawViewTitle = styled.div`
+  padding: 8px 16px;
+  font-weight: 500;
+  border-bottom: 1px solid ${(props) => props.theme.colorBorderSecondary || '#eee'};
+  background-color: ${(props) => props.theme.colorBgElevated || '#f5f5f5'};
+  color: ${(props) => props.theme.colorText || '#333'};
+  font-size: 13px;
 `
 
 // --- Component ---
@@ -348,11 +361,14 @@ const WorkspaceFileViewer: React.FC<FileViewerProps> = ({
             },
             {
               key: 'raw',
-              label: t('workspace.raw'),
+              label: t('workspace.raw') || '原始内容',
               children: (
-                <RawScrollContainer isDark={isDarkThemeForRaw} token={token}>
-                  {content} {/* 直接渲染文本内容，没有 SyntaxHighlighter */}
-                </RawScrollContainer>
+                <>
+                  <RawViewTitle>{t('workspace.rawFileContent') || '文件原始内容 (无语法高亮)'}</RawViewTitle>
+                  <RawScrollContainer isDark={isDarkThemeForRaw} token={token}>
+                    {content}
+                  </RawScrollContainer>
+                </>
               )
             }
           ]}

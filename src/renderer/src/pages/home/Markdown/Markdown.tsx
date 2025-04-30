@@ -85,26 +85,50 @@ const Markdown: FC<Props> = ({
 
   const rehypePlugins = useMemo(() => {
     const plugins: any[] = []
-    // Check if messageContent contains any of the allowed raw HTML tags
-    const rawTagsRegex = /<(style|translated|think|tool-block)[\s>]/i
-    if (rawTagsRegex.test(messageContent)) {
-      plugins.push(rehypeRaw)
-    }
+    // 始终添加rehypeRaw插件，确保HTML标签能够被正确处理
+    plugins.push(rehypeRaw)
+
     if (mathEngine === 'KaTeX') {
       plugins.push(rehypeKatex as any)
     } else if (mathEngine === 'MathJax') {
       plugins.push(rehypeMathjax as any)
     }
     return plugins
-  }, [mathEngine, messageContent])
+  }, [mathEngine])
 
   // Remove processToolUse function as it's based on XML tags in content,
   // which won't exist with native function calling.
   // const processToolUse = (content: string) => { ... }
 
-  // 处理后的消息内容
-  // Use the original message content directly, without XML processing.
-  const processedMessageContent = messageContent
+  // 预处理消息内容，解码HTML实体并处理复杂的引用标记
+  const processedMessageContent = useMemo(() => {
+    // 先解码HTML实体
+    let content = messageContent
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+
+    // 处理复杂的引用标记格式
+    // 匹配形如 <sup class="citation-marker" data-citation='{"url":"..."}'>123</sup> 的模式
+    const citationRegex = /<sup\s+class="citation-marker"\s+data-citation='(.*?)'>(.*?)<\/sup>/g
+
+    // 替换为更简单的格式，确保data-citation属性被正确处理
+    content = content.replace(citationRegex, (match, dataCitation, number) => {
+      try {
+        // 尝试解析data-citation属性
+        const citation = JSON.parse(dataCitation.replace(/&quot;/g, '"').replace(/&apos;/g, "'"))
+        // 创建一个新的引用标记，使用更简单的格式
+        return `<sup data-citation="${encodeURIComponent(JSON.stringify(citation))}">${number}</sup>`
+      } catch (e) {
+        console.error('Error processing citation in Markdown preprocessing:', e)
+        return match // 如果解析失败，保留原始匹配
+      }
+    })
+
+    return content
+  }, [messageContent])
 
   const components = useMemo(() => {
     const baseComponents = {
@@ -124,41 +148,115 @@ const Markdown: FC<Props> = ({
       sup: (props: any) => {
         // 检查是否包含data-citation属性
         if (props['data-citation']) {
-          const citationData = parseJSON(props['data-citation'])
-          // console.log('Rendering citation sup with data:', citationData)
+          try {
+            // 尝试解析data-citation属性，可能是字符串或已解析的对象
+            let citationData = props['data-citation']
 
-          // 移除data-citation属性，避免重复处理
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { 'data-citation': unused, ...restProps } = props
+            // 如果是字符串，尝试解析为JSON
+            if (typeof citationData === 'string') {
+              try {
+                // 检查是否是URL编码的JSON
+                if (citationData.includes('%')) {
+                  citationData = decodeURIComponent(citationData)
+                }
+
+                // 先解码HTML实体
+                const decodedCitation = citationData
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&apos;/g, "'")
+
+                citationData = parseJSON(decodedCitation)
+              } catch (e) {
+                console.error('Error decoding citation data:', e)
+                // 如果解析失败，尝试直接解析
+                citationData = parseJSON(citationData)
+              }
+            }
+
+            console.log('Rendering citation sup with data:', citationData)
+
+            // 移除data-citation属性，避免重复处理
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { 'data-citation': unused, ...restProps } = props
+
+            // 确保className包含citation-marker
+            const className = `citation-marker ${restProps.className || ''}`
+
+            return (
+              <CitationTooltip citation={citationData}>
+                <sup {...restProps} className={className} />
+              </CitationTooltip>
+            )
+          } catch (error) {
+            console.error('Error processing citation data:', error, props['data-citation'])
+            // 如果解析失败，创建一个通用的引用数据
+            const genericCitation = {
+              url: `#citation-${props.children}`,
+              title: `引用 ${props.children}`,
+              content: `这是对原始回复中引用 ${props.children} 的引用`
+            }
+
+            return (
+              <CitationTooltip citation={genericCitation}>
+                <sup {...props} className="citation-marker" />
+              </CitationTooltip>
+            )
+          }
+        }
+
+        // 检查是否有class="citation-marker"但没有data-citation
+        if (props.className && props.className.includes('citation-marker')) {
+          // 创建一个通用的引用数据
+          const genericCitation = {
+            url: `#citation-${props.children}`,
+            title: `引用 ${props.children}`,
+            content: `这是对原始回复中引用 ${props.children} 的引用`
+          }
 
           return (
-            <CitationTooltip citation={citationData}>
-              <sup {...restProps} />
+            <CitationTooltip citation={genericCitation}>
+              <sup {...props} />
             </CitationTooltip>
           )
         }
+
         return <sup {...props} />
       },
-      // 自定义处理think标签
+      // 自定义处理所有思考相关标签 - 显示思考过程的内容
       think: (props: any) => {
-        // 将think标签内容渲染为带样式的span，避免在p标签内使用div导致的hydration错误
-        return (
-          <span
-            className="thinking-content"
-            style={{
-              display: 'block',
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              padding: '10px 15px',
-              borderRadius: '8px',
-              marginBottom: '15px',
-              borderLeft: '3px solid var(--color-primary)',
-              fontStyle: 'italic',
-              color: 'var(--color-text-2)'
-            }}>
-            <span style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>思考过程:</span>
-            {props.children}
-          </span>
-        )
+        // 显示思考过程的内容
+        return props.children
+      },
+      thinking: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      thoughts: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      thought: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      reasoning: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      reason: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      analysis: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
+      },
+      reflection: (props: any) => {
+        // 显示思考过程的内容
+        return props.children
       },
       // 自定义处理translated标签
       translated: (props: any) => {
@@ -193,30 +291,32 @@ const Markdown: FC<Props> = ({
         console.log('[Markdown] Rendering SingleToolCallBlock for toolCallId:', toolCallId) // Log rendering SingleToolCallBlock
         // 渲染 SingleToolCallBlock 组件，并传递必要的 props
         return (
-          <SingleToolCallBlock
-            toolResponse={toolResponse}
-            isActive={activeToolKeys.includes(toolCallId)}
-            isCopied={copiedToolMap[toolCallId] || false}
-            isEditing={editingToolId === toolCallId}
-            editedParamsString={editedToolParamsString}
-            fontFamily={
-              messageFont === 'serif'
-                ? 'serif'
-                : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans","Helvetica Neue", sans-serif'
-            } // 传递字体样式
-            t={t} // 传递翻译函数
-            onToggle={() =>
-              onToolToggle((prev) =>
-                prev.includes(toolCallId) ? prev.filter((k) => k !== toolCallId) : [...prev, toolCallId]
-              )
-            } // 传递 onToolToggle 函数
-            onCopy={onToolCopy} // 传递 onToolCopy 函数
-            onRerun={onToolRerun} // 传递 onToolRerun 函数
-            onEdit={onToolEdit} // 传递 onToolEdit 函数
-            onSave={() => toolResponse && onToolSave(toolResponse)} // 传递 onToolSave 函数
-            onCancel={onToolCancel} // 传递 onToolCancel 函数
-            onParamsChange={onToolParamsChange} // 传递 onToolParamsChange 函数
-          />
+          <div className="tool-block-wrapper">
+            <SingleToolCallBlock
+              toolResponse={toolResponse}
+              isActive={activeToolKeys.includes(toolCallId)}
+              isCopied={copiedToolMap[toolCallId] || false}
+              isEditing={editingToolId === toolCallId}
+              editedParamsString={editedToolParamsString}
+              fontFamily={
+                messageFont === 'serif'
+                  ? 'serif'
+                  : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans","Helvetica Neue", sans-serif'
+              } // 传递字体样式
+              t={t} // 传递翻译函数
+              onToggle={() =>
+                onToolToggle((prev) =>
+                  prev.includes(toolCallId) ? prev.filter((k) => k !== toolCallId) : [...prev, toolCallId]
+                )
+              } // 传递 onToolToggle 函数
+              onCopy={onToolCopy} // 传递 onToolCopy 函数
+              onRerun={onToolRerun} // 传递 onToolRerun 函数
+              onEdit={onToolEdit} // 传递 onToolEdit 函数
+              onSave={() => toolResponse && onToolSave(toolResponse)} // 传递 onToolSave 函数
+              onCancel={onToolCancel} // 传递 onToolCancel 函数
+              onParamsChange={onToolParamsChange} // 传递 onToolParamsChange 函数
+            />
+          </div>
         )
       }
     } as Partial<Components>
@@ -236,6 +336,9 @@ const Markdown: FC<Props> = ({
     onToolParamsChange, // 添加 onToolParamsChange 依赖
     t, // 添加 t 依赖
     messageFont // 添加 messageFont 依赖
+    // 移除不再需要的依赖
+    // message.model?.provider
+    // message.model?.id
   ])
 
   // 使用useEffect在渲染后添加事件处理

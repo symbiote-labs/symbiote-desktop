@@ -28,6 +28,9 @@ export const useWebviewEvents = () => {
   ) => {
     // console.log('Setting up event listeners for tab:', tabId) // 注释掉日志
 
+    // 添加WebView就绪状态标志
+    let isWebViewReady = false
+
     // 处理加载开始事件
     const handleDidStartLoading = () => {
       // 只更新当前活动标签页的UI状态
@@ -42,7 +45,15 @@ export const useWebviewEvents = () => {
     // 处理加载结束事件
     const handleDidStopLoading = () => {
       const currentURL = webview.getURL()
-      const pageTitle = webview.getTitle() || currentURL
+      // 安全地获取标题，确保WebView已准备好
+      let pageTitle = currentURL
+      if (isWebViewReady) {
+        try {
+          pageTitle = webview.getTitle() || currentURL
+        } catch (err) {
+          console.warn(`[Tab ${tabId}] Failed to get title, WebView may not be ready:`, err)
+        }
+      }
 
       console.log(`[Tab ${tabId}] Page loaded: ${currentURL}, title: ${pageTitle}`)
 
@@ -61,28 +72,45 @@ export const useWebviewEvents = () => {
         isLoading: false,
         url: currentURL,
         title: pageTitle, // 使用初始获取的pageTitle
-        canGoBack: webview.canGoBack(),
-        canGoForward: webview.canGoForward()
+        canGoBack: isWebViewReady ? webview.canGoBack() : false,
+        canGoForward: isWebViewReady ? webview.canGoForward() : false
       })
 
       console.log(`[Tab ${tabId}] Updated tab info after stop loading with title: ${pageTitle}`)
 
       // 使用setTimeout确保在下一个事件循环中更新标题 (如果需要更精确的最终标题)
       // 但不在这里更新 isLoading
-      setTimeout(() => {
-        const finalTitle = webview.getTitle() || currentURL
-        if (finalTitle !== pageTitle) {
-          updateTabInfo(tabId, { title: finalTitle })
-          console.log(`[Tab ${tabId}] Final title updated: ${finalTitle}`)
-        }
-      }, 100)
+      if (isWebViewReady) {
+        setTimeout(() => {
+          try {
+            const finalTitle = webview.getTitle() || currentURL
+            if (finalTitle !== pageTitle) {
+              updateTabInfo(tabId, { title: finalTitle })
+              console.log(`[Tab ${tabId}] Final title updated: ${finalTitle}`)
+            }
+          } catch (err) {
+            console.warn(`[Tab ${tabId}] Failed to get final title:`, err)
+          }
+        }, 100)
+      }
     }
 
     // 处理导航事件
     const handleDidNavigate = (e: any) => {
-      const canGoBackStatus = webview.canGoBack()
-      const canGoForwardStatus = webview.canGoForward()
-      const pageTitle = webview.getTitle() || e.url
+      // 仅当WebView准备好时才获取导航状态
+      let canGoBackStatus = false
+      let canGoForwardStatus = false
+      let pageTitle = e.url
+
+      if (isWebViewReady) {
+        try {
+          canGoBackStatus = webview.canGoBack()
+          canGoForwardStatus = webview.canGoForward()
+          pageTitle = webview.getTitle() || e.url
+        } catch (err) {
+          console.warn(`[Tab ${tabId}] Failed to get navigation status:`, err)
+        }
+      }
 
       console.log(`[Tab ${tabId}] Navigation: ${e.url}, title: ${pageTitle}`)
 
@@ -108,9 +136,20 @@ export const useWebviewEvents = () => {
 
     // 处理页内导航事件
     const handleDidNavigateInPage = (e: any) => {
-      const canGoBackStatus = webview.canGoBack()
-      const canGoForwardStatus = webview.canGoForward()
-      const pageTitle = webview.getTitle() || e.url
+      // 仅当WebView准备好时才获取导航状态
+      let canGoBackStatus = false
+      let canGoForwardStatus = false
+      let pageTitle = e.url
+
+      if (isWebViewReady) {
+        try {
+          canGoBackStatus = webview.canGoBack()
+          canGoForwardStatus = webview.canGoForward()
+          pageTitle = webview.getTitle() || e.url
+        } catch (err) {
+          console.warn(`[Tab ${tabId}] Failed to get in-page navigation status:`, err)
+        }
+      }
 
       console.log(`[Tab ${tabId}] In-page navigation: ${e.url}, title: ${pageTitle}`)
 
@@ -153,9 +192,19 @@ export const useWebviewEvents = () => {
 
     // 处理DOM就绪事件
     const handleDomReady = () => {
+      // 标记WebView已准备好
+      isWebViewReady = true
+
       // 更新导航状态
-      const canGoBackStatus = webview.canGoBack()
-      const canGoForwardStatus = webview.canGoForward()
+      let canGoBackStatus = false
+      let canGoForwardStatus = false
+
+      try {
+        canGoBackStatus = webview.canGoBack()
+        canGoForwardStatus = webview.canGoForward()
+      } catch (err) {
+        console.warn(`[Tab ${tabId}] Failed to get navigation status in dom-ready:`, err)
+      }
 
       // 更新选项卡状态
       updateTabInfo(tabId, {

@@ -2,7 +2,7 @@ import { SettingOutlined } from '@ant-design/icons'
 import { useProvider } from '@renderer/hooks/useProvider'
 import { Model } from '@renderer/types'
 import { Button, Tooltip } from 'antd'
-import { FC, useCallback } from 'react'
+import { FC, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -17,16 +17,35 @@ interface ModelSettingsButtonProps {
 const ModelSettingsButton: FC<ModelSettingsButtonProps> = ({ model, size = 16, className }) => {
   const { t } = useTranslation()
   const { updateModel } = useProvider(model.provider)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const handleClick = useCallback(
     async (e: React.MouseEvent) => {
-      e.stopPropagation() // 防止触发父元素的点击事件
-      const updatedModel = await ModelEditPopup.show(model)
-      if (updatedModel) {
-        updateModel(updatedModel)
+      e.stopPropagation()
+      e.preventDefault()
+
+      if (isProcessing) return
+
+      try {
+        setIsProcessing(true)
+
+        ModelEditPopup.hide()
+
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        const updatedModel = await ModelEditPopup.show(model)
+
+        if (updatedModel) {
+          updateModel(updatedModel)
+          console.log('模型更新成功:', updatedModel.name)
+        }
+      } catch (error) {
+        console.error('模型设置更新失败:', error)
+      } finally {
+        setIsProcessing(false)
       }
     },
-    [model, updateModel]
+    [model, updateModel, isProcessing]
   )
 
   return (
@@ -36,6 +55,11 @@ const ModelSettingsButton: FC<ModelSettingsButtonProps> = ({ model, size = 16, c
         icon={<SettingOutlined style={{ fontSize: size }} />}
         onClick={handleClick}
         className={className}
+        onMouseDown={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+        }}
+        disabled={isProcessing}
       />
     </Tooltip>
   )
@@ -45,7 +69,7 @@ const StyledButton = styled(Button)`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px; // 增加内边距
+  padding: 6px;
   margin: 0;
   height: auto;
   width: auto;
@@ -54,10 +78,17 @@ const StyledButton = styled(Button)`
   border: none;
   opacity: 0.5;
   transition: opacity 0.2s;
+  z-index: 100;
+  position: relative;
 
   &:hover {
     opacity: 1;
     background: transparent;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
   }
 `
 

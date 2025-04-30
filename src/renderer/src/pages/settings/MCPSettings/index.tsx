@@ -1,5 +1,6 @@
 import { nanoid } from '@reduxjs/toolkit'
 import { VStack } from '@renderer/components/Layout'
+import TopMcpSearch from '@renderer/components/TopMcpSearch'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useMCPServers } from '@renderer/hooks/useMCPServers'
 import { MCPServer } from '@renderer/types'
@@ -126,6 +127,7 @@ const MCPSettings: FC = () => {
 
   return (
     <Container>
+      <TopMcpSearch />
       <ThreeColumnLayout leftColumn={renderServerList()} middleColumn={renderContent()} rightColumn={renderNavMenu()} />
     </Container>
   )

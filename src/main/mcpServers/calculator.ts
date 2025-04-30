@@ -8,44 +8,200 @@ import Logger from 'electron-log'
 import fs from 'fs/promises'
 import path from 'path'
 
-// 动态加载 mathjs
+// 缓存实例和代码
 let math: any = null
+let mathJsCodeCache: string | null = null
+let plotly: any = null
+let plotlyCodeCache: string | null = null
+
+// 创建一个加载 plotly.js 的函数
+async function loadPlotly() {
+  try {
+    // 如果已有实例，直接返回
+    if (plotly) {
+      Logger.info('[Calculator] Using cached plotly instance')
+      return true
+    }
+
+    // 使用应用程序的用户数据目录，确保缓存持久化
+    const cacheDir = path.join(app.getPath('userData'), 'calculator-cache')
+    const plotlyJsPath = path.join(cacheDir, 'plotly.js')
+    const plotlyJsVersionPath = path.join(cacheDir, 'plotly-version.txt')
+    const currentVersion = '3.0.1' // 当前使用的 plotly.js 版本
+
+    // 确保缓存目录存在
+    try {
+      await fs.mkdir(cacheDir, { recursive: true })
+    } catch (err) {
+      Logger.warn('[Calculator] Failed to create cache directory:', err)
+    }
+
+    // 检查缓存的版本是否匹配
+    let useCache = false
+    try {
+      const cachedVersion = await fs.readFile(plotlyJsVersionPath, 'utf-8')
+      if (cachedVersion.trim() === currentVersion) {
+        useCache = true
+      } else {
+        Logger.info(`[Calculator] Cached plotly version ${cachedVersion} doesn't match current ${currentVersion}`)
+      }
+    } catch (err) {
+      Logger.info('[Calculator] No cached plotly version info found')
+    }
+
+    // 尝试从本地缓存加载
+    if (useCache) {
+      try {
+        if (!plotlyCodeCache) {
+          plotlyCodeCache = await fs.readFile(plotlyJsPath, 'utf-8')
+          Logger.info('[Calculator] Loaded plotly from local cache')
+        }
+      } catch (err) {
+        useCache = false
+        Logger.warn('[Calculator] Failed to read cached plotly:', err)
+      }
+    }
+
+    // 如果缓存不可用或版本不匹配，从网络加载
+    if (!useCache) {
+      try {
+        Logger.info('[Calculator] Downloading plotly from unpkg.com')
+        const response = await axios.get(`https://unpkg.com/plotly.js-dist@${currentVersion}/plotly.js`)
+        plotlyCodeCache = response.data
+
+        // 同步保存到本地，确保缓存文件被写入
+        await fs.writeFile(plotlyJsPath, plotlyCodeCache || '')
+        await fs.writeFile(plotlyJsVersionPath, currentVersion)
+        Logger.info(`[Calculator] Saved plotly to ${plotlyJsPath}`)
+      } catch (err) {
+        Logger.error('[Calculator] Failed to download plotly:', err)
+        // 如果下载失败但有旧缓存，尝试使用旧缓存
+        if (!plotlyCodeCache) {
+          try {
+            plotlyCodeCache = await fs.readFile(plotlyJsPath, 'utf-8')
+            Logger.info('[Calculator] Falling back to existing plotly cache despite version mismatch')
+          } catch (readErr) {
+            Logger.error('[Calculator] No fallback plotly cache available:', readErr)
+            throw err // 重新抛出原始错误
+          }
+        }
+      }
+    }
+
+    // 直接从内存执行代码
+    const plotlyModule = { exports: {} }
+    const moduleFn = new Function('module', 'exports', plotlyCodeCache!)
+    moduleFn(plotlyModule, plotlyModule.exports)
+
+    plotly = plotlyModule.exports
+    Logger.info('[Calculator] Successfully loaded plotly')
+    return true
+  } catch (error) {
+    Logger.error('[Calculator] Failed to load plotly:', error)
+
+    // 降级实现 - 返回一个简单的 SVG 生成函数
+    plotly = {
+      newPlot: () => {
+        throw new Error('Plotly is not available')
+      },
+      toImage: () => {
+        throw new Error('Plotly is not available')
+      }
+    }
+
+    Logger.info('[Calculator] Using fallback plotly implementation')
+    return false
+  }
+}
 
 // 创建一个加载 mathjs 的函数
 async function loadMathJs() {
   try {
-    Logger.info('[Calculator] Loading mathjs from unpkg.com')
+    // 如果已有实例，直接返回
+    if (math) {
+      Logger.info('[Calculator] Using cached mathjs instance')
+      return true
+    }
 
-    // 尝试从 unpkg.com 加载 mathjs
-    const response = await axios.get('https://unpkg.com/mathjs@12.4.0/lib/browser/math.js')
+    // 使用应用程序的用户数据目录而不是临时目录，确保缓存持久化
+    const cacheDir = path.join(app.getPath('userData'), 'calculator-cache')
+    const mathJsPath = path.join(cacheDir, 'math.js')
+    const mathJsVersionPath = path.join(cacheDir, 'version.txt')
+    const currentVersion = '12.4.0' // 当前使用的 mathjs 版本
 
-    // 创建一个临时目录来存储下载的脚本
-    const tempDir = path.join(app.getPath('temp'), 'cherry-calculator')
-    await fs.mkdir(tempDir, { recursive: true })
+    // 确保缓存目录存在
+    try {
+      await fs.mkdir(cacheDir, { recursive: true })
+    } catch (err) {
+      Logger.warn('[Calculator] Failed to create cache directory:', err)
+    }
 
-    const mathJsPath = path.join(tempDir, 'math.js')
-    await fs.writeFile(mathJsPath, response.data)
+    // 检查缓存的版本是否匹配
+    let useCache = false
+    try {
+      const cachedVersion = await fs.readFile(mathJsVersionPath, 'utf-8')
+      if (cachedVersion.trim() === currentVersion) {
+        useCache = true
+      } else {
+        Logger.info(`[Calculator] Cached mathjs version ${cachedVersion} doesn't match current ${currentVersion}`)
+      }
+    } catch (err) {
+      Logger.info('[Calculator] No cached version info found')
+    }
 
-    Logger.info(`[Calculator] Saved mathjs to ${mathJsPath}`)
+    // 尝试从本地缓存加载
+    if (useCache) {
+      try {
+        if (!mathJsCodeCache) {
+          mathJsCodeCache = await fs.readFile(mathJsPath, 'utf-8')
+          Logger.info('[Calculator] Loaded mathjs from local cache')
+        }
+      } catch (err) {
+        useCache = false
+        Logger.warn('[Calculator] Failed to read cached mathjs:', err)
+      }
+    }
 
-    // 使用 require 加载本地保存的脚本
-    // 注意：这里使用了一个技巧，通过创建一个模块来执行脚本
-    const mathJsCode = await fs.readFile(mathJsPath, 'utf-8')
+    // 如果缓存不可用或版本不匹配，从网络加载
+    if (!useCache) {
+      try {
+        Logger.info('[Calculator] Downloading mathjs from unpkg.com')
+        const response = await axios.get(`https://unpkg.com/mathjs@${currentVersion}/lib/browser/math.js`)
+        mathJsCodeCache = response.data
+
+        // 同步保存到本地，确保缓存文件被写入
+        await fs.writeFile(mathJsPath, mathJsCodeCache || '')
+        await fs.writeFile(mathJsVersionPath, currentVersion)
+        Logger.info(`[Calculator] Saved mathjs to ${mathJsPath}`)
+      } catch (err) {
+        Logger.error('[Calculator] Failed to download mathjs:', err)
+        // 如果下载失败但有旧缓存，尝试使用旧缓存
+        if (!mathJsCodeCache) {
+          try {
+            mathJsCodeCache = await fs.readFile(mathJsPath, 'utf-8')
+            Logger.info('[Calculator] Falling back to existing cache despite version mismatch')
+          } catch (readErr) {
+            Logger.error('[Calculator] No fallback cache available:', readErr)
+            throw err // 重新抛出原始错误
+          }
+        }
+      }
+    }
+
+    // 直接从内存执行代码
     const mathModule = { exports: {} }
-    const moduleFn = new Function('module', 'exports', mathJsCode)
+    const moduleFn = new Function('module', 'exports', mathJsCodeCache!)
     moduleFn(mathModule, mathModule.exports)
 
     math = mathModule.exports
     Logger.info('[Calculator] Successfully loaded mathjs')
     return true
   } catch (error) {
-    Logger.error('[Calculator] Failed to load mathjs from unpkg.com:', error)
+    Logger.error('[Calculator] Failed to load mathjs:', error)
 
-    // 如果加载失败，使用基本的数学函数
+    // 降级实现
     math = {
       evaluate: (expr: string) => {
-        // 安全的 eval 实现，仅支持基本数学运算
-        // 这只是一个备用方案，功能有限
         return Function('"use strict"; return (' + expr + ')')()
       },
       format: (value: any) => String(value),
@@ -67,7 +223,6 @@ async function loadMathJs() {
         return {
           toNumber: () => value,
           to: (targetUnit: string) => {
-            // 非常基本的单位转换，仅作为备用
             if (unit === 'inch' && targetUnit === 'cm') return { toNumber: () => value * 2.54 }
             if (unit === 'cm' && targetUnit === 'inch') return { toNumber: () => value / 2.54 }
             if (unit === 'kg' && targetUnit === 'lb') return { toNumber: () => value * 2.20462 }
@@ -741,8 +896,8 @@ const GRAPH_TOOL = {
       operation: {
         type: 'string',
         description:
-          '图形操作，可选值：evaluate(函数求值)、roots(求根)、extrema(极值点)、inflection(拐点)、tangent(切线)、describe(图像描述)、intersect(交点)',
-        enum: ['evaluate', 'roots', 'extrema', 'inflection', 'tangent', 'describe', 'intersect']
+          '图形操作，可选值：evaluate(函数求值)、plot(绘制函数图像)、roots(求根)、extrema(极值点)、inflection(拐点)、tangent(切线)、describe(图像描述)、intersect(交点)',
+        enum: ['evaluate', 'plot', 'roots', 'extrema', 'inflection', 'tangent', 'describe', 'intersect']
       },
       function: {
         type: 'string',
@@ -771,6 +926,26 @@ const GRAPH_TOOL = {
       domain: {
         type: 'string',
         description: '当operation为describe时，函数的定义域，格式为：min,max'
+      },
+      xMin: {
+        type: 'number',
+        description: '当operation为plot时，x轴的最小值，默认为-10'
+      },
+      xMax: {
+        type: 'number',
+        description: '当operation为plot时，x轴的最大值，默认为10'
+      },
+      yMin: {
+        type: 'number',
+        description: '当operation为plot时，y轴的最小值，默认为-10'
+      },
+      yMax: {
+        type: 'number',
+        description: '当operation为plot时，y轴的最大值，默认为10'
+      },
+      points: {
+        type: 'number',
+        description: '当operation为plot时，用于绘制图像的点数，默认为100'
       }
     },
     required: ['operation', 'function']
@@ -803,27 +978,34 @@ class CalculatorServer {
 
     Logger.info('[Calculator] Server initialized with tools capability')
 
-    // 初始化 mathjs 并设置请求处理程序
-    this.initialize().then(() => {
-      Logger.info('[Calculator] Server initialization completed')
-    })
+    // 立即设置请求处理程序，使工具列表可见
+    this.setupRequestHandlers()
+
+    // 异步加载 mathjs，不阻塞工具列表显示
+    this.initialize()
+      .then(() => {
+        Logger.info('[Calculator] Server initialization completed')
+      })
+      .catch((error) => {
+        Logger.error('[Calculator] Server initialization failed:', error)
+      })
 
     Logger.info('[Calculator] Server initialization started')
   }
 
-  // 初始化函数，加载 mathjs 并设置请求处理程序
+  // 初始化函数，加载 mathjs 和 plotly
   private async initialize(): Promise<void> {
     try {
       // 加载 mathjs
       await loadMathJs()
+      Logger.info('[Calculator] MathJS initialization complete')
 
-      // 设置请求处理程序
-      this.setupRequestHandlers()
-
-      Logger.info('[Calculator] Server initialization complete')
+      // 加载 plotly
+      await loadPlotly()
+      Logger.info('[Calculator] Plotly initialization complete')
     } catch (error) {
       Logger.error('[Calculator] Error during initialization:', error)
-      throw error
+      // 不抛出错误，让服务器继续运行，使用降级实现
     }
   }
 
@@ -859,38 +1041,52 @@ class CalculatorServer {
       Logger.info(`[Calculator] Tool call received: ${name}`, args)
 
       try {
+        let result
+
         if (name === 'calculate') {
-          return this.handleCalculate(args)
+          result = this.handleCalculate(args)
         } else if (name === 'convert_unit') {
-          return this.handleUnitConvert(args)
+          result = this.handleUnitConvert(args)
         } else if (name === 'statistics') {
-          return this.handleStatistics(args)
+          result = this.handleStatistics(args)
         } else if (name === 'solve_equation') {
-          return this.handleEquationSolver(args)
+          result = this.handleEquationSolver(args)
         } else if (name === 'calculus') {
-          return this.handleCalculus(args)
+          result = this.handleCalculus(args)
         } else if (name === 'matrix') {
-          return this.handleMatrix(args)
+          result = this.handleMatrix(args)
         } else if (name === 'probability') {
-          return this.handleProbability(args)
+          result = this.handleProbability(args)
         } else if (name === 'finance') {
-          return this.handleFinance(args)
+          result = this.handleFinance(args)
         } else if (name === 'physics') {
-          return this.handlePhysics(args)
+          result = this.handlePhysics(args)
         } else if (name === 'chemistry') {
-          return this.handleChemistry(args)
+          result = this.handleChemistry(args)
         } else if (name === 'programming') {
-          return this.handleProgramming(args)
+          result = this.handleProgramming(args)
         } else if (name === 'datetime') {
-          return this.handleDateTime(args)
+          result = this.handleDateTime(args)
         } else if (name === 'geometry') {
-          return this.handleGeometry(args)
+          result = this.handleGeometry(args)
         } else if (name === 'graph') {
-          return this.handleGraph(args)
+          result = this.handleGraph(args)
+        } else {
+          Logger.error(`[Calculator] Unknown tool: ${name}`)
+          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`)
         }
 
-        Logger.error(`[Calculator] Unknown tool: ${name}`)
-        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`)
+        // 确保结果是一个对象
+        if (typeof result !== 'object') {
+          result = { result }
+        }
+
+        // 在结果中添加原始参数信息
+        return {
+          ...result,
+          // 添加一个特殊字段，包含原始参数
+          _originalArgs: args
+        }
       } catch (error) {
         Logger.error(`[Calculator] Error handling tool call ${name}:`, error)
         return {
@@ -900,6 +1096,7 @@ class CalculatorServer {
               text: error instanceof Error ? error.message : String(error)
             }
           ],
+          _originalArgs: args, // 即使出错也包含原始参数
           isError: true
         }
       }
@@ -1825,14 +2022,24 @@ class CalculatorServer {
           if (rate === undefined || nper === undefined || pmt === undefined) {
             throw new McpError(ErrorCode.InvalidParams, 'Rate, nper, and pmt are required for pv')
           }
-          result = math.finance.pv(rate, nper, pmt, fv || 0, type)
+          // 计算现值 PV = PMT * ((1 - (1 + rate)^(-nper)) / rate) + FV * (1 + rate)^(-nper)
+          result = pmt * ((1 - Math.pow(1 + rate, -nper)) / rate) + (fv || 0) * Math.pow(1 + rate, -nper)
+          // 如果是期初付款，需要调整
+          if (type === 1) {
+            result = result * (1 + rate)
+          }
           break
 
         case 'fv':
           if (rate === undefined || nper === undefined || pmt === undefined) {
             throw new McpError(ErrorCode.InvalidParams, 'Rate, nper, and pmt are required for fv')
           }
-          result = math.finance.fv(rate, nper, pmt, pv || 0, type)
+          // 计算终值 FV = PMT * ((1 + rate)^nper - 1) / rate + PV * (1 + rate)^nper
+          result = pmt * ((Math.pow(1 + rate, nper) - 1) / rate) + (pv || 0) * Math.pow(1 + rate, nper)
+          // 如果是期初付款，需要调整
+          if (type === 1) {
+            result = result * (1 + rate)
+          }
           break
 
         case 'pmt':
@@ -2675,7 +2882,7 @@ class CalculatorServer {
       // 根据操作类型处理几何计算
       switch (operation) {
         case 'distance':
-          result = this.handleGeometryDistance()
+          result = this.handleGeometryDistance(args)
           break
         case 'area':
           result = this.handleGeometryArea()
@@ -2729,10 +2936,89 @@ class CalculatorServer {
   }
 
   // 处理距离计算
-  private handleGeometryDistance() {
-    // 距离计算的实现
-    return {
-      message: 'Distance calculation functionality will be implemented'
+  private handleGeometryDistance(args: any) {
+    const shape = args?.shape
+    const points = args?.points
+
+    if (!shape || !points) {
+      throw new McpError(ErrorCode.InvalidParams, 'Shape and points are required for distance calculation')
+    }
+
+    try {
+      // 解析点坐标
+      const pointsArray = points.split(';').map((point: string) => {
+        const coords = point.split(',').map((coord: string) => parseFloat(coord.trim()))
+        return coords
+      })
+
+      if (pointsArray.length < 2) {
+        throw new McpError(ErrorCode.InvalidParams, 'At least two points are required for distance calculation')
+      }
+
+      let distance: number
+
+      switch (shape) {
+        case 'point':
+          // 计算两点之间的距离
+          if (pointsArray[0].length === 2 && pointsArray[1].length === 2) {
+            // 2D 点
+            const [x1, y1] = pointsArray[0]
+            const [x2, y2] = pointsArray[1]
+            distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2))
+          } else if (pointsArray[0].length === 3 && pointsArray[1].length === 3) {
+            // 3D 点
+            const [x1, y1, z1] = pointsArray[0]
+            const [x2, y2, z2] = pointsArray[1]
+            distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2))
+          } else {
+            throw new McpError(ErrorCode.InvalidParams, 'Points must have the same dimensions (2D or 3D)')
+          }
+          break
+
+        case 'line':
+          // 计算点到线的距离
+          if (pointsArray.length < 3) {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              'For point-to-line distance, need at least 3 points: 2 for the line and 1 for the point'
+            )
+          }
+
+          if (pointsArray[0].length === 2 && pointsArray[1].length === 2 && pointsArray[2].length === 2) {
+            // 2D 点到线的距离
+            const [x1, y1] = pointsArray[0] // 线上的点1
+            const [x2, y2] = pointsArray[1] // 线上的点2
+            const [x0, y0] = pointsArray[2] // 要计算距离的点
+
+            // 计算点到线的距离: |Ax0 + By0 + C| / sqrt(A^2 + B^2)
+            // 其中 Ax + By + C = 0 是线的方程
+            const A = y2 - y1
+            const B = x1 - x2
+            const C = x2 * y1 - x1 * y2
+
+            distance = Math.abs(A * x0 + B * y0 + C) / Math.sqrt(A * A + B * B)
+          } else {
+            throw new McpError(ErrorCode.InvalidParams, 'Only 2D point-to-line distance is supported')
+          }
+          break
+
+        default:
+          throw new McpError(ErrorCode.InvalidParams, `Distance calculation for shape '${shape}' is not supported`)
+      }
+
+      return {
+        shape: shape,
+        points: pointsArray,
+        distance: distance
+      }
+    } catch (error) {
+      if (error instanceof McpError) {
+        throw error
+      }
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Error calculating distance: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 
@@ -2809,7 +3095,10 @@ class CalculatorServer {
       // 根据操作类型处理图形函数
       switch (operation) {
         case 'evaluate':
-          result = this.handleGraphEvaluate()
+          result = this.handleGraphEvaluate(args)
+          break
+        case 'plot':
+          result = this.handleGraphPlot(args)
           break
         case 'roots':
           result = this.handleGraphRoots()
@@ -2861,10 +3150,38 @@ class CalculatorServer {
   }
 
   // 处理函数求值
-  private handleGraphEvaluate() {
-    // 函数求值的实现
-    return {
-      message: 'Function evaluation functionality will be implemented'
+  private handleGraphEvaluate(args: any) {
+    const func = args?.function
+    const variable = args?.variable || 'x'
+    const point = args?.point
+
+    if (!func) {
+      throw new McpError(ErrorCode.InvalidParams, 'Function expression is required')
+    }
+
+    if (point === undefined) {
+      throw new McpError(ErrorCode.InvalidParams, 'Point value is required for function evaluation')
+    }
+
+    try {
+      // 创建一个包含变量值的对象
+      const scope: Record<string, number> = {}
+      scope[variable] = point
+
+      // 使用 mathjs 计算函数值
+      const result = math.evaluate(func, scope)
+
+      return {
+        function: func,
+        variable: variable,
+        point: point,
+        value: result
+      }
+    } catch (error) {
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Error evaluating function: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 
@@ -2913,6 +3230,94 @@ class CalculatorServer {
     // 交点的实现
     return {
       message: 'Intersection finding functionality will be implemented'
+    }
+  }
+
+  // 处理函数图像绘制
+  private async handleGraphPlot(args: any) {
+    const func = args?.function
+    const variable = args?.variable || 'x'
+    const xMin = args?.xMin !== undefined ? args.xMin : -10
+    const xMax = args?.xMax !== undefined ? args.xMax : 10
+    const yMin = args?.yMin !== undefined ? args.yMin : -10
+    const yMax = args?.yMax !== undefined ? args.yMax : 10
+    const points = args?.points || 100
+
+    if (!func) {
+      throw new McpError(ErrorCode.InvalidParams, 'Function expression is required')
+    }
+
+    try {
+      // 检查 plotly 是否可用
+      if (!plotly) {
+        throw new Error('Plotly is not available')
+      }
+
+      // 生成 x 值数组
+      const xValues = Array.from({ length: points }, (_, i) => xMin + (i * (xMax - xMin)) / (points - 1))
+
+      // 计算 y 值
+      const yValues = xValues.map((x) => {
+        try {
+          const scope: Record<string, number> = {}
+          scope[variable] = x
+          return math.evaluate(func, scope)
+        } catch (error) {
+          // 如果计算失败，返回 null
+          return null
+        }
+      })
+
+      // 创建 plotly 图形
+      const figure = {
+        data: [
+          {
+            x: xValues,
+            y: yValues,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: 'rgb(75, 192, 192)', width: 2 }
+          }
+        ],
+        layout: {
+          title: `y = ${func}`,
+          xaxis: { range: [xMin, xMax], title: 'x' },
+          yaxis: { range: [yMin, yMax], title: 'y' },
+          width: 800,
+          height: 500,
+          margin: { l: 50, r: 50, b: 50, t: 50 },
+          plot_bgcolor: 'rgb(240, 240, 240)',
+          paper_bgcolor: 'rgb(255, 255, 255)'
+        }
+      }
+
+      // 生成图像
+      const imgBuffer = await plotly.toImage(figure, { format: 'png' })
+      const base64Image = `data:image/png;base64,${imgBuffer.toString('base64')}`
+
+      return {
+        function: func,
+        variable: variable,
+        domain: { x: [xMin, xMax], y: [yMin, yMax] },
+        content: [
+          {
+            type: 'image',
+            data: base64Image,
+            mimeType: 'image/png'
+          }
+        ]
+      }
+    } catch (error) {
+      Logger.error('[Calculator] Error plotting function:', error)
+
+      // 如果 plotly 不可用，返回一个简单的错误消息
+      return {
+        function: func,
+        variable: variable,
+        domain: { x: [xMin, xMax], y: [yMin, yMax] },
+        error: error instanceof Error ? error.message : String(error),
+        message: 'Unable to generate plot. Plotly.js may not be available.'
+      }
     }
   }
 }

@@ -148,9 +148,29 @@ export default class DeepClaudeProvider extends BaseProvider {
             let reasoningPrompt = ''
             if (isSpecialReasonerModel) {
               // 专门的推理模型使用简单提示词
-              reasoningPrompt = `你是一个思考助手。请对以下问题进行深入思考，分析问题的各个方面，并提供详细的推理过程。
+              reasoningPrompt = `你是一个专业的思考助手，负责对问题进行深入、系统的分析。你的任务是思考问题，而不是直接给出答案。
+
+请按照以下步骤进行思考：
+
+1. 分析问题的不同角度和维度
+2. 考虑多种可能的解决方案或方向
+3. 评估每种解决方案的优缺点
+4. 提供详细的推理过程，包括事实、逻辑推导和合理假设
+5. 如果适用，提供具体的代码结构、步骤或示例思路
+
+重要说明：
+- 你只负责思考过程，严禁给出最终答案
+- 不要以"我的回答是..."、"因此答案是..."、"所以答案是..."或"综上所述，答案是..."等方式总结答案
+- 不要在最后给出选项或明确指出哪个选项是正确的
+- 不要使用"正确答案是..."、"答案应该选..."等表述
+- 专注于分析问题和探索可能的解决方案，但不要得出最终结论
+- 提供深入的思考过程，但绝对不要指明最终答案
+- 你的思考将作为另一个AI助手回答用户的基础
+- 如果涉及数学公式，请使用LaTeX格式，例如：$E=mc^2$、$\\frac{a}{b}$、$\\sqrt{x}$等
+- 对于复杂的数学公式，请使用$$...$$格式，例如：$$\\int_{a}^{b} f(x) dx$$
+
 请以<thinking>开始，以</thinking>结束你的思考过程。
-不要在思考过程中包含“思考过程”或类似的标题，直接开始思考即可。
+直接开始思考，不要添加"思考过程"等标题。
 
 问题: ${lastUserMessage.content}`
             } else {
@@ -164,11 +184,30 @@ export default class DeepClaudeProvider extends BaseProvider {
               } else {
                 // 使用默认提示词
                 console.log('[DeepClaudeProvider] 使用默认思考提示词')
-                reasoningPrompt = `你是一个思考助手。请对以下问题进行深入思考，分析问题的各个方面，并提供详细的推理过程。
-请非常详细地思考这个问题的各个方面，考虑不同的角度和可能性。
-你的回答将作为另一个AI助手的思考基础，所以请尽可能详细和全面。
+                reasoningPrompt = `你是一个专业的思考助手，负责对问题进行深入、系统的分析。你的任务是思考问题，而不是直接给出答案。
+
+请按照以下步骤进行思考：
+
+1. 分析问题的不同角度和维度
+2. 考虑多种可能的解决方案或方向
+3. 评估每种解决方案的优缺点
+4. 提供详细的推理过程，包括事实、逻辑推导和合理假设
+5. 如果适用，提供具体的代码结构、步骤或示例思路
+6. 组织你的思考，使其具有清晰的结构和逻辑顺序
+
+重要说明：
+- 你只负责思考过程，严禁给出最终答案
+- 不要以"我的回答是..."、"因此答案是..."、"所以答案是..."或"综上所述，答案是..."等方式总结答案
+- 不要在最后给出选项或明确指出哪个选项是正确的
+- 不要使用"正确答案是..."、"答案应该选..."等表述
+- 专注于分析问题和探索可能的解决方案，但不要得出最终结论
+- 提供深入的思考过程，但绝对不要指明最终答案
+- 你的思考将作为另一个AI助手回答用户的基础，所以请尽可能详细和全面
+- 如果涉及数学公式，请使用LaTeX格式，例如：$E=mc^2$、$\\frac{a}{b}$、$\\sqrt{x}$等
+- 对于复杂的数学公式，请使用$$...$$格式，例如：$$\\int_{a}^{b} f(x) dx$$
+
 请以<think>开始，以</think>结束你的思考过程。
-不要在思考过程中包含“思考过程”或类似的标题，直接开始思考即可。
+直接开始思考，不要添加"思考过程"等标题。
 
 问题: ${lastUserMessage.content}`
               }
@@ -210,12 +249,16 @@ export default class DeepClaudeProvider extends BaseProvider {
                     if (!state.isReasoningStarted) {
                       state.isReasoningStarted = true
                       // 第一次发送思考过程，使用reasoning_content字段
+                      // 使用 "THINKING_TAG_START" 和 "THINKING_TAG_END" 作为特殊标记，这样不会被分开
+                      // MessageThought组件会处理这些特殊标记
                       onChunk({
-                        reasoning_content: chunk.text,
+                        reasoning_content: `THINKING_TAG_START${chunk.text}THINKING_TAG_END`,
                         text: '' // 不显示文本，只显示思考过程
                       })
                     } else {
                       // 后续发送思考过程，继续使用reasoning_content字段
+                      // 这里直接使用chunk.text作为思考过程，不需要包装在<think>标签中
+                      // 因为我们只是在追加内容，而不是创建新的思考块
                       onChunk({
                         reasoning_content: chunk.text,
                         text: '' // 不显示文本，只显示思考过程
@@ -230,24 +273,36 @@ export default class DeepClaudeProvider extends BaseProvider {
               onFilterMessages: () => {}
             })
 
-            // 如果不是专门的推理模型，将其输出包装在<think></think>标签中
+            // 确保思考过程总是被包装在<think>标签中，这样它就会被MessageThought组件处理
+            // 这是必要的，因为我们希望思考过程总是使用折叠样式显示
             if (
-              !isSpecialReasonerModel &&
               !state.accumulatedThinking.includes('<think>') &&
-              !state.accumulatedThinking.includes('<thinking>')
+              !state.accumulatedThinking.includes('<thinking>') &&
+              !state.accumulatedThinking.includes('<thoughts>') &&
+              !state.accumulatedThinking.includes('<thought>') &&
+              !state.accumulatedThinking.includes('<reasoning>') &&
+              !state.accumulatedThinking.includes('<reason>') &&
+              !state.accumulatedThinking.includes('<analysis>') &&
+              !state.accumulatedThinking.includes('<reflection>')
             ) {
-              state.accumulatedThinking = `<think>${state.accumulatedThinking}</think>`
+              state.accumulatedThinking = `<think>\n${state.accumulatedThinking}\n</think>`
             }
 
             // 提取思考过程
             let extractedThinking = ''
 
-            // 检查是否是Gemini模型的JSON格式输出
+            // 检查是否是JSON格式输出
             if (
               state.accumulatedThinking.includes('data: {"candidates"') ||
-              state.accumulatedThinking.includes('data: {"candidates"')
+              state.accumulatedThinking.includes('data: {"candidates"') ||
+              state.accumulatedThinking.includes('data: {"id"')
             ) {
-              console.log('[DeepClaudeProvider] 检测到Gemini模型的JSON格式输出')
+              const isGemini = state.accumulatedThinking.includes('data: {"candidates"')
+              const isOpenAI = state.accumulatedThinking.includes('data: {"id"')
+
+              console.log(
+                `[DeepClaudeProvider] 检测到${isGemini ? 'Gemini' : isOpenAI ? 'OpenAI' : '未知'}模型的JSON格式输出`
+              )
 
               try {
                 // 尝试提取JSON中的文本内容
@@ -258,9 +313,12 @@ export default class DeepClaudeProvider extends BaseProvider {
                   if (line.startsWith('data: ')) {
                     try {
                       const jsonStr = line.substring(6)
+                      if (jsonStr === '[DONE]') continue // 跳过OpenAI的结束标记
+
                       const jsonData = JSON.parse(jsonStr)
 
                       if (
+                        isGemini &&
                         jsonData.candidates &&
                         jsonData.candidates[0] &&
                         jsonData.candidates[0].content &&
@@ -268,53 +326,79 @@ export default class DeepClaudeProvider extends BaseProvider {
                         jsonData.candidates[0].content.parts[0] &&
                         jsonData.candidates[0].content.parts[0].text
                       ) {
+                        // Gemini格式处理
                         combinedText += jsonData.candidates[0].content.parts[0].text
+                      } else if (
+                        isOpenAI &&
+                        jsonData.choices &&
+                        jsonData.choices[0] &&
+                        jsonData.choices[0].delta &&
+                        jsonData.choices[0].delta.content
+                      ) {
+                        // OpenAI格式处理
+                        combinedText += jsonData.choices[0].delta.content
                       }
                     } catch (e) {
                       // 忽略JSON解析错误
+                      console.log('[DeepClaudeProvider] JSON解析错误，跳过此行:', e)
                     }
                   }
                 }
 
                 if (combinedText) {
-                  // 尝试从组合的文本中提取<think>标签
-                  const thinkRegex = new RegExp('<think>([\\s\\S]*?)</think>')
-                  const thinkMatch = combinedText.match(thinkRegex)
-
-                  if (thinkMatch && thinkMatch[1]) {
-                    extractedThinking = thinkMatch[1].trim()
-                    console.log('[DeepClaudeProvider] 成功从 Gemini JSON 输出中提取<think>标签的思考过程')
-                  } else {
-                    // 如果没有标签，使用整个文本作为思考过程
+                  // 对于组合模型，我们直接使用思考模型的全部输出作为思考过程
+                  // 但是我们需要确保它被包装在<think>标签中，这样它就会被MessageThought组件处理
+                  // 首先检查是否已经包含了思考标签
+                  if (
+                    combinedText.includes('<think>') ||
+                    combinedText.includes('<thinking>') ||
+                    combinedText.includes('<thoughts>') ||
+                    combinedText.includes('<thought>') ||
+                    combinedText.includes('<reasoning>') ||
+                    combinedText.includes('<reason>') ||
+                    combinedText.includes('<analysis>') ||
+                    combinedText.includes('<reflection>')
+                  ) {
+                    // 已经包含了思考标签，直接使用原始输出
                     extractedThinking = combinedText.trim()
-                    console.log('[DeepClaudeProvider] 从 Gemini JSON 输出中提取了思考过程，但没有<think>标签')
+                    console.log(
+                      `[DeepClaudeProvider] 组合模型：使用已包含思考标签的 ${isGemini ? 'Gemini' : isOpenAI ? 'OpenAI' : '未知'} 思考模型输出`
+                    )
+                  } else {
+                    // 不包含思考标签，包装在<think>标签中
+                    // 使用换行符分隔标签和内容，避免标签被分开
+                    extractedThinking = `<think>\n${combinedText.trim()}\n</think>`
+                    console.log(
+                      `[DeepClaudeProvider] 组合模型：将 ${isGemini ? 'Gemini' : isOpenAI ? 'OpenAI' : '未知'} 思考模型输出包装在<think>标签中`
+                    )
                   }
                 }
               } catch (error) {
-                console.error('[DeepClaudeProvider] 解析 Gemini JSON 输出时出错:', error)
+                console.error('[DeepClaudeProvider] 解析JSON输出时出错:', error)
                 extractedThinking = state.accumulatedThinking
               }
             } else {
-              // 常规模型输出处理
-              // 先尝试匹配<think>标签
-              const thinkRegex = new RegExp('<think>([\\s\\S]*?)</think>')
-              const thinkMatch = state.accumulatedThinking.match(thinkRegex)
-
-              // 如果没有匹配到<think>标签，尝试匹配<thinking>标签
-              if (thinkMatch && thinkMatch[1]) {
-                extractedThinking = thinkMatch[1].trim()
-                console.log('[DeepClaudeProvider] 成功提取<think>标签中的思考过程')
+              // 对于组合模型，我们直接使用思考模型的全部输出作为思考过程
+              // 但是我们需要确保它被包装在<think>标签中，这样它就会被MessageThought组件处理
+              // 首先检查是否已经包含了思考标签
+              if (
+                state.accumulatedThinking.includes('<think>') ||
+                state.accumulatedThinking.includes('<thinking>') ||
+                state.accumulatedThinking.includes('<thoughts>') ||
+                state.accumulatedThinking.includes('<thought>') ||
+                state.accumulatedThinking.includes('<reasoning>') ||
+                state.accumulatedThinking.includes('<reason>') ||
+                state.accumulatedThinking.includes('<analysis>') ||
+                state.accumulatedThinking.includes('<reflection>')
+              ) {
+                // 已经包含了思考标签，直接使用原始输出
+                extractedThinking = state.accumulatedThinking
+                console.log('[DeepClaudeProvider] 组合模型：使用已包含思考标签的思考模型输出')
               } else {
-                const thinkingRegex = new RegExp('<thinking>([\\s\\S]*?)</thinking>')
-                const thinkingMatch = state.accumulatedThinking.match(thinkingRegex)
-
-                if (thinkingMatch && thinkingMatch[1]) {
-                  extractedThinking = thinkingMatch[1].trim()
-                  console.log('[DeepClaudeProvider] 成功提取<thinking>标签中的思考过程')
-                } else {
-                  extractedThinking = state.accumulatedThinking
-                  console.log('[DeepClaudeProvider] 未能提取思考过程，使用原始输出')
-                }
+                // 不包含思考标签，包装在<think>标签中
+                // 使用换行符分隔标签和内容，避免标签被分开
+                extractedThinking = `<think>\n${state.accumulatedThinking}\n</think>`
+                console.log('[DeepClaudeProvider] 组合模型：将思考模型输出包装在<think>标签中')
               }
             }
 
@@ -367,9 +451,27 @@ export default class DeepClaudeProvider extends BaseProvider {
             )
 
             // 构建目标模型的提示词
-            const targetPrompt = `以下是对这个问题的思考过程，请基于这个思考过程回答我的问题，但不要重复思考过程，不要在回答中包含“思考过程”或类似的标题，直接给出清晰、准确的回答：
+            const targetPrompt = `请基于前文提供的辅助思考过程，结合你自己的思考，用你自己的方式回答用户的问题。
 
-${state.extractedThinking}`
+重要说明：
+1. 思考过程仅供你参考，你需要形成自己的理解和回答
+2. 保持系统提示词中的角色设定和风格来进行回复
+3. 不要提及"思考过程"、"思考助手"或分析步骤
+4. 不要使用"根据分析"、"基于思考"等表述
+5. 回答应当是完整的、组织良好的，使用您自己的语言
+6. 直接进入回答，无需引言或开场白
+7. 如果思考过程中有错误或不完整的地方，请自行纠正
+8. 你的回答应该比思考过程更加全面、准确和有深度
+9. 如果涉及数学公式，请使用LaTeX格式，例如：$E=mc^2$、$\\frac{a}{b}$、$\\sqrt{x}$等
+10. 对于复杂的数学公式，请使用$$...$$格式，例如：$$\\int_{a}^{b} f(x) dx$$
+11. 保持数学公式的准确性和可读性，确保公式能够正确渲染
+
+用户问题: ${lastUserMessage.content}
+
+思考过程（仅供参考，不要在回答中提及）:
+${state.extractedThinking}
+
+请直接回答用户问题，保持你的专业性和权威性：`
 
             // 构建系统提示词
             const systemPrompt = await buildSystemPrompt(assistant.prompt || '', mcpTools || [], [])

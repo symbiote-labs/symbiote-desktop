@@ -20,7 +20,7 @@ import {
 // 导入useAppSelector
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 
 import AboutSettings from './AboutSettings'
@@ -31,6 +31,7 @@ import MCPSettings from './MCPSettings'
 import MemorySettings from './MemorySettings'
 import MiniAppSettings from './MiniappSettings/MiniAppSettings'
 import ModelCombinationSettings from './ModelCombinationSettings'
+import ModuleSettings from './ModuleSettings'
 import PDFSettings from './PDFSettings'
 import ProvidersList from './ProviderSettings'
 import QuickAssistantSettings from './QuickAssistantSettings'
@@ -146,6 +147,12 @@ const SettingsPage: FC = () => {
               {t('settings.pdf.title')}
             </MenuItem>
           </MenuItemLink>
+          <MenuItemLink to="/settings/modules">
+            <MenuItem className={isRoute('/settings/modules')}>
+              <Package size={18} />
+              {t('settings.modules.title')}
+            </MenuItem>
+          </MenuItemLink>
           <MenuItemLink to="/settings/about">
             <MenuItem className={isRoute('/settings/about')}>
               <Info size={18} />
@@ -161,6 +168,7 @@ const SettingsPage: FC = () => {
             <Route path="web-search" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
             <Route path="memory" element={<MemorySettings />} />
+            <Route path="functions" element={<Navigate to="/settings/modules?tab=functions" replace />} />
             <Route path="general" element={<GeneralSettings />} />
             <Route path="general/*" element={<GeneralSettings />} />
             <Route path="display" element={<DisplaySettings />} />
@@ -170,6 +178,7 @@ const SettingsPage: FC = () => {
             <Route path="data/*" element={<DataSettings />} />
             <Route path="tts" element={<TTSSettings />} />
             <Route path="pdf" element={<PDFSettings />} />
+            <Route path="modules" element={<ModuleSettings />} />
             <Route path="about" element={<AboutSettings />} />
             <Route path="quickPhrase" element={<QuickPhraseSettings />} />
           </Routes>

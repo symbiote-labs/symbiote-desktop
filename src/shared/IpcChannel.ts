@@ -11,6 +11,7 @@ export enum IpcChannel {
   App_SetTrayOnClose = 'app:setTrayOnClose',
   App_RestartTray = 'app:restartTray',
   App_SetTheme = 'app:setTheme',
+  App_GetTheme = 'app:getTheme',
   App_ClearCache = 'app:clearCache',
   App_CheckForUpdate = 'app:checkForUpdate',
   App_IsBinaryExist = 'app:isBinaryExist',
@@ -216,5 +217,11 @@ export enum IpcChannel {
 
   // Browser
   Browser_OpenNewWindow = 'browser:openNewWindow',
-  Browser_SyncCookies = 'browser:syncCookies'
+  Browser_SyncCookies = 'browser:syncCookies',
+
+  // Module Manager
+  Module_Download = 'module:download',
+  Module_Delete = 'module:delete',
+  Module_List = 'module:list',
+  Module_Exists = 'module:exists'
 }

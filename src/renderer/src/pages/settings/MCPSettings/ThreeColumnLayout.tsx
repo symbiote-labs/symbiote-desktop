@@ -41,9 +41,11 @@ const MiddleColumn = styled.div`
 
 const RightColumn = styled.div`
   width: 10%;
+  min-width: 85px;
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px 0;
   background-color: var(--color-background-soft);
+  box-shadow: -1px 0 3px rgba(0, 0, 0, 0.05);
 
   /* 确保所有内容都能正确显示，不会溢出 */
   .ant-form-item-control-input {

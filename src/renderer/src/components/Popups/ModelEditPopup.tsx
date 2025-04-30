@@ -11,9 +11,8 @@ import {
 import { useProvider } from '@renderer/hooks/useProvider'
 import { Model, ModelType } from '@renderer/types'
 import { getDefaultGroupName } from '@renderer/utils'
-import { Button, Checkbox, Divider, Flex, Form, Input, message, Modal } from 'antd'
-import { CheckboxProps } from 'antd/lib/checkbox'
-import { FC, useState } from 'react'
+import { Button, Card, Checkbox, Flex, Form, Input, message, Modal, Space, Tooltip } from 'antd'
+import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -28,15 +27,26 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
   const { t } = useTranslation()
   const [showModelTypes, setShowModelTypes] = useState(false)
   const { updateModel } = useProvider(model.provider)
+  const [currentModel, setCurrentModel] = useState<Model>({ ...model })
+
+  useEffect(() => {
+    form.setFieldsValue({
+      id: currentModel.id,
+      name: currentModel.name,
+      group: currentModel.group
+    })
+  }, [currentModel, form])
 
   const onFinish = (values: any) => {
     const updatedModel = {
-      ...model,
-      id: values.id || model.id,
-      name: values.name || model.name,
-      group: values.group || model.group
+      ...currentModel,
+      id: values.id || currentModel.id,
+      name: values.name || currentModel.name,
+      group: values.group || currentModel.group
     }
+
     updateModel(updatedModel)
+
     setShowModelTypes(false)
     setOpen(false)
     resolve(updatedModel)
@@ -49,8 +59,8 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
   }
 
   const onUpdateModel = (updatedModel: Model) => {
+    setCurrentModel(updatedModel)
     updateModel(updatedModel)
-    // 只更新模型数据，不关闭弹窗，不返回结果
   }
 
   return (
@@ -61,11 +71,11 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
       footer={null}
       maskClosable={false}
       centered
-      width={600} // 增加宽度
+      width={550}
       styles={{
         content: {
-          padding: '20px', // 增加内边距
-          borderRadius: 15 // 增加圆角
+          padding: '24px',
+          borderRadius: '12px'
         }
       }}
       afterOpenChange={(visible) => {
@@ -77,17 +87,18 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
       }}>
       <Form
         form={form}
-        labelCol={{ flex: '120px' }} // 增加标签宽度
-        labelAlign="left"
+        layout="vertical"
         colon={false}
         style={{ marginTop: 15 }}
-        size="large" // 使表单控件更大
+        size="middle"
         initialValues={{
-          id: model.id,
-          name: model.name,
-          group: model.group
+          id: currentModel.id,
+          name: currentModel.name,
+          group: currentModel.group
         }}
         onFinish={onFinish}>
+        <SectionTitle>基本信息</SectionTitle>
+
         <Form.Item
           name="id"
           label={t('settings.models.add.model_id')}
@@ -99,21 +110,23 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
               spellCheck={false}
               maxLength={200}
               disabled={true}
-              value={model.id}
+              value={currentModel.id}
               onChange={(e) => {
                 const value = e.target.value
                 form.setFieldValue('name', value)
                 form.setFieldValue('group', getDefaultGroupName(value))
               }}
             />
-            <Button
-              type="text"
-              icon={<CopyIcon />}
-              onClick={() => {
-                navigator.clipboard.writeText(model.id)
-                message.success(t('message.copy.success'))
-              }}
-            />
+            <Tooltip title={t('common.copy')}>
+              <Button
+                type="text"
+                icon={<CopyIcon />}
+                onClick={() => {
+                  navigator.clipboard.writeText(currentModel.id)
+                  message.success(t('message.copy.success'))
+                }}
+              />
+            </Tooltip>
           </Flex>
         </Form.Item>
         <Form.Item
@@ -129,32 +142,33 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
           tooltip={t('settings.models.add.model_group.tooltip')}>
           <Input placeholder={t('settings.models.add.model_group.placeholder')} spellCheck={false} maxLength={200} />
         </Form.Item>
-        <Form.Item style={{ marginBottom: 20, textAlign: 'center', marginTop: 10 }}>
-          <Flex justify="space-between" align="center" style={{ position: 'relative' }}>
-            <MoreSettingsRow onClick={() => setShowModelTypes(!showModelTypes)}>
-              {t('settings.moresetting')}
-              <ExpandIcon>{showModelTypes ? <UpOutlined /> : <DownOutlined />}</ExpandIcon>
-            </MoreSettingsRow>
-            <Button type="primary" htmlType="submit" size="large">
-              {t('common.save')}
-            </Button>
-          </Flex>
-        </Form.Item>
+
+        <MoreSettingsToggle onClick={() => setShowModelTypes(!showModelTypes)}>
+          {t('settings.moresetting')}
+          <ExpandIcon>{showModelTypes ? <UpOutlined /> : <DownOutlined />}</ExpandIcon>
+        </MoreSettingsToggle>
+
         {showModelTypes && (
-          <div>
-            <Divider style={{ margin: '0 0 15px 0' }} />
-            <TypeTitle>{t('models.type.select')}:</TypeTitle>
+          <Card
+            bordered={false}
+            style={{
+              marginTop: 16,
+              background: 'var(--color-background-soft)',
+              borderRadius: '8px'
+            }}>
+            <TypeTitle>选择模型类型:</TypeTitle>
             {(() => {
+              const modelTypes = currentModel.type || []
+
               const defaultTypes = [
-                ...(isVisionModel(model) ? ['vision'] : []),
-                ...(isEmbeddingModel(model) ? ['embedding'] : []),
-                ...(isReasoningModel(model) ? ['reasoning'] : []),
-                ...(isFunctionCallingModel(model) ? ['function_calling'] : []),
-                ...(isWebSearchModel(model) ? ['web_search'] : [])
+                ...(isVisionModel(currentModel) ? ['vision'] : []),
+                ...(isEmbeddingModel(currentModel) ? ['embedding'] : []),
+                ...(isReasoningModel(currentModel) ? ['reasoning'] : []),
+                ...(isFunctionCallingModel(currentModel) ? ['function_calling'] : []),
+                ...(isWebSearchModel(currentModel) ? ['web_search'] : [])
               ] as ModelType[]
 
-              // 合并现有选择和默认类型
-              const selectedTypes = [...new Set([...(model.type || []), ...defaultTypes])]
+              const selectedTypes = [...new Set([...modelTypes, ...defaultTypes])]
 
               const showTypeConfirmModal = (type: string) => {
                 window.modal.confirm({
@@ -165,7 +179,10 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
                   okButtonProps: { danger: true },
                   cancelButtonProps: { type: 'primary' },
                   onOk: () => {
-                    const updatedModel = { ...model, type: [...selectedTypes, type] as ModelType[] }
+                    const updatedModel = {
+                      ...currentModel,
+                      type: [...selectedTypes, type] as ModelType[]
+                    }
                     onUpdateModel(updatedModel)
                   },
                   onCancel: () => {},
@@ -177,11 +194,9 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
                 const newType = types.find((type) => !selectedTypes.includes(type as ModelType))
 
                 if (newType) {
-                  // 如果有新类型被添加，显示确认对话框
                   showTypeConfirmModal(newType)
                 } else {
-                  // 如果没有新类型，只是取消选择了某些类型，直接更新
-                  const updatedModel = { ...model, type: types as ModelType[] }
+                  const updatedModel = { ...currentModel, type: types as ModelType[] }
                   onUpdateModel(updatedModel)
                 }
               }
@@ -200,58 +215,113 @@ const PopupContainer: FC<ModelEditPopupProps> = ({ model, resolve }) => {
                 </Checkbox.Group>
               )
             })()}
-          </div>
+          </Card>
         )}
+
+        <Form.Item style={{ marginTop: 24, textAlign: 'right' }}>
+          <Space>
+            <Button onClick={handleClose}>{t('common.cancel')}</Button>
+            <Button type="primary" htmlType="submit">
+              {t('common.save')}
+            </Button>
+          </Space>
+        </Form.Item>
       </Form>
     </Modal>
   )
 }
 
-const MoreSettingsRow = styled.div`
+const SectionTitle = styled.h3`
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+  color: var(--color-text-primary);
+`
+
+const MoreSettingsToggle = styled.div`
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px; // 增加间距
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: var(--color-background-soft);
   color: var(--color-text-secondary);
-  font-size: 14px; // 增加字体大小
+  font-size: 14px;
+  transition: all 0.2s;
+
   &:hover {
     color: var(--color-text-primary);
+    background-color: var(--color-background-mute);
   }
 `
 
 const ExpandIcon = styled.span`
-  font-size: 12px; // 增加图标大小
-  display: flex;
+  display: inline-flex;
   align-items: center;
 `
 
-const TypeTitle = styled.div`
-  font-size: 16px; // 增加字体大小
-  margin-bottom: 15px; // 增加下边距
+const TypeTitle = styled.h4`
+  font-size: 14px;
   font-weight: 500;
+  margin: 0 0 16px 0;
+  color: var(--color-text-primary);
 `
 
-const StyledCheckbox = styled(Checkbox)<CheckboxProps>`
-  font-size: 14px; // 增加字体大小
-  padding: 5px 0; // 增加内边距
-
-  .ant-checkbox-inner {
-    width: 18px; // 增加复选框大小
-    height: 18px; // 增加复选框大小
-  }
-
-  .ant-checkbox + span {
-    padding-left: 12px; // 增加文字与复选框的间距
+const StyledCheckbox = styled(Checkbox)`
+  &.ant-checkbox-wrapper {
+    margin-right: 0;
+    margin-left: 8px;
   }
 `
 
 export default class ModelEditPopup {
+  // 标记是否正在显示弹窗
+  private static isVisible = false
+
   static hide() {
+    // 清理TopView状态
     TopView.hide('ModelEditPopup')
+    this.isVisible = false
   }
+
   static show(model: Model) {
+    // 如果已经在显示，先关闭
+    if (this.isVisible) {
+      TopView.hide('ModelEditPopup')
+
+      // 确保DOM已完全更新后再显示新弹窗
+      return new Promise<Model | undefined>((resolve) => {
+        setTimeout(() => {
+          this.isVisible = true
+          TopView.show(
+            <PopupContainer
+              model={model}
+              resolve={(value) => {
+                this.isVisible = false
+                resolve(value)
+              }}
+            />,
+            'ModelEditPopup'
+          )
+        }, 50)
+      })
+    }
+
+    // 正常显示弹窗
+    this.isVisible = true
     return new Promise<Model | undefined>((resolve) => {
-      TopView.show(<PopupContainer model={model} resolve={resolve} />, 'ModelEditPopup')
+      TopView.show(
+        <PopupContainer
+          model={model}
+          resolve={(value) => {
+            this.isVisible = false
+            resolve(value)
+          }}
+        />,
+        'ModelEditPopup'
+      )
     })
   }
 }

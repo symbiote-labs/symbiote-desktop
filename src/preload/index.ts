@@ -28,7 +28,8 @@ const api = {
   setTrayOnClose: (isActive: boolean) => ipcRenderer.invoke(IpcChannel.App_SetTrayOnClose, isActive),
   setEnableDataCollection: (isActive: boolean) => ipcRenderer.invoke('app:setEnableDataCollection', isActive),
   restartTray: () => ipcRenderer.invoke(IpcChannel.App_RestartTray),
-  setTheme: (theme: 'light' | 'dark') => ipcRenderer.invoke(IpcChannel.App_SetTheme, theme),
+  setTheme: (theme: 'light' | 'dark' | 'auto') => ipcRenderer.invoke(IpcChannel.App_SetTheme, theme),
+  getTheme: () => ipcRenderer.invoke(IpcChannel.App_GetTheme),
   openWebsite: (url: string) => ipcRenderer.invoke(IpcChannel.Open_Website, url),
   clearCache: () => ipcRenderer.invoke(IpcChannel.App_ClearCache),
   system: {
@@ -74,7 +75,8 @@ const api = {
     base64Image: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_Base64Image, fileId),
     download: (url: string) => ipcRenderer.invoke(IpcChannel.File_Download, url),
     copy: (fileId: string, destPath: string) => ipcRenderer.invoke(IpcChannel.File_Copy, fileId, destPath),
-    binaryFile: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_BinaryFile, fileId)
+    binaryFile: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_BinaryFile, fileId),
+    writeBase64Image: (bytes: string) => ipcRenderer.invoke(IpcChannel.File_WriteBase64Image, bytes)
   },
   fs: {
     read: (path: string, encoding?: BufferEncoding) => ipcRenderer.invoke(IpcChannel.Fs_Read, path, encoding)
@@ -261,7 +263,9 @@ const api = {
   },
   pdf: {
     splitPDF: (file: FileType, pageRange: string) => ipcRenderer.invoke(IpcChannel.PDF_SplitPDF, file, pageRange),
-    getPageCount: (filePath: string) => ipcRenderer.invoke(IpcChannel.PDF_GetPageCount, filePath)
+    getPageCount: (filePath: string) => ipcRenderer.invoke(IpcChannel.PDF_GetPageCount, filePath),
+    toWord: (pdfBuffer: ArrayBuffer, outputPath?: string) =>
+      ipcRenderer.invoke(IpcChannel.PDF_ToWord, { pdfBuffer, outputPath })
   },
   codeExecutor: {
     getSupportedLanguages: () => ipcRenderer.invoke(IpcChannel.CodeExecutor_GetSupportedLanguages),
@@ -274,6 +278,23 @@ const api = {
     // 暴露打开新窗口的IPC通道
     // 暂时使用字符串字面量绕过TypeScript错误
     openNewWindow: (args: { url: string; title?: string }) => ipcRenderer.invoke('browser:openNewWindow', args)
+  },
+  moduleManager: {
+    downloadModule: (packageName: string, version?: string) => {
+      console.log('preload: downloadModule called with', { packageName, version });
+      // 确保 version 参数不是 undefined
+      const moduleVersion = version || 'latest';
+      return ipcRenderer.invoke(IpcChannel.Module_Download, packageName, moduleVersion);
+    },
+    deleteModule: (packageName: string, version?: string) => {
+      const moduleVersion = version || null; // 使用 null 表示删除所有版本
+      return ipcRenderer.invoke(IpcChannel.Module_Delete, packageName, moduleVersion);
+    },
+    listModules: () => ipcRenderer.invoke(IpcChannel.Module_List),
+    moduleExists: (packageName: string, version?: string) => {
+      const moduleVersion = version || 'latest';
+      return ipcRenderer.invoke(IpcChannel.Module_Exists, packageName, moduleVersion);
+    }
   }
 }
 

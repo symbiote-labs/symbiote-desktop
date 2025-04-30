@@ -3,6 +3,9 @@ import { useDispatch, useSelector, useStore } from 'react-redux'
 import { FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
+import { moduleManagerReducer, ModuleManagerState } from '../services/ModuleManager'
+import { moduleRegistryReducer, ModuleRegistryState } from '../services/ModuleRegistryManager'
+import { pluginSystemReducer, PluginSystemState } from '../services/PluginSystem'
 import agents from './agents'
 import assistants from './assistants'
 import backup from './backup'
@@ -22,6 +25,9 @@ import shortcuts from './shortcuts'
 import websearch from './websearch'
 import workspace from './workspace'
 
+// 导出用于类型检查的状态类型
+export type { ModuleManagerState, ModuleRegistryState, PluginSystemState }
+
 const rootReducer = combineReducers({
   assistants,
   agents,
@@ -38,6 +44,9 @@ const rootReducer = combineReducers({
   mcp,
   copilot,
   memory,
+  moduleRegistry: moduleRegistryReducer,
+  pluginSystem: pluginSystemReducer,
+  moduleManager: moduleManagerReducer,
   workspace,
   messages: messagesReducer
 })

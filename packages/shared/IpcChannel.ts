@@ -12,6 +12,7 @@ export enum IpcChannel {
   App_SetTrayOnClose = 'app:set-tray-on-close',
   App_RestartTray = 'app:restart-tray',
   App_SetTheme = 'app:set-theme',
+  App_GetTheme = 'app:get-theme',
 
   App_IsBinaryExist = 'app:is-binary-exist',
   App_GetBinaryPath = 'app:get-binary-path',
@@ -49,6 +50,7 @@ export enum IpcChannel {
   Mcp_RestartServer = 'mcp:restart-server',
   Mcp_StopServer = 'mcp:stop-server',
   Mcp_ListTools = 'mcp:list-tools',
+  Mcp_ResetToolsList = 'mcp:reset-tools-list',
   Mcp_CallTool = 'mcp:call-tool',
   Mcp_ListPrompts = 'mcp:list-prompts',
   Mcp_GetPrompt = 'mcp:get-prompt',
@@ -119,6 +121,7 @@ export enum IpcChannel {
   File_Download = 'file:download',
   File_Copy = 'file:copy',
   File_BinaryFile = 'file:binaryFile',
+  File_WriteBase64Image = 'file:writeBase64Image',
 
   Fs_Read = 'fs:read',
 
@@ -190,11 +193,18 @@ export enum IpcChannel {
   // PDF
   PDF_SplitPDF = 'pdf:split-pdf',
   PDF_GetPageCount = 'pdf:get-page-count',
+  PDF_ToWord = 'pdf:to-word',
 
   // Deep Research
   DeepResearch_Complete = 'deep-research:complete',
   DeepResearch_Progress = 'deep-research:progress',
 
   // MCP Rerun Updates (Main -> Renderer)
-  Mcp_ToolRerunUpdate = 'mcp:tool-rerun-update'
+  Mcp_ToolRerunUpdate = 'mcp:tool-rerun-update',
+
+  // Module Manager
+  Module_Download = 'module:download',
+  Module_Delete = 'module:delete',
+  Module_List = 'module:list',
+  Module_Exists = 'module:exists'
 }

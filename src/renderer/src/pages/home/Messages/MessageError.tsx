@@ -1,13 +1,62 @@
-import { Message } from '@renderer/types'
+import { MCPToolResponse, Message } from '@renderer/types'
 import { formatErrorMessage } from '@renderer/utils/error'
 import { Alert as AntdAlert } from 'antd'
-import { FC, memo } from 'react'
+import { FC, memo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import Markdown from '../Markdown/Markdown'
+
+// 创建默认的空数组，用于 Markdown props
+const DEFAULT_TOOL_RESPONSES: MCPToolResponse[] = []
+
 const MessageError: FC<{ message: Message }> = ({ message }) => {
   const { t } = useTranslation()
+  const [activeToolKeys, setActiveToolKeys] = useState<string[]>([])
+  const [copiedToolMap, setCopiedToolMap] = useState<Record<string, boolean>>({})
+  const [editingToolId, setEditingToolId] = useState<string | null>(null)
+  const [editedToolParamsString, setEditedToolParamsString] = useState('')
+
+  // 处理工具相关的回调函数
+  const handleToolCopy = (_content: string, toolId: string) => {
+    setCopiedToolMap((prev) => ({ ...prev, [toolId]: true }))
+  }
+
+  const handleToolRerun = () => {
+    // 实现工具重新运行的逻辑
+  }
+
+  const handleToolEdit = () => {
+    // 实现工具编辑的逻辑
+  }
+
+  const handleToolSave = () => {
+    setEditingToolId(null)
+  }
+
+  const handleToolCancel = () => {
+    setEditingToolId(null)
+  }
+
+  const handleToolParamsChange = (newParams: string) => {
+    setEditedToolParamsString(newParams)
+  }
+
+  // 创建通用的 Markdown props
+  const markdownProps = {
+    toolResponses: DEFAULT_TOOL_RESPONSES,
+    activeToolKeys,
+    copiedToolMap,
+    editingToolId,
+    editedToolParamsString,
+    onToolToggle: setActiveToolKeys,
+    onToolCopy: handleToolCopy,
+    onToolRerun: handleToolRerun,
+    onToolEdit: handleToolEdit,
+    onToolSave: handleToolSave,
+    onToolCancel: handleToolCancel,
+    onToolParamsChange: handleToolParamsChange
+  }
 
   // 首先检查是否存在已知的问题错误
   if (message.error && typeof message.error === 'object') {
@@ -15,7 +64,7 @@ const MessageError: FC<{ message: Message }> = ({ message }) => {
     if (message.error.message === 'rememberInstructions is not defined') {
       return (
         <>
-          <Markdown message={message} />
+          <Markdown message={message} {...markdownProps} />
           <Alert description="消息加载时发生错误" type="error" />
         </>
       )
@@ -25,7 +74,7 @@ const MessageError: FC<{ message: Message }> = ({ message }) => {
     if (message.error.message === 'network error') {
       return (
         <>
-          <Markdown message={message} />
+          <Markdown message={message} {...markdownProps} />
           <Alert description={t('error.network')} type="error" />
         </>
       )
@@ -34,13 +83,14 @@ const MessageError: FC<{ message: Message }> = ({ message }) => {
 
   return (
     <>
-      <Markdown message={message} />
+      <Markdown message={message} {...markdownProps} />
       {message.error && (
         <Markdown
           message={{
             ...message,
             content: formatErrorMessage(message.error)
           }}
+          {...markdownProps}
         />
       )}
       <MessageErrorInfo message={message} />

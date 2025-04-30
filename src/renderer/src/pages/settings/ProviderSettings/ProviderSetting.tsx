@@ -1,4 +1,4 @@
-import { CheckOutlined, CopyOutlined, LoadingOutlined } from '@ant-design/icons'
+import { CheckOutlined, CopyOutlined, FileTextOutlined, LoadingOutlined } from '@ant-design/icons'
 import { StreamlineGoodHealthAndWellBeing } from '@renderer/components/Icons/SVGIcon'
 import { HStack } from '@renderer/components/Layout'
 import { isEmbeddingModel, isRerankModel } from '@renderer/config/models'
@@ -36,6 +36,7 @@ import HealthCheckPopup from './HealthCheckPopup'
 import LMStudioSettings from './LMStudioSettings'
 import ModelList, { ModelStatus } from './ModelList'
 import ModelListSearchBar from './ModelListSearchBar'
+import ModelNotesPopup from './ModelNotesPopup'
 import OllamSettings from './OllamaSettings'
 import ProviderOAuth from './ProviderOAuth'
 import ProviderSettingsPopup from './ProviderSettingsPopup'
@@ -257,6 +258,10 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
     return formatApiHost(apiHost) + 'chat/completions'
   }
 
+  const onShowNotes = useCallback(() => {
+    ModelNotesPopup.show({ provider })
+  }, [provider])
+
   useEffect(() => {
     if (provider.id === 'copilot') {
       return
@@ -292,6 +297,9 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
               onClick={() => ProviderSettingsPopup.show({ provider })}
             />
           )}
+          <Tooltip title={t('settings.provider.notes.title')}>
+            <Button type="text" onClick={onShowNotes} icon={<FileTextOutlined />} />
+          </Tooltip>
         </Flex>
         <Switch
           value={provider.enabled}

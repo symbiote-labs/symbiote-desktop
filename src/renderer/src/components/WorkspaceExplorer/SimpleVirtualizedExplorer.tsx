@@ -68,7 +68,7 @@ const FileItem = styled.div`
   height: 100%;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--color-background-soft);
   }
 `
 

@@ -80,10 +80,26 @@
       "settings.default_model": "Default Model",
       "settings.knowledge_base": "Knowledge Base Settings",
       "settings.mcp": "MCP Servers",
-      "settings.mcp.enableFirst": "Enable this server in MCP settings first",
+      "settings.mcp.enableFirst": "Please enable this server in MCP settings first",
       "settings.mcp.title": "MCP Settings",
-      "settings.mcp.noServersAvailable": "No MCP servers available. Add servers in settings",
-      "settings.mcp.description": "Default enabled MCP servers",
+      "settings.mcp.noServersAvailable": "No MCP servers available. Please add a server in settings",
+      "settings.mcp.description": "MCP server enabled by default",
+      "settings.mcp.sync": {
+        "title": "Sync Servers",
+        "selectProvider": "Select Provider:",
+        "discoverMcpServers": "Discover MCP Servers",
+        "discoverMcpServersDescription": "Visit the platform to discover available MCP servers",
+        "getToken": "Get API Token",
+        "getTokenDescription": "Retrieve your personal API token from your account",
+        "setToken": "Enter Your Token",
+        "tokenRequired": "API Token is required",
+        "tokenPlaceholder": "Enter API token here",
+        "button": "Sync",
+        "error": "Sync MCP Servers error",
+        "success": "Sync MCP Servers successful",
+        "unauthorized": "Sync Unauthorized",
+        "noServersAvailable": "No MCP servers available"
+      },
       "settings.model": "Model Settings",
       "settings.preset_messages": "Preset Messages",
       "settings.prompt": "Prompt Settings",
@@ -1636,7 +1652,13 @@
         "remove_invalid_keys": "Remove Invalid Keys",
         "search": "Search Providers...",
         "search_placeholder": "Search model id or name",
-        "title": "Model Provider"
+        "title": "Model Provider",
+        "notes": {
+          "title": "Model Notes",
+          "menu_item": "Notes",
+          "placeholder": "Enter Markdown formatted notes here...",
+          "markdown_editor_default_value": "Preview area"
+        }
       },
       "proxy": {
         "mode": {

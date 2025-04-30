@@ -38,6 +38,7 @@ i18n.use(initReactI18next).init({
   resources,
   lng: getLanguage(),
   fallbackLng: defaultLanguage,
+  defaultNS: 'translation',
   interpolation: {
     escapeValue: false
   }

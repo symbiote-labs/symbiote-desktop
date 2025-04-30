@@ -155,6 +155,7 @@ export type Provider = {
   isAuthed?: boolean
   rateLimit?: number
   isNotSupportArrayContent?: boolean
+  notes?: string
 }
 
 export type ProviderType = 'openai' | 'anthropic' | 'gemini' | 'qwenlm' | 'azure-openai' | 'deepclaude'
@@ -188,6 +189,7 @@ export interface Painting {
   steps?: number
   guidanceScale?: number
   promptEnhancement?: boolean
+  aspectRatio?: string
 }
 
 export type MinAppType = {
@@ -366,6 +368,7 @@ export type SidebarIcon =
   | 'workspace'
   | 'deepresearch'
   | 'browser'
+  | 'calendar'
 
 export type WebSearchProvider = {
   id: string
@@ -510,6 +513,11 @@ export interface MCPServer {
   configSample?: MCPConfigSample
   headers?: Record<string, string> // Custom headers to be sent with requests to this server
   searchKey?: string
+  timeout?: number // 请求超时时间，单位秒
+  provider?: string // 服务提供者名称
+  providerUrl?: string // 服务提供者URL
+  logoUrl?: string // 服务图标URL
+  tags?: string[] // 服务标签
 }
 
 export interface MCPToolInputSchema {

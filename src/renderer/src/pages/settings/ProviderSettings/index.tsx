@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, FileTextOutlined, PlusOutlined } from '@ant-design/icons'
 import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea/dnd'
 import Scrollbar from '@renderer/components/Scrollbar'
 import { getProviderLogo } from '@renderer/config/providers'
@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import AddProviderPopup from './AddProviderPopup'
+import ModelNotesPopup from './ModelNotesPopup'
 import ProviderSetting from './ProviderSetting'
 
 const ProvidersList: FC = () => {
@@ -129,6 +130,14 @@ const ProvidersList: FC = () => {
               }
             }
           }
+        }
+      },
+      {
+        label: t('settings.provider.notes.menu_item'),
+        key: 'notes',
+        icon: <FileTextOutlined />,
+        async onClick() {
+          await ModelNotesPopup.show({ provider })
         }
       },
       {

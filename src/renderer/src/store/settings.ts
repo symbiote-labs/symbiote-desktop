@@ -1,6 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
-import { CodeStyleVarious, LanguageVarious, MathEngine, Model, ThemeMode, TranslateLanguageVarious } from '@renderer/types'
+import {
+  CodeStyleVarious,
+  LanguageVarious,
+  MathEngine,
+  Model,
+  ThemeMode,
+  TranslateLanguageVarious
+} from '@renderer/types'
 import { IpcChannel } from '@shared/IpcChannel'
 
 import { WebDAVSyncState } from './backup'
@@ -19,6 +26,7 @@ export type SidebarIcon =
   | 'workspace'
   | 'deepresearch'
   | 'browser'
+  | 'calendar'
 
 export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
   'assistants',

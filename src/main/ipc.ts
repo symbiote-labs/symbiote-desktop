@@ -8,7 +8,7 @@ import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
 import { IpcChannel } from '@shared/IpcChannel'
 import { MCPServer, Shortcut, ThemeMode } from '@types' // Import MCPServer here
-import { BrowserWindow, ipcMain, session, shell, webContents } from 'electron'
+import { BrowserWindow, ipcMain, nativeTheme, session, shell, webContents } from 'electron'
 import log from 'electron-log'
 
 import { titleBarOverlayDark, titleBarOverlayLight } from './config'
@@ -125,24 +125,30 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     return configManager.get(key)
   })
 
+  ipcMain.handle(IpcChannel.App_GetTheme, () => {
+    return configManager.getTheme()
+  })
+
   // theme
-  ipcMain.handle(IpcChannel.App_SetTheme, (event, theme: ThemeMode) => {
-    if (theme === configManager.getTheme()) return
+  ipcMain.handle(IpcChannel.App_SetTheme, (_, theme: ThemeMode) => {
+    const notifyThemeChange = () => {
+      const windows = BrowserWindow.getAllWindows()
+      windows.forEach((win) =>
+        win.webContents.send(IpcChannel.ThemeChange, nativeTheme.shouldUseDarkColors ? ThemeMode.dark : ThemeMode.light)
+      )
+    }
 
+    if (theme === ThemeMode.auto) {
+      nativeTheme.themeSource = 'system'
+      nativeTheme.on('updated', notifyThemeChange)
+    } else {
+      nativeTheme.themeSource = theme
+      nativeTheme.removeAllListeners('updated')
+    }
+
+    mainWindow.setTitleBarOverlay(nativeTheme.shouldUseDarkColors ? titleBarOverlayDark : titleBarOverlayLight)
     configManager.setTheme(theme)
-
-    // should sync theme change to all windows
-    const senderWindowId = event.sender.id
-    const windows = BrowserWindow.getAllWindows()
-    // 向其他窗口广播主题变化
-    windows.forEach((win) => {
-      if (win.webContents.id !== senderWindowId) {
-        win.webContents.send(IpcChannel.ThemeChange, theme)
-      }
-    })
-
-    mainWindow?.setTitleBarOverlay &&
-      mainWindow.setTitleBarOverlay(theme === 'dark' ? titleBarOverlayDark : titleBarOverlayLight)
+    notifyThemeChange()
   })
 
   // clear cache
@@ -287,6 +293,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   ipcMain.handle(IpcChannel.File_Download, fileManager.downloadFile)
   ipcMain.handle(IpcChannel.File_Copy, fileManager.copyFile)
   ipcMain.handle(IpcChannel.File_BinaryFile, fileManager.binaryFile)
+  ipcMain.handle(IpcChannel.File_WriteBase64Image, fileManager.writeBase64Image)
 
   // fs
   ipcMain.handle(IpcChannel.Fs_Read, FileService.readFile)
@@ -525,6 +532,7 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // PDF服务
   ipcMain.handle(IpcChannel.PDF_SplitPDF, PDFService.splitPDF.bind(PDFService))
   ipcMain.handle(IpcChannel.PDF_GetPageCount, PDFService.getPDFPageCount.bind(PDFService))
+  ipcMain.handle(IpcChannel.PDF_ToWord, PDFService.toWord.bind(PDFService))
 
   // 深度研究服务
   deepResearchService.setMainWindow(mainWindow)

@@ -12,20 +12,20 @@ const WorkspaceDrawerContent = styled.div`
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background: #fafbfc;
+  background: var(--color-background);
 `
 
 const SelectorWrapper = styled.div`
   padding: 16px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--color-background-soft);
+  border-bottom: 1px solid var(--color-border);
 `
 
 const ExplorerContainer = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: #fafbfc;
+  background: var(--color-background);
 `
 
 const FileViewerHeader = styled.div`
@@ -33,8 +33,8 @@ const FileViewerHeader = styled.div`
   align-items: center;
   height: 56px;
   padding: 0 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background-soft);
 `
 
 const FileViewerTitle = styled.span`
@@ -144,7 +144,7 @@ const ChatWorkspacePanel: React.FC<ChatWorkspacePanelProps> = ({
       open={visible}
       styles={{
         header: { display: 'none' }, // 隐藏默认标题栏
-        body: { padding: 0, height: '100%', overflow: 'hidden' }
+        body: { padding: '40px 0 0 0', height: '100%', overflow: 'hidden' }
       }}
       closable={false}
       destroyOnClose>

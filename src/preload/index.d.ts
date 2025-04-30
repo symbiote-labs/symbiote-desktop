@@ -28,7 +28,8 @@ declare global {
       setTray: (isActive: boolean) => void
       setTrayOnClose: (isActive: boolean) => void
       restartTray: () => void
-      setTheme: (theme: 'light' | 'dark') => void
+      setTheme: (theme: 'light' | 'dark' | 'auto') => void
+      getTheme: () => Promise<'light' | 'dark' | 'auto'>
       reload: () => void
       clearCache: () => Promise<{ success: boolean; error?: string }>
       system: {
@@ -221,6 +222,12 @@ declare global {
       }
       pdf: {
         splitPDF: (file: FileType, pageRange: string) => Promise<FileType>
+      },
+      moduleManager: {
+        downloadModule: (packageName: string, version?: string) => Promise<{ success: boolean; error?: string; modulePath?: string }>
+        deleteModule: (packageName: string, version?: string) => Promise<{ success: boolean; error?: string }>
+        listModules: () => Promise<{ packageName: string; versions: string[] }[]>
+        moduleExists: (packageName: string, version?: string) => Promise<boolean>
       }
     }
   }

@@ -21,6 +21,7 @@ const AgentModePanelContainer: FC<Props> = ({
 
   // 添加设置 Agent 任务列表显示状态的函数
   const handleSetShowAgentTaskList = (show: boolean) => {
+    console.log('更新任务列表显示状态:', show)
     dispatch(setShowAgentTaskList(show))
   }
 
@@ -33,6 +34,12 @@ const AgentModePanelContainer: FC<Props> = ({
     // 监听Agent状态变化
     const handleAgentStateChange = (state: AgentState) => {
       setAgentState({ ...state })
+      // 添加调试日志
+      console.log('AgentModePanelContainer - Agent状态更新:', {
+        isRunning: state.isRunning,
+        tasksCount: state.tasks.length,
+        tasks: state.tasks
+      })
     }
 
     agentService.addListener(handleAgentStateChange)
@@ -41,6 +48,17 @@ const AgentModePanelContainer: FC<Props> = ({
       agentService.removeListener(handleAgentStateChange)
     }
   }, [])
+
+  // 添加调试日志，监控关键状态变化
+  useEffect(() => {
+    console.log('AgentModePanelContainer 状态检查:', {
+      enableAgentMode,
+      showAgentTaskList,
+      agentAutoExecutionCount,
+      tasks: agentState.tasks,
+      isRunning: agentState.isRunning
+    })
+  }, [enableAgentMode, showAgentTaskList, agentAutoExecutionCount, agentState])
 
   // 始终显示面板，即使未启用Agent模式或没有任务
   // 注释掉原来的条件渲染逻辑
@@ -56,6 +74,7 @@ const AgentModePanelContainer: FC<Props> = ({
   }, [dispatch, enableAgentMode])
 
   const handleTaskClick = (taskId: string, messageId: string) => {
+    console.log('任务点击:', { taskId, messageId })
     const taskIndex = agentState.tasks.findIndex((task) => task.id === taskId)
     if (taskIndex !== -1) {
       agentService.setCurrentTask(taskIndex)

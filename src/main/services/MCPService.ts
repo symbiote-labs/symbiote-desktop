@@ -377,7 +377,7 @@ class McpService {
         const toolKey = `${server.id}-${tool.name}` // Combine server ID and tool name
         const serverTool: MCPTool = {
           ...tool,
-          id: `f${nanoid()}`, // Keep the random ID for internal use (e.g., React keys)
+          id: `${tool.name}`, // Use tool name as stable ID
           serverId: server.id,
           serverName: server.name,
           toolKey: toolKey // Add the generated toolKey
@@ -415,7 +415,9 @@ class McpService {
     try {
       Logger.info('[MCP] Calling:', server.name, name, args)
       const client = await this.initClient(server)
-      const result = await client.callTool({ name, arguments: args })
+      const result = await client.callTool({ name, arguments: args }, undefined, {
+        timeout: server.timeout ? server.timeout * 1000 : 60000 // Default timeout of 1 minute
+      })
       return result as MCPCallToolResponse
     } catch (error) {
       Logger.error(`[MCP] Error calling tool ${name} on ${server.name}:`, error)

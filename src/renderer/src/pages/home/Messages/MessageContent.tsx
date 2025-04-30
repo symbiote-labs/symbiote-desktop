@@ -270,6 +270,16 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     })
   }
 
+  // HTML实体解码辅助函数使用useCallback包装，避免每次渲染都重新创建
+  const decodeHTML = useCallback((str: string) => {
+    return str
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+  }, [])
+
   // Format citations for display
   const formattedCitations = useMemo(() => {
     if (!message.metadata?.citations?.length && !message.metadata?.annotations?.length) return null
@@ -365,7 +375,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
 
     // 即使没有元数据，也尝试处理引用标记（针对二次询问的回复）
     // 这样可以确保在二次询问的回复中也能处理引用标记
-    let content = message.content
+    // 首先解码内容中的HTML实体，确保引用标记能被正确识别
+    let content = decodeHTML(message.content)
 
     // 预先计算citations数组
     const websearchResults = message?.metadata?.webSearch?.results?.map((result) => result.url) || []
@@ -480,7 +491,11 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
 
       // 然后处理纯数字引用格式 [1][2]
       // 使用更宽松的正则表达式，匹配各种形式的引用标记
-      const simpleCitationRegex = /\[(\d+)\](?:\[(\d+)\])?|\[\[(\d+)\]\]/g
+      // 增强正则表达式，匹配更多引用格式，包括带有class="citation-marker"的sup标签
+      // 添加对更复杂的HTML格式的支持，如带有data-citation属性的sup标签
+      // 使用非贪婪匹配和更宽松的模式，确保能够匹配各种格式的引用标记
+      const simpleCitationRegex =
+        /\[(\d+)\](?:\[(\d+)\])?|\[\[(\d+)\]\]|<sup[^>]*class=["']citation-marker["'][^>]*>(\d+)<\/sup>|<sup[^>]*data-citation=['"](.*?)['"][^>]*>(\d+)<\/sup>/g
       content = content.replace(
         simpleCitationRegex,
         (
@@ -488,10 +503,57 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
           num1,
           // 移除未使用的参数 num2
           _unused,
-          num3
+          num3,
+          num4,
+          _citationData,
+          num6
         ) => {
-          const numStr = num1 || num3 // num1是[1]格式，num3是[[1]]格式
+          const numStr = num1 || num3 || num4 || num6 // num1是[1]格式，num3是[[1]]格式，num4和num6是<sup>格式
           if (!numStr) return match
+
+          // 如果是带有data-citation属性的sup标签，尝试直接使用该属性
+          if (_citationData) {
+            try {
+              // 尝试解析data-citation属性，先解码HTML实体
+              const decodedCitationData = decodeHTML(_citationData)
+              // 尝试解析JSON
+              let citationData: { url?: string; title?: string; content?: string }
+              try {
+                citationData = JSON.parse(decodedCitationData)
+              } catch (jsonError) {
+                // 如果JSON解析失败，可能是因为引号问题，尝试替换引号
+                const fixedData = decodedCitationData
+                  .replace(/&quot;/g, '"')
+                  .replace(/&apos;/g, "'")
+                  .replace(/\\"/g, '"')
+                citationData = JSON.parse(fixedData)
+              }
+
+              // 确保URL字段存在
+              if (!citationData.url && citationData.title) {
+                citationData.url = `#citation-${numStr}`
+              }
+
+              // 编码为HTML安全的JSON字符串
+              const citationDataHtml = encodeHTML(JSON.stringify(citationData))
+              console.log('Found existing citation data:', citationData)
+
+              // 直接返回格式化的引用标记，使用单引号包裹data-citation属性
+              return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${numStr}</sup>`
+            } catch (e) {
+              console.error('Error parsing citation data:', e, _citationData)
+              // 如果解析失败，创建一个通用的引用数据
+              const genericCitation = {
+                url: `#citation-${numStr}`,
+                title: `引用 ${numStr}`,
+                content: `这是对原始回复中引用 ${numStr} 的引用`
+              }
+              const citationDataHtml = encodeHTML(JSON.stringify(genericCitation))
+
+              // 返回通用引用标记
+              return `<sup class="citation-marker" data-citation='${citationDataHtml}'>${numStr}</sup>`
+            }
+          }
 
           const index = parseInt(numStr) - 1
 
@@ -534,30 +596,225 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     }
 
     // 处理 MCP 工具调用标记
-    // 处理 MCP 工具调用标记
-    // 处理 MCP 工具调用标记
     console.log('[MessageContent] Original message content:', message.content) // Log original content
+    console.log('[MessageContent] Original message content type:', typeof message.content) // 记录内容类型
+    console.log('[MessageContent] Original message content length:', message.content?.length || 0) // 记录内容长度
+    console.log('[MessageContent] First 100 chars:', message.content?.substring(0, 100)) // 显示前100个字符
+    console.log('[MessageContent] Message metadata:', message.metadata) // 记录完整元数据
+
     const toolResponses = message.metadata?.mcpTools || []
     console.log('[MessageContent] Tool responses from metadata:', toolResponses) // Log tool responses
+
+    // 如果有工具响应，检查每个工具的ID和名称
+    if (toolResponses.length > 0) {
+      console.log('[MessageContent] Tool IDs and names:')
+      toolResponses.forEach(tr => {
+        console.log(`- Tool ID: ${tr.id}, Tool Name: ${tr.tool.name}, Server: ${tr.tool.serverName}`)
+      })
+    }
+
     if (toolResponses.length > 0) {
       let toolIndex = 0
-      // 使用更通用的正则表达式匹配 <tool_use>...</tool_use> 块
-      const toolTagRegex = /<tool_use>[\s\S]*?<\/tool_use>/gi
-      const matches = Array.from(content.matchAll(toolTagRegex)) // Get all matches
-      console.log('[MessageContent] Regex matches for tool tags:', matches) // Log matches
 
-      content = content.replace(toolTagRegex, (match) => {
-        if (toolIndex < toolResponses.length) {
-          const toolCall = toolResponses[toolIndex]
-          toolIndex++
-          console.log(`[MessageContent] Replacing match ${toolIndex} with tool-block id="${toolCall.id}"`) // Log replacement
-          return `<tool-block id="${toolCall.id}"></tool-block>`
+      // 支持多种工具调用标签格式
+      const toolTagPatterns = [
+        // 1. 标准格式: <tool_use>...</tool_use>
+        /<tool_use(?:\s+[^>]*)?>([\s\S]*?)<\/tool_use>/gi,
+
+        // 2. 其他常见标签格式
+        /<tool(?:\s+[^>]*)?>([\s\S]*?)<\/tool>/gi,
+        /<function_call(?:\s+[^>]*)?>([\s\S]*?)<\/function_call>/gi,
+        /<api_call(?:\s+[^>]*)?>([\s\S]*?)<\/api_call>/gi,
+
+        // 3. Gemini特定格式 - 直接使用函数名作为标签
+        /<(?:get_current_time|search|calculate|get_weather|query_database)(?:\s+[^>]*)?>([\s\S]*?)<\/(?:get_current_time|search|calculate|get_weather|query_database)>/gi,
+
+        // 4. 工具名称直接作为标签 (基于已注册的工具)
+        ...toolResponses.map(
+          (tr) => new RegExp(`<${tr.tool.id}(?:\\s+[^>]*)?>(\\s*[\\s\\S]*?)<\\/${tr.tool.id}>`, 'gi')
+        )
+      ]
+
+      // 记录所有匹配到的工具调用标记
+      interface MatchInfo {
+        pattern: RegExp
+        match: RegExpMatchArray
+        index: number
+        length: number
+      }
+
+      const allMatches: MatchInfo[] = []
+
+      // 对每种模式进行处理并收集匹配
+      for (const pattern of toolTagPatterns) {
+        // 重置正则表达式的lastIndex
+        pattern.lastIndex = 0
+
+        // 查找所有匹配并添加到总匹配列表
+        const matches = Array.from(content.matchAll(pattern))
+        if (matches.length > 0) {
+          // 记录匹配的位置信息，用于后续按顺序替换
+          matches.forEach((match) => {
+            allMatches.push({
+              pattern,
+              match,
+              index: match.index,
+              length: match[0].length
+            })
+          })
         }
-        // 如果工具响应数量与标记数量不匹配，记录警告并返回原始匹配
-        console.warn('[MessageContent] Mismatch between tool tags and tool responses. Returning original tag:', match)
-        return match
-      })
-      console.log('[MessageContent] Content after tool tag replacement:', content) // Log content after replacement
+      }
+
+      // 尝试匹配JSON格式的工具调用
+      const jsonPattern =
+        /\{(?:\s*)"(?:tool|function)"(?:\s*):(?:\s*)"([^"]+)"(?:\s*),(?:\s*)"(?:params|arguments|args)"(?:\s*):(?:\s*)(\{[\s\S]*?\})(?:\s*)\}/gi
+      jsonPattern.lastIndex = 0
+      const jsonMatches = Array.from(content.matchAll(jsonPattern))
+
+      if (jsonMatches.length > 0) {
+        jsonMatches.forEach((match) => {
+          allMatches.push({
+            pattern: jsonPattern,
+            match,
+            index: match.index,
+            length: match[0].length
+          })
+        })
+      }
+
+      // 尝试匹配Markdown代码块格式的工具调用
+      const markdownPattern = /```(?:tool|function|api)\n([\s\S]*?)```/gi
+      markdownPattern.lastIndex = 0
+      const markdownMatches = Array.from(content.matchAll(markdownPattern))
+
+      if (markdownMatches.length > 0) {
+        markdownMatches.forEach((match) => {
+          allMatches.push({
+            pattern: markdownPattern,
+            match,
+            index: match.index,
+            length: match[0].length
+          })
+        })
+      }
+
+      // 按照在原文中的位置排序匹配结果
+      allMatches.sort((a, b) => a.index - b.index)
+      console.log('[MessageContent] All tool tag matches sorted by position:', allMatches)
+
+      // 从后向前替换，避免位置变化影响
+      if (allMatches.length > 0) {
+        // 创建内容的副本
+        let newContent = content
+
+        // 从后向前替换
+        for (let i = allMatches.length - 1; i >= 0; i--) {
+          const matchInfo = allMatches[i]
+
+          if (toolIndex < toolResponses.length) {
+            const toolCall = toolResponses[toolIndex]
+            toolIndex++
+
+            // 替换匹配的内容
+            newContent =
+              newContent.substring(0, matchInfo.index) +
+              `<tool-block id="${toolCall.id}"></tool-block>` +
+              newContent.substring(matchInfo.index + matchInfo.length)
+
+            console.log(
+              `[MessageContent] Replacing match at position ${matchInfo.index} with tool-block id="${toolCall.id}"`
+            )
+          } else {
+            // 如果工具响应数量与标记数量不匹配，记录警告但不替换
+            console.warn(
+              '[MessageContent] Mismatch between tool tags and tool responses. Keeping original tag:',
+              matchInfo.match[0]
+            )
+          }
+        }
+
+        // 更新内容
+        content = newContent
+      } else {
+        // 如果没有找到匹配，使用原始的正则表达式作为后备方案
+        const toolTagRegex = /<tool_use>[\s\S]*?<\/tool_use>/gi
+        const matches = Array.from(content.matchAll(toolTagRegex))
+        console.log('[MessageContent] Fallback regex matches for tool tags:', matches)
+
+        content = content.replace(toolTagRegex, (match) => {
+          if (toolIndex < toolResponses.length) {
+            const toolCall = toolResponses[toolIndex]
+            toolIndex++
+            console.log(`[MessageContent] Replacing match with tool-block id="${toolCall.id}"`)
+            return `<tool-block id="${toolCall.id}"></tool-block>`
+          }
+          console.warn('[MessageContent] Mismatch between tool tags and tool responses. Returning original tag:', match)
+          return match
+        })
+
+        // 检查是否所有工具都被处理了
+        // 如果没有在内容中找到工具标签匹配但有工具响应，则为每个未处理的工具添加工具块
+        if (toolIndex < toolResponses.length) {
+          console.log('[MessageContent] Content has no tool tags but has tool responses, adding tool blocks')
+          // 为每个剩余的工具响应创建工具块
+          let additionalBlocks = ''
+          while (toolIndex < toolResponses.length) {
+            const toolCall = toolResponses[toolIndex]
+            additionalBlocks += `<tool-block id="${toolCall.id}"></tool-block>`
+            console.log(`[MessageContent] Adding tool-block for id="${toolCall.id}"`)
+            toolIndex++
+          }
+
+          // 智能插入工具块到自然位置
+          if (content.trim() === '') {
+            // 如果内容为空，直接设置为工具块
+            content = additionalBlocks
+          } else {
+            // 寻找适合插入工具块的位置
+            const sentences = content.split(/([.!?。！？]+\s*)/).filter(s => s.trim());
+
+            // 如果有足够的句子，尝试在第一句话后插入
+            if (sentences.length >= 2) {
+              // 找到第一个句子结束的位置
+              let insertPosition = 0;
+              let firstSentence = sentences[0] + (sentences[1].match(/[.!?。！？]+\s*/) ? sentences[1] : '');
+              insertPosition = content.indexOf(firstSentence) + firstSentence.length;
+
+              // 在第一句话之后插入工具块
+              content = content.substring(0, insertPosition) + '\n\n' + additionalBlocks + '\n\n' + content.substring(insertPosition);
+              console.log(`[MessageContent] Inserted tool blocks after first sentence at position ${insertPosition}`);
+            }
+            // 如果找不到合适的句子，检查是否有"稍等"、"请稍等"等提示词
+            else if (content.match(/稍等|请稍等|等一下|查询|搜索|检索|查找|让我|我来|正在/i)) {
+              const waitPhrases = ['稍等', '请稍等', '等一下', '查询', '搜索', '检索', '查找', '让我', '我来', '正在'];
+              let insertPosition = content.length;
+
+              for (const phrase of waitPhrases) {
+                const phrasePosition = content.indexOf(phrase);
+                if (phrasePosition !== -1) {
+                  // 找到包含提示词的句子结束位置
+                  const sentenceEnd = content.substring(phrasePosition).search(/[.!?。！？]+\s*/);
+                  if (sentenceEnd !== -1) {
+                    insertPosition = phrasePosition + sentenceEnd + 1; // +1 包含标点符号
+                    break;
+                  }
+                }
+              }
+
+              // 在提示词句子后插入工具块
+              content = content.substring(0, insertPosition) + '\n\n' + additionalBlocks + '\n\n' + content.substring(insertPosition);
+              console.log(`[MessageContent] Inserted tool blocks after waiting phrase at position ${insertPosition}`);
+            }
+            // 如果没有找到合适的位置，则放在开头
+            else {
+              content = additionalBlocks + '\n\n' + content;
+              console.log('[MessageContent] No suitable insertion point found, added tool blocks at the beginning');
+            }
+          }
+        }
+      }
+
+      console.log('[MessageContent] Content after tool tag replacement:', content)
     }
 
     return content
@@ -567,7 +824,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     message.metadata?.knowledge,
     message.metadata?.mcpTools, // Add mcpTools as dependency
     message.content,
-    citationsData
+    citationsData,
+    decodeHTML // 添加decodeHTML函数作为依赖
   ])
 
   if (message.status === 'sending') {
@@ -613,11 +871,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
     )
   }
 
-  // --- MODIFIED LINE BELOW ---
-  // This regex matches various tool calling formats:
-  // 1. <tool_use>...</tool_use> - Standard format
-  // 2. Special format: <tool_use>feaAumUH6sCQu074KDtuY6{"format": "time"}</tool_use>
-  // Case-insensitive, allows for attributes and whitespace
+  // 只移除工具调用标签，保留思考标签的内容
+  // 这样思考过程的内容会保留在原始内容中，同时也会在折叠的思考块中显示
   const tagsToRemoveRegex = /<tool_use>(?:[\s\S]*?)<\/tool_use>/gi
 
   return (
@@ -782,8 +1037,8 @@ const MessageContent: React.FC<Props> = ({ message: _message, model }) => {
             dangerouslySetInnerHTML={{
               __html: message.metadata.groundingMetadata?.searchEntryPoint?.renderedContent
                 ? message.metadata.groundingMetadata.searchEntryPoint.renderedContent
-                    .replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
-                    .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
+                  .replace(/@media \(prefers-color-scheme: light\)/g, 'body[theme-mode="light"]')
+                  .replace(/@media \(prefers-color-scheme: dark\)/g, 'body[theme-mode="dark"]')
                 : ''
             }}
           />
@@ -1021,6 +1276,27 @@ try {
             0% { background-color: rgba(255, 215, 0, 0.1); }
             50% { background-color: rgba(255, 215, 0, 0.5); }
             100% { background-color: rgba(255, 215, 0, 0.1); }
+          }
+
+          /* 工具块包装器样式 */
+          .tool-block-wrapper {
+            display: block;
+            margin: 16px 0;
+            break-inside: avoid;
+          }
+
+          /* 确保 p 标签内的 tool-block-wrapper 能正确显示 */
+          p > .tool-block-wrapper {
+            margin-top: 16px;
+            margin-bottom: 16px;
+            display: block;
+          }
+          
+          /* 防止段落内容包含块级元素的样式问题 */
+          p > tool-block {
+            display: block;
+            margin-top: 16px;
+            margin-bottom: 0;
           }
         `
       document.head.appendChild(styleElement)

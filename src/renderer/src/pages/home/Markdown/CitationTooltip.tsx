@@ -13,40 +13,52 @@ interface CitationTooltipProps {
 }
 
 const CitationTooltip: React.FC<CitationTooltipProps> = ({ children, citation }) => {
+  // 确保citation对象有效
+  const safeCitation = {
+    url: citation?.url || '#',
+    title: citation?.title || '',
+    content: citation?.content || ''
+  }
+
   let hostname = ''
   try {
-    hostname = new URL(citation.url).hostname
+    // 只有当URL是有效的网址时才尝试解析
+    if (safeCitation.url && safeCitation.url.startsWith('http')) {
+      hostname = new URL(safeCitation.url).hostname
+    } else {
+      hostname = safeCitation.url
+    }
   } catch {
-    hostname = citation.url
+    hostname = safeCitation.url
   }
 
   // 添加点击处理函数
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log('Citation clicked:', citation)
+    console.log('Citation clicked:', safeCitation)
 
     // 如果是锚点链接，滚动到页面对应位置
-    if (citation.url.startsWith('#')) {
-      const element = document.querySelector(citation.url)
+    if (safeCitation.url.startsWith('#')) {
+      const element = document.querySelector(safeCitation.url)
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' })
       }
     } else {
       // 否则打开外部链接
-      window.open(citation.url, '_blank')
+      window.open(safeCitation.url, '_blank')
     }
   }
 
   // 自定义悬浮卡片内容
   const tooltipContent = (
     <TooltipContentWrapper>
-      <TooltipHeader onClick={() => window.open(citation.url, '_blank')}>
-        <Favicon hostname={hostname} alt={citation.title || hostname} />
-        <TooltipTitle title={citation.title || hostname}>{citation.title || hostname}</TooltipTitle>
+      <TooltipHeader onClick={() => window.open(safeCitation.url, '_blank')}>
+        <Favicon hostname={hostname} alt={safeCitation.title || hostname} />
+        <TooltipTitle title={safeCitation.title || hostname}>{safeCitation.title || hostname}</TooltipTitle>
       </TooltipHeader>
-      {citation.content && <TooltipBody>{citation.content}</TooltipBody>}
-      <TooltipFooter onClick={() => window.open(citation.url, '_blank')}>{hostname}</TooltipFooter>
+      {safeCitation.content && <TooltipBody>{safeCitation.content}</TooltipBody>}
+      <TooltipFooter onClick={() => window.open(safeCitation.url, '_blank')}>{hostname}</TooltipFooter>
     </TooltipContentWrapper>
   )
 

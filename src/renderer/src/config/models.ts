@@ -186,7 +186,7 @@ export const VISION_REGEX = new RegExp(
 )
 
 // Text to image models
-export const TEXT_TO_IMAGE_REGEX = /flux|diffusion|stabilityai|sd-|dall|cogview|janus/i
+export const TEXT_TO_IMAGE_REGEX = /flux|diffusion|stabilityai|sd-|dall|cogview|janus|midjourney/i
 
 // Reasoning models
 export const REASONING_REGEX =
@@ -2285,6 +2285,8 @@ export const GENERATE_IMAGE_MODELS = [
   'gpt-image-1'
 ]
 
+export const OPENAI_NO_SUPPORT_DEV_ROLE_MODELS = ['o1-preview', 'o1-mini']
+
 export const GEMINI_SEARCH_MODELS = [
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
@@ -2330,9 +2332,10 @@ export function isVisionModel(model: Model): boolean {
   if (!model) {
     return false
   }
-  if (model.provider === 'copilot') {
-    return false
-  }
+  // 新添字段 copilot-vision-request 后可使用 vision
+  // if (model.provider === 'copilot') {
+  // return false
+  // }
 
   if (model.provider === 'doubao') {
     return VISION_REGEX.test(model.name) || model.type?.includes('vision') || false

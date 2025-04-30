@@ -5085,6 +5085,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/file-saver@npm:^2":
+  version: 2.0.7
+  resolution: "@types/file-saver@npm:2.0.7"
+  checksum: 10c0/c6b88a1aea8eec58469da2a90828fef6e9d5d590c7094fb959783d7c32878af80d39439734f3d41b78355dadb507f606e3d04a29a160c85411c65251e58df847
+  languageName: node
+  linkType: hard
+
 "@types/fs-extra@npm:9.0.13, @types/fs-extra@npm:^9.0.11":
   version: 9.0.13
   resolution: "@types/fs-extra@npm:9.0.13"
@@ -5859,6 +5866,7 @@ __metadata:
     "@types/adm-zip": "npm:^0.5.7"
     "@types/d3": "npm:^7"
     "@types/diff": "npm:^7"
+    "@types/file-saver": "npm:^2"
     "@types/fs-extra": "npm:^11"
     "@types/glob": "npm:^8.1.0"
     "@types/lodash": "npm:^4.17.16"
@@ -5893,7 +5901,7 @@ __metadata:
     dexie: "npm:^4.0.8"
     dexie-react-hooks: "npm:^1.1.7"
     diff: "npm:^7.0.0"
-    docx: "npm:^9.0.2"
+    docx: "npm:^9.4.1"
     dotenv-cli: "npm:^7.4.2"
     edge-tts-node: "npm:^1.5.7"
     electron: "npm:32.3.3"
@@ -5915,6 +5923,7 @@ __metadata:
     eslint-plugin-unused-imports: "npm:^4.1.4"
     fast-xml-parser: "npm:^5.0.9"
     fetch-socks: "npm:^1.3.2"
+    file-saver: "npm:^2.0.5"
     framer-motion: "npm:^12.9.2"
     fs-extra: "npm:^11.2.0"
     glob: "npm:^11.0.1"
@@ -5932,6 +5941,7 @@ __metadata:
     markdown-it: "npm:^14.1.0"
     mime: "npm:^4.0.4"
     minimatch: "npm:^10.0.1"
+    moment: "npm:^2.30.1"
     monaco-editor: "npm:^0.52.2"
     node-edge-tts: "npm:^1.2.8"
     npx-scope-finder: "npm:^1.2.0"
@@ -8725,9 +8735,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"docx@npm:^9.0.2":
-  version: 9.3.0
-  resolution: "docx@npm:9.3.0"
+"docx@npm:^9.4.1":
+  version: 9.4.1
+  resolution: "docx@npm:9.4.1"
   dependencies:
     "@types/node": "npm:^22.7.5"
     hash.js: "npm:^1.1.7"
@@ -8735,7 +8745,7 @@ __metadata:
     nanoid: "npm:^5.1.3"
     xml: "npm:^1.0.1"
     xml-js: "npm:^1.6.8"
-  checksum: 10c0/55d3689932b2c0ceae23bf5883826009296f2ae260aae44dda632e170adc847cc6dfa0b4c692623f84fbb9a6b60018338279d64933d5a7f0abc8f3e30fd3e68e
+  checksum: 10c0/f5f62339667597648fb0587f7b427b058b2dde07812579b57ed72b9f8b606bfcc36b0b24a7fb4835ac2800d7fca751241755e924e685597186b4a22cd2572451
   languageName: node
   linkType: hard
 
@@ -10382,6 +10392,13 @@ __metadata:
   dependencies:
     flat-cache: "npm:^4.0.0"
   checksum: 10c0/9e2b5938b1cd9b6d7e3612bdc533afd4ac17b2fc646569e9a8abbf2eb48e5eb8e316bc38815a3ef6a1b456f4107f0d0f055a614ca613e75db6bf9ff4d72c1638
+  languageName: node
+  linkType: hard
+
+"file-saver@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "file-saver@npm:2.0.5"
+  checksum: 10c0/0a361f683786c34b2574aea53744cb70d0a6feb0fa5e3af00f2fcb6c9d40d3049cc1470e38c6c75df24219f247f6fb3076f86943958f580e62ee2ffe897af8b1
   languageName: node
   linkType: hard
 
@@ -14798,6 +14815,13 @@ __metadata:
   bin:
     mkdirp: dist/cjs/src/bin.js
   checksum: 10c0/9f2b975e9246351f5e3a40dcfac99fcd0baa31fbfab615fe059fb11e51f10e4803c63de1f384c54d656e4db31d000e4767e9ef076a22e12a641357602e31d57d
+  languageName: node
+  linkType: hard
+
+"moment@npm:^2.30.1":
+  version: 2.30.1
+  resolution: "moment@npm:2.30.1"
+  checksum: 10c0/865e4279418c6de666fca7786607705fd0189d8a7b7624e2e56be99290ac846f90878a6f602e34b4e0455c549b85385b1baf9966845962b313699e7cb847543a
   languageName: node
   linkType: hard
 

@@ -1,6 +1,6 @@
 import { CheckOutlined } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { Message } from '@renderer/types'
+import { MCPToolResponse, Message } from '@renderer/types'
 import { Collapse, message as antdMessage, Tooltip } from 'antd'
 import { FC, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +8,15 @@ import BarLoader from 'react-spinners/BarLoader'
 import styled from 'styled-components'
 
 import Markdown from '../Markdown/Markdown'
+
+// 创建默认的空数组，用于 Markdown props
+const DEFAULT_TOOL_RESPONSES: MCPToolResponse[] = []
+
+// 将 MessageContentContainer 移到组件外部定义，避免动态创建 styled-components 的警告
+const MessageContentContainer = styled.div<{ fontFamily: string; fontSize: string | number }>`
+  font-family: ${(props) => props.fontFamily};
+  font-size: ${(props) => props.fontSize};
+`
 
 interface Props {
   message: Message
@@ -25,6 +34,12 @@ const MessageThought: FC<Props> = ({ message }) => {
       : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans","Helvetica Neue", sans-serif'
   }, [messageFont])
 
+  // 添加工具相关的状态
+  const [activeToolKeys, setActiveToolKeys] = useState<string[]>([])
+  const [copiedToolMap, setCopiedToolMap] = useState<Record<string, boolean>>({})
+  const [editingToolId, setEditingToolId] = useState<string | null>(null)
+  const [editedToolParamsString, setEditedToolParamsString] = useState('')
+
   useEffect(() => {
     if (!isThinking && thoughtAutoCollapse) setActiveKey('')
   }, [isThinking, thoughtAutoCollapse])
@@ -38,6 +53,61 @@ const MessageThought: FC<Props> = ({ message }) => {
       setTimeout(() => setCopied(false), 2000)
     }
   }, [message.reasoning_content, t])
+
+  // 处理工具相关的回调函数
+  const handleToolCopy = useCallback((_content: string, toolId: string) => {
+    setCopiedToolMap((prev) => ({ ...prev, [toolId]: true }))
+  }, [])
+
+  const handleToolRerun = useCallback(() => {
+    // 实现工具重新运行的逻辑
+  }, [])
+
+  const handleToolEdit = useCallback(() => {
+    // 实现工具编辑的逻辑
+  }, [])
+
+  const handleToolSave = useCallback(() => {
+    setEditingToolId(null)
+  }, [])
+
+  const handleToolCancel = useCallback(() => {
+    setEditingToolId(null)
+  }, [])
+
+  const handleToolParamsChange = useCallback((newParams: string) => {
+    setEditedToolParamsString(newParams)
+  }, [])
+
+  // 创建通用的 Markdown props
+  const markdownProps = useMemo(
+    () => ({
+      toolResponses: DEFAULT_TOOL_RESPONSES,
+      activeToolKeys,
+      copiedToolMap,
+      editingToolId,
+      editedToolParamsString,
+      onToolToggle: setActiveToolKeys,
+      onToolCopy: handleToolCopy,
+      onToolRerun: handleToolRerun,
+      onToolEdit: handleToolEdit,
+      onToolSave: handleToolSave,
+      onToolCancel: handleToolCancel,
+      onToolParamsChange: handleToolParamsChange
+    }),
+    [
+      activeToolKeys,
+      copiedToolMap,
+      editingToolId,
+      editedToolParamsString,
+      handleToolCopy,
+      handleToolRerun,
+      handleToolEdit,
+      handleToolSave,
+      handleToolCancel,
+      handleToolParamsChange
+    ]
+  )
 
   const thinkingTime = message.metrics?.time_thinking_millsec || 0
   const thinkingTimeSeconds = (thinkingTime / 1000).toFixed(1)
@@ -71,18 +141,102 @@ const MessageThought: FC<Props> = ({ message }) => {
           </MessageTitleLabel>
         ),
         children: (
-          <div style={{ fontFamily, fontSize }}>
-            <Markdown message={{ ...message, content: message.reasoning_content || '' }} />
-          </div>
+          <MessageContentContainer fontFamily={fontFamily} fontSize={fontSize}>
+            <Markdown message={{ ...message, content: message.reasoning_content || '' }} {...markdownProps} />
+          </MessageContentContainer>
         )
       }
     ],
-    [isThinking, isPaused, t, thinkingTimeSeconds, copied, copyThought, fontFamily, fontSize, message.reasoning_content]
+    [
+      isThinking,
+      isPaused,
+      t,
+      thinkingTimeSeconds,
+      copied,
+      copyThought,
+      fontFamily,
+      fontSize,
+      markdownProps,
+      message // 包含整个 message 对象，包括 message.reasoning_content
+    ]
   )
 
   // 如果没有思考内容，不渲染任何内容
   if (!message.reasoning_content) {
     return null
+  }
+
+  // 简化处理：直接移除所有可能的标签
+  // 这样无论标签是否被分开，都能正确处理
+  let processedContent = message.reasoning_content
+
+  // 使用一个函数来处理所有可能的标签和标签片段
+  const cleanThinkingTags = (content: string): string => {
+    // 0. 处理特殊标记 THINKING_TAG_START 和 THINKING_TAG_END
+    content = content.replace(/THINKING_TAG_START/g, '')
+    content = content.replace(/THINKING_TAG_END/g, '')
+
+    // 0.1 先尝试修复分开的标签
+    // 如果发现行尾有单独的 < 符号，且下一行开头有 think>，则删除这两个部分
+    const lines = content.split('\n')
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (lines[i].trim().endsWith('<') && lines[i + 1].trim().startsWith('think>')) {
+        lines[i] = lines[i].replace(/<\s*$/, '')
+        lines[i + 1] = lines[i + 1].replace(/^\s*think>\s*/, '')
+      }
+    }
+    content = lines.join('\n')
+
+    // 1. 处理完整的标签
+    content = content.replace(
+      /<think>|<thinking>|<thoughts>|<thought>|<reasoning>|<reason>|<analysis>|<reflection>/g,
+      ''
+    )
+    content = content.replace(
+      /<\/think>|<\/thinking>|<\/thoughts>|<\/thought>|<\/reasoning>|<\/reason>|<\/analysis>|<\/reflection>/g,
+      ''
+    )
+
+    // 2. 处理分开的标签
+    content = content.replace(/\s*<\s*(\r?\n|\s)*\s*think>\s*/g, '')
+    content = content.replace(/\s*<\s*$/gm, '') // 处理行尾的单独 < 符号
+    content = content.replace(/^\s*think>\s*/gm, '') // 处理行首的单独 think> 标签
+
+    // 2.1 处理所有可能的标签开头
+    content = content.replace(
+      /\s*<\s*(\r?\n|\s)*\s*(thinking|thoughts|thought|reasoning|reason|analysis|reflection)>\s*/g,
+      ''
+    )
+
+    // 2.2 处理所有可能的标签结尾
+    content = content.replace(/^\s*(thinking|thoughts|thought|reasoning|reason|analysis|reflection)>\s*/gm, '')
+
+    // 3. 处理标签片段
+    content = content.replace(/\b(think|thinking|thoughts|thought|reasoning|reason|analysis|reflection)>\s*/g, '')
+    content = content.replace(/<\/(think|thinking|thoughts|thought|reasoning|reason|analysis|reflection)\s*/g, '')
+
+    // 4. 处理HTML实体编码
+    content = content.replace(/&lt;(think|thinking|thoughts|thought|reasoning|reason|analysis|reflection)&gt;/g, '')
+    content = content.replace(/&lt;\/(think|thinking|thoughts|thought|reasoning|reason|analysis|reflection)&gt;/g, '')
+
+    // 5. 处理单独的 < 和 > 符号
+    content = content.replace(/^\s*<\s*$/gm, '') // 单独一行的 < 符号
+    content = content.replace(/^\s*>\s*$/gm, '') // 单独一行的 > 符号
+    content = content.replace(/^\s*\/\s*$/gm, '') // 单独一行的 / 符号
+
+    // 6. 最后的清理：移除所有可能的标签残余
+    content = content.replace(/<\/?[a-z]+>/g, '') // 移除所有简单的HTML标签
+
+    return content
+  }
+
+  // 应用清理函数
+  processedContent = cleanThinkingTags(processedContent)
+
+  // 更新消息对象
+  message = {
+    ...message,
+    reasoning_content: processedContent
   }
 
   return (

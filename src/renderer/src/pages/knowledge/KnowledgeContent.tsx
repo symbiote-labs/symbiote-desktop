@@ -8,7 +8,7 @@ import Scrollbar from '@renderer/components/Scrollbar'
 import { useKnowledge } from '@renderer/hooks/useKnowledge'
 import FileManager from '@renderer/services/FileManager'
 import { getProviderName } from '@renderer/services/ProviderService'
-import { FileType, FileTypes, KnowledgeBase, KnowledgeItem } from '@renderer/types'
+import { FileType, KnowledgeBase, KnowledgeItem } from '@renderer/types'
 import { formatFileSize } from '@renderer/utils'
 import { bookExts, documentExts, textExts, thirdPartyApplicationExts } from '@shared/config/constant'
 import { Alert, Button, Dropdown, Empty, message, Tag, Tooltip, Upload } from 'antd'
@@ -89,35 +89,64 @@ const KnowledgeContent: FC<KnowledgeContentProps> = ({ selectedBase }) => {
 
     if (files) {
       try {
-        const _files: FileType[] = files
-          .map((file) => {
-            // 检查文件是否有path属性（兼容Electron 32.3.3之前的版本）
-            const filePath = 'path' in file ? (file as any).path : ''
+        // 处理文件列表
+        const processedFiles: FileType[] = []
 
-            return {
-              id: file.name,
-              name: file.name,
-              path: filePath, // 使用检查后的路径
-              size: file.size,
-              ext: `.${file.name.split('.').pop()}`.toLowerCase(),
-              count: 1,
-              origin_name: file.name,
-              type: file.type as FileTypes,
-              created_at: new Date().toISOString()
+        for (const file of files) {
+          const ext = `.${file.name.split('.').pop()}`.toLowerCase()
+
+          // 检查文件扩展名是否在支持列表中
+          if (!fileTypes.includes(ext)) {
+            continue
+          }
+
+          // 检查文件是否有path属性（兼容Electron 32.3.3之前的版本）
+          const hasPath = 'path' in file && typeof (file as any).path === 'string'
+
+          if (hasPath) {
+            // 如果有path属性，直接使用
+            const fileInfo = await window.api.file.get((file as any).path)
+            if (fileInfo) {
+              processedFiles.push(fileInfo)
             }
-          })
-          .filter(({ ext, path }) => {
-            // 只处理有路径且扩展名符合要求的文件
-            return path && fileTypes.includes(ext)
-          })
+          } else {
+            // 对于没有path属性的文件（Electron 32.3.3+）
+            // 创建临时文件并写入内容
+            try {
+              const fileName = file.name
+              const tempFilePath = await window.api.file.create(fileName)
+
+              // 读取文件内容
+              const reader = new FileReader()
+              const fileContent = await new Promise<ArrayBuffer>((resolve, reject) => {
+                reader.onload = () => resolve(reader.result as ArrayBuffer)
+                reader.onerror = reject
+                reader.readAsArrayBuffer(file)
+              })
+
+              // 写入临时文件
+              const uint8Array = new Uint8Array(fileContent)
+              await window.api.file.write(tempFilePath, uint8Array)
+
+              // 获取文件信息
+              const fileInfo = await window.api.file.get(tempFilePath)
+              if (fileInfo) {
+                processedFiles.push(fileInfo)
+              }
+            } catch (error) {
+              console.error('[KnowledgeContent] Error processing file without path:', error)
+              continue
+            }
+          }
+        }
 
         // 如果没有有效文件，显示提示并返回
-        if (_files.length === 0) {
+        if (processedFiles.length === 0) {
           message.info(t('knowledge.no_valid_files'))
           return
         }
 
-        const uploadedFiles = await FileManager.uploadFiles(_files)
+        const uploadedFiles = await FileManager.uploadFiles(processedFiles)
         addFiles(uploadedFiles)
       } catch (error) {
         console.error('[KnowledgeContent] Error processing files:', error)
@@ -137,7 +166,7 @@ const KnowledgeContent: FC<KnowledgeContentProps> = ({ selectedBase }) => {
       inputPlaceholder: t('knowledge.url_placeholder'),
       inputProps: {
         rows: 10,
-        onPressEnter: () => {}
+        onPressEnter: () => { }
       }
     })
 
