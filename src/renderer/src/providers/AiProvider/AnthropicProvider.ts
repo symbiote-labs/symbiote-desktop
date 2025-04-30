@@ -23,8 +23,6 @@ import OpenAI from 'openai'
 import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
 
-type ReasoningEffort = 'high' | 'medium' | 'low'
-
 interface ReasoningConfig {
   type: 'enabled' | 'disabled'
   budget_tokens?: number
@@ -124,32 +122,17 @@ export default class AnthropicProvider extends BaseProvider {
    * @param model - The model
    * @returns The reasoning effort
    */
-  private getReasoningEffort(assistant: Assistant, model: Model): ReasoningConfig | undefined {
+  private getBudgetToken(assistant: Assistant, model: Model): ReasoningConfig | undefined {
     if (!isReasoningModel(model)) {
       return undefined
     }
 
-    const effortRatios: Record<ReasoningEffort, number> = {
-      high: 0.8,
-      medium: 0.5,
-      low: 0.2
-    }
-
-    const effort = assistant?.settings?.reasoning_effort as ReasoningEffort
-    const effortRatio = effortRatios[effort]
-
-    if (!effortRatio) {
-      return undefined
-    }
-
-    const isClaude37Sonnet = model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
-
-    if (!isClaude37Sonnet) {
-      return undefined
-    }
-
     const maxTokens = assistant?.settings?.maxTokens || DEFAULT_MAX_TOKENS
-    const budgetTokens = Math.trunc(Math.max(Math.min(maxTokens * effortRatio, 32000), 1024))
+    const budgetTokens = assistant?.settings?.thinking_budget || maxTokens
+
+    if (budgetTokens > maxTokens) {
+      return undefined
+    }
 
     return {
       type: 'enabled',
@@ -200,7 +183,7 @@ export default class AnthropicProvider extends BaseProvider {
       top_p: this.getTopP(assistant, model),
       system: systemPrompt,
       // @ts-ignore thinking
-      thinking: this.getReasoningEffort(assistant, model),
+      thinking: this.getBudgetToken(assistant, model),
       ...this.getCustomParameters(assistant)
     }
 

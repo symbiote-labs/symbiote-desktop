@@ -1,7 +1,9 @@
 import { InfoCircleOutlined } from '@ant-design/icons'
 import { Model } from '@renderer/types'
-import { Col, InputNumber, Radio, Row, Slider, Space, Tooltip } from 'antd'
+import { Button, InputNumber, Slider, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import styled from 'styled-components'
 
 import { isSupportedThinkingTokenGeminiModel } from '../../config/models'
 
@@ -14,11 +16,9 @@ interface ThinkingSliderProps {
 }
 
 export default function ThinkingSlider({ model, value, min, max, onChange }: ThinkingSliderProps) {
-  // 使用null表示"Default"模式，使用数字表示"Custom"模式
   const [mode, setMode] = useState<'default' | 'custom'>(value === null ? 'default' : 'custom')
   const [customValue, setCustomValue] = useState<number>(value === null ? 0 : value)
-
-  // 当外部value变化时更新内部状态
+  const { t } = useTranslation()
   useEffect(() => {
     if (value === null) {
       setMode('default')
@@ -28,18 +28,15 @@ export default function ThinkingSlider({ model, value, min, max, onChange }: Thi
     }
   }, [value])
 
-  // 处理模式切换
-  const handleModeChange = (e: any) => {
-    const newMode = e.target.value
+  const handleModeChange = (newMode: 'default' | 'custom') => {
     setMode(newMode)
     if (newMode === 'default') {
-      onChange(null) // 传递null表示使用默认行为
+      onChange(null)
     } else {
-      onChange(customValue) // 传递当前自定义值
+      onChange(customValue)
     }
   }
 
-  // 处理自定义值变化
   const handleCustomValueChange = (newValue: number | null) => {
     if (newValue !== null) {
       setCustomValue(newValue)
@@ -48,45 +45,128 @@ export default function ThinkingSlider({ model, value, min, max, onChange }: Thi
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
+    <Container>
       {isSupportedThinkingTokenGeminiModel(model) && (
-        <Radio.Group value={mode} onChange={handleModeChange}>
-          <Radio.Button value="default">Default (Model's default behavior)</Radio.Button>
-          <Radio.Button value="custom">Custom</Radio.Button>
-        </Radio.Group>
+        <ButtonGroup>
+          <Tooltip title={t('chat.input.thinking.mode.default.tip')}>
+            <ModeButton type={mode === 'default' ? 'primary' : 'text'} onClick={() => handleModeChange('default')}>
+              {t('chat.input.thinking.mode.default')}
+            </ModeButton>
+          </Tooltip>
+          <Tooltip title={t('chat.input.thinking.mode.custom.tip')}>
+            <ModeButton type={mode === 'custom' ? 'primary' : 'text'} onClick={() => handleModeChange('custom')}>
+              {t('chat.input.thinking.mode.custom')}
+            </ModeButton>
+          </Tooltip>
+        </ButtonGroup>
       )}
 
       {mode === 'custom' && (
-        <Row align="middle">
-          <Col span={12}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <Slider
-                min={min}
-                max={max}
-                onChange={handleCustomValueChange}
-                value={customValue}
-                marks={{
-                  0: { label: '0' },
-                  [max]: { label: `${max.toLocaleString()}` }
-                }}
-              />
-              <Tooltip title="Set the number of thinking tokens to use. Set to 0 to explicitly use no thinking tokens.">
-                <InfoCircleOutlined style={{ marginLeft: 8, color: 'var(--color-text-secondary)' }} />
-              </Tooltip>
-            </div>
-          </Col>
-          <Col span={4}>
-            <InputNumber
+        <CustomControls>
+          <SliderContainer>
+            <Slider
               min={min}
               max={max}
-              style={{ margin: '0 16px' }}
               value={customValue}
               onChange={handleCustomValueChange}
-              addonAfter="tokens"
+              tooltip={{ formatter: null }}
             />
-          </Col>
-        </Row>
+            <SliderMarks>
+              <span>0</span>
+              <span>{max.toLocaleString()}</span>
+            </SliderMarks>
+          </SliderContainer>
+
+          <InputContainer>
+            <StyledInputNumber
+              min={min}
+              max={max}
+              value={customValue}
+              onChange={(value) => handleCustomValueChange(Number(value))}
+              controls={false}
+            />
+            <Tooltip title={t('chat.input.thinking.mode.tokens.tip')}>
+              <InfoCircleOutlined style={{ color: 'var(--color-text-2)' }} />
+            </Tooltip>
+          </InputContainer>
+        </CustomControls>
       )}
-    </Space>
+    </Container>
   )
 }
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 320px;
+  padding: 4px;
+`
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 4px;
+`
+
+const ModeButton = styled(Button)`
+  min-width: 90px;
+  height: 28px;
+  border-radius: 14px;
+  padding: 0 16px;
+  font-size: 13px;
+
+  &:hover {
+    background-color: var(--color-background-soft);
+  }
+
+  &.ant-btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+
+    &:hover {
+      background-color: var(--color-primary);
+      opacity: 0.9;
+    }
+  }
+`
+
+const CustomControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`
+
+const SliderContainer = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+`
+
+const SliderMarks = styled.div`
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-2);
+  font-size: 12px;
+`
+
+const InputContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const StyledInputNumber = styled(InputNumber)`
+  width: 70px;
+
+  .ant-input-number-input {
+    height: 28px;
+    text-align: center;
+    font-size: 13px;
+    padding: 0 8px;
+  }
+`

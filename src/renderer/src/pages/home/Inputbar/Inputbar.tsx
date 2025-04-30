@@ -799,10 +799,14 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
     const newEnableThinking = !assistant.enableThinking
     updateAssistant({ ...assistant, enableThinking: newEnableThinking })
 
-    if (newEnableThinking && (isSupportedThinkingToken || isSupportedReasoningEffort)) {
-      setThinkingPanelVisible(true)
-    } else {
+    if (!newEnableThinking) {
       setThinkingPanelVisible(false)
+    }
+  }
+
+  const onTogglePanel = () => {
+    if (isSupportedThinkingToken || isSupportedReasoningEffort) {
+      setThinkingPanelVisible((prev) => !prev)
     }
   }
 
@@ -952,6 +956,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
                   assistant={assistant}
                   ToolbarButton={ToolbarButton}
                   onToggleThinking={onToggleThinking}
+                  onTogglePanel={onTogglePanel}
+                  showPanel={thinkingPanelVisible}
                 />
               </ThinkingButtonContainer>
               <WebSearchButton ref={webSearchButtonRef} assistant={assistant} ToolbarButton={ToolbarButton} />
@@ -1139,7 +1145,8 @@ const ToolbarButton = styled(Button)`
   &.active {
     background-color: var(--color-primary) !important;
     .anticon,
-    .iconfont {
+    .iconfont,
+    .chevron-icon {
       color: var(--color-white-soft);
     }
     &:hover {
@@ -1155,31 +1162,18 @@ const ThinkingPanelContainer = styled.div`
   transform: translateX(-50%);
   background-color: var(--color-background);
   border: 0.5px solid var(--color-border);
-  border-radius: 8px 8px 0 0;
+  border-radius: 15px;
   padding: 10px;
   margin-bottom: 5px;
   z-index: 10;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
   min-width: 250px;
-
-  /* Add a small arrow pointing down to the ThinkingButton */
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid var(--color-border);
-  }
 `
 
 const ThinkingButtonContainer = styled.div`
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 `
 
 export default Inputbar

@@ -1,10 +1,10 @@
 import {
   getOpenAIWebSearchParams,
-  isGrokReasoningModel,
   isHunyuanSearchModel,
   isOpenAIWebSearch,
   isReasoningModel,
   isSupportedModel,
+  isSupportedReasoningEffortGrokModel,
   isSupportedReasoningEffortModel,
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenClaudeModel,
@@ -264,11 +264,15 @@ export default class OpenAIProvider extends BaseProvider {
       if (model.provider === 'openrouter') {
         if (isSupportedReasoningEffortModel(model)) {
           return {
-            reasoning_effort: assistant?.settings?.reasoning_effort
+            reasoning: {
+              effort: assistant?.settings?.reasoning_effort
+            }
           }
         } else if (isSupportedThinkingTokenModel(model)) {
           return {
-            max_tokens: assistant?.settings?.thinking_budget
+            reasoning: {
+              max_tokens: assistant?.settings?.thinking_budget
+            }
           }
         }
       }
@@ -286,23 +290,39 @@ export default class OpenAIProvider extends BaseProvider {
         }
       }
 
-      if (isGrokReasoningModel(model)) {
-        return {
-          reasoning_effort: assistant?.settings?.reasoning_effort
+      if (isSupportedReasoningEffortGrokModel(model)) {
+        if (enableThinking) {
+          return {
+            reasoning_effort: assistant?.settings?.reasoning_effort
+          }
+        } else {
+          return {}
         }
       }
 
       if (isSupportedReasoningEffortOpenAIModel(model)) {
-        return {
-          reasoning_effort: assistant?.settings?.reasoning_effort
+        if (enableThinking) {
+          return {
+            reasoning_effort: assistant?.settings?.reasoning_effort
+          }
+        } else {
+          return {}
         }
       }
 
       if (isSupportedThinkingTokenClaudeModel(model)) {
-        return {
-          thinking: {
-            type: 'enabled',
-            budget_tokens: assistant?.settings?.thinking_budget
+        if (enableThinking) {
+          return {
+            thinking: {
+              type: 'enabled',
+              budget_tokens: assistant?.settings?.thinking_budget
+            }
+          }
+        } else {
+          return {
+            thinking: {
+              type: 'disabled'
+            }
           }
         }
       }

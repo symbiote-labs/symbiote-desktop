@@ -14,19 +14,17 @@ import ThinkingSlider from './ThinkingSlider'
 
 const THINKING_TOKEN_MAP: Record<string, { min: number; max: number }> = {
   // Gemini models
-  '^gemini-.*$': { min: 0, max: 24576 },
+  'gemini-.*$': { min: 0, max: 24576 },
 
   // Qwen models
-  '^qwen-plus-.*$': { min: 0, max: 38912 },
-  '^qwen-turbo-.*$': { min: 0, max: 38912 },
-  '^qwq-.*$': { min: 0, max: 32768 },
-  '^qvq-.*$': { min: 0, max: 16384 },
-  '^qwen3-0\\.6b$': { min: 0, max: 30720 },
-  '^qwen3-1\\.7b$': { min: 0, max: 30720 },
-  '^qwen3-.*$': { min: 0, max: 38912 },
+  'qwen-plus-.*$': { min: 0, max: 38912 },
+  'qwen-turbo-.*$': { min: 0, max: 38912 },
+  'qwen3-0\\.6b$': { min: 0, max: 30720 },
+  'qwen3-1\\.7b$': { min: 0, max: 30720 },
+  'qwen3-.*$': { min: 0, max: 38912 },
 
   // Claude models
-  '^claude-3.*sonnet$': { min: 0, max: 64000 }
+  'claude-3[.-]7.*sonnet.*$': { min: 0, max: 64000 }
 }
 
 export type ReasoningEffortOptions = 'low' | 'medium' | 'high'
@@ -67,10 +65,9 @@ export default function ThinkingPanel({ model, assistant }: ThinkingPanelProps) 
     return currentThinkingBudget > maxTokens
   }, [currentThinkingBudget, maxTokens])
 
-  // 使用useEffect显示错误消息
   useEffect(() => {
     if (isBudgetExceedingMax && isSupportedThinkingTokenClaudeModel(model)) {
-      window.message.error(t('chat.input.thinking_budget_exceeds_max'))
+      window.message.error(t('chat.input.thinking.budget_exceeds_max'))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBudgetExceedingMax, model])
@@ -109,13 +106,11 @@ export default function ThinkingPanel({ model, assistant }: ThinkingPanelProps) 
   }
 
   if (isSupportedReasoningEffort) {
-    const currentReasoningEffort = assistant.settings?.reasoning_effort
-
     return (
       <ThinkingSelect
-        model={model}
         assistant={assistant}
-        value={currentReasoningEffort}
+        model={model}
+        value={assistant.settings?.reasoning_effort || 'medium'}
         onChange={onReasoningEffortChange}
       />
     )

@@ -210,6 +210,7 @@ export const FUNCTION_CALLING_MODELS = [
   'o1(?:-[\\w-]+)?',
   'claude',
   'qwen',
+  'qwen3',
   'hunyuan',
   'deepseek',
   'glm-4(?:-[\\w-]+)?',
@@ -2298,7 +2299,7 @@ export function isQwenReasoningModel(model?: Model): boolean {
     return true
   }
 
-  if (model.id.includes('qwq')) {
+  if (model.id.includes('qwq') || model.id.includes('qvq')) {
     return true
   }
 
@@ -2312,8 +2313,6 @@ export function isSupportedThinkingTokenQwenModel(model?: Model): boolean {
 
   return (
     model.id.includes('qwen3') ||
-    model.id.includes('qwq') ||
-    model.id.includes('qvq') ||
     [
       'qwen-plus-latest',
       'qwen-plus-0428',
