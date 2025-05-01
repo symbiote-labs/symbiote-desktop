@@ -1,13 +1,7 @@
 import { HolderOutlined } from '@ant-design/icons'
 import { QuickPanelListItem, QuickPanelView, useQuickPanel } from '@renderer/components/QuickPanel'
-import ThinkingPanel from '@renderer/components/ThinkingPanel'
 import TranslateButton from '@renderer/components/TranslateButton'
-import {
-  isGenerateImageModel,
-  isSupportedReasoningEffortModel,
-  isVisionModel,
-  isWebSearchModel
-} from '@renderer/config/models'
+import { isGenerateImageModel, isReasoningModel, isVisionModel, isWebSearchModel } from '@renderer/config/models'
 import db from '@renderer/databases'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useKnowledgeBases } from '@renderer/hooks/useKnowledge'
@@ -59,7 +53,6 @@ import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useS
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-import { isSupportedThinkingTokenModel } from '../../../config/models'
 import NarrowLayout from '../Messages/NarrowLayout'
 import AttachmentButton, { AttachmentButtonRef } from './AttachmentButton'
 import AttachmentPreview from './AttachmentPreview'
@@ -72,7 +65,7 @@ import MentionModelsInput from './MentionModelsInput'
 import NewContextButton from './NewContextButton'
 import QuickPhrasesButton, { QuickPhrasesButtonRef } from './QuickPhrasesButton'
 import SendMessageButton from './SendMessageButton'
-import ThinkingButton from './ThinkingButton'
+import ThinkingButton, { ThinkingButtonRef } from './ThinkingButton'
 import TokenCount from './TokenCount'
 import WebSearchButton, { WebSearchButtonRef } from './WebSearchButton'
 
@@ -118,7 +111,6 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const [selectedKnowledgeBases, setSelectedKnowledgeBases] = useState<KnowledgeBase[]>([])
   const [mentionModels, setMentionModels] = useState<Model[]>([])
   const [isDragging, setIsDragging] = useState(false)
-  const [thinkingPanelVisible, setThinkingPanelVisible] = useState(false)
   const [textareaHeight, setTextareaHeight] = useState<number>()
   const startDragY = useRef<number>(0)
   const startHeight = useRef<number>(0)
@@ -139,7 +131,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   const knowledgeBaseButtonRef = useRef<KnowledgeBaseButtonRef>(null)
   const mcpToolsButtonRef = useRef<MCPToolsButtonRef>(null)
   const attachmentButtonRef = useRef<AttachmentButtonRef>(null)
-  const webSearchButtonRef = useRef<WebSearchButtonRef>(null)
+  const webSearchButtonRef = useRef<WebSearchButtonRef | null>(null)
+  const thinkingButtonRef = useRef<ThinkingButtonRef | null>(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedEstimate = useCallback(
@@ -770,9 +763,6 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   const textareaRows = window.innerHeight >= 1000 || isBubbleStyle ? 2 : 1
 
-  const isSupportedReasoningEffort = isSupportedReasoningEffortModel(model)
-  const isSupportedThinkingToken = isSupportedThinkingTokenModel(model)
-
   const handleKnowledgeBaseSelect = (bases?: KnowledgeBase[]) => {
     updateAssistant({ ...assistant, knowledge_bases: bases })
     setSelectedKnowledgeBases(bases ?? [])
@@ -793,21 +783,6 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   const onEnableGenerateImage = () => {
     updateAssistant({ ...assistant, enableGenerateImage: !assistant.enableGenerateImage })
-  }
-
-  const onToggleThinking = () => {
-    const newEnableThinking = !assistant.enableThinking
-    updateAssistant({ ...assistant, enableThinking: newEnableThinking })
-
-    if (!newEnableThinking) {
-      setThinkingPanelVisible(false)
-    }
-  }
-
-  const onTogglePanel = () => {
-    if (isSupportedThinkingToken || isSupportedReasoningEffort) {
-      setThinkingPanelVisible((prev) => !prev)
-    }
   }
 
   useEffect(() => {
@@ -945,21 +920,14 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
                 setFiles={setFiles}
                 ToolbarButton={ToolbarButton}
               />
-              <ThinkingButtonContainer>
-                {thinkingPanelVisible && (
-                  <ThinkingPanelContainer>
-                    <ThinkingPanel model={model} assistant={assistant} />
-                  </ThinkingPanelContainer>
-                )}
+              {isReasoningModel(model) && (
                 <ThinkingButton
+                  ref={thinkingButtonRef}
                   model={model}
                   assistant={assistant}
                   ToolbarButton={ToolbarButton}
-                  onToggleThinking={onToggleThinking}
-                  onTogglePanel={onTogglePanel}
-                  showPanel={thinkingPanelVisible}
                 />
-              </ThinkingButtonContainer>
+              )}
               <WebSearchButton ref={webSearchButtonRef} assistant={assistant} ToolbarButton={ToolbarButton} />
               {showKnowledgeIcon && (
                 <KnowledgeBaseButton
@@ -1153,27 +1121,6 @@ const ToolbarButton = styled(Button)`
       background-color: var(--color-primary);
     }
   }
-`
-
-const ThinkingPanelContainer = styled.div`
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--color-background);
-  border: 0.5px solid var(--color-border);
-  border-radius: 15px;
-  padding: 10px;
-  margin-bottom: 5px;
-  z-index: 10;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  min-width: 250px;
-`
-
-const ThinkingButtonContainer = styled.div`
-  position: relative;
-  display: inline-flex;
-  align-items: center;
 `
 
 export default Inputbar

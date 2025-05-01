@@ -56,9 +56,10 @@
       "settings.preset_messages": "预设消息",
       "settings.prompt": "提示词设置",
       "settings.reasoning_effort": "思维链长度",
-      "settings.reasoning_effort.low": "稍微思考",
-      "settings.reasoning_effort.medium": "正常思考",
-      "settings.reasoning_effort.high": "尽力思考",
+      "settings.reasoning_effort.off": "关闭",
+      "settings.reasoning_effort.low": "浮想",
+      "settings.reasoning_effort.medium": "斟酌",
+      "settings.reasoning_effort.high": "沉思",
       "settings.more": "助手设置"
     },
     "auth": {

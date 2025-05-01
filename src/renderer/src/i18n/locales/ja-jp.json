@@ -56,6 +56,7 @@
       "settings.preset_messages": "プリセットメッセージ",
       "settings.prompt": "プロンプト設定",
       "settings.reasoning_effort": "思考連鎖の長さ",
+      "settings.reasoning_effort.off": "オフ",
       "settings.reasoning_effort.high": "最大限の思考",
       "settings.reasoning_effort.low": "少しの思考",
       "settings.reasoning_effort.medium": "普通の思考",

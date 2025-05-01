@@ -56,6 +56,7 @@
       "settings.preset_messages": "預設訊息",
       "settings.prompt": "提示詞設定",
       "settings.reasoning_effort": "思維鏈長度",
+      "settings.reasoning_effort.off": "關閉",
       "settings.reasoning_effort.high": "盡力思考",
       "settings.reasoning_effort.low": "稍微思考",
       "settings.reasoning_effort.medium": "正常思考",

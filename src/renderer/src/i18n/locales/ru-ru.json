@@ -55,6 +55,7 @@
       "settings.model": "Настройки модели",
       "settings.preset_messages": "Предустановленные сообщения",
       "settings.prompt": "Настройки промптов",
+      "settings.reasoning_effort.off": "Выключить",
       "settings.reasoning_effort.high": "Стараюсь думать",
       "settings.reasoning_effort.low": "Меньше думать",
       "settings.reasoning_effort.medium": "Среднее",

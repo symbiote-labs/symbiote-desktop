@@ -56,6 +56,7 @@
       "settings.preset_messages": "Preset Messages",
       "settings.prompt": "Prompt Settings",
       "settings.reasoning_effort": "Reasoning effort",
+      "settings.reasoning_effort.off": "Off",
       "settings.reasoning_effort.high": "Think harder",
       "settings.reasoning_effort.low": "Think less",
       "settings.reasoning_effort.medium": "Think normally",
