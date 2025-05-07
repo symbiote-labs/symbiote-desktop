@@ -1,4 +1,5 @@
-import { WebviewTag } from 'electron'
+// import { WebviewTag } from 'electron'
+declare type WebviewTag = any
 import { memo, useEffect, useRef } from 'react'
 
 /**

@@ -7,6 +7,7 @@ import iconDark from '../../../build/tray_icon_dark.png?asset'
 import iconLight from '../../../build/tray_icon_light.png?asset'
 import { configManager } from './ConfigManager'
 import { windowService } from './WindowService'
+import { APP_NAME } from '../../shared/app-meta'
 
 export class TrayService {
   private static instance: TrayService
@@ -70,7 +71,7 @@ export class TrayService {
       this.tray.setContextMenu(contextMenu)
     }
 
-    this.tray.setToolTip('Cherry Studio')
+    this.tray.setToolTip(APP_NAME || 'Cherry Studio')
 
     this.tray.on('right-click', () => {
       this.tray?.popUpContextMenu(contextMenu)

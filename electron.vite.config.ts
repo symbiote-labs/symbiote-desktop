@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import fs from 'fs'
 import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
 
@@ -37,7 +38,27 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
-        external: ['@libsql/client']
+        external: ['@libsql/client'],
+        plugins: [
+          {
+            name: 'inject-windows7-polyfill',
+            generateBundle(_, bundle) {
+              // 遍历所有生成的文件
+              for (const fileName in bundle) {
+                const chunk = bundle[fileName]
+                if (
+                  chunk.type === 'chunk' &&
+                  chunk.isEntry &&
+                  chunk.fileName.includes('index.js') // 匹配主进程入口文件
+                ) {
+                  const code = fs.readFileSync('src/main/polyfill/windows7-patch.js', 'utf-8')
+                  // 在文件末尾插入自定义代码
+                  chunk.code = code + '\r\n' + chunk.code
+                }
+              }
+            }
+          }
+        ]
       }
     }
   },
@@ -50,6 +71,10 @@ export default defineConfig({
     }
   },
   renderer: {
+    define: {
+      // 使用方法 (Windows CMD): set CUSTOM_APP_NAME=AppName && yarn run dev
+      'process.env.CUSTOM_APP_NAME': JSON.stringify(process.env.CUSTOM_APP_NAME)
+    },
     plugins: [
       react({
         plugins: [

@@ -315,7 +315,7 @@ class FileStorage {
     fileName: string,
     content: string,
     options?: SaveDialogOptions
-  ): Promise<string | null> => {
+  ): Promise<string | null | undefined> => {
     try {
       const result: SaveDialogReturnValue = await dialog.showSaveDialog({
         title: '保存文件',

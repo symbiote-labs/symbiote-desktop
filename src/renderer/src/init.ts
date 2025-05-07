@@ -3,6 +3,7 @@ import KeyvStorage from '@kangfenmao/keyv-storage'
 import { startAutoSync } from './services/BackupService'
 import { startNutstoreAutoSync } from './services/NutstoreService'
 import store from './store'
+import { APP_NAME, APP_IS_CUSTOM_PRODUCT } from './config/env'
 
 function initSpinner() {
   const spinner = document.getElementById('spinner')
@@ -32,3 +33,7 @@ function initAutoSync() {
 initSpinner()
 initKeyv()
 initAutoSync()
+
+if (APP_IS_CUSTOM_PRODUCT) {
+  document.title = APP_NAME
+}

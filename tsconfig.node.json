@@ -2,6 +2,7 @@
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
     "electron.vite.config.*",
+    "src/shared/*.ts",
     "src/main/**/*",
     "src/preload/**/*",
     "src/main/env.d.ts",
