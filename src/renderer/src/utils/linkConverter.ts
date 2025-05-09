@@ -113,14 +113,12 @@ export function convertLinksToHunyuan(text: string, webSearch: any[], resetCount
  * Converts Markdown links in the text to numbered links based on the rules:
  * 1. ([host](url)) -> [cnt](url)
  * 2. [host](url) -> [cnt](url)
- * 3. [anytext except host](url) -> anytext[cnt](url)
  *
  * @param text The current chunk of text to process
  * @param resetCounter Whether to reset the counter and buffer
- * @param isZhipu Whether to use Zhipu format
  * @returns Processed text with complete links converted
  */
-export function convertLinks(text: string, resetCounter = false, isZhipu = false): string {
+export function convertLinks(text: string, resetCounter = false): string {
   if (resetCounter) {
     linkCounter = 1
     buffer = ''
@@ -132,34 +130,7 @@ export function convertLinks(text: string, resetCounter = false, isZhipu = false
 
   // Find the safe point - the position after which we might have incomplete patterns
   let safePoint = buffer.length
-  if (isZhipu) {
-    // Handle Zhipu mode - find safe point for [ref_N] patterns
-    let safePoint = buffer.length
 
-    // Check from the end for potentially incomplete [ref_N] patterns
-    for (let i = buffer.length - 1; i >= 0; i--) {
-      if (buffer[i] === '[') {
-        const substring = buffer.substring(i)
-        // Check if it's a complete [ref_N] pattern
-        const match = /^\[ref_\d+\]/.exec(substring)
-
-        if (!match) {
-          // Potentially incomplete [ref_N] pattern
-          safePoint = i
-          break
-        }
-      }
-    }
-
-    // Process the safe part of the buffer
-    const safeBuffer = buffer.substring(0, safePoint)
-    buffer = buffer.substring(safePoint)
-
-    // Replace all complete [ref_N] patterns
-    return safeBuffer.replace(/\[ref_(\d+)\]/g, (_, num) => {
-      return `[<sup>${num}</sup>]()`
-    })
-  }
 
   // Check for potentially incomplete patterns from the end
   for (let i = buffer.length - 1; i >= 0; i--) {
@@ -227,7 +198,6 @@ export function convertLinks(text: string, resetCounter = false, isZhipu = false
 
       if (match) {
         // Found complete regular link
-        const linkText = match[1]
         const url = match[2]
 
         // Check if this URL has been seen before
@@ -239,11 +209,7 @@ export function convertLinks(text: string, resetCounter = false, isZhipu = false
           urlToCounterMap.set(url, counter)
         }
 
-        if (isHost(linkText)) {
-          result += `[<sup>${counter}</sup>](${url})`
-        } else {
-          result += `${linkText}[<sup>${counter}</sup>](${url})`
-        }
+        result += `[<sup>${counter}</sup>](${url})`
 
         position += match[0].length
         continue
