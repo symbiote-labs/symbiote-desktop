@@ -16,6 +16,7 @@ export interface Citation {
   content?: string
   showFavicon?: boolean
   type?: string
+  metadata?: Record<string, any>
 }
 
 interface CitationsListProps {

@@ -113,6 +113,7 @@ export function convertLinksToHunyuan(text: string, webSearch: any[], resetCount
  * Converts Markdown links in the text to numbered links based on the rules:
  * 1. ([host](url)) -> [cnt](url)
  * 2. [host](url) -> [cnt](url)
+ * 3. [any text except url](url)-> any text [cnt](url)
  *
  * @param text The current chunk of text to process
  * @param resetCounter Whether to reset the counter and buffer
@@ -130,7 +131,6 @@ export function convertLinks(text: string, resetCounter = false): string {
 
   // Find the safe point - the position after which we might have incomplete patterns
   let safePoint = buffer.length
-
 
   // Check for potentially incomplete patterns from the end
   for (let i = buffer.length - 1; i >= 0; i--) {
@@ -198,6 +198,7 @@ export function convertLinks(text: string, resetCounter = false): string {
 
       if (match) {
         // Found complete regular link
+        const linkText = match[1]
         const url = match[2]
 
         // Check if this URL has been seen before
@@ -209,7 +210,13 @@ export function convertLinks(text: string, resetCounter = false): string {
           urlToCounterMap.set(url, counter)
         }
 
-        result += `[<sup>${counter}</sup>](${url})`
+        // Rule 3: If the link text is not a URL/host, keep the text and add the numbered link
+        if (!isHost(linkText)) {
+          result += `${linkText} [<sup>${counter}</sup>](${url})`
+        } else {
+          // Rule 2: If the link text is a URL/host, replace with numbered link
+          result += `[<sup>${counter}</sup>](${url})`
+        }
 
         position += match[0].length
         continue
@@ -317,7 +324,7 @@ export function extractUrlsFromMarkdown(text: string): string[] {
 
   // 匹配所有Markdown链接格式
   const linkPattern = /\[(?:[^[\]]*)\]\(([^()]+)\)/g
-  let match
+  let match: RegExpExecArray | null
 
   while ((match = linkPattern.exec(text)) !== null) {
     const url = match[1].trim()

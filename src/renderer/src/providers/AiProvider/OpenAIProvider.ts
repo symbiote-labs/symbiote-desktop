@@ -287,7 +287,7 @@ export default class OpenAIProvider extends BaseProvider {
     const model = assistant.model || defaultModel
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
 
-    const isEnabledWebSearch = assistant.enableWebSearch || !!assistant.webSearchProviderId
+    const isEnabledBuiltinWebSearch = assistant.enableWebSearch
     onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     // 退回到 OpenAI 兼容模式
     if (isOpenAIWebSearch(model)) {
@@ -342,7 +342,7 @@ export default class OpenAIProvider extends BaseProvider {
           const delta = chunk.choices[0]?.delta
           const finishReason = chunk.choices[0]?.finish_reason
           if (delta?.content) {
-            if (delta?.annotations) {
+            if (isOpenAIWebSearch(model)) {
               delta.content = convertLinks(delta.content || '', isFirstChunk)
             }
             if (isFirstChunk) {
@@ -388,7 +388,10 @@ export default class OpenAIProvider extends BaseProvider {
       return
     }
     const tools: OpenAI.Responses.Tool[] = []
-    if (isEnabledWebSearch) {
+    const toolChoices: OpenAI.Responses.ToolChoiceTypes = {
+      type: 'web_search_preview'
+    }
+    if (isEnabledBuiltinWebSearch) {
       tools.push({
         type: 'web_search_preview'
       })
@@ -558,17 +561,22 @@ export default class OpenAIProvider extends BaseProvider {
               thinking_millsec: new Date().getTime() - time_first_token_millsec
             })
             break
-          case 'response.output_text.delta':
+          case 'response.output_text.delta': {
+            let delta = chunk.delta
+            if (isEnabledBuiltinWebSearch) {
+              delta = convertLinks(delta)
+            }
             onChunk({
               type: ChunkType.TEXT_DELTA,
-              text: chunk.delta
+              text: delta
             })
-            content += chunk.delta
+            content += delta
             break
+          }
           case 'response.output_text.done':
             onChunk({
               type: ChunkType.TEXT_COMPLETE,
-              text: chunk.text
+              text: content
             })
             break
           case 'response.content_part.done':
@@ -633,6 +641,7 @@ export default class OpenAIProvider extends BaseProvider {
         max_output_tokens: maxTokens,
         stream: streamOutput,
         tools: tools.length > 0 ? tools : undefined,
+        tool_choice: isEnabledBuiltinWebSearch ? toolChoices : undefined,
         service_tier: this.getServiceTier(model),
         ...this.getResponseReasoningEffort(assistant, model),
         ...this.getCustomParameters(assistant)

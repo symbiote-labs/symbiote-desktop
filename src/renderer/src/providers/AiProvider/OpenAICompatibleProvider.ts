@@ -331,7 +331,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
     const model = assistant.model || defaultModel
 
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
-    const isEnabledWebSearch = assistant.enableWebSearch || !!assistant.webSearchProviderId
+    const isEnabledBultinWebSearch = assistant.enableWebSearch
     messages = addImageFileToContents(messages)
     const enableReasoning =
       ((isSupportedThinkingTokenModel(model) || isSupportedReasoningEffortModel(model)) &&
@@ -597,7 +597,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
                 }
               }
               if (
-                isEnabledWebSearch &&
+                isEnabledBultinWebSearch &&
                 isZhipuModel(model) &&
                 finishReason === 'stop' &&
                 originalFinishRawChunk?.web_search
@@ -611,7 +611,7 @@ export default class OpenAICompatibleProvider extends OpenAIProvider {
                 } as LLMWebSearchCompleteChunk)
               }
               if (
-                isEnabledWebSearch &&
+                isEnabledBultinWebSearch &&
                 isHunyuanSearchModel(model) &&
                 originalFinishRawChunk?.search_info?.search_results
               ) {

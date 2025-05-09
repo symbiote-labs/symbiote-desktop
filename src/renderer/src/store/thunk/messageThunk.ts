@@ -470,7 +470,6 @@ const fetchAndProcessAssistantResponseImpl = async (
         saveUpdatedBlockToDB(citationBlock.id, assistantMsgId, topicId, getState)
       },
       onExternalToolComplete: (externalToolResult: ExternalToolResult) => {
-        console.warn('onExternalToolComplete received.', externalToolResult)
         if (citationBlockId) {
           const changes: Partial<CitationMessageBlock> = {
             response: externalToolResult.webSearch,
@@ -505,16 +504,21 @@ const fetchAndProcessAssistantResponseImpl = async (
           )
           citationBlockId = citationBlock.id
           handleBlockTransition(citationBlock, MessageBlockType.CITATION)
-          if (mainTextBlockId) {
-            const state = getState()
-            const existingMainTextBlock = state.messageBlocks.entities[mainTextBlockId]
-            if (existingMainTextBlock && existingMainTextBlock.type === MessageBlockType.MAIN_TEXT) {
-              const currentRefs = existingMainTextBlock.citationReferences || []
-              if (!currentRefs.some((ref) => ref.citationBlockId === citationBlockId)) {
-                const mainTextChanges = { citationReferences: [...currentRefs, { citationBlockId }] }
-                dispatch(updateOneBlock({ id: mainTextBlockId, changes: mainTextChanges }))
-                saveUpdatedBlockToDB(mainTextBlockId, assistantMsgId, topicId, getState)
+        }
+        if (mainTextBlockId) {
+          const state = getState()
+          const existingMainTextBlock = state.messageBlocks.entities[mainTextBlockId]
+          if (existingMainTextBlock && existingMainTextBlock.type === MessageBlockType.MAIN_TEXT) {
+            const currentRefs = existingMainTextBlock.citationReferences || []
+            if (!currentRefs.some((ref) => ref.citationBlockId === citationBlockId)) {
+              const mainTextChanges = {
+                citationReferences: [
+                  ...currentRefs,
+                  { citationBlockId, citationBlockSource: llmWebSearchResult.source }
+                ]
               }
+              dispatch(updateOneBlock({ id: mainTextBlockId, changes: mainTextChanges }))
+              saveUpdatedBlockToDB(mainTextBlockId, assistantMsgId, topicId, getState)
             }
           }
         }
