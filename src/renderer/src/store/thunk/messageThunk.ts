@@ -106,44 +106,46 @@ const updateExistingMessageAndBlocksInDB = async (
 }
 
 // 更新单个块的逻辑，用于更新消息中的单个块
-const throttledBlockUpdate = throttle((id, blockUpdate) => {
-  const state = store.getState()
-  const block = state.messageBlocks.entities[id]
+const throttledBlockUpdate = throttle(async (id, blockUpdate) => {
+  // const state = store.getState()
+  // const block = state.messageBlocks.entities[id]
   // throttle是异步函数,可能会在complete事件触发后才执行
-  if (
-    blockUpdate.status === MessageBlockStatus.STREAMING &&
-    (block?.status === MessageBlockStatus.SUCCESS || block?.status === MessageBlockStatus.ERROR)
-  )
-    return
+  // if (
+  //   blockUpdate.status === MessageBlockStatus.STREAMING &&
+  //   (block?.status === MessageBlockStatus.SUCCESS || block?.status === MessageBlockStatus.ERROR)
+  // )
+  //   return
 
   store.dispatch(updateOneBlock({ id, changes: blockUpdate }))
+  await db.message_blocks.update(id, blockUpdate)
 }, 150)
 
-// 修改: 节流更新单个块的内容/状态到数据库 (仅用于 Text/Thinking Chunks)
-export const throttledBlockDbUpdate = throttle(
-  async (blockId: string, blockChanges: Partial<MessageBlock>) => {
-    // Check if blockId is valid before attempting update
-    if (!blockId) {
-      console.warn('[DB Throttle Block Update] Attempted to update with null/undefined blockId. Skipping.')
-      return
-    }
-    const state = store.getState()
-    const block = state.messageBlocks.entities[blockId]
-    // throttle是异步函数,可能会在complete事件触发后才执行
-    if (
-      blockChanges.status === MessageBlockStatus.STREAMING &&
-      (block?.status === MessageBlockStatus.SUCCESS || block?.status === MessageBlockStatus.ERROR)
-    )
-      return
-    try {
-      await db.message_blocks.update(blockId, blockChanges)
-    } catch (error) {
-      console.error(`[DB Throttle Block Update] Failed for block ${blockId}:`, error)
-    }
-  },
-  300, // 可以调整节流间隔
-  { leading: false, trailing: true }
-)
+const cancelThrottledBlockUpdate = throttledBlockUpdate.cancel
+
+// // 修改: 节流更新单个块的内容/状态到数据库 (仅用于 Text/Thinking Chunks)
+// export const throttledBlockDbUpdate = throttle(
+//   async (blockId: string, blockChanges: Partial<MessageBlock>) => {
+//     // Check if blockId is valid before attempting update
+//     if (!blockId) {
+//       console.warn('[DB Throttle Block Update] Attempted to update with null/undefined blockId. Skipping.')
+//       return
+//     }
+//     const state = store.getState()
+//     const block = state.messageBlocks.entities[blockId]
+//     // throttle是异步函数,可能会在complete事件触发后才执行
+//     if (
+//       blockChanges.status === MessageBlockStatus.STREAMING &&
+//       (block?.status === MessageBlockStatus.SUCCESS || block?.status === MessageBlockStatus.ERROR)
+//     )
+//       return
+//     try {
+//     } catch (error) {
+//       console.error(`[DB Throttle Block Update] Failed for block ${blockId}:`, error)
+//     }
+//   },
+//   300, // 可以调整节流间隔
+//   { leading: false, trailing: true }
+// )
 
 // 新增: 通用的、非节流的函数，用于保存消息和块的更新到数据库
 const saveUpdatesToDB = async (
@@ -338,7 +340,7 @@ const fetchAndProcessAssistantResponseImpl = async (
               status: MessageBlockStatus.STREAMING
             }
             throttledBlockUpdate(lastBlockId, blockChanges)
-            throttledBlockDbUpdate(lastBlockId, blockChanges)
+            // throttledBlockDbUpdate(lastBlockId, blockChanges)
           } else {
             const newBlock = createMainTextBlock(assistantMsgId, accumulatedContent, {
               status: MessageBlockStatus.STREAMING,
@@ -396,7 +398,7 @@ const fetchAndProcessAssistantResponseImpl = async (
               thinking_millsec: thinking_millsec
             }
             throttledBlockUpdate(lastBlockId, blockChanges)
-            throttledBlockDbUpdate(lastBlockId, blockChanges)
+            // throttledBlockDbUpdate(lastBlockId, blockChanges)
           } else {
             const newBlock = createThinkingBlock(assistantMsgId, accumulatedThinking, {
               status: MessageBlockStatus.STREAMING,
@@ -540,6 +542,7 @@ const fetchAndProcessAssistantResponseImpl = async (
         }
       },
       onError: async (error) => {
+        cancelThrottledBlockUpdate()
         console.dir(error, { depth: null })
         const isErrorTypeAbort = isAbortError(error)
         let pauseErrorLanguagePlaceholder = ''
@@ -581,6 +584,8 @@ const fetchAndProcessAssistantResponseImpl = async (
         })
       },
       onComplete: async (status: AssistantMessageStatus, response?: Response) => {
+        cancelThrottledBlockUpdate()
+
         const finalStateOnComplete = getState()
         const finalAssistantMsg = finalStateOnComplete.messages.entities[assistantMsgId]
 
