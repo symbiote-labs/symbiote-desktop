@@ -164,7 +164,7 @@ const MessageMenubar: FC<Props> = (props) => {
       if (resendMessage) {
         resendUserMessageWithEdit(message, editedText, assistant)
       } else {
-        editMessageBlocks([{ ...findMainTextBlocks(message)[0], content: editedText }])
+        editMessageBlocks(message.id, { id: findMainTextBlocks(message)[0].id, content: editedText })
       }
       // // 更新消息内容，保留图片信息
       // await editMessage(message.id, {

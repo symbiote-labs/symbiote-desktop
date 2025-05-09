@@ -867,6 +867,7 @@ export const resendMessageThunk =
         const blockIdsToDelete = [...(originalMsg.blocks || [])]
         const resetMsg = resetAssistantMessage(originalMsg, {
           status: AssistantMessageStatus.PENDING,
+          updatedAt: new Date().toISOString(),
           ...(assistantMessagesToReset.length === 1 ? { model: assistant.model } : {})
         })
 
@@ -969,7 +970,8 @@ export const regenerateAssistantResponseThunk =
 
       // 5. Reset the message entity in Redux
       const resetAssistantMsg = resetAssistantMessage(messageToResetEntity, {
-        status: AssistantMessageStatus.PENDING
+        status: AssistantMessageStatus.PENDING,
+        updatedAt: new Date().toISOString()
       })
       dispatch(
         newMessagesActions.updateMessage({
