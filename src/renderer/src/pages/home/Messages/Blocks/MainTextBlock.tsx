@@ -75,7 +75,6 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
         let processedContent = content
         const firstCitation = formattedCitations[0]
         if (firstCitation?.metadata) {
-          console.log('groundingSupport, ', firstCitation.metadata)
           firstCitation.metadata.forEach((support: GroundingSupport) => {
             const citationNums = support.groundingChunkIndices!
 
@@ -126,12 +125,14 @@ const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions
             title: citation.title || citation.hostname || '',
             content: citation.content?.substring(0, 200)
           }
+          const isLink = citation.url.startsWith('http')
           const citationJson = encodeHTML(JSON.stringify(supData))
 
           // Handle both plain references [N] and pre-formatted links [<sup>N</sup>](url)
           const plainRefRegex = new RegExp(`\\[${citationNum}\\]`, 'g')
 
-          const citationTag = `[<sup data-citation='${citationJson}'>${citationNum}</sup>](${citation.url})`
+          const supTag = `<sup data-citation='${citationJson}'>${citationNum}</sup>`
+          const citationTag = isLink ? `[${supTag}](${citation.url})` : supTag
 
           content = content.replace(plainRefRegex, citationTag)
         })

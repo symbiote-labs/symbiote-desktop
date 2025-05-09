@@ -163,7 +163,7 @@ export type Message = {
   assistantId: string
   topicId: string
   createdAt: string
-  //   updatedAt?: string
+  updatedAt?: string
   status: UserMessageStatus | AssistantMessageStatus
 
   // 消息元数据
