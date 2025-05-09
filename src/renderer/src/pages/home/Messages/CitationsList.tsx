@@ -91,7 +91,7 @@ const CitationsList: React.FC<CitationsListProps> = ({ citations }) => {
           onClose={() => setOpen(false)}
           open={open}
           width={680}
-          styles={{ header: { border: 'none' }, body: { paddingTop: 0, backgroundColor: 'var(--color-background)' } }}
+          styles={{ header: { border: 'none' }, body: { paddingTop: 0 } }}
           destroyOnClose={false}>
           {open &&
             citations.map((citation) => (
@@ -127,12 +127,12 @@ const WebSearchCitation: React.FC<{ citation: Citation }> = ({ citation }) => {
   })
 
   return (
-    <WebSearchCard onClick={() => handleLinkClick(citation.url)}>
+    <WebSearchCard>
       <WebSearchCardHeader>
         {citation.showFavicon && citation.url && (
           <Favicon hostname={new URL(citation.url).hostname} alt={citation.title || citation.hostname || ''} />
         )}
-        <CitationLink className="text-nowrap">
+        <CitationLink className="text-nowrap" href={citation.url} onClick={(e) => handleLinkClick(citation.url, e)}>
           {citation.title || <span className="hostname">{citation.hostname}</span>}
         </CitationLink>
       </WebSearchCardHeader>
@@ -146,10 +146,12 @@ const WebSearchCitation: React.FC<{ citation: Citation }> = ({ citation }) => {
 }
 
 const KnowledgeCitation: React.FC<{ citation: Citation }> = ({ citation }) => (
-  <WebSearchCard onClick={() => handleLinkClick(citation.url)}>
+  <WebSearchCard>
     <WebSearchCardHeader>
       {citation.showFavicon && <FileSearch width={16} />}
-      <CitationLink className="text-nowrap">{citation.title}</CitationLink>
+      <CitationLink className="text-nowrap" href={citation.url} onClick={(e) => handleLinkClick(citation.url, e)}>
+        {citation.title}
+      </CitationLink>
     </WebSearchCardHeader>
     <WebSearchCardContent>{citation.content && truncateText(citation.content, 100)}</WebSearchCardContent>
   </WebSearchCard>
@@ -189,11 +191,15 @@ const PreviewIcon = styled.div`
   }
 `
 
-const CitationLink = styled.div`
+const CitationLink = styled.a`
   font-size: 14px;
   line-height: 1.6;
   color: var(--color-text-1);
   text-decoration: none;
+
+  .hostname {
+    color: var(--color-link);
+  }
 `
 
 const WebSearchCard = styled.div`
@@ -204,11 +210,6 @@ const WebSearchCard = styled.div`
   border-radius: var(--list-item-border-radius);
   background-color: var(--color-background);
   transition: all 0.3s ease;
-  cursor: pointer;
-
-  &:hover {
-    background-color: var(--color-background-soft);
-  }
 `
 
 const WebSearchCardHeader = styled.div`
@@ -217,7 +218,6 @@ const WebSearchCardHeader = styled.div`
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  font-weight: 500;
 `
 
 const WebSearchCardContent = styled.div`
