@@ -19,6 +19,7 @@ import HomePage from './pages/home/HomePage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PaintingsRoutePage from './pages/paintings/PaintingsRoutePage'
 import SettingsPage from './pages/settings/SettingsPage'
+import StorePage from './pages/store'
 import TranslatePage from './pages/translate/TranslatePage'
 
 function App(): React.ReactElement {
@@ -42,6 +43,7 @@ function App(): React.ReactElement {
                       <Route path="/knowledge" element={<KnowledgePage />} />
                       <Route path="/apps" element={<AppsPage />} />
                       <Route path="/settings/*" element={<SettingsPage />} />
+                      <Route path="/store/*" element={<StorePage />} />
                     </Routes>
                   </HashRouter>
                 </TopViewContainer>

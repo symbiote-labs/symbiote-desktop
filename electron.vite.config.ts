@@ -1,8 +1,8 @@
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { resolve } from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
-
 const visualizerPlugin = (type: 'renderer' | 'main') => {
   return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : []
 }
@@ -64,7 +64,8 @@ export default defineConfig({
           ]
         ]
       }),
-      ...visualizerPlugin('renderer')
+      ...visualizerPlugin('renderer'),
+      tailwindcss()
     ],
     resolve: {
       alias: {

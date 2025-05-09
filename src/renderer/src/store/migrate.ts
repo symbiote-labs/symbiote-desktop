@@ -1252,6 +1252,22 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '99': (state: RootState) => {
+    try {
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          sidebarIcons: {
+            ...state.settings.sidebarIcons,
+            visible: [...state.settings.sidebarIcons.visible, 'store']
+          }
+        }
+      }
+    } catch (error) {
+      return state
+    }
   }
 }
 

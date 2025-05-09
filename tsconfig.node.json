@@ -10,6 +10,7 @@
   ],
   "compilerOptions": {
     "composite": true,
+    "moduleResolution": "bundler",
     "types": [
       "electron-vite/node"
     ],
@@ -17,6 +18,7 @@
     "paths": {
       "@main/*": ["src/main/*"],
       "@types": ["src/renderer/src/types/index.ts"],
+      "@components/*": ["packages/components/*"],
       "@shared/*": ["packages/shared/*"]
     }
   }

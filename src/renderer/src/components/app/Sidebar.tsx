@@ -11,6 +11,7 @@ import { isEmoji } from '@renderer/utils'
 import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Tooltip } from 'antd'
 import {
+  Box,
   CircleHelp,
   FileSearch,
   Folder,
@@ -143,7 +144,8 @@ const MainMenus: FC = () => {
     translate: <Languages size={18} className="icon" />,
     minapp: <LayoutGrid size={18} className="icon" />,
     knowledge: <FileSearch size={18} className="icon" />,
-    files: <Folder size={17} className="icon" />
+    files: <Folder size={17} className="icon" />,
+    store: <Box size={18} className="icon" />
   }
 
   const pathMap = {
@@ -153,7 +155,8 @@ const MainMenus: FC = () => {
     translate: '/translate',
     minapp: '/apps',
     knowledge: '/knowledge',
-    files: '/files'
+    files: '/files',
+    store: '/store'
   }
 
   return sidebarIcons.visible.map((icon) => {
