@@ -109,7 +109,8 @@ const CitationsList: React.FC<CitationsListProps> = ({ citations }) => {
   )
 }
 
-const handleLinkClick = (url: string) => {
+const handleLinkClick = (url: string, event: React.MouseEvent) => {
+  event.preventDefault()
   if (url.startsWith('http')) window.open(url, '_blank', 'noopener,noreferrer')
   else window.api.file.openPath(url)
 }
