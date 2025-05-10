@@ -428,7 +428,6 @@ export abstract class BaseOpenAiProvider extends BaseProvider {
       type: 'input_text'
     }
     if (isSupportedReasoningEffortOpenAIModel(model)) {
-      systemMessageInput.text = `Formatting re-enabled${systemMessageInput.text ? '\n' + systemMessageInput.text : ''}`
       systemMessage.role = 'developer'
     }
 
@@ -640,10 +639,10 @@ export abstract class BaseOpenAiProvider extends BaseProvider {
           break
         }
         switch (chunk.type) {
-          case 'response.created':
-            time_first_token_millsec = new Date().getTime()
-            break
           case 'response.output_item.added':
+            if (time_first_token_millsec === 0) {
+              time_first_token_millsec = new Date().getTime()
+            }
             if (chunk.item.type === 'function_call') {
               outputItems.push(chunk.item)
             }

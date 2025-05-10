@@ -206,7 +206,7 @@ export const FUNCTION_CALLING_MODELS = [
   'gpt-4o-mini',
   'gpt-4',
   'gpt-4.5',
-  'o1(?:-[\\w-]+)?',
+  'o(1|3|4)(?:-[\\w-]+)?',
   'claude',
   'qwen',
   'qwen3',

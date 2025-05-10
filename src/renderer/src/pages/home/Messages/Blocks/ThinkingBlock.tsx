@@ -52,6 +52,7 @@ const ThinkingBlock: React.FC<Props> = ({ block }) => {
     }
   }, [block.content, t])
 
+  // FIXME: 这里统计的和请求处统计的有一定误差
   useEffect(() => {
     if (isThinking) {
       intervalId.current = setInterval(() => {
