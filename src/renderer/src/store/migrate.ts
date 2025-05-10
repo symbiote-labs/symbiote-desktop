@@ -1412,6 +1412,14 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '104': (state: RootState) => {
+    try {
+      addProvider(state, 'cherry-cloud')
+      return state
+    } catch (error) {
+      return state
+    }
   }
 }
 

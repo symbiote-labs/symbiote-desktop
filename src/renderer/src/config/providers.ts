@@ -7,6 +7,7 @@ import AnthropicProviderLogo from '@renderer/assets/images/providers/anthropic.p
 import BaichuanProviderLogo from '@renderer/assets/images/providers/baichuan.png'
 import BaiduCloudProviderLogo from '@renderer/assets/images/providers/baidu-cloud.svg'
 import BailianProviderLogo from '@renderer/assets/images/providers/bailian.png'
+import CherryCloudProviderLogo from '@renderer/assets/images/providers/cherry-cloud.svg'
 import DeepSeekProviderLogo from '@renderer/assets/images/providers/deepseek.png'
 import DmxapiProviderLogo from '@renderer/assets/images/providers/DMXAPI.png'
 import FireworksProviderLogo from '@renderer/assets/images/providers/fireworks.png'
@@ -88,7 +89,8 @@ const PROVIDER_LOGO_MAP = {
   gpustack: GPUStackProviderLogo,
   alayanew: AlayaNewProviderLogo,
   voyageai: VoyageAIProviderLogo,
-  qiniu: QiniuProviderLogo
+  qiniu: QiniuProviderLogo,
+  'cherry-cloud': CherryCloudProviderLogo
 } as const
 
 export function getProviderLogo(providerId: string) {
@@ -583,6 +585,17 @@ export const PROVIDER_CONFIG = {
       apiKey: 'https://portal.qiniu.com/ai-inference/api-key?cps_key=1h4vzfbkxobiq',
       docs: 'https://developer.qiniu.com/aitokenapi',
       models: 'https://developer.qiniu.com/aitokenapi/12883/model-list'
+    }
+  },
+  'cherry-cloud': {
+    api: {
+      url: 'https://cherry-ai.cloud'
+    },
+    websites: {
+      official: 'https://cherry-ai.cloud',
+      apiKey: 'https://cherry-ai.cloud/dashboard/api-keys',
+      docs: 'https://cherry-ai.cloud/docs',
+      models: 'https://cherry-ai.cloud/models'
     }
   }
 }
