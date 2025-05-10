@@ -2,7 +2,7 @@ import { CheckOutlined } from '@ant-design/icons'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { MessageBlockStatus, type ThinkingMessageBlock } from '@renderer/types/newMessage'
 import { Collapse, message as antdMessage, Tooltip } from 'antd'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import BarLoader from 'react-spinners/BarLoader'
 import styled from 'styled-components'
@@ -17,6 +17,8 @@ const ThinkingBlock: React.FC<Props> = ({ block }) => {
   const { t } = useTranslation()
   const { messageFont, fontSize, thoughtAutoCollapse } = useSettings()
   const [activeKey, setActiveKey] = useState<'thought' | ''>(thoughtAutoCollapse ? '' : 'thought')
+  const [thinkingTime, setThinkingTime] = useState(block.thinking_millsec || 0)
+  const intervalId = useRef<NodeJS.Timeout>(null)
 
   const isThinking = useMemo(() => block.status === MessageBlockStatus.STREAMING, [block.status])
 
@@ -50,12 +52,27 @@ const ThinkingBlock: React.FC<Props> = ({ block }) => {
     }
   }, [block.content, t])
 
+  useEffect(() => {
+    if (isThinking) {
+      intervalId.current = setInterval(() => {
+        setThinkingTime((prev) => prev + 200)
+      }, 200)
+    } else {
+      return
+    }
+
+    return () => {
+      if (intervalId.current) {
+        window.clearInterval(intervalId.current)
+      }
+    }
+  }, [isThinking])
+
+  const thinkingTimeSeconds = useMemo(() => (thinkingTime / 1000).toFixed(1), [thinkingTime])
+
   if (!block.content) {
     return null
   }
-
-  const thinkingTime = block.thinking_millsec || 0
-  const thinkingTimeSeconds = (thinkingTime / 1000).toFixed(1)
 
   return (
     <CollapseContainer

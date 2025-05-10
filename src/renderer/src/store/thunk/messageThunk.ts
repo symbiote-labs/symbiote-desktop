@@ -398,7 +398,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           } else {
             const newBlock = createThinkingBlock(assistantMsgId, accumulatedThinking, {
               status: MessageBlockStatus.STREAMING,
-              thinking_millsec: thinking_millsec
+              thinking_millsec: 0
             })
             handleBlockTransition(newBlock, MessageBlockType.THINKING)
           }
