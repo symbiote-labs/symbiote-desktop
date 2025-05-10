@@ -153,6 +153,16 @@ export default class GeminiProvider extends BaseProvider {
           }
         }
       }
+      const file = imageBlock.file
+      if (file) {
+        const base64Data = await window.api.file.base64Image(file.id + file.ext)
+        parts.push({
+          inlineData: {
+            data: base64Data.base64,
+            mimeType: base64Data.mime
+          } as Part['inlineData']
+        })
+      }
     }
 
     const fileBlocks = findFileBlocks(message)
