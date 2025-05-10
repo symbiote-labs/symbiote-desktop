@@ -91,7 +91,7 @@ const updateExistingMessageAndBlocksInDB = async (
           const newMessages = [...topic.messages]
           // Apply the updates passed in updatedMessage
           Object.assign(newMessages[messageIndex], updatedMessage)
-          console.log('updateExistingMessageAndBlocksInDB', updatedMessage)
+          // console.log('updateExistingMessageAndBlocksInDB', updatedMessage)
           await db.topics.update(updatedMessage.topicId, { messages: newMessages })
         } else {
           console.error(`[updateExistingMsg] Message ${updatedMessage.id} not found in topic ${updatedMessage.topicId}`)
@@ -155,7 +155,6 @@ const saveUpdatesToDB = async (
   messageUpdates: Partial<Message>, // 需要更新的消息字段
   blocksToUpdate: MessageBlock[] // 需要更新/创建的块
 ) => {
-  console.log('messageUpdates', messageUpdates)
   try {
     const messageDataToSave: Partial<Message> & Pick<Message, 'id' | 'topicId'> = {
       id: messageId,
@@ -283,12 +282,7 @@ const fetchAndProcessAssistantResponseImpl = async (
       const currentState = getState()
       const updatedMessage = currentState.messages.entities[assistantMsgId]
       if (updatedMessage) {
-        await saveUpdatesToDB(
-          assistantMsgId,
-          topicId,
-          { blocks: updatedMessage.blocks, status: updatedMessage.status },
-          [newBlock]
-        )
+        await saveUpdatesToDB(assistantMsgId, topicId, { blocks: updatedMessage.blocks }, [newBlock])
       } else {
         console.error(`[handleBlockTransition] Failed to get updated message ${assistantMsgId} from state for DB save.`)
       }
@@ -640,7 +634,6 @@ const fetchAndProcessAssistantResponseImpl = async (
             updates: messageUpdates
           })
         )
-        console.log('onComplete: saveUpdatesToDB', messageUpdates)
         saveUpdatesToDB(assistantMsgId, topicId, messageUpdates, [])
 
         EventEmitter.emit(EVENT_NAMES.MESSAGE_COMPLETE, { id: assistantMsgId, topicId, status })
@@ -1109,7 +1102,7 @@ export const initiateTranslationThunk =
 export const updateTranslationBlockThunk =
   (blockId: string, accumulatedText: string, isComplete: boolean = false) =>
   async (dispatch: AppDispatch) => {
-    console.log(`[updateTranslationBlockThunk] 更新翻译块 ${blockId}, isComplete: ${isComplete}`)
+    // console.log(`[updateTranslationBlockThunk] 更新翻译块 ${blockId}, isComplete: ${isComplete}`)
     try {
       const status = isComplete ? MessageBlockStatus.SUCCESS : MessageBlockStatus.STREAMING
       const changes: Partial<MessageBlock> = {
@@ -1122,7 +1115,7 @@ export const updateTranslationBlockThunk =
 
       // 更新数据库
       await db.message_blocks.update(blockId, changes)
-      console.log(`[updateTranslationBlockThunk] Successfully updated translation block ${blockId}.`)
+      // console.log(`[updateTranslationBlockThunk] Successfully updated translation block ${blockId}.`)
     } catch (error) {
       console.error(`[updateTranslationBlockThunk] Failed to update translation block ${blockId}:`, error)
     }
