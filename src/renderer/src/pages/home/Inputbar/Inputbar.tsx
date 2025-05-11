@@ -741,7 +741,7 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
   useEffect(() => {
     textareaRef.current?.focus()
-  }, [assistant])
+  }, [assistant, topic])
 
   useEffect(() => {
     setTimeout(() => resizeTextArea(), 0)
@@ -757,9 +757,14 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
   }, [])
 
   useEffect(() => {
-    window.addEventListener('focus', () => {
+    const onFocus = () => {
+      if (document.activeElement?.closest('.ant-modal')) {
+        return
+      }
       textareaRef.current?.focus()
-    })
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
   }, [])
 
   useEffect(() => {
@@ -898,10 +903,8 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
             styles={{ textarea: TextareaStyle }}
             onFocus={(e: React.FocusEvent<HTMLTextAreaElement>) => {
               setInputFocus(true)
-              const textArea = e.target
-              if (textArea) {
-                const length = textArea.value.length
-                textArea.setSelectionRange(length, length)
+              if (e.target.value.length === 0) {
+                e.target.setSelectionRange(0, 0)
               }
             }}
             onBlur={() => setInputFocus(false)}
