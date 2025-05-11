@@ -72,6 +72,7 @@ window.electron.ipcRenderer.on(IpcChannel.Provider_AddKey, (_, data) => {
   if (id === 'cherry-cloud') {
     if (apiKey) {
       store.dispatch(updateProvider({ id, apiKey } as Provider))
+      window.message.success('Cherry Cloud API key updated')
       console.log('Cherry Cloud API key updated:', apiKey)
     }
   }
