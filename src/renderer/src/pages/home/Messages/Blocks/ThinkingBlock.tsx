@@ -56,10 +56,12 @@ const ThinkingBlock: React.FC<Props> = ({ block }) => {
   useEffect(() => {
     if (isThinking) {
       intervalId.current = setInterval(() => {
-        setThinkingTime((prev) => prev + 200)
-      }, 200)
-    } else {
-      return
+        setThinkingTime((prev) => prev + 100)
+      }, 100)
+    } else if (intervalId.current) {
+      // 立即清除计时器
+      clearInterval(intervalId.current)
+      intervalId.current = null
     }
 
     return () => {

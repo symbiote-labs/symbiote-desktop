@@ -40,6 +40,7 @@ import {
   MCPCallToolResponse,
   MCPTool,
   MCPToolResponse,
+  Metrics,
   Model,
   Provider,
   Suggestion,
@@ -370,8 +371,17 @@ export default class GeminiProvider extends BaseProvider {
       }
     }
 
-    const start_time_millsec = new Date().getTime()
-    let time_first_token_millsec = 0
+    const finalUsage: Usage = {
+      completion_tokens: 0,
+      prompt_tokens: 0,
+      total_tokens: 0
+    }
+
+    const finalMetrics: Metrics = {
+      completion_tokens: 0,
+      time_completion_millsec: 0,
+      time_first_token_millsec: 0
+    }
 
     const { cleanup, abortController } = this.createAbortController(userLastMessage?.id, true)
 
@@ -445,6 +455,8 @@ export default class GeminiProvider extends BaseProvider {
       history.push(messageContents)
 
       let functionCalls: FunctionCall[] = []
+      let time_first_token_millsec = 0
+      const start_time_millsec = new Date().getTime()
 
       if (stream instanceof GenerateContentResponse) {
         let content = ''
@@ -504,34 +516,18 @@ export default class GeminiProvider extends BaseProvider {
         } as BlockCompleteChunk)
       } else {
         let content = ''
-        let final_time_completion_millsec = 0
-        let lastUsage: Usage | undefined = undefined
         for await (const chunk of stream) {
           if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
-          // --- Calculate Metrics ---
-          if (time_first_token_millsec == 0 && chunk.text !== undefined) {
-            // Update based on text arrival
-            time_first_token_millsec = new Date().getTime() - start_time_millsec
+          if (time_first_token_millsec == 0) {
+            time_first_token_millsec = new Date().getTime()
           }
 
-          // 1. Text Content
           if (chunk.text !== undefined) {
             content += chunk.text
             onChunk({ type: ChunkType.TEXT_DELTA, text: chunk.text })
           }
 
-          // 2. Usage Data
-          if (chunk.usageMetadata) {
-            lastUsage = {
-              prompt_tokens: chunk.usageMetadata.promptTokenCount || 0,
-              completion_tokens: chunk.usageMetadata.candidatesTokenCount || 0,
-              total_tokens: chunk.usageMetadata.totalTokenCount || 0
-            }
-            final_time_completion_millsec = new Date().getTime() - start_time_millsec
-          }
-
-          // 4. Image Generation
           const generateImage = this.processGeminiImageResponse(chunk, onChunk)
           if (generateImage?.images?.length) {
             onChunk({ type: ChunkType.IMAGE_COMPLETE, image: generateImage })
@@ -541,8 +537,12 @@ export default class GeminiProvider extends BaseProvider {
             if (chunk.text) {
               onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
             }
+            if (chunk.usageMetadata) {
+              finalUsage.prompt_tokens += chunk.usageMetadata.promptTokenCount || 0
+              finalUsage.completion_tokens += chunk.usageMetadata.candidatesTokenCount || 0
+              finalUsage.total_tokens += chunk.usageMetadata.totalTokenCount || 0
+            }
             if (chunk.candidates?.[0]?.groundingMetadata) {
-              // 3. Grounding/Search Metadata
               const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata
               onChunk({
                 type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
@@ -561,35 +561,37 @@ export default class GeminiProvider extends BaseProvider {
               functionCalls = functionCalls.concat(chunk.functionCalls)
             }
 
-            onChunk({
-              type: ChunkType.BLOCK_COMPLETE,
-              response: {
-                metrics: {
-                  completion_tokens: lastUsage?.completion_tokens,
-                  time_completion_millsec: final_time_completion_millsec,
-                  time_first_token_millsec
-                },
-                usage: lastUsage
-              }
-            })
-          }
-
-          // --- End Incremental onChunk calls ---
-
-          // Call processToolUses AFTER potentially processing text content in this chunk
-          // This assumes tools might be specified within the text stream
-          // Note: parseAndCallTools inside should handle its own onChunk for tool responses
-          let toolResults: Awaited<ReturnType<typeof parseAndCallTools>> = []
-          if (functionCalls.length) {
-            toolResults = await processToolCalls(functionCalls)
-          }
-          if (content.length) {
-            toolResults = toolResults.concat(await processToolUses(content))
-          }
-          if (toolResults.length) {
-            await processToolResults(toolResults, idx)
+            finalMetrics.completion_tokens = finalUsage.completion_tokens
+            finalMetrics.time_completion_millsec += new Date().getTime() - start_time_millsec
+            finalMetrics.time_first_token_millsec =
+              (finalMetrics.time_first_token_millsec || 0) + (time_first_token_millsec - start_time_millsec)
           }
         }
+
+        // --- End Incremental onChunk calls ---
+
+        // Call processToolUses AFTER potentially processing text content in this chunk
+        // This assumes tools might be specified within the text stream
+        // Note: parseAndCallTools inside should handle its own onChunk for tool responses
+        let toolResults: Awaited<ReturnType<typeof parseAndCallTools>> = []
+        if (functionCalls.length) {
+          toolResults = await processToolCalls(functionCalls)
+        }
+        if (content.length) {
+          toolResults = toolResults.concat(await processToolUses(content))
+        }
+        if (toolResults.length) {
+          await processToolResults(toolResults, idx)
+        }
+
+        // FIXME: 由于递归，会发送n次
+        onChunk({
+          type: ChunkType.BLOCK_COMPLETE,
+          response: {
+            usage: finalUsage,
+            metrics: finalMetrics
+          }
+        })
       }
     }
 
@@ -615,17 +617,6 @@ export default class GeminiProvider extends BaseProvider {
     })
 
     await processStream(userMessagesStream, 0).finally(cleanup)
-
-    const final_time_completion_millsec = new Date().getTime() - start_time_millsec
-    onChunk({
-      type: ChunkType.BLOCK_COMPLETE,
-      response: {
-        metrics: {
-          time_completion_millsec: final_time_completion_millsec,
-          time_first_token_millsec
-        }
-      }
-    })
   }
 
   /**

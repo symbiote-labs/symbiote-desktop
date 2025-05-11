@@ -565,7 +565,7 @@ const fetchAndProcessAssistantResponseImpl = async (
           message: pauseErrorLanguagePlaceholder || error.message || 'Stream processing error',
           originalMessage: error.message,
           stack: error.stack,
-          status: error.status,
+          status: error.status || error.code,
           requestId: error.request_id
         }
         if (lastBlockId) {
@@ -609,13 +609,14 @@ const fetchAndProcessAssistantResponseImpl = async (
           // 更新topic的name
           autoRenameTopic(assistant, topicId)
 
-          if (response && !response.usage) {
+          if (response && response.usage?.total_tokens === 0) {
             const usage = await estimateMessagesUsage({ assistant, messages: finalContextWithAssistant })
             response.usage = usage
           }
+          console.log('response', response)
         }
         if (response && response.metrics) {
-          if (!response.metrics.completion_tokens && response.usage) {
+          if (response.metrics.completion_tokens === 0 && response.usage?.completion_tokens) {
             response = {
               ...response,
               metrics: {
