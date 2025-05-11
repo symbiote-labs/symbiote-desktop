@@ -613,7 +613,6 @@ const fetchAndProcessAssistantResponseImpl = async (
             const usage = await estimateMessagesUsage({ assistant, messages: finalContextWithAssistant })
             response.usage = usage
           }
-          console.log('response', response)
         }
         if (response && response.metrics) {
           if (response.metrics.completion_tokens === 0 && response.usage?.completion_tokens) {
