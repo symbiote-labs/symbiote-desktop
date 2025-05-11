@@ -2153,11 +2153,11 @@ export const TEXT_TO_IMAGES_MODELS_SUPPORT_IMAGE_ENHANCEMENT = [
 
 export const GENERATE_IMAGE_MODELS = [
   'gemini-2.0-flash-exp-image-generation',
+  'gemini-2.0-flash-preview-image-generation',
   'gemini-2.0-flash-exp',
   'grok-2-image-1212',
   'grok-2-image',
   'grok-2-image-latest',
-  'gpt-4o-image',
   'gpt-image-1'
 ]
 
@@ -2172,6 +2172,7 @@ export const GEMINI_SEARCH_MODELS = [
   'gemini-2.5-pro-exp-03-25',
   'gemini-2.5-pro-preview',
   'gemini-2.5-pro-preview-03-25',
+  'gemini-2.5-pro-preview-05-06',
   'gemini-2.5-flash-preview',
   'gemini-2.5-flash-preview-04-17'
 ]
