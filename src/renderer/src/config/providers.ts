@@ -44,6 +44,8 @@ import XirangProviderLogo from '@renderer/assets/images/providers/xirang.png'
 import ZeroOneProviderLogo from '@renderer/assets/images/providers/zero-one.png'
 import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
 
+import { CHERRY_CLOUD_HOST } from './constant'
+
 const PROVIDER_LOGO_MAP = {
   openai: OpenAiProviderLogo,
   silicon: SiliconFlowProviderLogo,
@@ -589,13 +591,13 @@ export const PROVIDER_CONFIG = {
   },
   'cherry-cloud': {
     api: {
-      url: 'https://cherry-ai.cloud'
+      url: CHERRY_CLOUD_HOST
     },
     websites: {
-      official: 'https://cherry-ai.cloud',
-      apiKey: 'https://cherry-ai.cloud/dashboard/api-keys',
-      docs: 'https://cherry-ai.cloud/docs',
-      models: 'https://cherry-ai.cloud/models'
+      official: CHERRY_CLOUD_HOST,
+      apiKey: `${CHERRY_CLOUD_HOST}/dashboard/api-keys`,
+      docs: `${CHERRY_CLOUD_HOST}/docs`,
+      models: `${CHERRY_CLOUD_HOST}/models`
     }
   }
 }
