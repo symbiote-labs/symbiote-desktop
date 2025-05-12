@@ -39,12 +39,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, defaultT
     }
   }
 
+  const tailwindThemeChange = (theme) => {
+    const root = window.document.documentElement
+    root.classList.remove('light', 'dark')
+    root.classList.add(theme)
+  }
+
   useEffect(() => {
     window.api?.setTheme(defaultTheme || theme)
   }, [defaultTheme, theme])
 
   useEffect(() => {
     document.body.setAttribute('theme-mode', effectiveTheme)
+    tailwindThemeChange(effectiveTheme)
   }, [effectiveTheme])
 
   useEffect(() => {

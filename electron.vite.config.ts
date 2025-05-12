@@ -51,6 +51,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [
+      tailwindcss(),
       react({
         plugins: [
           [
@@ -64,8 +65,7 @@ export default defineConfig({
           ]
         ]
       }),
-      ...visualizerPlugin('renderer'),
-      tailwindcss()
+      ...visualizerPlugin('renderer')
     ],
     resolve: {
       alias: {
