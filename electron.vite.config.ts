@@ -1,4 +1,3 @@
-import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { resolve } from 'path'
@@ -6,75 +5,77 @@ import { visualizer } from 'rollup-plugin-visualizer'
 const visualizerPlugin = (type: 'renderer' | 'main') => {
   return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : []
 }
-
-export default defineConfig({
-  main: {
-    plugins: [
-      externalizeDepsPlugin({
-        exclude: [
-          '@cherrystudio/embedjs',
-          '@cherrystudio/embedjs-openai',
-          '@cherrystudio/embedjs-loader-web',
-          '@cherrystudio/embedjs-loader-markdown',
-          '@cherrystudio/embedjs-loader-msoffice',
-          '@cherrystudio/embedjs-loader-xml',
-          '@cherrystudio/embedjs-loader-pdf',
-          '@cherrystudio/embedjs-loader-sitemap',
-          '@cherrystudio/embedjs-libsql',
-          '@cherrystudio/embedjs-loader-image',
-          'p-queue',
-          'webdav'
-        ]
-      }),
-      ...visualizerPlugin('main')
-    ],
-    resolve: {
-      alias: {
-        '@main': resolve('src/main'),
-        '@types': resolve('src/renderer/src/types'),
-        '@shared': resolve('packages/shared')
-      }
-    },
-    build: {
-      rollupOptions: {
-        external: ['@libsql/client']
-      }
-    }
-  },
-  preload: {
-    plugins: [externalizeDepsPlugin()],
-    resolve: {
-      alias: {
-        '@shared': resolve('packages/shared')
-      }
-    }
-  },
-  renderer: {
-    plugins: [
-      tailwindcss(),
-      react({
-        plugins: [
-          [
-            '@swc/plugin-styled-components',
-            {
-              displayName: true, // 开发环境下启用组件名称
-              fileName: false, // 不在类名中包含文件名
-              pure: true, // 优化性能
-              ssr: false // 不需要服务端渲染
-            }
+export default defineConfig(async () => {
+  const tailwindcssPlugin = (await import('@tailwindcss/vite')).default // 动态导入
+  return {
+    main: {
+      plugins: [
+        externalizeDepsPlugin({
+          exclude: [
+            '@cherrystudio/embedjs',
+            '@cherrystudio/embedjs-openai',
+            '@cherrystudio/embedjs-loader-web',
+            '@cherrystudio/embedjs-loader-markdown',
+            '@cherrystudio/embedjs-loader-msoffice',
+            '@cherrystudio/embedjs-loader-xml',
+            '@cherrystudio/embedjs-loader-pdf',
+            '@cherrystudio/embedjs-loader-sitemap',
+            '@cherrystudio/embedjs-libsql',
+            '@cherrystudio/embedjs-loader-image',
+            'p-queue',
+            'webdav'
           ]
-        ]
-      }),
-      ...visualizerPlugin('renderer')
-    ],
-    resolve: {
-      alias: {
-        '@renderer': resolve('src/renderer/src'),
-        '@shared': resolve('packages/shared')
+        }),
+        ...visualizerPlugin('main')
+      ],
+      resolve: {
+        alias: {
+          '@main': resolve('src/main'),
+          '@types': resolve('src/renderer/src/types'),
+          '@shared': resolve('packages/shared')
+        }
+      },
+      build: {
+        rollupOptions: {
+          external: ['@libsql/client']
+        }
       }
     },
-    optimizeDeps: {
-      exclude: []
+    preload: {
+      plugins: [externalizeDepsPlugin()],
+      resolve: {
+        alias: {
+          '@shared': resolve('packages/shared')
+        }
+      }
+    },
+    renderer: {
+      plugins: [
+        react({
+          plugins: [
+            [
+              '@swc/plugin-styled-components',
+              {
+                displayName: true, // 开发环境下启用组件名称
+                fileName: false, // 不在类名中包含文件名
+                pure: true, // 优化性能
+                ssr: false // 不需要服务端渲染
+              }
+            ]
+          ]
+        }),
+        tailwindcssPlugin(),
+        ...visualizerPlugin('renderer')
+      ],
+      resolve: {
+        alias: {
+          '@renderer': resolve('src/renderer/src'),
+          '@shared': resolve('packages/shared')
+        }
+      },
+      optimizeDeps: {
+        exclude: []
+      }
     }
   }
 })
