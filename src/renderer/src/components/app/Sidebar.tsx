@@ -11,8 +11,8 @@ import { isEmoji } from '@renderer/utils'
 import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Tooltip } from 'antd'
 import {
-  Box,
   CircleHelp,
+  Compass,
   FileSearch,
   Folder,
   Languages,
@@ -145,7 +145,7 @@ const MainMenus: FC = () => {
     minapp: <LayoutGrid size={18} className="icon" />,
     knowledge: <FileSearch size={18} className="icon" />,
     files: <Folder size={17} className="icon" />,
-    store: <Box size={18} className="icon" />
+    store: <Compass size={18} className="icon" />
   }
 
   const pathMap = {

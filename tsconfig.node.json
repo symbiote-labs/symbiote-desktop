@@ -18,8 +18,8 @@
     "paths": {
       "@main/*": ["src/main/*"],
       "@types": ["src/renderer/src/types/index.ts"],
-      "@components/*": ["packages/components/*"],
-      "@shared/*": ["packages/shared/*"]
+      "@shared/*": ["packages/shared/*"],
+      "@renderer/*": ["src/renderer/src/*"]
     }
   }
 }

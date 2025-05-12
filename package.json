@@ -188,6 +188,7 @@
     "lru-cache": "^11.1.0",
     "lucide-react": "^0.509.0",
     "mime": "^4.0.4",
+    "motion": "^12.11.0",
     "npx-scope-finder": "^1.2.0",
     "openai": "patch:openai@npm%3A4.96.0#~/.yarn/patches/openai-npm-4.96.0-0665b05cb9.patch",
     "p-queue": "^8.1.0",
