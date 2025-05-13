@@ -23,7 +23,7 @@ export function handleProvidersProtocolUrl(url: URL) {
         const mainWindow = windowService.getMainWindow()
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send(IpcChannel.Provider_AddKey, jsonConfig)
-          mainWindow.webContents.executeJavaScript("window.navigate('/settings/provider')")
+          mainWindow.webContents.executeJavaScript(`window.navigate('/settings/provider?id=${jsonConfig.id}')`)
         }
       } else {
         Logger.error('No data found in URL')
