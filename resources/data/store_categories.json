@@ -1,0 +1,90 @@
+[
+  {
+    "id": "all",
+    "title": "Categories",
+    "items": [
+      { "id": "featured", "name": "Featured", "count": 24 },
+      { "id": "new", "name": "New Releases", "count": 18 },
+      { "id": "top", "name": "Top Rated", "count": 32 }
+    ]
+  },
+  {
+    "id": "assistant",
+    "title": "助手",
+    "items": [
+      { "id": "assistant-job", "name": "职业" },
+      { "id": "assistant-business", "name": "商业" },
+      { "id": "assistant-tools", "name": "工具" },
+      { "id": "assistant-language", "name": "语言" },
+      { "id": "assistant-office", "name": "办公" },
+      { "id": "assistant-general", "name": "通用" },
+      { "id": "assistant-writing", "name": "写作" },
+      { "id": "assistant-coding", "name": "编程" },
+      { "id": "assistant-emotion", "name": "情感" },
+      { "id": "assistant-education", "name": "教育" },
+      { "id": "assistant-creative", "name": "创意" },
+      { "id": "assistant-academic", "name": "学术" },
+      { "id": "assistant-design", "name": "设计" },
+      { "id": "assistant-art", "name": "艺术" },
+      { "id": "assistant-entertainment", "name": "娱乐" }
+    ]
+  },
+  {
+    "id": "mini-app",
+    "title": "小程序",
+    "items": []
+  },
+  {
+    "id": "knowledge",
+    "title": "知识库",
+    "items": [
+      { "id": "knowledge-history", "name": "历史" },
+      { "id": "knowledge-literature", "name": "文学" },
+      { "id": "knowledge-education", "name": "教育" },
+      { "id": "knowledge-law", "name": "法律" },
+      { "id": "knowledge-science", "name": "科学" },
+      { "id": "knowledge-medicine", "name": "医学" },
+      { "id": "knowledge-economics", "name": "经济" },
+      { "id": "knowledge-art", "name": "艺术" },
+      { "id": "knowledge-geography", "name": "地理" },
+      { "id": "knowledge-social", "name": "社会" }
+    ]
+  },
+  {
+    "id": "mcp-server",
+    "title": "MCP 服务器",
+    "items": [
+      { "id": "mcp-dev-tools", "name": "Developer Tools" },
+      { "id": "mcp-research-data", "name": "Research And Data" },
+      { "id": "mcp-cloud", "name": "Cloud Platforms" },
+      { "id": "mcp-communication", "name": "Communication" },
+      { "id": "mcp-browser-auto", "name": "Browser Automation" },
+      { "id": "mcp-finance", "name": "Finance" },
+      { "id": "mcp-security", "name": "Security" },
+      { "id": "mcp-os-auto", "name": "Os Automation" },
+      { "id": "mcp-databases", "name": "Databases" },
+      { "id": "mcp-cloud-storage", "name": "Cloud Storage" },
+      { "id": "mcp-monitoring", "name": "Monitoring" },
+      { "id": "mcp-media", "name": "Entertainment And Media" },
+      { "id": "mcp-knowledge-mem", "name": "Knowledge And Memory" },
+      { "id": "mcp-file-systems", "name": "File Systems" },
+      { "id": "mcp-location", "name": "Location Services" },
+      { "id": "mcp-calendar", "name": "Calendar Management" },
+      { "id": "mcp-customer-data", "name": "Customer Data Platforms" },
+      { "id": "mcp-ai-chatbot", "name": "AI Chatbot" },
+      { "id": "mcp-virtualization", "name": "Virtualization" },
+      { "id": "mcp-official-servers", "name": "Official Servers" },
+      { "id": "mcp-database", "name": "Database" }
+    ]
+  },
+  {
+    "id": "model-provider",
+    "title": "模型服务",
+    "items": []
+  },
+  {
+    "id": "agent",
+    "title": "智能体",
+    "items": []
+  }
+]

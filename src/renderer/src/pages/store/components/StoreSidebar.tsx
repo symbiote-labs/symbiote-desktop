@@ -10,23 +10,36 @@ import {
   SidebarMenuItem
 } from '@renderer/ui/sidebar'
 
-import categories from '../data/store_categories.json'
+import { Category } from '../data'
 
 interface StoreSidebarProps {
+  categories: Category[]
   selectedCategory: string
   selectedSubcategory: string
   onSelectCategory: (categoryId: string, subcategoryId: string) => void
 }
 
-export function StoreSidebar({ selectedCategory, selectedSubcategory, onSelectCategory }: StoreSidebarProps) {
-  console.log('selectedCategory', selectedCategory)
-  console.log('selectedSubcategory', selectedSubcategory)
+export function StoreSidebar({
+  categories,
+  selectedCategory,
+  selectedSubcategory,
+  onSelectCategory
+}: StoreSidebarProps) {
+  if (!categories || categories.length === 0) {
+    return (
+      <Sidebar className="absolute left-0 top-0 h-full border-r">
+        <SidebarContent>
+          <p className="p-4 text-sm text-gray-500">No categories loaded.</p>
+        </SidebarContent>
+      </Sidebar>
+    )
+  }
+
   return (
     <Sidebar className="absolute left-0 top-0 h-full border-r">
       <SidebarContent>
         {categories.map((category) => (
-          <SidebarGroup key={category.title}>
-            {/* Only render label if it's not the 'all' category wrapper */}
+          <SidebarGroup key={category.id}>
             {category.id !== 'all' && <SidebarGroupLabel>{category.title}</SidebarGroupLabel>}
             <SidebarGroupContent>
               <SidebarMenu>
@@ -36,14 +49,14 @@ export function StoreSidebar({ selectedCategory, selectedSubcategory, onSelectCa
                       isActive={category.id === selectedCategory && item.id === selectedSubcategory}
                       className="justify-between"
                       onClick={() => {
-                        console.log('category', category)
-                        // Special handling for top-level 'all' categories vs nested ones
-                        onSelectCategory(category.id, item.id) // Selecting 'all', 'featured', 'new', 'top' uses the item.id as category
+                        onSelectCategory(category.id, item.id)
                       }}>
                       {item.name}
-                      <Badge variant="secondary" className="ml-auto">
-                        {item.count}
-                      </Badge>
+                      {typeof item.count === 'number' && (
+                        <Badge variant="secondary" className="ml-auto">
+                          {item.count}
+                        </Badge>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
