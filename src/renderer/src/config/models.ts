@@ -2190,8 +2190,8 @@ export function isEmbeddingModel(model: Model): boolean {
   if (!model) {
     return false
   }
-  if (model.type) {
-    return model.type.includes('embedding')
+  if (model.type && model.type.includes('embedding')) {
+    return true
   } else {
     if (['anthropic'].includes(model?.provider)) {
       return false
@@ -2217,8 +2217,8 @@ export function isVisionModel(model: Model): boolean {
   if (!model) {
     return false
   }
-  if (model.type) {
-    return model.type.includes('vision')
+  if (model.type && model.type.includes('vision')) {
+    return true
   } else {
     // 新添字段 copilot-vision-request 后可使用 vision
     // if (model.provider === 'copilot') {
@@ -2364,8 +2364,8 @@ export function isReasoningModel(model?: Model): boolean {
   if (!model) {
     return false
   }
-  if (model.type) {
-    return model.type.includes('reasoning')
+  if (model.type && model.type.includes('reasoning')) {
+    return true
   } else {
     if (model.provider === 'doubao') {
       return REASONING_REGEX.test(model.name)
@@ -2398,8 +2398,8 @@ export function isWebSearchModel(model: Model): boolean {
   if (!model) {
     return false
   }
-  if (model.type) {
-    return model.type.includes('web_search')
+  if (model.type && model.type.includes('web_search')) {
+    return true
   } else {
     const provider = getProviderByModel(model)
 
