@@ -34,12 +34,10 @@ export function formatErrorMessage(error: any): string {
     delete detailedError?.stack
     delete detailedError?.request_id
 
-    // 格式化错误信息为更易读的形式
     const formattedJson = JSON.stringify(detailedError, null, 2)
       .split('\n')
-      .map((line) => `  ${line}`) // 添加缩进
+      .map((line) => `  ${line}`)
       .join('\n')
-
     return `Error Details:\n${formattedJson}`
   } catch (e) {
     try {
