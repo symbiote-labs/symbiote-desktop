@@ -124,7 +124,7 @@ const ModelEditContent: FC<ModelEditContentProps> = ({ model, onUpdateModel, ope
             <Divider style={{ margin: '0 0 15px 0' }} />
             <TypeTitle>{t('models.type.select')}:</TypeTitle>
             {(() => {
-              const defaultTypes = [
+              const systemTypes = [
                 ...(isVisionModel(model) ? ['vision'] : []),
                 ...(isEmbeddingModel(model) ? ['embedding'] : []),
                 ...(isReasoningModel(model) ? ['reasoning'] : []),
@@ -132,8 +132,7 @@ const ModelEditContent: FC<ModelEditContentProps> = ({ model, onUpdateModel, ope
                 ...(isWebSearchModel(model) ? ['web_search'] : [])
               ] as ModelType[]
 
-              // 合并现有选择和默认类型
-              const selectedTypes = [...new Set([...(model.type || []), ...defaultTypes])]
+              const selectedTypes = model.type && model.type.length > 0 ? model.type : systemTypes
 
               const showTypeConfirmModal = (type: string) => {
                 window.modal.confirm({
@@ -166,28 +165,23 @@ const ModelEditContent: FC<ModelEditContentProps> = ({ model, onUpdateModel, ope
                   options={[
                     {
                       label: t('models.type.vision'),
-                      value: 'vision',
-                      disabled: isVisionModel(model) && !selectedTypes.includes('vision')
+                      value: 'vision'
                     },
                     {
                       label: t('models.type.websearch'),
-                      value: 'web_search',
-                      disabled: isWebSearchModel(model) && !selectedTypes.includes('web_search')
+                      value: 'web_search'
                     },
                     {
                       label: t('models.type.embedding'),
-                      value: 'embedding',
-                      disabled: isEmbeddingModel(model) && !selectedTypes.includes('embedding')
+                      value: 'embedding'
                     },
                     {
                       label: t('models.type.reasoning'),
-                      value: 'reasoning',
-                      disabled: isReasoningModel(model) && !selectedTypes.includes('reasoning')
+                      value: 'reasoning'
                     },
                     {
                       label: t('models.type.function_calling'),
-                      value: 'function_calling',
-                      disabled: isFunctionCallingModel(model) && !selectedTypes.includes('function_calling')
+                      value: 'function_calling'
                     }
                   ]}
                 />
