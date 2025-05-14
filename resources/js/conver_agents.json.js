@@ -7,7 +7,7 @@ const path = require('path')
 // --- 配置路径 ---
 const agentsJsonPath = path.resolve(__dirname, '../data/agents.json')
 const outputDir = path.resolve(__dirname, '../data')
-const outputJsonPath = path.resolve(outputDir, 'list_assistant.json')
+const outputJsonPath = path.resolve(outputDir, 'store_list_assistant.json')
 
 // --- 映射和默认值配置 ---
 const CATEGORY_ID_ASSISTANT = 'assistant'
@@ -31,15 +31,24 @@ const groupToSubcategoryMap = {
   设计: 'assistant-design',
   艺术: 'assistant-art',
   娱乐: 'assistant-entertainment',
-  精选: 'assistant-general',
-  生活: 'assistant-general',
-  医疗: 'assistant-health',
-  文案: 'assistant-writing',
+  精选: 'assistant-featured',
+  生活: 'assistant-life',
+  医疗: 'assistant-medical',
+  文案: 'assistant-copywriting',
   健康: 'assistant-health',
   点评: 'assistant-review',
-  百科: 'assistant-knowledge',
+  百科: 'assistant-encyclopedia',
   旅游: 'assistant-travel',
-  翻译: 'assistant-language'
+  翻译: 'assistant-translation',
+  游戏: 'assistant-game',
+  音乐: 'assistant-music',
+  营销: 'assistant-marketing',
+  科学: 'assistant-science',
+  分析: 'assistant-analysis',
+  法律: 'assistant-law',
+  咨询: 'assistant-consulting',
+  金融: 'assistant-finance',
+  管理: 'assistant-management'
 }
 
 // 从 agent.group 数组中获取 subcategoryId
@@ -106,12 +115,13 @@ try {
         categoryId: CATEGORY_ID_ASSISTANT, // 固定一级分类
         subcategoryId: subcategoryId, // 从 agent.group 动态获取
         author: 'Cherry Studio', // agent.author 可能不存在, 提供默认 'Cherry Studio'
-        rating: parseFloat(agent.rating) || 4.0, // agent.rating 可能不存在, 提供默认 4.0
-        downloads: '0',
-        image: agent.emoji || '🤖', // 使用 agent.emoji (顶层), 若无则用默认
+        icon: agent.emoji || '🤖', // 使用 agent.emoji (顶层), 若无则用默认
+        image: '',
         tags: agentGroups, // 使用 agent.group (顶层) 作为 StoreItem.tags
         // 如果 group 含 "精选"，则 isFeaturedByGroup 为 true。
-        featured: isFeaturedByGroup || (typeof agent.featured === 'boolean' ? agent.featured : false)
+        featured: isFeaturedByGroup,
+        // assistant
+        prompt: agent.prompt || ''
       }
     })
     .filter((item) => item !== null)

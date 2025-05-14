@@ -3076,6 +3076,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@radix-ui/react-collapsible@npm:^1.1.10":
+  version: 1.1.10
+  resolution: "@radix-ui/react-collapsible@npm:1.1.10"
+  dependencies:
+    "@radix-ui/primitive": "npm:1.1.2"
+    "@radix-ui/react-compose-refs": "npm:1.1.2"
+    "@radix-ui/react-context": "npm:1.1.2"
+    "@radix-ui/react-id": "npm:1.1.1"
+    "@radix-ui/react-presence": "npm:1.1.4"
+    "@radix-ui/react-primitive": "npm:2.1.2"
+    "@radix-ui/react-use-controllable-state": "npm:1.2.2"
+    "@radix-ui/react-use-layout-effect": "npm:1.1.1"
+  peerDependencies:
+    "@types/react": "*"
+    "@types/react-dom": "*"
+    react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    "@types/react-dom":
+      optional: true
+  checksum: 10c0/d806b7da926ba6bf70a42d643b716bcc167502c6b8be115047bd40a1cbd20975869ee824d9406d906ef0b7b069a426a2b57021ff188c3233f592ed9477ad1e48
+  languageName: node
+  linkType: hard
+
 "@radix-ui/react-collection@npm:1.1.6":
   version: 1.1.6
   resolution: "@radix-ui/react-collection@npm:1.1.6"
@@ -5231,6 +5257,7 @@ __metadata:
     "@modelcontextprotocol/sdk": "npm:^1.10.2"
     "@mozilla/readability": "npm:^0.6.0"
     "@notionhq/client": "npm:^2.2.15"
+    "@radix-ui/react-collapsible": "npm:^1.1.10"
     "@radix-ui/react-dialog": "npm:^1.1.13"
     "@radix-ui/react-dropdown-menu": "npm:^2.1.14"
     "@radix-ui/react-separator": "npm:^1.1.6"

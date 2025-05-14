@@ -1,20 +1,5 @@
 import store from '@renderer/store'
-import { CherryStoreItem } from '@renderer/types/cherryStore'
-
-// 定义 Category 和 SubCategory 的类型 (基于您 store_categories.json 的结构)
-// 您可能已经在别处定义了这些类型，如果是，请使用它们。
-export interface SubCategoryItem {
-  id: string
-  name: string
-  count?: number // count 是可选的，因为并非所有二级分类都有
-  isActive?: boolean
-}
-
-export interface Category {
-  id: string
-  title: string
-  items: SubCategoryItem[]
-}
+import { Category, CherryStoreItem } from '@renderer/types/cherryStore'
 
 // 移除 LoadedStoreData 和 LoadedStoreDataByType，因为我们将按需加载
 // export interface LoadedStoreData {
@@ -126,16 +111,10 @@ export async function loadAndFilterItems(
 
   let filteredItems = items
 
-  if (subcategoryId) {
-    filteredItems = filteredItems.filter((item) => {
-      return item.subcategoryId === subcategoryId
-    })
-  }
-
-  if (searchQuery) {
+  if (searchQuery || subcategoryId) {
     const query = searchQuery.toLowerCase()
     filteredItems = filteredItems.filter((item) => {
-      const searchableText = `${item.title.toLowerCase()} ${item.description?.toLowerCase() || ''} ${item.author?.toLowerCase() || ''} ${item.tags?.join(' ')?.toLowerCase() || ''}`
+      const searchableText = `${item.subcategoryId} ${item.title.toLowerCase()} ${item.author?.toLowerCase() || ''} ${item.tags?.join(' ')?.toLowerCase() || ''}`
       return searchableText.includes(query)
     })
   }
@@ -144,25 +123,3 @@ export async function loadAndFilterItems(
   )
   return filteredItems
 }
-
-// 原始的 loadStoreDataSeparately 现在可以移除或重构
-// 如果还需要一次性加载所有数据（例如用于初始全局搜索或特定情况），可以保留并调整
-// 但根据需求，我们现在倾向于按需加载
-/*
-export async function loadStoreDataSeparately(): Promise<LoadedStoreDataByType> {
-  const categories = (await readFileSafe<Category[]>(getResourcesPath('/data/store_categories.json'))) || []
-  // 示例: 不再默认加载所有类型的 items
-  // const assistantItems = await readFileSafe<CherryStoreItem[]>(getResourcesPath('/data/store_list_assistant.json'))
-
-  console.log('Store data loaded (categories only by default):', {
-    categoriesCount: categories.length,
-  })
-
-  return {
-    categories,
-    // assistantItems: undefined, // Items 会按需加载
-    // knowledgeItems: undefined,
-    // mcpServerItems: undefined,
-  }
-}
-*/

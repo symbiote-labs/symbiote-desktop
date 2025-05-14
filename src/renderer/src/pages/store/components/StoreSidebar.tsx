@@ -1,22 +1,13 @@
+import { Category, SubCategoryItem } from '@renderer/types/cherryStore'
 import { Badge } from '@renderer/ui/badge'
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem
-} from '@renderer/ui/sidebar'
-
-import { Category } from '../data'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@renderer/ui/collapsible'
+import { Sidebar, SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@renderer/ui/sidebar'
 
 interface StoreSidebarProps {
   categories: Category[]
   selectedCategory: string
   selectedSubcategory: string
-  onSelectCategory: (categoryId: string, subcategoryId: string) => void
+  onSelectCategory: (categoryId: string, subcategoryId: string, row: SubCategoryItem) => void
 }
 
 export function StoreSidebar({
@@ -38,32 +29,46 @@ export function StoreSidebar({
   return (
     <Sidebar className="absolute left-0 top-0 h-full border-r">
       <SidebarContent>
-        {categories.map((category) => (
-          <SidebarGroup key={category.id}>
-            {category.id !== 'all' && <SidebarGroupLabel>{category.title}</SidebarGroupLabel>}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {category.items.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={category.id === selectedCategory && item.id === selectedSubcategory}
-                      className="justify-between"
-                      onClick={() => {
-                        onSelectCategory(category.id, item.id)
-                      }}>
-                      {item.name}
-                      {typeof item.count === 'number' && (
-                        <Badge variant="secondary" className="ml-auto">
-                          {item.count}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <SidebarMenu className="gap-0">
+          {categories.map((category, index) => (
+            <Collapsible key={category.id} defaultOpen={index === 0} className="group/collapsible w-full">
+              <SidebarMenuItem className="w-full px-0 py-0">
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    variant="outline"
+                    className="rounded-none hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none">
+                    <span className="truncate">{category.title}</span>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="overflow-hidden text-sm transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                  <SidebarMenu className="py-1 pl-4 pr-1">
+                    {category.items.map((subItem) => (
+                      <SidebarMenuItem key={subItem.id}>
+                        <SidebarMenuButton
+                          isActive={category.id === selectedCategory && subItem.id === selectedSubcategory}
+                          className="w-full justify-between"
+                          onClick={() => {
+                            onSelectCategory(category.id, subItem.id, subItem)
+                          }}
+                          size="sm">
+                          <span className="truncate">{subItem.name}</span>
+                          {typeof subItem.count === 'number' && (
+                            <Badge variant="secondary" className="ml-auto shrink-0">
+                              {subItem.count}
+                            </Badge>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                    {category.items.length === 0 && (
+                      <SidebarMenuItem className="px-3 py-1.5 text-xs text-muted-foreground">No items</SidebarMenuItem>
+                    )}
+                  </SidebarMenu>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          ))}
+        </SidebarMenu>
       </SidebarContent>
     </Sidebar>
   )

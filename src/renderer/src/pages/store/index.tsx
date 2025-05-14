@@ -1,13 +1,13 @@
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import { useRuntime } from '@renderer/hooks/useRuntime'
-import { CherryStoreItem } from '@renderer/types/cherryStore'
+import { Category, CherryStoreItem, SubCategoryItem } from '@renderer/types/cherryStore'
 import { SidebarProvider } from '@renderer/ui/sidebar'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { StoreContent } from './components/StoreContent'
 import { StoreSidebar } from './components/StoreSidebar'
-import { Category, loadAndFilterItems, loadCategories } from './data'
+import { loadAndFilterItems, loadCategories } from './data'
 export default function StoreLayout() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
@@ -31,6 +31,7 @@ export default function StoreLayout() {
         setCategories(loadedCategories)
         if (loadedCategories.length > 0 && !selectedCategory) {
           setSelectedCategory(loadedCategories[0].id)
+          setSelectedSubcategory(loadedCategories[0].items[0].id)
         }
       } catch (err) {
         console.error('Error in StoreLayout fetchCategories:', err)
@@ -39,7 +40,7 @@ export default function StoreLayout() {
         setIsLoading(false)
       }
     }
-    fetchCategories()
+    resourcesPath && fetchCategories()
   }, [resourcesPath])
 
   useEffect(() => {
@@ -66,9 +67,10 @@ export default function StoreLayout() {
     fetchItems()
   }, [selectedCategory, selectedSubcategory, searchQuery])
 
-  const handleSelectCategory = (categoryId: string, subcategoryId: string) => {
+  const handleSelectCategory = (categoryId: string, subcategoryId: string, row: SubCategoryItem) => {
     setSelectedCategory(categoryId)
     setSelectedSubcategory(subcategoryId)
+    setSearchQuery(row.name)
   }
 
   if (isLoading) {
