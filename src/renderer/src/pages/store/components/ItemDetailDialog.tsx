@@ -46,10 +46,10 @@ export function ItemDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] sm:max-w-4xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader className="flex flex-row items-start justify-between">
           <div>
-            <DialogTitle className="flex items-center text-xl space-x-1">
+            <DialogTitle className="flex items-center space-x-1 text-xl">
               {item.title}
               <Badge variant="outline" className="ml-2">
                 {item.type}
@@ -62,7 +62,7 @@ export function ItemDetailDialog({
 
         <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="md:col-span-2">
-            <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm mt-4">
+            <div className="mt-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
               <ReactMarkdown>{item.prompt}</ReactMarkdown>
             </div>
 
@@ -84,7 +84,7 @@ export function ItemDetailDialog({
           <div className="space-y-4">
             <div className="overflow-hidden">
               {item.image && (
-                <div className="aspect-square w-full rounded-lg border overflow-hidden bg-muted">
+                <div className="aspect-square w-full overflow-hidden rounded-lg border bg-muted">
                   <img src={item.image || '/placeholder.svg'} alt={item.title} className="h-full w-full object-cover" />
                 </div>
               )}
@@ -125,7 +125,7 @@ export function ItemDetailDialog({
               {/* )} */}
             </div>
 
-            <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm space-y-2">
+            <div className="space-y-2 rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
               <h3 className="mb-2 text-sm font-medium">标签</h3>
               <div className="flex flex-wrap gap-1">
                 {item.tags.map((tag: string) => (

@@ -1,7 +1,14 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source('../../../src');
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+
+/* 如需自定义:
+1. 清晰地组织自定义 CSS 到相应的层中。
+2. 基础样式（如全局重置、链接样式）放入 base 层；
+3. 可复用的组件样式（如果仍使用 @apply 或原生 CSS 嵌套创建）放入 components 层；
+4. 新的自定义工具类放入 utilities 层。 
+*/
 
 :root {
   --radius: 0.625rem;
@@ -112,19 +119,19 @@
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   @keyframes marquee {
-  from {
-    transform: translateX(0);
+    from {
+      transform: translateX(0);
     }
-  to {
-    transform: translateX(calc(-100% - var(--gap)));
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
     }
   }
   @keyframes marquee-vertical {
-  from {
-    transform: translateY(0);
+    from {
+      transform: translateY(0);
     }
-  to {
-    transform: translateY(calc(-100% - var(--gap)));
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
     }
   }
 }

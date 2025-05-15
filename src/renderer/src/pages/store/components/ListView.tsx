@@ -20,10 +20,10 @@ export function ListView({ items }: { items: CherryStoreItem[] }) {
         {items.map((item) => (
           <Card
             key={item.id}
-            className="p-0 cursor-pointer hover:shadow-lg transition-shadow"
+            className="cursor-pointer p-0 transition-shadow hover:shadow-lg"
             onClick={() => handleCardClick(item)}>
             <div className="flex flex-col sm:flex-row">
-              <div className="h-24 w-24 shrink-0 overflow-hidden rounded-l-lg bg-muted sm:h-auto flex items-center justify-center">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-l-lg bg-muted sm:h-auto">
                 {item.icon ? (
                   <div
                     className="flex h-full w-full items-center justify-center text-3xl"

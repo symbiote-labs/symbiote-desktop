@@ -20,9 +20,9 @@ export function GridView({ items }: { items: CherryStoreItem[] }) {
     <>
       <div className="columns-4 gap-4">
         {items.map((item) => (
-          <BlurFade key={item.id} delay={0.2} inView className="mb-4 cursor-pointer ">
+          <BlurFade key={item.id} delay={0.2} inView className="mb-4 cursor-pointer">
             <Card
-              className="overflow-hidden hover:scale-105 transition-transform"
+              className="overflow-hidden transition-transform hover:scale-105"
               onClick={() => handleCardClick(item)}>
               <CardHeader className="p-0">
                 {item.icon ? (

@@ -78,7 +78,7 @@ export default function StoreLayout() {
   }
 
   if (error) {
-    return <div className="p-4 text-red-500 text-center">Error: {error}</div>
+    return <div className="p-4 text-center text-red-500">Error: {error}</div>
   }
 
   return (
@@ -87,7 +87,7 @@ export default function StoreLayout() {
         <NavbarCenter>{t('store.title')}</NavbarCenter>
       </Navbar>
       <div id="content-container" className="h-full w-full">
-        <SidebarProvider className="h-full w-full relative min-h-full">
+        <SidebarProvider className="relative h-full min-h-full w-full">
           <StoreSidebar
             categories={categories}
             selectedCategory={selectedCategory}

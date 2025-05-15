@@ -26,14 +26,14 @@ export function StoreContent({
   onViewModeChange
 }: StoreContentProps) {
   return (
-    <div className="flex-1 overflow-auto w-full">
+    <div className="w-full flex-1 overflow-auto">
       {/* Sticky Header for Search, Filter, View Mode, and Category Tabs */}
       <div className="sticky top-0 z-10 border-b bg-background p-4">
         <div className="flex flex-col gap-4">
           {/* Top row: Search, Filter, View buttons */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search store..."
@@ -84,7 +84,7 @@ export function StoreContent({
       </div>
 
       {/* Main Content Area: Grid or List View */}
-      <div className="p-4 w-full">
+      <div className="w-full p-4">
         {items.length === 0 ? (
           <div className="flex h-[400px] items-center justify-center">
             <p className="text-center text-muted-foreground">No items found matching your criteria.</p>

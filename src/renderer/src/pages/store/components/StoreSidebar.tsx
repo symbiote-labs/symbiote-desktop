@@ -18,7 +18,7 @@ export function StoreSidebar({
 }: StoreSidebarProps) {
   if (!categories || categories.length === 0) {
     return (
-      <Sidebar className="absolute left-0 top-0 h-full border-r">
+      <Sidebar className="absolute top-0 left-0 h-full border-r">
         <SidebarContent>
           <p className="p-4 text-sm text-gray-500">No categories loaded.</p>
         </SidebarContent>
@@ -27,7 +27,7 @@ export function StoreSidebar({
   }
 
   return (
-    <Sidebar className="absolute left-0 top-0 h-full border-r">
+    <Sidebar className="absolute top-0 left-0 h-full border-r">
       <SidebarContent>
         <SidebarMenu className="gap-0">
           {categories.map((category, index) => (
@@ -41,7 +41,7 @@ export function StoreSidebar({
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="overflow-hidden text-sm transition-all data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
-                  <SidebarMenu className="py-1 pl-4 pr-1">
+                  <SidebarMenu className="py-1 pr-1 pl-4">
                     {category.items.map((subItem) => (
                       <SidebarMenuItem key={subItem.id}>
                         <SidebarMenuButton
