@@ -1,70 +1,46 @@
-import { CherryStoreItem } from '@renderer/types/cherryStore'
-import { Badge } from '@renderer/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@renderer/ui/card'
-import { BlurFade } from '@renderer/ui/third-party/BlurFade'
-import { cn } from '@renderer/utils'
-import { useState } from 'react'
+import { AssistantItem, CherryStoreItem, CherryStoreType, MiniAppItem } from '@renderer/types/cherryStore'
+import { Fragment, useMemo } from 'react'
 
-import { ItemDetailDialog } from './ItemDetailDialog'
+import AssistantCard from './Assistant/AssistantCard'
+import MiniAppCard from './MiniApp/MiniAppCard'
 
-export function GridView({ items }: { items: CherryStoreItem[] }) {
-  const [selectedItemForDetail, setSelectedItemForDetail] = useState<CherryStoreItem | null>(null)
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false)
+interface GridViewProps {
+  items: CherryStoreItem[]
+  selectedCategory: string
+  className?: string
+}
 
-  const handleCardClick = (item: CherryStoreItem) => {
-    setSelectedItemForDetail(item)
-    setIsDetailDialogOpen(true)
+const CardComponent = (selectedCategory: string, item: CherryStoreItem) => {
+  switch (selectedCategory) {
+    case CherryStoreType.ASSISTANT:
+      return <AssistantCard item={item as AssistantItem} />
+    case CherryStoreType.MINI_APP:
+      return <MiniAppCard item={item as MiniAppItem} />
+    default:
+      return null
   }
+}
+
+export function GridView({ items, selectedCategory }: GridViewProps) {
+  const effectiveGridClass = useMemo(() => {
+    let gridClass = 'columns-4 gap-4 '
+
+    switch (selectedCategory) {
+      case CherryStoreType.ASSISTANT:
+        gridClass += '2xl:columns-6'
+        break
+      case CherryStoreType.MINI_APP:
+        gridClass = 'grid grid-cols-8 gap-4 2xl:grid-cols-10'
+        break
+    }
+    return gridClass
+  }, [selectedCategory])
 
   return (
-    <>
-      <div className="columns-4 gap-4">
-        {items.map((item) => (
-          <BlurFade key={item.id} delay={0.2} inView className="mb-4 cursor-pointer">
-            <Card
-              className="overflow-hidden transition-transform hover:scale-105"
-              onClick={() => handleCardClick(item)}>
-              <CardHeader className="p-0">
-                {item.icon ? (
-                  <div
-                    className="flex h-full w-full items-center justify-center text-4xl"
-                    role="img"
-                    aria-label={item.title}>
-                    {item.icon}
-                  </div>
-                ) : (
-                  <div className={cn('w-full overflow-hidden bg-muted', 'aspect-square')}>
-                    <img
-                      src={item.image || '/placeholder.svg'}
-                      alt={item.title}
-                      className="h-full w-full object-cover transition-transform"
-                    />
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className={cn('px-4', 'min-h-[120px]', 'space-y-1')}>
-                <CardTitle className="line-clamp-2 text-base">{item.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">{item.author}</p>
-                <div className="space-x-2">
-                  {item.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-                <p className={cn('mt-2 text-sm text-muted-foreground', 'line-clamp-4 xl:line-clamp-7')}>
-                  {item.description}
-                </p>
-              </CardContent>
-            </Card>
-          </BlurFade>
-        ))}
-      </div>
-      <ItemDetailDialog
-        item={selectedItemForDetail}
-        isOpen={isDetailDialogOpen}
-        onClose={() => setIsDetailDialogOpen(false)}
-      />
-    </>
+    <div className={effectiveGridClass}>
+      {items.map((item) => (
+        <Fragment key={item.id}>{CardComponent(selectedCategory, item)}</Fragment>
+      ))}
+    </div>
   )
 }

@@ -1,10 +1,11 @@
 import { CherryStoreItem } from '@renderer/types/cherryStore'
 import { Button } from '@renderer/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@renderer/ui/dropdown-menu'
 import { Input } from '@renderer/ui/input'
 import { cn } from '@renderer/utils'
-import { Filter, Grid3X3, List, Search } from 'lucide-react'
+import { Grid3X3, List, Search } from 'lucide-react'
+import React from 'react' // Import React for ComponentType
 
+// Import the card components
 // Define the type for a store item based on store_list.json
 import { GridView } from './GridView'
 import { ListView } from './ListView'
@@ -21,6 +22,7 @@ interface StoreContentProps {
 export function StoreContent({
   viewMode,
   searchQuery,
+  selectedCategory, // This prop will drive the component choice
   items,
   onSearchQueryChange,
   onViewModeChange
@@ -42,19 +44,18 @@ export function StoreContent({
                 onChange={(e) => onSearchQueryChange(e.target.value)}
               />
             </div>
-            <DropdownMenu>
+            {/* <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon">
                   <Filter className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Add actual filtering logic later */}
                 <DropdownMenuItem>Most Popular</DropdownMenuItem>
                 <DropdownMenuItem>Newest</DropdownMenuItem>
                 <DropdownMenuItem>Highest Rated</DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu> */}
             <Button
               variant="outline"
               size="icon"
@@ -90,7 +91,7 @@ export function StoreContent({
             <p className="text-center text-muted-foreground">No items found matching your criteria.</p>
           </div>
         ) : viewMode === 'grid' ? (
-          <GridView items={items} />
+          <GridView items={items} selectedCategory={selectedCategory} />
         ) : (
           <ListView items={items} />
         )}

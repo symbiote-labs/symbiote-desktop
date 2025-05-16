@@ -21,7 +21,7 @@
     ]
   },
   {
-    "id": "assistant",
+    "id": "Assistant",
     "title": "助手",
     "items": [
       {
@@ -192,12 +192,12 @@
     ]
   },
   {
-    "id": "mini-app",
+    "id": "Mini-App",
     "title": "小程序",
     "items": []
   },
   {
-    "id": "knowledge",
+    "id": "Knowledge",
     "title": "知识库",
     "items": [
       {
@@ -243,7 +243,7 @@
     ]
   },
   {
-    "id": "mcp-server",
+    "id": "MCP-Server",
     "title": "MCP 服务器",
     "items": [
       {
@@ -333,12 +333,12 @@
     ]
   },
   {
-    "id": "model-provider",
+    "id": "Model-Provider",
     "title": "模型服务",
     "items": []
   },
   {
-    "id": "agent",
+    "id": "Agent",
     "title": "智能体",
     "items": []
   }

@@ -29,7 +29,7 @@ export interface SubCategoryItem {
 }
 
 export interface Category {
-  id: string
+  id: CherryStoreType
   title: string
   items: SubCategoryItem[]
 }
@@ -40,4 +40,13 @@ export interface AssistantItem extends CherryStoreBaseItem {
   prompt?: string
 }
 
-export type CherryStoreItem = AssistantItem
+export interface MiniAppItem extends CherryStoreBaseItem {
+  type: CherryStoreType.MINI_APP
+  url: string
+  bodered?: boolean
+  style?: {
+    padding?: number
+  }
+}
+
+export type CherryStoreItem = AssistantItem | MiniAppItem

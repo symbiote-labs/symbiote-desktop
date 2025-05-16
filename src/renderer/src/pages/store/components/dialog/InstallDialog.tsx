@@ -8,7 +8,7 @@ import { Download } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { v4 as uuid } from 'uuid'
 
-export function ItemDetailDialog({
+export default function InstallDialog({
   item,
   isOpen,
   onClose

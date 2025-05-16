@@ -3,7 +3,7 @@ import { Badge } from '@renderer/ui/badge'
 import { Card } from '@renderer/ui/card'
 import { useState } from 'react'
 
-import { ItemDetailDialog } from './ItemDetailDialog'
+// import { ItemDetailDialog } from './ItemDetailDialog'
 
 export function ListView({ items }: { items: CherryStoreItem[] }) {
   const [selectedItemForDetail, setSelectedItemForDetail] = useState<CherryStoreItem | null>(null)
@@ -73,11 +73,11 @@ export function ListView({ items }: { items: CherryStoreItem[] }) {
           </Card>
         ))}
       </div>
-      <ItemDetailDialog
+      {/* <ItemDetailDialog
         item={selectedItemForDetail}
         isOpen={isDetailDialogOpen}
         onClose={() => setIsDetailDialogOpen(false)}
-      />
+      /> */}
     </>
   )
 }

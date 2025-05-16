@@ -5,9 +5,13 @@ import { SidebarProvider } from '@renderer/ui/sidebar'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Import Context and the main Dialog Manager component
+import { DialogManagerProvider } from './components/dialog/DialogManagerContext'
+import Dialogs from './components/dialog/index'
 import { StoreContent } from './components/StoreContent'
 import { StoreSidebar } from './components/StoreSidebar'
 import { loadAndFilterItems, loadCategories } from './data'
+
 export default function StoreLayout() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,10 +71,10 @@ export default function StoreLayout() {
     fetchItems()
   }, [selectedCategory, selectedSubcategory, searchQuery])
 
-  const handleSelectCategory = (categoryId: string, subcategoryId: string, row: SubCategoryItem) => {
+  const handleSelectCategory = (categoryId: string, subcategoryId: string, row?: SubCategoryItem) => {
     setSelectedCategory(categoryId)
     setSelectedSubcategory(subcategoryId)
-    setSearchQuery(row.name)
+    setSearchQuery(row?.name || '')
   }
 
   if (isLoading) {
@@ -80,34 +84,38 @@ export default function StoreLayout() {
   if (error) {
     return <div className="p-4 text-center text-red-500">Error: {error}</div>
   }
-
+  console.log('categories', categories)
   return (
-    <div className="h-[calc(100vh_-_var(--navbar-height))] w-full">
-      <Navbar className="h-full">
-        <NavbarCenter>{t('store.title')}</NavbarCenter>
-      </Navbar>
-      <div id="content-container" className="h-full w-full">
-        <SidebarProvider className="relative h-full min-h-full w-full">
-          <StoreSidebar
-            categories={categories}
-            selectedCategory={selectedCategory}
-            selectedSubcategory={selectedSubcategory}
-            onSelectCategory={handleSelectCategory}
-          />
-          {isLoadingItems ? (
-            <div className="p-4 text-center">Loading items...</div>
-          ) : (
-            <StoreContent
-              viewMode={viewMode}
-              searchQuery={searchQuery}
+    <DialogManagerProvider>
+      <div className="h-[calc(100vh_-_var(--navbar-height))] w-full">
+        <Navbar className="h-full">
+          <NavbarCenter>{t('store.title')}</NavbarCenter>
+        </Navbar>
+        <div id="content-container" className="h-full w-full">
+          <SidebarProvider className="relative h-full min-h-full w-full">
+            <StoreSidebar
+              categories={categories}
               selectedCategory={selectedCategory}
-              items={items}
-              onSearchQueryChange={setSearchQuery}
-              onViewModeChange={setViewMode}
+              selectedSubcategory={selectedSubcategory}
+              onSelectCategory={handleSelectCategory}
             />
-          )}
-        </SidebarProvider>
+            {isLoadingItems ? (
+              // TODO: 添加 loading 动画
+              <div className="p-4 text-center">Loading items...</div>
+            ) : (
+              <StoreContent
+                viewMode={viewMode}
+                searchQuery={searchQuery}
+                selectedCategory={selectedCategory}
+                items={items}
+                onSearchQueryChange={setSearchQuery}
+                onViewModeChange={setViewMode}
+              />
+            )}
+          </SidebarProvider>
+        </div>
+        <Dialogs />
       </div>
-    </div>
+    </DialogManagerProvider>
   )
 }
