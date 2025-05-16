@@ -12,14 +12,25 @@ import styled, { css } from 'styled-components'
 
 import MessageItem from './Message'
 import MessageGroupMenuBar from './MessageGroupMenuBar'
+import SelectableMessage from './MessageSelect'
 
 interface Props {
   messages: (Message & { index: number })[]
   topic: Topic
   hidePresetMessages?: boolean
+  isMultiSelectMode?: boolean // 添加是否处于多选模式
+  selectedMessages?: Set<string> // 已选择的消息ID集合
+  onSelectMessage?: (messageId: string, selected: boolean) => void // 消息选择回调
 }
 
-const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
+const MessageGroup = ({
+  messages,
+  topic,
+  hidePresetMessages,
+  isMultiSelectMode = false,
+  selectedMessages = new Set(),
+  onSelectMessage
+}: Props) => {
   const { editMessage } = useMessageOperations(topic)
   const { multiModelMessageStyle: multiModelMessageStyleSetting, gridColumns, gridPopoverTrigger } = useSettings()
 
@@ -160,7 +171,7 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
         }
       }
 
-      const messageWrapper = (
+      const messageContent = (
         <MessageWrapper
           id={`message-${message.id}`}
           $layout={multiModelMessageStyle}
@@ -174,6 +185,17 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
           })}>
           <MessageItem {...messageProps} />
         </MessageWrapper>
+      )
+
+      const wrappedMessage = (
+        <SelectableMessage
+          key={`selectable-${message.id}`}
+          messageId={message.id}
+          isMultiSelectMode={isMultiSelectMode}
+          isSelected={selectedMessages.has(message.id)}
+          onSelect={(selected) => onSelectMessage?.(message.id, selected)}>
+          {messageContent}
+        </SelectableMessage>
       )
 
       if (isGridGroupMessage) {
@@ -192,12 +214,12 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
             trigger={gridPopoverTrigger}
             styles={{ root: { maxWidth: '60vw', minWidth: '550px', overflowY: 'auto', zIndex: 1000 } }}
             getPopupContainer={(triggerNode) => triggerNode.parentNode as HTMLElement}>
-            {messageWrapper}
+            {wrappedMessage}
           </Popover>
         )
       }
 
-      return messageWrapper
+      return wrappedMessage
     },
     [
       isGrid,
@@ -208,7 +230,10 @@ const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
       topic,
       hidePresetMessages,
       gridPopoverTrigger,
-      getSelectedMessageId
+      getSelectedMessageId,
+      isMultiSelectMode, // 添加依赖项
+      selectedMessages, // 添加依赖项
+      onSelectMessage // 添加依赖项
     ]
   )
 

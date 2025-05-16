@@ -53,6 +53,8 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const messages = useTopicMessages(topic.id)
   const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
@@ -60,6 +62,47 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  useEffect(() => {
+    const handleToggleMultiSelect = (value: boolean) => {
+      setIsMultiSelectMode(value)
+      if (!value) {
+        setSelectedMessages(new Set())
+      }
+    }
+
+    EventEmitter.on(EVENT_NAMES.MESSAGE_MULTI_SELECT, handleToggleMultiSelect)
+
+    return () => {
+      EventEmitter.off(EVENT_NAMES.MESSAGE_MULTI_SELECT, handleToggleMultiSelect)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleRequestSelectedMessageDetails = (messageIds: string[]) => {
+      const selectedMessages = messages.filter((msg) => messageIds.includes(msg.id))
+      EventEmitter.emit('SELECTED_MESSAGE_DETAILS', selectedMessages)
+    }
+
+    EventEmitter.on('REQUEST_SELECTED_MESSAGE_DETAILS', handleRequestSelectedMessageDetails)
+
+    return () => {
+      EventEmitter.off('REQUEST_SELECTED_MESSAGE_DETAILS', handleRequestSelectedMessageDetails)
+    }
+  }, [messages])
+
+  const handleSelectMessage = (messageId: string, selected: boolean) => {
+    setSelectedMessages((prev) => {
+      const newSet = new Set(prev)
+      if (selected) {
+        newSet.add(messageId)
+      } else {
+        newSet.delete(messageId)
+      }
+      EventEmitter.emit(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, Array.from(newSet))
+      return newSet
+    })
+  }
 
   useEffect(() => {
     const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
@@ -273,6 +316,9 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic })
                 messages={groupMessages}
                 topic={topic}
                 hidePresetMessages={assistant.settings?.hideMessages}
+                isMultiSelectMode={isMultiSelectMode}
+                selectedMessages={selectedMessages}
+                onSelectMessage={handleSelectMessage}
               />
             ))}
             {isLoadingMore && (
