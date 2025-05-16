@@ -21,7 +21,7 @@ interface MessageTypeInfo {
 
 const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onClose, onAction }) => {
   const { t } = useTranslation()
-  const [selectedMessages, setSelectedMessages] = useState<Message[]>([])
+  const [, setSelectedMessages] = useState<Message[]>([])
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([])
   const [, setMessageTypeInfo] = useState<MessageTypeInfo>({
     hasUserMessages: false,
