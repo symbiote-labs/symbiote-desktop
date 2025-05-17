@@ -382,7 +382,7 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
       style={{
         position: 'relative',
         maxWidth,
-        paddingTop: showPrompt ? 10 : 0
+        paddingTop: showPrompt ? 10 : 0,
       }}
       key={assistant.id}
       $right={topicPosition === 'left'}>
@@ -425,7 +425,7 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
             left: Math.min(dragStart.x, dragCurrent.x),
             top: Math.min(dragStart.y, dragCurrent.y),
             width: Math.abs(dragCurrent.x - dragStart.x),
-            height: Math.abs(dragCurrent.y - dragStart.y)
+            height: Math.abs(dragCurrent.y - dragStart.y),
           }}
         />
       )}

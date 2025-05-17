@@ -1,22 +1,77 @@
 import { CloseOutlined, CopyOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons'
-import { useMultiSelect } from '@renderer/pages/home/Messages/MessageSelectContext'
-import type { Topic } from '@renderer/types'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import type { Message } from '@renderer/types/newMessage'
 import { Button, Tooltip } from 'antd'
-import { FC } from 'react'
+import { FC, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 interface MultiSelectActionPopupProps {
-  topic: Topic
+  visible: boolean
+  onClose: () => void
+  onAction?: (action: string, messageIds: string[]) => void
+  topic: any
 }
 
-const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = () => {
-  const { t } = useTranslation()
-  const { isMultiSelectMode, toggleMultiSelectMode, selectedMessageIds, handleAction } = useMultiSelect()
+interface MessageTypeInfo {
+  hasUserMessages: boolean
+  hasAssistantMessages: boolean
+  messageIds: string[]
+}
 
-  if (!isMultiSelectMode) return null
+const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onClose, onAction }) => {
+  const { t } = useTranslation()
+  const [, setSelectedMessages] = useState<Message[]>([])
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([])
+  const [, setMessageTypeInfo] = useState<MessageTypeInfo>({
+    hasUserMessages: false,
+    hasAssistantMessages: false,
+    messageIds: []
+  })
+
+  useEffect(() => {
+    const handleSelectedMessagesChanged = (messageIds: string[]) => {
+      setSelectedMessageIds(messageIds)
+      EventEmitter.emit('REQUEST_SELECTED_MESSAGE_DETAILS', messageIds)
+    }
+
+    const handleSelectedMessageDetails = (messages: Message[]) => {
+      setSelectedMessages(messages)
+
+      const hasUserMessages = messages.some((msg) => msg.role === 'user')
+      const hasAssistantMessages = messages.some((msg) => msg.role === 'assistant')
+
+      setMessageTypeInfo({
+        hasUserMessages,
+        hasAssistantMessages,
+        messageIds: selectedMessageIds
+      })
+    }
+
+    EventEmitter.on(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, handleSelectedMessagesChanged)
+    EventEmitter.on('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
+
+    return () => {
+      EventEmitter.off(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, handleSelectedMessagesChanged)
+      EventEmitter.off('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
+    }
+  }, [selectedMessageIds])
+
+  const handleAction = (action: string) => {
+    if (onAction) {
+      onAction(action, selectedMessageIds)
+    }
+  }
+
+  const handleClose = () => {
+    EventEmitter.emit(EVENT_NAMES.MESSAGE_MULTI_SELECT, false)
+    onClose()
+  }
+
+  if (!visible) return null
 
   // TODO: 视情况调整
+  // const isActionDisabled = selectedMessages.some((msg) => msg.role === 'user')
   const isActionDisabled = false
 
   return (
@@ -35,7 +90,7 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = () => {
           </Tooltip>
         </ActionButtons>
         <Tooltip title={t('chat.navigation.close')}>
-          <ActionButton icon={<CloseOutlined />} onClick={() => toggleMultiSelectMode(false)} />
+          <ActionButton icon={<CloseOutlined />} onClick={handleClose} />
         </Tooltip>
       </ActionBar>
     </Container>
