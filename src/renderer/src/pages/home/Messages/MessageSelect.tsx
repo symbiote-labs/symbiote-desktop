@@ -1,5 +1,5 @@
 import { Checkbox } from 'antd'
-import { FC, ReactNode } from 'react'
+import { FC, ReactNode, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 
 interface SelectableMessageProps {
@@ -8,11 +8,29 @@ interface SelectableMessageProps {
   isSelected: boolean
   onSelect: (selected: boolean) => void
   messageId: string
+  registerElement?: (id: string, element: HTMLElement | null) => void
 }
 
-const SelectableMessage: FC<SelectableMessageProps> = ({ children, isMultiSelectMode, isSelected, onSelect }) => {
+const SelectableMessage: FC<SelectableMessageProps> = ({
+  children,
+  isMultiSelectMode,
+  isSelected,
+  onSelect,
+  messageId,
+  registerElement
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (registerElement && containerRef.current) {
+      registerElement(messageId, containerRef.current)
+      return () => registerElement(messageId, null)
+    }
+    return undefined
+  }, [messageId, registerElement])
+
   return (
-    <Container>
+    <Container ref={containerRef}>
       {isMultiSelectMode && (
         <CheckboxWrapper>
           <Checkbox checked={isSelected} onChange={(e) => onSelect(e.target.checked)} />

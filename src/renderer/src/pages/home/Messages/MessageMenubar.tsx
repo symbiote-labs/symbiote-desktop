@@ -262,7 +262,7 @@ const MessageMenubar: FC<Props> = (props) => {
       {
         label: t('chat.multiple.select'),
         key: 'multi-select',
-        icon: <MenuOutlined />,
+        icon: <MenuOutlined size={16} />,
         onClick: () => {
           EventEmitter.emit(EVENT_NAMES.MESSAGE_MULTI_SELECT, true)
         }

@@ -21,6 +21,7 @@ interface Props {
   isMultiSelectMode?: boolean // 添加是否处于多选模式
   selectedMessages?: Set<string> // 已选择的消息ID集合
   onSelectMessage?: (messageId: string, selected: boolean) => void // 消息选择回调
+  registerMessageElement?: (id: string, element: HTMLElement | null) => void
 }
 
 const MessageGroup = ({
@@ -29,7 +30,8 @@ const MessageGroup = ({
   hidePresetMessages,
   isMultiSelectMode = false,
   selectedMessages = new Set(),
-  onSelectMessage
+  onSelectMessage,
+  registerMessageElement
 }: Props) => {
   const { editMessage } = useMessageOperations(topic)
   const { multiModelMessageStyle: multiModelMessageStyleSetting, gridColumns, gridPopoverTrigger } = useSettings()
@@ -193,7 +195,8 @@ const MessageGroup = ({
           messageId={message.id}
           isMultiSelectMode={isMultiSelectMode}
           isSelected={selectedMessages.has(message.id)}
-          onSelect={(selected) => onSelectMessage?.(message.id, selected)}>
+          onSelect={(selected) => onSelectMessage?.(message.id, selected)}
+          registerElement={registerMessageElement}>
           {messageContent}
         </SelectableMessage>
       )

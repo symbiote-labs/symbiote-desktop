@@ -89,7 +89,7 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onCl
             <ActionButton danger icon={<DeleteOutlined />} onClick={() => handleAction('delete')} />
           </Tooltip>
         </ActionButtons>
-        <Tooltip title={t('popup.close')}>
+        <Tooltip title={t('chat.navigation.close')}>
           <ActionButton icon={<CloseOutlined />} onClick={handleClose} />
         </Tooltip>
       </ActionBar>

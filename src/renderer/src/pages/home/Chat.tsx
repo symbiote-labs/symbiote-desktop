@@ -1,5 +1,5 @@
-import MultiSelectActionPopup from '@renderer/components/Popups/MultiSelectionPopup'
 import { ContentSearch, ContentSearchRef } from '@renderer/components/ContentSearch'
+import MultiSelectActionPopup from '@renderer/components/Popups/MultiSelectionPopup'
 import { QuickPanelProvider } from '@renderer/components/QuickPanel'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
@@ -12,7 +12,7 @@ import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newM
 import { Assistant, Topic } from '@renderer/types'
 import { Flex, Modal } from 'antd'
 import { debounce } from 'lodash'
-import React, { FC, useMemo, useEffect, useState } from 'react'
+import React, { FC, useEffect, useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
@@ -44,7 +44,7 @@ const Chat: FC<Props> = (props) => {
   // 获取所有消息块
   const messageBlocks = useSelector(messageBlocksSelectors.selectEntities)
 
-    const mainRef = React.useRef<HTMLDivElement>(null)
+  const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
   const [filterIncludeUser, setFilterIncludeUser] = useState(false)
 
@@ -118,7 +118,7 @@ const Chat: FC<Props> = (props) => {
     setTimeout(() => (firstUpdateCompleted = true), 300)
     firstUpdateOrNoFirstUpdateHandler()
   }
-          
+
   useEffect(() => {
     const handleToggleMultiSelect = (value: boolean) => {
       setIsMultiSelectMode(value)
