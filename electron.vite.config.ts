@@ -23,8 +23,7 @@ export default defineConfig({
           '@cherrystudio/embedjs-libsql',
           '@cherrystudio/embedjs-loader-image',
           'p-queue',
-          'webdav',
-          'node-notifier'
+          'webdav'
         ]
       }),
       ...visualizerPlugin('main')
