@@ -39,6 +39,7 @@ files:
 asarUnpack:
   - resources/**
   - '**/*.{metal,exp,lib}'
+  - 'node_modules/node-notifier/**/*'
 win:
   executableName: Cherry Studio
   artifactName: ${productName}-${version}-${arch}-setup.${ext}

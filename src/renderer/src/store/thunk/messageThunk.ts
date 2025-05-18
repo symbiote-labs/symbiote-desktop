@@ -2,6 +2,7 @@ import db from '@renderer/databases'
 import { autoRenameTopic } from '@renderer/hooks/useTopic'
 import { fetchChatCompletion } from '@renderer/services/ApiService'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { NotificationService } from '@renderer/services/NotificationService'
 import { createStreamProcessor, type StreamProcessorCallbacks } from '@renderer/services/StreamProcessingService'
 import { estimateMessagesUsage } from '@renderer/services/TokenService'
 import store from '@renderer/store'
@@ -629,6 +630,14 @@ const fetchAndProcessAssistantResponseImpl = async (
             dispatch(updateOneBlock({ id: lastBlockId, changes }))
             saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
           }
+
+          const notificationService = NotificationService.getInstance()
+          notificationService.send({
+            id: uuidv4(),
+            type: 'success',
+            title: 'Assistant Response',
+            message: finalAssistantMsg
+          })
 
           // 更新topic的name
           autoRenameTopic(assistant, topicId)
