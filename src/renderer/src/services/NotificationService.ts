@@ -1,5 +1,4 @@
 import type { Notification } from '@renderer/types/notification'
-import { ipcRenderer } from 'electron'
 
 import { NotificationQueue } from '../queue/NotificationQueue'
 
@@ -31,7 +30,8 @@ export class NotificationService {
    * 设置通知点击事件处理
    */
   private setupNotificationClickHandler(): void {
-    ipcRenderer.on('notification-click', (_event, notification: Notification) => {
+    // Register an event listener for notification clicks
+    window.electron.ipcRenderer.on('notification-click', (_event, notification: Notification) => {
       // 根据通知类型处理点击事件
       if (notification.type === 'action' && notification.onClick) {
         notification.onClick()

@@ -5,9 +5,10 @@ import { isMac, isWin } from '@main/constant'
 import { getBinaryPath, isBinaryExists, runInstallScript } from '@main/utils/process'
 import { handleZoomFactor } from '@main/utils/zoom'
 import { IpcChannel } from '@shared/IpcChannel'
-import { Notification as CherryNotification, Shortcut, ThemeMode } from '@types'
+import { Shortcut, ThemeMode } from '@types'
 import { BrowserWindow, ipcMain, nativeTheme, session, shell } from 'electron'
 import log from 'electron-log'
+import { Notification } from 'src/renderer/src/types/notification'
 
 import { titleBarOverlayDark, titleBarOverlayLight } from './config'
 import AppUpdater from './services/AppUpdater'
@@ -203,10 +204,10 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   })
 
   // notification
-  ipcMain.handle(IpcChannel.App_Notification, async (_, notification: CherryNotification) => {
+  ipcMain.handle(IpcChannel.App_Notification, async (_, notification: Notification) => {
     await notificationService.sendNotification(notification)
   })
-  ipcMain.handle(IpcChannel.App_OnNotificationClick, (_, notification: CherryNotification) => {
+  ipcMain.handle(IpcChannel.App_OnNotificationClick, (_, notification: Notification) => {
     mainWindow.webContents.send('notification-click', notification)
   })
 

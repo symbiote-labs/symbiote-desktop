@@ -771,6 +771,9 @@
       "hide_sidebar": "Скрыть боковую панель",
       "show_sidebar": "Показать боковую панель"
     },
+    "notification": {
+      "assistant": "Ответ ассистента"
+    },
     "ollama": {
       "keep_alive_time.description": "Время в минутах, в течение которого модель остается активной, по умолчанию 5 минут.",
       "keep_alive_time.placeholder": "Минуты",

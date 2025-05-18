@@ -1,6 +1,4 @@
 import type { Notification } from '@renderer/types/notification'
-import { IpcChannel } from '@shared/IpcChannel'
-import { ipcRenderer } from 'electron'
 import PQueue from 'p-queue'
 
 export class NotificationQueue {
@@ -24,7 +22,7 @@ export class NotificationQueue {
   public async add(notification: Notification): Promise<void> {
     await this.queue.add(async () => {
       try {
-        await ipcRenderer.invoke(IpcChannel.App_Notification, notification)
+        await window.api.notification.send(notification)
       } catch (error) {
         console.error('Failed to send notification:', error)
       }

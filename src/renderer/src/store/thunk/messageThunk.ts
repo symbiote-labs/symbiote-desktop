@@ -33,7 +33,9 @@ import {
   createTranslationBlock,
   resetAssistantMessage
 } from '@renderer/utils/messageUtils/create'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
+import { t } from 'i18next'
 import { throttle } from 'lodash'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -254,6 +256,7 @@ const fetchAndProcessAssistantResponseImpl = async (
     let citationBlockId: string | null = null
     let mainTextBlockId: string | null = null
     const toolCallIdToBlockIdMap = new Map<string, string>()
+    const notificationService = NotificationService.getInstance()
 
     const handleBlockTransition = async (newBlock: MessageBlock, newBlockType: MessageBlockType) => {
       lastBlockId = newBlock.id
@@ -631,12 +634,15 @@ const fetchAndProcessAssistantResponseImpl = async (
             saveUpdatedBlockToDB(lastBlockId, assistantMsgId, topicId, getState)
           }
 
-          const notificationService = NotificationService.getInstance()
-          notificationService.send({
+          const content = getMainTextContent(finalAssistantMsg)
+          await notificationService.send({
             id: uuidv4(),
             type: 'success',
-            title: 'Assistant Response',
-            message: finalAssistantMsg
+            title: t('notification.assistant'),
+            message: content.length > 50 ? content.slice(0, 47) + '...' : content,
+            silent: true,
+            channel: 'system',
+            timestamp: Date.now()
           })
 
           // 更新topic的name

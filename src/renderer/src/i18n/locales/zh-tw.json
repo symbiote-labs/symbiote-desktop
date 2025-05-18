@@ -771,6 +771,9 @@
       "hide_sidebar": "隱藏側邊欄",
       "show_sidebar": "顯示側邊欄"
     },
+    "notification": {
+      "assistant": "助手回應"
+    },
     "ollama": {
       "keep_alive_time.description": "對話後模型在記憶體中保持的時間（預設為 5 分鐘）。",
       "keep_alive_time.placeholder": "分鐘",

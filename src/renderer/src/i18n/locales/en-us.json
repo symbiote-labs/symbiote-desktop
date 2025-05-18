@@ -771,6 +771,9 @@
       "hide_sidebar": "Hide Sidebar",
       "show_sidebar": "Show Sidebar"
     },
+    "notification": {
+      "assistant": "Assistant Response"
+    },
     "ollama": {
       "keep_alive_time.description": "The time in minutes to keep the connection alive, default is 5 minutes.",
       "keep_alive_time.placeholder": "Minutes",
