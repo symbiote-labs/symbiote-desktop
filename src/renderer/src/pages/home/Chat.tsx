@@ -240,15 +240,14 @@ const Chat: FC<Props> = (props) => {
           />
         </MessagesContainer>
         <QuickPanelProvider>
-          {isMultiSelectMode ? (
+          <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
+          {isMultiSelectMode && (
             <MultiSelectActionPopup
               visible={isMultiSelectMode}
               onClose={() => setIsMultiSelectMode(false)}
               onAction={handleMultiSelectAction}
               topic={props.activeTopic}
             />
-          ) : (
-            <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
           )}
         </QuickPanelProvider>
       </Main>

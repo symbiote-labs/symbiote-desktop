@@ -98,7 +98,7 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onCl
 }
 
 const Container = styled.div`
-  position: sticky;
+  position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
