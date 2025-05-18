@@ -31,6 +31,7 @@ import { useTranslation } from 'react-i18next'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import styled from 'styled-components'
 
+import { useChatContext } from './ChatContext'
 import ChatNavigation from './ChatNavigation'
 import MessageAnchorLine from './MessageAnchorLine'
 import MessageGroup from './MessageGroup'
@@ -55,8 +56,10 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
   const [hasMore, setHasMore] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
+
+  const { isMultiSelectMode } = useChatContext()
+
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragCurrent, setDragCurrent] = useState({ x: 0, y: 0 })
@@ -155,19 +158,10 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
   }, [])
 
   useEffect(() => {
-    const handleToggleMultiSelect = (value: boolean) => {
-      setIsMultiSelectMode(value)
-      if (!value) {
-        setSelectedMessages(new Set())
-      }
+    if (!isMultiSelectMode) {
+      setSelectedMessages(new Set())
     }
-
-    EventEmitter.on(EVENT_NAMES.MESSAGE_MULTI_SELECT, handleToggleMultiSelect)
-
-    return () => {
-      EventEmitter.off(EVENT_NAMES.MESSAGE_MULTI_SELECT, handleToggleMultiSelect)
-    }
-  }, [])
+  }, [isMultiSelectMode])
 
   useEffect(() => {
     const handleRequestSelectedMessageDetails = (messageIds: string[]) => {

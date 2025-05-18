@@ -37,6 +37,7 @@ import { FC, memo, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
+import { useChatContext } from './ChatContext'
 
 interface Props {
   message: Message
@@ -55,6 +56,7 @@ const MessageMenubar: FC<Props> = (props) => {
   const { message, index, isGrouped, isLastMessage, isAssistantMessage, assistant, topic, model, messageContainerRef } =
     props
   const { t } = useTranslation()
+  const { toggleMultiSelectMode } = useChatContext()
   const [copied, setCopied] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [showRegenerateTooltip, setShowRegenerateTooltip] = useState(false)
@@ -264,7 +266,7 @@ const MessageMenubar: FC<Props> = (props) => {
         key: 'multi-select',
         icon: <MenuOutlined size={16} />,
         onClick: () => {
-          EventEmitter.emit(EVENT_NAMES.MESSAGE_MULTI_SELECT, true)
+          toggleMultiSelectMode(true)
         }
       },
       {
