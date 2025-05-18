@@ -80,6 +80,14 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           miniWindow: resolve(__dirname, 'src/renderer/miniWindow.html')
+        },
+        output: {
+          manualChunks(id: string): string | undefined {
+            if (id.includes('node_modules')) {
+              return 'vendor'
+            }
+            return undefined // Other modules use default chunk splitting strategy
+          }
         }
       }
     }
