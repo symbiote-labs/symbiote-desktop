@@ -47,7 +47,7 @@ const TopicMessages: FC<Props> = ({ topic, ...props }) => {
   }
 
   return (
-    <ChatProvider activeTopic={topic} isHistoryView={true}>
+    <ChatProvider activeTopic={topic}>
       <MessagesContainer {...props} ref={containerRef} onScroll={handleScroll} className={messageStyle}>
         <ContainerWrapper style={{ paddingTop: 30, paddingBottom: 30 }}>
           {topic?.messages.map((message) => (

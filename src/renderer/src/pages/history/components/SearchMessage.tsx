@@ -2,6 +2,7 @@ import { ArrowRightOutlined } from '@ant-design/icons'
 import { HStack } from '@renderer/components/Layout'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { getTopicById } from '@renderer/hooks/useTopic'
+import { ChatProvider } from '@renderer/pages/home/Messages/ChatContext'
 import { default as MessageItem } from '@renderer/pages/home/Messages/Message'
 import { locateToMessage } from '@renderer/services/MessagesService'
 import NavigationService from '@renderer/services/NavigationService'
@@ -41,23 +42,25 @@ const SearchMessage: FC<Props> = ({ message, ...props }) => {
   }
 
   return (
-    <MessagesContainer {...props} className={messageStyle}>
-      <ContainerWrapper style={{ paddingTop: 20, paddingBottom: 20, position: 'relative' }}>
-        <MessageItem message={message} topic={topic} />
-        <Button
-          type="text"
-          size="middle"
-          style={{ color: 'var(--color-text-3)', position: 'absolute', right: 0, top: 10 }}
-          onClick={() => locateToMessage(navigate, message)}
-          icon={<ArrowRightOutlined />}
-        />
-        <HStack mt="10px" justifyContent="center">
-          <Button onClick={() => locateToMessage(navigate, message)} icon={<ArrowRightOutlined />}>
-            {t('history.locate.message')}
-          </Button>
-        </HStack>
-      </ContainerWrapper>
-    </MessagesContainer>
+    <ChatProvider activeTopic={topic}>
+      <MessagesContainer {...props} className={messageStyle}>
+        <ContainerWrapper style={{ paddingTop: 20, paddingBottom: 20, position: 'relative' }}>
+          <MessageItem message={message} topic={topic} />
+          <Button
+            type="text"
+            size="middle"
+            style={{ color: 'var(--color-text-3)', position: 'absolute', right: 0, top: 10 }}
+            onClick={() => locateToMessage(navigate, message)}
+            icon={<ArrowRightOutlined />}
+          />
+          <HStack mt="10px" justifyContent="center">
+            <Button onClick={() => locateToMessage(navigate, message)} icon={<ArrowRightOutlined />}>
+              {t('history.locate.message')}
+            </Button>
+          </HStack>
+        </ContainerWrapper>
+      </MessagesContainer>
+    </ChatProvider>
   )
 }
 
