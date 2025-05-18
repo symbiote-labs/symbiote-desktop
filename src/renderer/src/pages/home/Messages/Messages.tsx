@@ -80,7 +80,7 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
       } else {
         newSet.delete(messageId)
       }
-      EventEmitter.emit(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, Array.from(newSet))
+      EventEmitter.emit('SELECTED_MESSAGES_CHANGED', Array.from(newSet))
       return newSet
     })
   }, [])

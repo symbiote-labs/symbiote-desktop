@@ -1,5 +1,5 @@
 import { CloseOutlined, CopyOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons'
-import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { EventEmitter } from '@renderer/services/EventService'
 import type { Message } from '@renderer/types/newMessage'
 import { Button, Tooltip } from 'antd'
 import { FC, useEffect, useState } from 'react'
@@ -48,11 +48,11 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onCl
       })
     }
 
-    EventEmitter.on(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, handleSelectedMessagesChanged)
+    EventEmitter.on('SELECTED_MESSAGES_CHANGED', handleSelectedMessagesChanged)
     EventEmitter.on('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
 
     return () => {
-      EventEmitter.off(EVENT_NAMES.SELECTED_MESSAGES_CHANGED, handleSelectedMessagesChanged)
+      EventEmitter.off('SELECTED_MESSAGES_CHANGED', handleSelectedMessagesChanged)
       EventEmitter.off('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
     }
   }, [selectedMessageIds])
@@ -64,7 +64,7 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onCl
   }
 
   const handleClose = () => {
-    EventEmitter.emit(EVENT_NAMES.MESSAGE_MULTI_SELECT, false)
+    EventEmitter.emit('MESSAGE_MULTI_SELECT', false)
     onClose()
   }
 
