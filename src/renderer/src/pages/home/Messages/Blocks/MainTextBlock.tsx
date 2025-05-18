@@ -37,14 +37,16 @@ const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
 const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions = [] }) => {
   // Use the passed citationBlockId directly in the selector
   const { renderInputMessageAsMarkdown } = useSettings()
+  if (role === 'user') console.log('render')
 
-  const formattedCitations = useSelector((state: RootState) => {
-    const citations = selectFormattedCitationsByBlockId(state, citationBlockId)
-    return citations.map((citation) => ({
+  const rawCitations = useSelector((state: RootState) => selectFormattedCitationsByBlockId(state, citationBlockId))
+
+  const formattedCitations = useMemo(() => {
+    return rawCitations.map((citation) => ({
       ...citation,
       content: citation.content ? cleanMarkdownContent(citation.content) : citation.content
     }))
-  })
+  }, [rawCitations])
 
   const processedContent = useMemo(() => {
     let content = block.content
