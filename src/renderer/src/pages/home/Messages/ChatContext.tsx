@@ -3,7 +3,7 @@ import { messageBlocksSelectors } from '@renderer/store/messageBlock'
 import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
 import { Topic } from '@renderer/types'
 import { Modal } from 'antd'
-import { createContext, FC, ReactNode, use, useState } from 'react'
+import { createContext, FC, ReactNode, use, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 
@@ -12,6 +12,8 @@ interface ChatContextProps {
   toggleMultiSelectMode: (value: boolean) => void
   handleMultiSelectAction: (actionType: string, messageIds: string[]) => void
   activeTopic: Topic
+  messageRefs: Map<string, HTMLElement>
+  registerMessageElement: (id: string, element: HTMLElement | null) => void
 }
 
 const ChatContext = createContext<ChatContextProps | undefined>(undefined)
@@ -35,6 +37,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false)
   const [messagesToDelete, setMessagesToDelete] = useState<string[]>([])
+  const [messageRefs, setMessageRefs] = useState<Map<string, HTMLElement>>(new Map())
 
   const messages = useSelector((state: RootState) => selectMessagesForTopic(state, activeTopic.id))
   const messageBlocks = useSelector(messageBlocksSelectors.selectEntities)
@@ -42,6 +45,18 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
   const toggleMultiSelectMode = (value: boolean) => {
     setIsMultiSelectMode(value)
   }
+
+  const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
+    setMessageRefs((prev) => {
+      const newRefs = new Map(prev)
+      if (element) {
+        newRefs.set(id, element)
+      } else {
+        newRefs.delete(id)
+      }
+      return newRefs
+    })
+  }, [])
 
   const handleMultiSelectAction = (actionType: string, messageIds: string[]) => {
     if (messageIds.length === 0) {
@@ -134,7 +149,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
     isMultiSelectMode,
     toggleMultiSelectMode,
     handleMultiSelectAction,
-    activeTopic
+    activeTopic,
+    messageRefs,
+    registerMessageElement
   }
 
   return (

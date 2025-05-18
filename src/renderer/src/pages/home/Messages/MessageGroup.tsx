@@ -1,7 +1,6 @@
 import Scrollbar from '@renderer/components/Scrollbar'
 import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { MultiModelMessageStyle } from '@renderer/store/settings'
 import type { Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
@@ -10,6 +9,7 @@ import { Popover } from 'antd'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
 
+import { useChatContext } from './ChatContext'
 import MessageItem from './Message'
 import MessageGroupMenuBar from './MessageGroupMenuBar'
 import SelectableMessage from './MessageSelect'
@@ -18,9 +18,9 @@ interface Props {
   messages: (Message & { index: number })[]
   topic: Topic
   hidePresetMessages?: boolean
-  isMultiSelectMode?: boolean // 添加是否处于多选模式
-  selectedMessages?: Set<string> // 已选择的消息ID集合
-  onSelectMessage?: (messageId: string, selected: boolean) => void // 消息选择回调
+  isMultiSelectMode?: boolean
+  selectedMessages?: Set<string>
+  onSelectMessage?: (messageId: string, selected: boolean) => void
   registerMessageElement?: (id: string, element: HTMLElement | null) => void
 }
 
@@ -35,6 +35,7 @@ const MessageGroup = ({
 }: Props) => {
   const { editMessage } = useMessageOperations(topic)
   const { multiModelMessageStyle: multiModelMessageStyleSetting, gridColumns, gridPopoverTrigger } = useSettings()
+  const { registerMessageElement: contextRegisterMessageElement } = useChatContext()
 
   const [multiModelMessageStyle, setMultiModelMessageStyle] = useState<MultiModelMessageStyle>(
     messages[0].multiModelMessageStyle || multiModelMessageStyleSetting
@@ -123,41 +124,20 @@ const MessageGroup = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, selectedIndex, isGrouped, messageLength])
 
-  // 添加对LOCATE_MESSAGE事件的监听
   useEffect(() => {
-    // 为每个消息注册一个定位事件监听器
-    const eventHandlers: { [key: string]: () => void } = {}
-
     messages.forEach((message) => {
-      const eventName = EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id
-      const handler = () => {
-        // 检查消息是否处于可见状态
-        const element = document.getElementById(`message-${message.id}`)
-        if (element) {
-          const display = window.getComputedStyle(element).display
-
-          if (display === 'none') {
-            // 如果消息隐藏，先切换标签
-            setSelectedMessage(message)
-          } else {
-            // 直接滚动
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        }
+      const element = document.getElementById(`message-${message.id}`)
+      if (element) {
+        contextRegisterMessageElement(message.id, element)
       }
-
-      eventHandlers[eventName] = handler
-      EventEmitter.on(eventName, handler)
     })
 
-    // 清理函数
     return () => {
-      // 移除所有事件监听器
-      Object.entries(eventHandlers).forEach(([eventName, handler]) => {
-        EventEmitter.off(eventName, handler)
+      messages.forEach((message) => {
+        contextRegisterMessageElement(message.id, null)
       })
     }
-  }, [messages, setSelectedMessage])
+  }, [messages, contextRegisterMessageElement])
 
   const renderMessage = useCallback(
     (message: Message & { index: number }, index: number) => {
@@ -227,16 +207,17 @@ const MessageGroup = ({
     [
       isGrid,
       isGrouped,
-      isHorizontal,
-      multiModelMessageStyle,
-      selectedIndex,
       topic,
       hidePresetMessages,
-      gridPopoverTrigger,
+      multiModelMessageStyle,
+      selectedIndex,
+      isHorizontal,
       getSelectedMessageId,
-      isMultiSelectMode, // 添加依赖项
-      selectedMessages, // 添加依赖项
-      onSelectMessage // 添加依赖项
+      isMultiSelectMode,
+      selectedMessages,
+      registerMessageElement,
+      onSelectMessage,
+      gridPopoverTrigger
     ]
   )
 

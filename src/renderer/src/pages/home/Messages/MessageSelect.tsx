@@ -2,6 +2,8 @@ import { Checkbox } from 'antd'
 import { FC, ReactNode, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 
+import { useChatContext } from './ChatContext'
+
 interface SelectableMessageProps {
   children: ReactNode
   isMultiSelectMode: boolean
@@ -20,14 +22,24 @@ const SelectableMessage: FC<SelectableMessageProps> = ({
   registerElement
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { registerMessageElement: contextRegister } = useChatContext()
 
   useEffect(() => {
-    if (registerElement && containerRef.current) {
-      registerElement(messageId, containerRef.current)
-      return () => registerElement(messageId, null)
+    if (containerRef.current) {
+      if (registerElement) {
+        registerElement(messageId, containerRef.current)
+      }
+      contextRegister(messageId, containerRef.current)
+
+      return () => {
+        if (registerElement) {
+          registerElement(messageId, null)
+        }
+        contextRegister(messageId, null)
+      }
     }
     return undefined
-  }, [messageId, registerElement])
+  }, [messageId, registerElement, contextRegister])
 
   return (
     <Container ref={containerRef}>
