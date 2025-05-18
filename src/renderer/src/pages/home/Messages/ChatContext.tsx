@@ -12,8 +12,14 @@ interface ChatContextProps {
   toggleMultiSelectMode: (value: boolean) => void
   handleMultiSelectAction: (actionType: string, messageIds: string[]) => void
   activeTopic: Topic
+  locateMessage: (messageId: string) => void
   messageRefs: Map<string, HTMLElement>
   registerMessageElement: (id: string, element: HTMLElement | null) => void
+}
+
+interface ChatProviderProps {
+  children: ReactNode
+  activeTopic: Topic
 }
 
 const ChatContext = createContext<ChatContextProps | undefined>(undefined)
@@ -24,11 +30,6 @@ export const useChatContext = () => {
     throw new Error('useChatContext 必须在 ChatProvider 内使用')
   }
   return context
-}
-
-interface ChatProviderProps {
-  children: ReactNode
-  activeTopic: Topic
 }
 
 export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) => {
@@ -57,6 +58,27 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
       return newRefs
     })
   }, [])
+
+  const locateMessage = (messageId: string) => {
+    const messageElement = messageRefs.get(messageId)
+    if (messageElement) {
+      // 检查消息是否可见
+      const display = window.getComputedStyle(messageElement).display
+
+      if (display === 'none') {
+        // 如果消息隐藏，需要处理显示逻辑
+        // 查找消息并设置为选中状态
+        const message = messages.find((m) => m.id === messageId)
+        if (message) {
+          // 这里需要实现设置消息为选中状态的逻辑
+          // 可能需要调用其他函数或修改状态
+        }
+      }
+
+      // 滚动到消息位置
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   const handleMultiSelectAction = (actionType: string, messageIds: string[]) => {
     if (messageIds.length === 0) {
@@ -150,6 +172,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
     toggleMultiSelectMode,
     handleMultiSelectAction,
     activeTopic,
+    locateMessage,
     messageRefs,
     registerMessageElement
   }
