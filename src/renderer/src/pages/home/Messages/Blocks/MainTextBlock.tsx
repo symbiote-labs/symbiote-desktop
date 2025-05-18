@@ -37,7 +37,6 @@ const toolUseRegex = /<tool_use>([\s\S]*?)<\/tool_use>/g
 const MainTextBlock: React.FC<Props> = ({ block, citationBlockId, role, mentions = [] }) => {
   // Use the passed citationBlockId directly in the selector
   const { renderInputMessageAsMarkdown } = useSettings()
-  if (role === 'user') console.log('render')
 
   const rawCitations = useSelector((state: RootState) => selectFormattedCitationsByBlockId(state, citationBlockId))
 
