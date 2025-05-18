@@ -1,8 +1,7 @@
 import { CloseOutlined, CopyOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons'
-import { EventEmitter } from '@renderer/services/EventService'
-import type { Message } from '@renderer/types/newMessage'
+import { useChatContext } from '@renderer/pages/home/Messages/ChatContext'
 import { Button, Tooltip } from 'antd'
-import { FC, useEffect, useState } from 'react'
+import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -12,50 +11,9 @@ interface MultiSelectActionPopupProps {
   onAction?: (action: string, messageIds: string[]) => void
   topic: any
 }
-
-interface MessageTypeInfo {
-  hasUserMessages: boolean
-  hasAssistantMessages: boolean
-  messageIds: string[]
-}
-
 const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onClose, onAction }) => {
   const { t } = useTranslation()
-  const [, setSelectedMessages] = useState<Message[]>([])
-  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([])
-  const [, setMessageTypeInfo] = useState<MessageTypeInfo>({
-    hasUserMessages: false,
-    hasAssistantMessages: false,
-    messageIds: []
-  })
-
-  useEffect(() => {
-    const handleSelectedMessagesChanged = (messageIds: string[]) => {
-      setSelectedMessageIds(messageIds)
-      EventEmitter.emit('REQUEST_SELECTED_MESSAGE_DETAILS', messageIds)
-    }
-
-    const handleSelectedMessageDetails = (messages: Message[]) => {
-      setSelectedMessages(messages)
-
-      const hasUserMessages = messages.some((msg) => msg.role === 'user')
-      const hasAssistantMessages = messages.some((msg) => msg.role === 'assistant')
-
-      setMessageTypeInfo({
-        hasUserMessages,
-        hasAssistantMessages,
-        messageIds: selectedMessageIds
-      })
-    }
-
-    EventEmitter.on('SELECTED_MESSAGES_CHANGED', handleSelectedMessagesChanged)
-    EventEmitter.on('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
-
-    return () => {
-      EventEmitter.off('SELECTED_MESSAGES_CHANGED', handleSelectedMessagesChanged)
-      EventEmitter.off('SELECTED_MESSAGE_DETAILS', handleSelectedMessageDetails)
-    }
-  }, [selectedMessageIds])
+  const { toggleMultiSelectMode, selectedMessageIds } = useChatContext()
 
   const handleAction = (action: string) => {
     if (onAction) {
@@ -64,7 +22,7 @@ const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onCl
   }
 
   const handleClose = () => {
-    EventEmitter.emit('MESSAGE_MULTI_SELECT', false)
+    toggleMultiSelectMode(false)
     onClose()
   }
 

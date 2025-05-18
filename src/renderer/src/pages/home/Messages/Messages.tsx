@@ -49,6 +49,7 @@ interface MessagesProps {
 const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onComponentUpdate, onFirstUpdate }) => {
   const { t } = useTranslation()
   const { showPrompt, showTopics, topicPosition, showAssistants, messageNavigation } = useSettings()
+  const { isMultiSelectMode, selectedMessageIds, handleSelectMessage } = useChatContext()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
   const dispatch = useAppDispatch()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -57,9 +58,6 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isProcessingContext, setIsProcessingContext] = useState(false)
 
-  const { isMultiSelectMode } = useChatContext()
-
-  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set())
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragCurrent, setDragCurrent] = useState({ x: 0, y: 0 })
@@ -68,22 +66,11 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
   const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
 
+  const selectedMessagesSet = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds])
+
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
-
-  const handleSelectMessage = useCallback((messageId: string, selected: boolean) => {
-    setSelectedMessages((prev) => {
-      const newSet = new Set(prev)
-      if (selected) {
-        newSet.add(messageId)
-      } else {
-        newSet.delete(messageId)
-      }
-      EventEmitter.emit('SELECTED_MESSAGES_CHANGED', Array.from(newSet))
-      return newSet
-    })
-  }, [])
 
   useEffect(() => {
     if (!isMultiSelectMode) return
@@ -156,25 +143,6 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
       messageElements.current.delete(id)
     }
   }, [])
-
-  useEffect(() => {
-    if (!isMultiSelectMode) {
-      setSelectedMessages(new Set())
-    }
-  }, [isMultiSelectMode])
-
-  useEffect(() => {
-    const handleRequestSelectedMessageDetails = (messageIds: string[]) => {
-      const selectedMessages = messages.filter((msg) => messageIds.includes(msg.id))
-      EventEmitter.emit('SELECTED_MESSAGE_DETAILS', selectedMessages)
-    }
-
-    EventEmitter.on('REQUEST_SELECTED_MESSAGE_DETAILS', handleRequestSelectedMessageDetails)
-
-    return () => {
-      EventEmitter.off('REQUEST_SELECTED_MESSAGE_DETAILS', handleRequestSelectedMessageDetails)
-    }
-  }, [messages])
 
   useEffect(() => {
     const newDisplayMessages = computeDisplayMessages(messages, 0, displayCount)
@@ -397,7 +365,7 @@ const Messages: FC<MessagesProps> = ({ assistant, topic, setActiveTopic, onCompo
                 topic={topic}
                 hidePresetMessages={assistant.settings?.hideMessages}
                 isMultiSelectMode={isMultiSelectMode}
-                selectedMessages={selectedMessages}
+                selectedMessages={selectedMessagesSet}
                 onSelectMessage={handleSelectMessage}
                 registerMessageElement={registerMessageElement}
               />

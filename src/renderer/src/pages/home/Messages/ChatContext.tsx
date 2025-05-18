@@ -9,8 +9,10 @@ import { useDispatch, useSelector } from 'react-redux'
 
 interface ChatContextProps {
   isMultiSelectMode: boolean
+  selectedMessageIds: string[]
   toggleMultiSelectMode: (value: boolean) => void
   handleMultiSelectAction: (actionType: string, messageIds: string[]) => void
+  handleSelectMessage: (messageId: string, selected: boolean) => void
   activeTopic: Topic
   locateMessage: (messageId: string) => void
   messageRefs: Map<string, HTMLElement>
@@ -36,6 +38,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
   const { t } = useTranslation()
   const dispatch = useDispatch()
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([])
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false)
   const [messagesToDelete, setMessagesToDelete] = useState<string[]>([])
   const [messageRefs, setMessageRefs] = useState<Map<string, HTMLElement>>(new Map())
@@ -45,6 +48,9 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
 
   const toggleMultiSelectMode = (value: boolean) => {
     setIsMultiSelectMode(value)
+    if (!value) {
+      setSelectedMessageIds([])
+    }
   }
 
   const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
@@ -78,6 +84,18 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
       // 滚动到消息位置
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+
+  const handleSelectMessage = (messageId: string, selected: boolean) => {
+    setSelectedMessageIds((prev) => {
+      const newSet = new Set(prev)
+      if (selected) {
+        newSet.add(messageId)
+      } else {
+        newSet.delete(messageId)
+      }
+      return Array.from(newSet)
+    })
   }
 
   const handleMultiSelectAction = (actionType: string, messageIds: string[]) => {
@@ -169,8 +187,10 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
 
   const value = {
     isMultiSelectMode,
+    selectedMessageIds,
     toggleMultiSelectMode,
     handleMultiSelectAction,
+    handleSelectMessage,
     activeTopic,
     locateMessage,
     messageRefs,
