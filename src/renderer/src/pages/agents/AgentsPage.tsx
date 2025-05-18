@@ -1,5 +1,4 @@
 import { ImportOutlined, PlusOutlined } from '@ant-design/icons'
-import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import CustomTag from '@renderer/components/CustomTag'
 import ListItem from '@renderer/components/ListItem'
 import Scrollbar from '@renderer/components/Scrollbar'
@@ -7,9 +6,8 @@ import { useAgents } from '@renderer/hooks/useAgents'
 import { createAssistantFromAgent } from '@renderer/services/AssistantService'
 import { Agent } from '@renderer/types'
 import { uuid } from '@renderer/utils'
-import { Button, Empty, Flex, Input } from 'antd'
+import { Button, Empty, Flex } from 'antd'
 import { omit } from 'lodash'
-import { Search } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
@@ -152,7 +150,7 @@ const AgentsPage: FC = () => {
 
   return (
     <Container>
-      <Navbar>
+      {/* <Navbar>
         <NavbarCenter style={{ borderRight: 'none', justifyContent: 'space-between' }}>
           {t('agents.title')}
           <Input
@@ -171,7 +169,7 @@ const AgentsPage: FC = () => {
           />
           <div style={{ width: 80 }} />
         </NavbarCenter>
-      </Navbar>
+      </Navbar> */}
 
       <Main id="content-container">
         <AgentsGroupList>

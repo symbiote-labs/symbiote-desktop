@@ -1546,8 +1546,8 @@
         "enable_privacy_mode": "匿名发送错误报告和数据统计"
       }
     },
-    "store": {
-      "title": "应用商店",
+    "discover": {
+      "title": "发现",
       "install": "安装",
       "uninstall": "卸载",
       "update": "更新",

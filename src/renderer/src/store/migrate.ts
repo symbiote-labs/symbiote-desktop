@@ -1261,7 +1261,7 @@ const migrateConfig = {
           ...state.settings,
           sidebarIcons: {
             ...state.settings.sidebarIcons,
-            visible: [...state.settings.sidebarIcons.visible, 'store']
+            visible: [...state.settings.sidebarIcons.visible, 'discover']
           }
         }
       }

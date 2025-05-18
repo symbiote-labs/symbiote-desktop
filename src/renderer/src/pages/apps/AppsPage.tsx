@@ -1,9 +1,7 @@
-import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import { Center } from '@renderer/components/Layout'
 import { useMinapps } from '@renderer/hooks/useMinapps'
-import { Empty, Input } from 'antd'
+import { Empty } from 'antd'
 import { isEmpty } from 'lodash'
-import { Search } from 'lucide-react'
 import React, { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -34,7 +32,7 @@ const AppsPage: FC = () => {
 
   return (
     <Container onContextMenu={handleContextMenu}>
-      <Navbar>
+      {/* <Navbar>
         <NavbarCenter style={{ borderRight: 'none', justifyContent: 'space-between' }}>
           {t('minapp.title')}
           <Input
@@ -49,7 +47,7 @@ const AppsPage: FC = () => {
           />
           <div style={{ width: 80 }} />
         </NavbarCenter>
-      </Navbar>
+      </Navbar> */}
       <ContentContainer id="content-container">
         {isEmpty(filteredApps) ? (
           <Center>

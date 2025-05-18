@@ -145,7 +145,7 @@ const MainMenus: FC = () => {
     minapp: <LayoutGrid size={18} className="icon" />,
     knowledge: <FileSearch size={18} className="icon" />,
     files: <Folder size={17} className="icon" />,
-    store: <Compass size={18} className="icon" />
+    discover: <Compass size={18} className="icon" />
   }
 
   const pathMap = {
@@ -156,7 +156,7 @@ const MainMenus: FC = () => {
     minapp: '/apps',
     knowledge: '/knowledge',
     files: '/files',
-    store: '/store'
+    discover: '/discover'
   }
 
   return sidebarIcons.visible.map((icon) => {
