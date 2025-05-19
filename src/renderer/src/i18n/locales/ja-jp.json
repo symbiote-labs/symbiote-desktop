@@ -191,7 +191,7 @@
       "message.quote": "引用",
       "message.regenerate.model": "モデルを切り替え",
       "message.useful": "役立つ",
-      "message.select": "選択",
+      "multiple.select": "選択",
       "multiple.select.empty": "メッセージが選択されていません",
       "navigation": {
         "first": "最初のメッセージです",

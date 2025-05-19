@@ -191,7 +191,7 @@
       "message.quote": "Quote",
       "message.regenerate.model": "Switch Model",
       "message.useful": "Helpful",
-      "message.select": "Multiple Select",
+      "multiple.select": "Multiple Select",
       "multiple.select.empty": "No Messages Selected",
       "navigation": {
         "first": "Already at the first message",

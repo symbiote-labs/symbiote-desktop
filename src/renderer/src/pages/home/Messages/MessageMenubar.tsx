@@ -32,6 +32,7 @@ import { FC, memo, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
+
 import { useChatContext } from './ChatContext'
 
 interface Props {
@@ -275,7 +276,26 @@ const MessageMenubar: FC<Props> = (props) => {
         ].filter(Boolean)
       }
     ],
-    [message, messageContainerRef, isEditable, onEdit, mainTextContent, onNewBranch, t, topic.name, exportMenuOptions]
+    [
+      t,
+      isEditable,
+      onEdit,
+      onNewBranch,
+      exportMenuOptions.image,
+      exportMenuOptions.markdown,
+      exportMenuOptions.markdown_reason,
+      exportMenuOptions.docx,
+      exportMenuOptions.notion,
+      exportMenuOptions.yuque,
+      exportMenuOptions.obsidian,
+      exportMenuOptions.joplin,
+      exportMenuOptions.siyuan,
+      message,
+      mainTextContent,
+      toggleMultiSelectMode,
+      messageContainerRef,
+      topic.name
+    ]
   )
 
   const onRegenerate = async (e: React.MouseEvent | undefined) => {
