@@ -132,7 +132,6 @@ export interface SettingsState {
     siyuan: boolean
     docx: boolean
   }
-  isOpenAIAlertShown: boolean
 }
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -239,8 +238,7 @@ export const initialState: SettingsState = {
     obsidian: true,
     siyuan: true,
     docx: true
-  },
-  isOpenAIAlertShown: true
+  }
 }
 
 const settingsSlice = createSlice({
@@ -521,9 +519,6 @@ const settingsSlice = createSlice({
     },
     setEnableBackspaceDeleteModel: (state, action: PayloadAction<boolean>) => {
       state.enableBackspaceDeleteModel = action.payload
-    },
-    setIsOpenAIAlertShown: (state, action: PayloadAction<boolean>) => {
-      state.isOpenAIAlertShown = action.payload
     }
   }
 })
@@ -618,8 +613,7 @@ export const {
   setEnableDataCollection,
   setEnableQuickPanelTriggers,
   setExportMenuOptions,
-  setEnableBackspaceDeleteModel,
-  setIsOpenAIAlertShown
+  setEnableBackspaceDeleteModel
 } = settingsSlice.actions
 
 export default settingsSlice.reducer
