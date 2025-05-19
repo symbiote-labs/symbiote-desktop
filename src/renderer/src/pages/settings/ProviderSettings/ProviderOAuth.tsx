@@ -1,6 +1,6 @@
 import AiHubMixProviderLogo from '@renderer/assets/images/providers/aihubmix.webp'
-import CherryCloudProviderLogo from '@renderer/assets/images/providers/cherry-cloud.svg'
 import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.png'
+import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.svg'
 import { HStack } from '@renderer/components/Layout'
 import OAuthButton from '@renderer/components/OAuth/OAuthButton'
 import { PROVIDER_CONFIG } from '@renderer/config/providers'
@@ -21,7 +21,7 @@ interface Props {
 const PROVIDER_LOGO_MAP = {
   silicon: SiliconFlowProviderLogo,
   aihubmix: AiHubMixProviderLogo,
-  'cherry-cloud': CherryCloudProviderLogo
+  tokenflux: TokenFluxProviderLogo
 }
 
 const ProviderOAuth: FC<Props> = ({ provider, setApiKey }) => {

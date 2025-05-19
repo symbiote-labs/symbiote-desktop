@@ -27,16 +27,6 @@ export interface LlmState {
 
 export const INITIAL_PROVIDERS: Provider[] = [
   {
-    id: 'cherry-cloud',
-    name: 'Cherry Cloud',
-    type: 'openai-compatible',
-    apiKey: '',
-    apiHost: 'https://cherry-ai.cloud',
-    models: SYSTEM_MODELS.cherrycloud,
-    isSystem: true,
-    enabled: true
-  },
-  {
     id: 'silicon',
     name: 'Silicon',
     type: 'openai',
@@ -487,6 +477,16 @@ export const INITIAL_PROVIDERS: Provider[] = [
     models: SYSTEM_MODELS.voyageai,
     isSystem: true,
     enabled: false
+  },
+  {
+    id: 'tokenflux',
+    name: 'TokenFlux',
+    type: 'openai',
+    apiKey: '',
+    apiHost: 'https://tokenflux.ai',
+    models: SYSTEM_MODELS.tokenflux,
+    isSystem: true,
+    enabled: true
   }
 ]
 

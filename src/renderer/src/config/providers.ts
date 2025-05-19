@@ -7,7 +7,6 @@ import AnthropicProviderLogo from '@renderer/assets/images/providers/anthropic.p
 import BaichuanProviderLogo from '@renderer/assets/images/providers/baichuan.png'
 import BaiduCloudProviderLogo from '@renderer/assets/images/providers/baidu-cloud.svg'
 import BailianProviderLogo from '@renderer/assets/images/providers/bailian.png'
-import CherryCloudProviderLogo from '@renderer/assets/images/providers/cherry-cloud.svg'
 import DeepSeekProviderLogo from '@renderer/assets/images/providers/deepseek.png'
 import DmxapiProviderLogo from '@renderer/assets/images/providers/DMXAPI.png'
 import FireworksProviderLogo from '@renderer/assets/images/providers/fireworks.png'
@@ -38,13 +37,14 @@ import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.p
 import StepProviderLogo from '@renderer/assets/images/providers/step.png'
 import TencentCloudProviderLogo from '@renderer/assets/images/providers/tencent-cloud-ti.png'
 import TogetherProviderLogo from '@renderer/assets/images/providers/together.png'
+import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.svg'
 import BytedanceProviderLogo from '@renderer/assets/images/providers/volcengine.png'
 import VoyageAIProviderLogo from '@renderer/assets/images/providers/voyageai.png'
 import XirangProviderLogo from '@renderer/assets/images/providers/xirang.png'
 import ZeroOneProviderLogo from '@renderer/assets/images/providers/zero-one.png'
 import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
 
-import { CHERRY_CLOUD_HOST } from './constant'
+import { TOKENFLUX_HOST } from './constant'
 
 const PROVIDER_LOGO_MAP = {
   openai: OpenAiProviderLogo,
@@ -92,7 +92,7 @@ const PROVIDER_LOGO_MAP = {
   alayanew: AlayaNewProviderLogo,
   voyageai: VoyageAIProviderLogo,
   qiniu: QiniuProviderLogo,
-  'cherry-cloud': CherryCloudProviderLogo
+  tokenflux: TokenFluxProviderLogo
 } as const
 
 export function getProviderLogo(providerId: string) {
@@ -589,15 +589,15 @@ export const PROVIDER_CONFIG = {
       models: 'https://developer.qiniu.com/aitokenapi/12883/model-list'
     }
   },
-  'cherry-cloud': {
+  tokenflux: {
     api: {
-      url: CHERRY_CLOUD_HOST
+      url: TOKENFLUX_HOST
     },
     websites: {
-      official: CHERRY_CLOUD_HOST,
-      apiKey: `${CHERRY_CLOUD_HOST}/dashboard/api-keys`,
-      docs: `${CHERRY_CLOUD_HOST}/docs`,
-      models: `${CHERRY_CLOUD_HOST}/models`
+      official: TOKENFLUX_HOST,
+      apiKey: `${TOKENFLUX_HOST}/dashboard/api-keys`,
+      docs: `${TOKENFLUX_HOST}/docs`,
+      models: `${TOKENFLUX_HOST}/models`
     }
   }
 }

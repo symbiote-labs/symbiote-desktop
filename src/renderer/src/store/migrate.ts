@@ -1415,7 +1415,7 @@ const migrateConfig = {
   },
   '104': (state: RootState) => {
     try {
-      addProvider(state, 'cherry-cloud')
+      addProvider(state, 'tokenflux')
       return state
     } catch (error) {
       return state

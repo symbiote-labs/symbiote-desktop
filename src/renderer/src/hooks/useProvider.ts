@@ -69,11 +69,12 @@ export function useProviderByAssistant(assistant: Assistant) {
 window.electron.ipcRenderer.on(IpcChannel.Provider_AddKey, (_, data) => {
   console.log('Received provider key data:', data)
   const { id, apiKey } = data
-  if (id === 'cherry-cloud') {
+  // for now only suppor tokenflux, but in the future we can support more
+  if (id === 'tokenflux') {
     if (apiKey) {
       store.dispatch(updateProvider({ id, apiKey } as Provider))
-      window.message.success('Cherry Cloud API key updated')
-      console.log('Cherry Cloud API key updated:', apiKey)
+      window.message.success('Provider API key updated')
+      console.log('Provider API key updated:', apiKey)
     }
   }
 })
