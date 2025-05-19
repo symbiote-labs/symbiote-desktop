@@ -1,4 +1,5 @@
 import Scrollbar from '@renderer/components/Scrollbar'
+import { MessageEditingProvider } from '@renderer/context/MessageEditingContext'
 import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { MultiModelMessageStyle } from '@renderer/store/settings'
@@ -6,7 +7,7 @@ import type { Topic } from '@renderer/types'
 import type { Message } from '@renderer/types/newMessage'
 import { classNames } from '@renderer/utils'
 import { Popover } from 'antd'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import styled, { css } from 'styled-components'
 
 import { useChatContext } from './ChatContext'
@@ -45,7 +46,8 @@ const MessageGroup = ({
   const prevMessageLengthRef = useRef(messageLength)
   const [selectedIndex, setSelectedIndex] = useState(messageLength - 1)
 
-  const getSelectedMessageId = useCallback(() => {
+  const selectedMessageId = useMemo(() => {
+    if (messages.length === 1) return messages[0]?.id
     const selectedMessage = messages.find((message) => message.foldSelected)
     if (selectedMessage) {
       return selectedMessage.id
@@ -55,9 +57,10 @@ const MessageGroup = ({
 
   const setSelectedMessage = useCallback(
     (message: Message) => {
-      messages.forEach(async (m) => {
-        await editMessage(m.id, { foldSelected: m.id === message.id })
-      })
+      // 前一个
+      editMessage(selectedMessageId, { foldSelected: false })
+      // 当前选中的消息
+      editMessage(message.id, { foldSelected: true })
 
       setTimeout(() => {
         const messageElement = document.getElementById(`message-${message.id}`)
@@ -66,7 +69,7 @@ const MessageGroup = ({
         }
       }, 200)
     },
-    [editMessage, messages]
+    [editMessage, selectedMessageId]
   )
 
   const isGrouped = messageLength > 1 && messages.every((m) => m.role === 'assistant')
@@ -81,8 +84,7 @@ const MessageGroup = ({
         setSelectedMessage(lastMessage)
       }
     } else {
-      const selectedId = getSelectedMessageId()
-      const newIndex = messages.findIndex((msg) => msg.id === selectedId)
+      const newIndex = messages.findIndex((msg) => msg.id === selectedMessageId)
       if (newIndex !== -1) {
         setSelectedIndex(newIndex)
       }
@@ -140,7 +142,7 @@ const MessageGroup = ({
   }, [messages, contextRegisterMessageElement])
 
   const renderMessage = useCallback(
-    (message: Message & { index: number }, index: number) => {
+    (message: Message & { index: number }) => {
       const isGridGroupMessage = isGrid && message.role === 'assistant' && isGrouped
       const messageProps = {
         isGrouped,
@@ -157,13 +159,13 @@ const MessageGroup = ({
         <MessageWrapper
           id={`message-${message.id}`}
           $layout={multiModelMessageStyle}
-          $selected={index === selectedIndex}
+          // $selected={index === selectedIndex}
           $isGrouped={isGrouped}
           key={message.id}
           className={classNames({
             'group-message-wrapper': message.role === 'assistant' && isHorizontal && isGrouped,
             [multiModelMessageStyle]: isGrouped,
-            selected: message.id === getSelectedMessageId()
+            selected: message.id === selectedMessageId
           })}>
           <MessageItem {...messageProps} />
         </MessageWrapper>
@@ -188,7 +190,7 @@ const MessageGroup = ({
             content={
               <MessageWrapper
                 $layout={multiModelMessageStyle}
-                $selected={index === selectedIndex}
+                // $selected={index === selectedIndex}
                 $isGrouped={isGrouped}
                 $isInPopover={true}>
                 <MessageItem {...messageProps} />
@@ -222,34 +224,36 @@ const MessageGroup = ({
   )
 
   return (
-    <GroupContainer
-      id={`message-group-${messages[0].askId}`}
-      $isGrouped={isGrouped}
-      $layout={multiModelMessageStyle}
-      className={classNames([isGrouped && 'group-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
-      <GridContainer
-        $count={messageLength}
+    <MessageEditingProvider>
+      <GroupContainer
+        id={`message-group-${messages[0].askId}`}
+        $isGrouped={isGrouped}
         $layout={multiModelMessageStyle}
-        $gridColumns={gridColumns}
-        className={classNames([isGrouped && 'group-grid-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
-        {messages.map(renderMessage)}
-      </GridContainer>
-      {isGrouped && (
-        <MessageGroupMenuBar
-          multiModelMessageStyle={multiModelMessageStyle}
-          setMultiModelMessageStyle={(style) => {
-            setMultiModelMessageStyle(style)
-            messages.forEach((message) => {
-              editMessage(message.id, { multiModelMessageStyle: style })
-            })
-          }}
-          messages={messages}
-          selectMessageId={getSelectedMessageId()}
-          setSelectedMessage={setSelectedMessage}
-          topic={topic}
-        />
-      )}
-    </GroupContainer>
+        className={classNames([isGrouped && 'group-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
+        <GridContainer
+          $count={messageLength}
+          $layout={multiModelMessageStyle}
+          $gridColumns={gridColumns}
+          className={classNames([isGrouped && 'group-grid-container', isHorizontal && 'horizontal', isGrid && 'grid'])}>
+          {messages.map(renderMessage)}
+        </GridContainer>
+        {isGrouped && (
+          <MessageGroupMenuBar
+            multiModelMessageStyle={multiModelMessageStyle}
+            setMultiModelMessageStyle={(style) => {
+              setMultiModelMessageStyle(style)
+              messages.forEach((message) => {
+                editMessage(message.id, { multiModelMessageStyle: style })
+              })
+            }}
+            messages={messages}
+            selectMessageId={selectedMessageId}
+            setSelectedMessage={setSelectedMessage}
+            topic={topic}
+          />
+        )}
+      </GroupContainer>
+    </MessageEditingProvider>
   )
 }
 
@@ -306,7 +310,7 @@ const GridContainer = styled.div<{ $count: number; $layout: MultiModelMessageSty
 
 interface MessageWrapperProps {
   $layout: 'fold' | 'horizontal' | 'vertical' | 'grid'
-  $selected: boolean
+  // $selected: boolean
   $isGrouped: boolean
   $isInPopover?: boolean
 }
