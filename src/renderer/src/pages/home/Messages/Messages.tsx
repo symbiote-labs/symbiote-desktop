@@ -80,6 +80,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
     const updateDragPos = (e: MouseEvent) => {
       const container = scrollContainerRef.current!
+      if (!container) return { x: 0, y: 0 }
       const rect = container.getBoundingClientRect()
       const x = e.clientX - rect.left + container.scrollLeft
       const y = e.clientY - rect.top + container.scrollTop
@@ -88,39 +89,73 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
     const handleMouseDown = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.ant-checkbox-wrapper')) return
+      if ((e.target as HTMLElement).closest('.MessageFooter')) return
       setIsDragging(true)
       const pos = updateDragPos(e)
       setDragStart(pos)
       setDragCurrent(pos)
+      document.body.classList.add('no-select')
     }
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return
       setDragCurrent(updateDragPos(e))
+      const container = scrollContainerRef.current!
+      if (container) {
+        const { top, bottom } = container.getBoundingClientRect()
+        const scrollSpeed = 15
+        if (e.clientY < top + 50) {
+          container.scrollBy(0, -scrollSpeed)
+        } else if (e.clientY > bottom - 50) {
+          container.scrollBy(0, scrollSpeed)
+        }
+      }
     }
 
     const handleMouseUp = () => {
       if (!isDragging) return
 
-      // 计算选择框的边界
       const left = Math.min(dragStart.x, dragCurrent.x)
       const right = Math.max(dragStart.x, dragCurrent.x)
       const top = Math.min(dragStart.y, dragCurrent.y)
       const bottom = Math.max(dragStart.y, dragCurrent.y)
 
-      // 选择在框内的消息
-      messageElements.current.forEach((element, messageId) => {
-        const rect = element.getBoundingClientRect()
+      const MIN_SELECTION_SIZE = 5
+      const isValidSelection =
+        Math.abs(right - left) > MIN_SELECTION_SIZE &&
+        Math.abs(bottom - top) > MIN_SELECTION_SIZE
 
-        // 检查消息元素是否与选择框相交
-        const isIntersecting = !(rect.right < left || rect.left > right || rect.bottom < top || rect.top > bottom)
+      if (isValidSelection) {
+        // 处理元素选择
+        messageElements.current.forEach((element, messageId) => {
+          try {
+            const rect = element.getBoundingClientRect()
+            const container = scrollContainerRef.current!
 
-        if (isIntersecting) {
-          handleSelectMessage(messageId, true)
-        }
-      })
+            const elementTop = rect.top - container.getBoundingClientRect().top + container.scrollTop
+            const elementLeft = rect.left - container.getBoundingClientRect().left + container.scrollLeft
+            const elementBottom = elementTop + rect.height
+            const elementRight = elementLeft + rect.width
 
+            const isIntersecting = !(
+              elementRight < left ||
+              elementLeft > right ||
+              elementBottom < top ||
+              elementTop > bottom
+            )
+
+            if (isIntersecting) {
+              handleSelectMessage(messageId, true)
+              element.classList.add('selection-highlight')
+              setTimeout(() => element.classList.remove('selection-highlight'), 300)
+            }
+          } catch (error) {
+            console.error('Error calculating element intersection:', error)
+          }
+        })
+      }
       setIsDragging(false)
+      document.body.classList.remove('no-select')
     }
 
     const container = scrollContainerRef.current!
@@ -135,6 +170,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
         container.removeEventListener('mousedown', handleMouseDown)
         window.removeEventListener('mousemove', handleMouseMove)
         window.removeEventListener('mouseup', handleMouseUp)
+        document.body.classList.remove('no-select')
       }
     }
   }, [isMultiSelectMode, isDragging, dragStart, dragCurrent, handleSelectMessage, scrollContainerRef])

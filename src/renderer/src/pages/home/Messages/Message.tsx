@@ -82,8 +82,6 @@ const MessageItem: FC<Props> = ({
   const handleEditResend = useCallback(
     async (blocks: MessageBlock[]) => {
       try {
-        // 编辑后重新发送消息
-        console.log('after resend blocks', blocks)
         await resendUserMessageWithEdit(message, blocks, assistant)
         stopEditing()
       } catch (error) {
