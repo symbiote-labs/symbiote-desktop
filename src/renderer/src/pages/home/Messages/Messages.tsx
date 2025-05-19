@@ -79,7 +79,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
     if (!isMultiSelectMode) return
 
     const updateDragPos = (e: MouseEvent) => {
-      const container = containerRef.current!
+      const container = scrollContainerRef.current!
       const rect = container.getBoundingClientRect()
       const x = e.clientX - rect.left + container.scrollLeft
       const y = e.clientY - rect.top + container.scrollTop
@@ -123,7 +123,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
       setIsDragging(false)
     }
 
-    const container = containerRef.current
+    const container = scrollContainerRef.current!
     if (container) {
       container.addEventListener('mousedown', handleMouseDown)
       window.addEventListener('mousemove', handleMouseMove)
@@ -137,7 +137,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isMultiSelectMode, isDragging, dragStart, dragCurrent, handleSelectMessage])
+  }, [isMultiSelectMode, isDragging, dragStart, dragCurrent, handleSelectMessage, scrollContainerRef])
 
   const registerMessageElement = useCallback((id: string, element: HTMLElement | null) => {
     if (element) {
@@ -343,7 +343,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   return (
     <Container
       id="messages"
-      ref={containerRef}
+      ref={scrollContainerRef}
       style={{
         position: 'relative',
         maxWidth,

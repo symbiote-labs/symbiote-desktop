@@ -29,6 +29,7 @@ interface Props {
   index?: number
   total?: number
   hidePresetMessages?: boolean
+  hideMenuBar?: boolean
   style?: React.CSSProperties
   isGrouped?: boolean
   isStreaming?: boolean
@@ -41,6 +42,7 @@ const MessageItem: FC<Props> = ({
   // assistant,
   index,
   hidePresetMessages,
+  hideMenuBar = false,
   isGrouped,
   isStreaming = false,
   style
@@ -97,7 +99,7 @@ const MessageItem: FC<Props> = ({
 
   const isLastMessage = index === 0
   const isAssistantMessage = message.role === 'assistant'
-  const showMenubar = !isStreaming && !message.status.includes('ing') && !isEditing
+  const showMenubar = !hideMenuBar && !isStreaming && !message.status.includes('ing') && !isEditing
 
   const messageBorder = showMessageDivider ? undefined : 'none'
   const messageBackground = getMessageBackground(isBubbleStyle, isAssistantMessage)
