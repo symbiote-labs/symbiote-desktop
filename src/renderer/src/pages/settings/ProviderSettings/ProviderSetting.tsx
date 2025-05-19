@@ -5,6 +5,7 @@ import { isEmbeddingModel, isRerankModel } from '@renderer/config/models'
 import { PROVIDER_CONFIG } from '@renderer/config/providers'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useAllProviders, useProvider, useProviders } from '@renderer/hooks/useProvider'
+import { useSettings } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { isOpenAIProvider } from '@renderer/providers/AiProvider/ProviderFactory'
 import { checkApi, formatApiKeys } from '@renderer/services/ApiService'
@@ -13,7 +14,7 @@ import { isProviderSupportAuth } from '@renderer/services/ProviderService'
 import { Provider } from '@renderer/types'
 import { formatApiHost } from '@renderer/utils/api'
 import { lightbulbVariants } from '@renderer/utils/motionVariants'
-import { Button, Divider, Flex, Input, Space, Switch, Tooltip } from 'antd'
+import { Alert, Button, Divider, Flex, Input, Space, Switch, Tooltip } from 'antd'
 import Link from 'antd/es/typography/Link'
 import { debounce, isEmpty } from 'lodash'
 import { Settings2, SquareArrowOutUpRight } from 'lucide-react'
@@ -60,6 +61,7 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
   const { t } = useTranslation()
   const { theme } = useTheme()
   const [inputValue, setInputValue] = useState(apiKey)
+  const { isOpenAIAlertShown, setIsOpenAIAlertShown } = useSettings()
 
   const isAzureOpenAI = provider.id === 'azure-openai' || provider.type === 'azure-openai'
 
@@ -324,6 +326,17 @@ const ProviderSetting: FC<Props> = ({ provider: _provider }) => {
             setInputValue(v)
             updateProvider({ ...provider, apiKey: v })
           }}
+        />
+      )}
+      {provider.id === 'openai' && isOpenAIAlertShown && (
+        <Alert
+          style={{ width: '100%', marginTop: 5 }}
+          message={t('settings.provider.openai.alert')}
+          closable
+          afterClose={() => {
+            setIsOpenAIAlertShown(false)
+          }}
+          type="warning"
         />
       )}
       <SettingSubtitle style={{ marginTop: 5 }}>{t('settings.provider.api_key')}</SettingSubtitle>

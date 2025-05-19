@@ -1343,6 +1343,14 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '102': (state: RootState) => {
+    try {
+      state.settings.isOpenAIAlertShown = true
+      return state
+    } catch (error) {
+      return state
+    }
   }
 }
 

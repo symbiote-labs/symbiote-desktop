@@ -4,6 +4,7 @@ import {
   SendMessageShortcut,
   setAssistantIconType,
   setAutoCheckUpdate as _setAutoCheckUpdate,
+  setIsOpenAIAlertShown,
   setLaunchOnBoot,
   setLaunchToTray,
   setSendMessageShortcut as _setSendMessageShortcut,
@@ -79,6 +80,9 @@ export function useSettings() {
     },
     setAssistantIconType(assistantIconType: AssistantIconType) {
       dispatch(setAssistantIconType(assistantIconType))
+    },
+    setIsOpenAIAlertShown(isOpenAIAlertShown: boolean) {
+      dispatch(setIsOpenAIAlertShown(isOpenAIAlertShown))
     }
   }
 }
