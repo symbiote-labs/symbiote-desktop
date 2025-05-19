@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import { getModelScopeToken, saveModelScopeToken, syncModelScopeServers } from './modelscopeSyncUtils'
-import { getCherryCloudToken, HOST, saveCherryCloudToken, syncCherryCloudServers } from './providers/cherry-cloud'
+import { getTokenFluxToken, saveTokenFluxToken, syncTokenFluxServers, TOKENFLUX_HOST } from './providers/tokenflux'
 
 // Provider configuration interface
 interface ProviderConfig {
@@ -36,15 +36,15 @@ const providers: ProviderConfig[] = [
     syncServers: syncModelScopeServers
   },
   {
-    key: 'cherrycloud',
-    name: 'CherryCloud',
-    description: 'CherryCloud 平台 MCP 服务',
-    discoverUrl: `${HOST}/mcps`,
-    apiKeyUrl: `${HOST}/dashboard/api-keys`,
-    tokenFieldName: 'cherryCloudToken',
-    getToken: getCherryCloudToken,
-    saveToken: saveCherryCloudToken,
-    syncServers: syncCherryCloudServers
+    key: 'tokenflux',
+    name: 'TokenFlux',
+    description: 'TokenFlux 平台 MCP 服务',
+    discoverUrl: `${TOKENFLUX_HOST}/mcps`,
+    apiKeyUrl: `${TOKENFLUX_HOST}/dashboard/api-keys`,
+    tokenFieldName: 'tokenfluxToken',
+    getToken: getTokenFluxToken,
+    saveToken: saveTokenFluxToken,
+    syncServers: syncTokenFluxServers
   }
 ]
 

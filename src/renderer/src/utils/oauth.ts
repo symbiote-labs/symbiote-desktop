@@ -1,4 +1,4 @@
-import { CHERRY_CLOUD_HOST, SILICON_CLIENT_ID } from '@renderer/config/constant'
+import { SILICON_CLIENT_ID, TOKENFLUX_HOST } from '@renderer/config/constant'
 import i18n, { getLanguageCode } from '@renderer/i18n'
 
 export const oauthWithSiliconFlow = async (setKey) => {
@@ -58,9 +58,9 @@ export const oauthWithAihubmix = async (setKey) => {
   window.addEventListener('message', messageHandler)
 }
 
-export const oauthWithCherryCloud = async () => {
-  const callbackUrl = `${CHERRY_CLOUD_HOST}/auth/callback?redirect_to=/dashboard/api-keys`
-  const resp = await fetch(`${CHERRY_CLOUD_HOST}/api/auth/auth-url?type=login&callback=${callbackUrl}`, {})
+export const oauthWithTokenFlux = async () => {
+  const callbackUrl = `${TOKENFLUX_HOST}/auth/callback?redirect_to=/dashboard/api-keys`
+  const resp = await fetch(`${TOKENFLUX_HOST}/api/auth/auth-url?type=login&callback=${callbackUrl}`, {})
   if (!resp.ok) {
     window.message.error(i18n.t('oauth.error'))
     return

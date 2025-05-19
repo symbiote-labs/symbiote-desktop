@@ -16,8 +16,6 @@ import BigcodeModelLogoDark from '@renderer/assets/images/models/bigcode_dark.we
 import ChatGLMModelLogo from '@renderer/assets/images/models/chatglm.png'
 import ChatGLMModelLogoDark from '@renderer/assets/images/models/chatglm_dark.png'
 import ChatGptModelLogo from '@renderer/assets/images/models/chatgpt.jpeg'
-import CherryCloudModelLogo from '@renderer/assets/images/models/cherry-cloud.png'
-import CherryCloudModelLogoDark from '@renderer/assets/images/models/cherry-cloud_dark.png'
 import ClaudeModelLogo from '@renderer/assets/images/models/claude.png'
 import ClaudeModelLogoDark from '@renderer/assets/images/models/claude_dark.png'
 import CodegeexModelLogo from '@renderer/assets/images/models/codegeex.png'
@@ -129,6 +127,8 @@ import SunoModelLogo from '@renderer/assets/images/models/suno.png'
 import SunoModelLogoDark from '@renderer/assets/images/models/suno_dark.png'
 import TeleModelLogo from '@renderer/assets/images/models/tele.png'
 import TeleModelLogoDark from '@renderer/assets/images/models/tele_dark.png'
+import TokenFluxModelLogo from '@renderer/assets/images/models/tokenflux.png'
+import TokenFluxModelLogoDark from '@renderer/assets/images/models/tokenflux_dark.png'
 import UpstageModelLogo from '@renderer/assets/images/models/upstage.png'
 import UpstageModelLogoDark from '@renderer/assets/images/models/upstage_dark.png'
 import ViduModelLogo from '@renderer/assets/images/models/vidu.png'
@@ -381,7 +381,7 @@ export function getModelLogo(modelId: string) {
     sonar: isLight ? PerplexityModelLogo : PerplexityModelLogoDark,
     'bge-': BgeModelLogo,
     'voyage-': VoyageModelLogo,
-    'cherry-cloud': isLight ? CherryCloudModelLogo : CherryCloudModelLogoDark
+    tokenflux: isLight ? TokenFluxModelLogo : TokenFluxModelLogoDark
   }
 
   for (const key in logoMap) {
@@ -2173,34 +2173,34 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       group: 'Qwen'
     }
   ],
-  cherrycloud: [
+  tokenflux: [
     {
       id: 'gpt-4.1',
-      provider: 'cherry-cloud',
+      provider: 'tokenflux',
       name: 'GPT-4.1',
       group: 'GPT-4.1'
     },
     {
       id: 'claude-3-7-sonnet',
-      provider: 'cherry-cloud',
+      provider: 'tokenflux',
       name: 'Claude 3.7 Sonnet',
-      group: 'Claude 3.7'
+      group: 'Claude'
     },
     {
       id: 'gemini-2.5-pro',
-      provider: 'cherry-cloud',
+      provider: 'tokenflux',
       name: 'Gemini 2.5 Pro',
-      group: 'Gemini 2.5'
+      group: 'Gemini'
     },
     {
       id: 'deepseek-r1',
-      provider: 'cherry-cloud',
+      provider: 'tokenflux',
       name: 'DeepSeek R1',
       group: 'DeepSeek'
     },
     {
       id: 'deepseek-v3',
-      provider: 'qiniu',
+      provider: 'tokenflux',
       name: 'DeepSeek V3',
       group: 'DeepSeek'
     }

@@ -1,5 +1,5 @@
 import { Provider } from '@renderer/types'
-import { oauthWithAihubmix, oauthWithCherryCloud, oauthWithSiliconFlow } from '@renderer/utils/oauth'
+import { oauthWithAihubmix, oauthWithSiliconFlow, oauthWithTokenFlux } from '@renderer/utils/oauth'
 import { Button, ButtonProps } from 'antd'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,8 +28,8 @@ const OAuthButton: FC<Props> = ({ provider, onSuccess, ...buttonProps }) => {
       oauthWithAihubmix(handleSuccess)
     }
 
-    if (provider.id === 'cherry-cloud') {
-      oauthWithCherryCloud()
+    if (provider.id === 'tokenflux') {
+      oauthWithTokenFlux()
     }
   }
 

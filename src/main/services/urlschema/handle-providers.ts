@@ -9,8 +9,8 @@ export function handleProvidersProtocolUrl(url: URL) {
     case '/api-keys': {
       // jsonConfig example:
       // {
-      //   "id": "cherry-cloud",
-      //   "baseUrl": "https://cherry-ai.cloud/v1",
+      //   "id": "tokenflux",
+      //   "baseUrl": "https://tokenflux.ai/v1",
       //   "apiKey": "sk-xxxx"
       // }
       // cherrystudio://providers/api-keys?data={base64Encode(JSON.stringify(jsonConfig))}

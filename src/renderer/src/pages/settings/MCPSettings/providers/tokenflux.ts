@@ -3,27 +3,27 @@ import type { MCPServer } from '@renderer/types'
 import i18next from 'i18next'
 
 // Token storage constants and utilities
-const TOKEN_STORAGE_KEY = 'cherrycloud_token'
+const TOKEN_STORAGE_KEY = 'tokenflux_token'
 // const HOST = 'http://localhost:1323'
-export const HOST = 'https://cherry-ai.cloud'
+export const TOKENFLUX_HOST = 'https://tokenflux.ai'
 
-export const saveCherryCloudToken = (token: string): void => {
+export const saveTokenFluxToken = (token: string): void => {
   localStorage.setItem(TOKEN_STORAGE_KEY, token)
 }
 
-export const getCherryCloudToken = (): string | null => {
+export const getTokenFluxToken = (): string | null => {
   return localStorage.getItem(TOKEN_STORAGE_KEY)
 }
 
-export const clearCherryCloudToken = (): void => {
+export const clearTokenFluxToken = (): void => {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
 }
 
-export const hasCherryCloudToken = (): boolean => {
-  return !!getCherryCloudToken()
+export const hasTokenFluxToken = (): boolean => {
+  return !!getTokenFluxToken()
 }
 
-interface CherryCloudServer {
+interface TokenFluxServer {
   name: string
   display_name?: string
   description?: string
@@ -32,22 +32,22 @@ interface CherryCloudServer {
   logo?: string
 }
 
-interface CherryCloudSyncResult {
+interface TokenFluxSyncResult {
   success: boolean
   message: string
   addedServers: MCPServer[]
   errorDetails?: string
 }
 
-// Function to fetch and process CherryCloud servers
-export const syncCherryCloudServers = async (
+// Function to fetch and process TokenFlux servers
+export const syncTokenFluxServers = async (
   token: string,
   existingServers: MCPServer[]
-): Promise<CherryCloudSyncResult> => {
+): Promise<TokenFluxSyncResult> => {
   const t = i18next.t
 
   try {
-    const response = await fetch(`${HOST}/v1/mcps`, {
+    const response = await fetch(`${TOKENFLUX_HOST}/v1/mcps`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +57,7 @@ export const syncCherryCloudServers = async (
 
     // Handle authentication errors
     if (response.status === 401 || response.status === 403) {
-      clearCherryCloudToken()
+      clearTokenFluxToken()
       return {
         success: false,
         message: t('settings.mcp.sync.unauthorized', 'Sync Unauthorized'),
@@ -77,7 +77,7 @@ export const syncCherryCloudServers = async (
 
     // Process successful response
     const data = await response.json()
-    const servers: CherryCloudServer[] = data.data || []
+    const servers: TokenFluxServer[] = data.data || []
 
     if (servers.length === 0) {
       return {
@@ -87,30 +87,30 @@ export const syncCherryCloudServers = async (
       }
     }
 
-    // Transform CherryCloud servers to MCP servers format
+    // Transform TokenFlux servers to MCP servers format
     const addedServers: MCPServer[] = []
 
     for (const server of servers) {
       try {
         // Skip if server already exists
-        if (existingServers.some((s) => s.id === `@cherrycloud/${server.name}`)) continue
+        if (existingServers.some((s) => s.id === `@tokenflux/${server.name}`)) continue
 
         const mcpServer: MCPServer = {
-          id: `@cherrycloud/${server.name}`,
-          name: server.display_name || server.name || `CherryCloud Server ${nanoid()}`,
+          id: `@tokenflux/${server.name}`,
+          name: server.display_name || server.name || `TokenFlux Server ${nanoid()}`,
           description: server.description || '',
           type: 'streamableHttp',
-          baseUrl: `${HOST}/v1/mcps/${server.name}`,
+          baseUrl: `${TOKENFLUX_HOST}/v1/mcps/${server.name}`,
           isActive: true,
-          provider: 'CherryCloud',
-          providerUrl: `${HOST}/mcps/${server.name}`,
+          provider: 'TokenFlux',
+          providerUrl: `${TOKENFLUX_HOST}/mcps/${server.name}`,
           logoUrl: server.logo || '',
           tags: server.categories || []
         }
 
         addedServers.push(mcpServer)
       } catch (err) {
-        console.error('Error processing CherryCloud server:', err)
+        console.error('Error processing TokenFlux server:', err)
       }
     }
 
@@ -120,7 +120,7 @@ export const syncCherryCloudServers = async (
       addedServers
     }
   } catch (error) {
-    console.error('CherryCloud sync error:', error)
+    console.error('TokenFlux sync error:', error)
     return {
       success: false,
       message: t('settings.mcp.sync.error'),
