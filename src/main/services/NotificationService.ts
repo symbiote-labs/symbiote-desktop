@@ -3,7 +3,6 @@ import { Notification } from 'src/renderer/src/types/notification'
 
 class NotificationService {
   private window: BrowserWindow
-  // private clickHandler: ((...args: any[]) => void) | null = null // 不再需要
 
   constructor(window: BrowserWindow) {
     // Initialize the service

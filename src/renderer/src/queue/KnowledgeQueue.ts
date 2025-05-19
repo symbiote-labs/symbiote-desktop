@@ -1,10 +1,13 @@
 import Logger from '@renderer/config/logger'
 import db from '@renderer/databases'
 import { getKnowledgeBaseParams } from '@renderer/services/KnowledgeService'
+import { NotificationService } from '@renderer/services/NotificationService'
 import store from '@renderer/store'
 import { clearCompletedProcessing, updateBaseItemUniqueId, updateItemProcessingStatus } from '@renderer/store/knowledge'
 import { KnowledgeItem } from '@renderer/types'
+import { uuid } from '@renderer/utils'
 import type { LoaderReturn } from '@shared/config/types'
+import { t } from 'i18next'
 
 class KnowledgeQueue {
   private processing: Map<string, boolean> = new Map()
@@ -88,6 +91,7 @@ class KnowledgeQueue {
   }
 
   private async processItem(baseId: string, item: KnowledgeItem): Promise<void> {
+    const notificationService = NotificationService.getInstance()
     try {
       if (item.retryCount && item.retryCount >= this.MAX_RETRIES) {
         Logger.log(`[KnowledgeQueue] Item ${item.id} has reached max retries, skipping`)
@@ -138,6 +142,16 @@ class KnowledgeQueue {
 
       Logger.log(`[KnowledgeQueue] Successfully completed processing item ${item.id}`)
 
+      notificationService.send({
+        id: uuid(),
+        type: 'success',
+        title: t('common.success'),
+        message: `Successfully added ${item.type} to knowledge base`,
+        silent: true,
+        channel: 'system',
+        timestamp: Date.now()
+      })
+
       store.dispatch(
         updateItemProcessingStatus({
           baseId,
@@ -161,6 +175,16 @@ class KnowledgeQueue {
       store.dispatch(clearCompletedProcessing({ baseId }))
     } catch (error) {
       Logger.error(`[KnowledgeQueue] Error processing item ${item.id}: `, error)
+      notificationService.send({
+        id: uuid(),
+        type: 'error',
+        title: t('common.knowledge'),
+        message: `Failed to add ${item.type} to knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        silent: true,
+        channel: 'system',
+        timestamp: Date.now()
+      })
+
       store.dispatch(
         updateItemProcessingStatus({
           baseId,

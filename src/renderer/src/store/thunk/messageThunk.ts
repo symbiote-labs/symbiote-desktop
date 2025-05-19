@@ -19,6 +19,7 @@ import type {
 } from '@renderer/types/newMessage'
 import { AssistantMessageStatus, MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
 import { Response } from '@renderer/types/newMessage'
+import { uuid } from '@renderer/utils'
 import { isAbortError } from '@renderer/utils/error'
 import { extractUrlsFromMarkdown } from '@renderer/utils/linkConverter'
 import {
@@ -37,7 +38,6 @@ import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { getTopicQueue, waitForTopicQueue } from '@renderer/utils/queue'
 import { t } from 'i18next'
 import { throttle } from 'lodash'
-import { v4 as uuidv4 } from 'uuid'
 
 import type { AppDispatch, RootState } from '../index'
 import { removeManyBlocks, updateOneBlock, upsertManyBlocks, upsertOneBlock } from '../messageBlock'
@@ -588,6 +588,16 @@ const fetchAndProcessAssistantResponseImpl = async (
           status: error.status || error.code,
           requestId: error.request_id
         }
+        notificationService.send({
+          id: uuid(),
+          type: 'error',
+          title: t('notification.assistant'),
+          message: serializableError.message,
+          silent: true,
+          channel: 'system',
+          timestamp: Date.now()
+        })
+
         if (lastBlockId) {
           // 更改上一个block的状态为ERROR
           const changes: Partial<MessageBlock> = {
@@ -636,7 +646,7 @@ const fetchAndProcessAssistantResponseImpl = async (
 
           const content = getMainTextContent(finalAssistantMsg)
           await notificationService.send({
-            id: uuidv4(),
+            id: uuid(),
             type: 'success',
             title: t('notification.assistant'),
             message: content.length > 50 ? content.slice(0, 47) + '...' : content,
@@ -1301,7 +1311,7 @@ export const cloneMessagesToNewTopicThunk =
 
       // 3. Clone Messages and Blocks with New IDs
       for (const oldMessage of messagesToClone) {
-        const newMsgId = uuidv4()
+        const newMsgId = uuid()
         originalToNewMsgIdMap.set(oldMessage.id, newMsgId) // Store mapping for all cloned messages
 
         let newAskId: string | undefined = undefined // Initialize newAskId
@@ -1327,7 +1337,7 @@ export const cloneMessagesToNewTopicThunk =
           for (const oldBlockId of oldMessage.blocks) {
             const oldBlock = state.messageBlocks.entities[oldBlockId]
             if (oldBlock) {
-              const newBlockId = uuidv4()
+              const newBlockId = uuid()
               const newBlock: MessageBlock = {
                 ...oldBlock,
                 id: newBlockId,
