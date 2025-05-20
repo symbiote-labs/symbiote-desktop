@@ -1351,6 +1351,11 @@ const migrateConfig = {
   },
   '102': (state: RootState) => {
     try {
+      state.settings.openAI = {
+        summaryText: 'off',
+        serviceTier: 'auto'
+      }
+
       state.settings.codeExecution = settingsInitialState.codeExecution
       state.settings.codeEditor = settingsInitialState.codeEditor
       state.settings.codePreview = settingsInitialState.codePreview
@@ -1401,6 +1406,8 @@ const migrateConfig = {
           searchMessageShortcut.shortcut = [isMac ? 'Command' : 'Ctrl', 'Shift', 'F']
         }
       }
+      // Quick assistant model
+      state.llm.quickAssistantModel = state.llm.defaultModel || SYSTEM_MODELS.silicon[1]
       return state
     } catch (error) {
       return state
