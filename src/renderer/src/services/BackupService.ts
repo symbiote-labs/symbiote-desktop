@@ -2,7 +2,6 @@ import Logger from '@renderer/config/logger'
 import db from '@renderer/databases'
 import { upgradeToV7 } from '@renderer/databases/upgrades'
 import i18n from '@renderer/i18n'
-import { updateKnowledgeBaseFilePath } from '@renderer/services/KnowledgeService'
 import store from '@renderer/store'
 import { setWebDAVSyncState } from '@renderer/store/backup'
 import { uuid } from '@renderer/utils'
@@ -37,7 +36,6 @@ export async function restore() {
       }
 
       await handleData(data)
-      await updateKnowledgeBaseFilePath()
       notificationService.send({
         id: uuid(),
         type: 'success',
@@ -245,7 +243,6 @@ export async function restoreFromWebdav(fileName?: string) {
 
   try {
     await handleData(JSON.parse(data))
-    await updateKnowledgeBaseFilePath()
   } catch (error) {
     console.error('[Backup] Error downloading file from WebDAV:', error)
     window.message.error({ content: i18n.t('error.backup.file_format'), key: 'restore' })
