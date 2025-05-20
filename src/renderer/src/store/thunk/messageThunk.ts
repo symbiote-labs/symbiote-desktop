@@ -589,12 +589,12 @@ const fetchAndProcessAssistantResponseImpl = async (
           status: error.status || error.code,
           requestId: error.request_id
         }
-        notificationService.send({
+        await notificationService.send({
           id: uuid(),
           type: 'error',
           title: t('notification.assistant'),
           message: serializableError.message,
-          silent: true,
+          silent: false,
           timestamp: Date.now(),
           source: 'assistant'
         })
@@ -651,7 +651,7 @@ const fetchAndProcessAssistantResponseImpl = async (
             type: 'success',
             title: t('notification.assistant'),
             message: content.length > 50 ? content.slice(0, 47) + '...' : content,
-            silent: true,
+            silent: false,
             timestamp: Date.now(),
             source: 'assistant'
           })

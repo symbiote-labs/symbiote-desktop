@@ -30,7 +30,6 @@ export default function useUpdateHandler() {
           type: 'info',
           title: t('button.update_available'),
           message: t('button.update_available', { version: releaseInfo.version }),
-          silent: true,
           timestamp: Date.now(),
           source: 'update'
         })

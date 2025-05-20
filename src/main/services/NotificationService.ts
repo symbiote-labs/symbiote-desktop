@@ -1,4 +1,5 @@
 import { BrowserWindow, Notification as ElectronNotification } from 'electron'
+import { getDoNotDisturb } from 'electron-notification-state'
 import { Notification } from 'src/renderer/src/types/notification'
 
 class NotificationService {
@@ -10,12 +11,13 @@ class NotificationService {
   }
 
   public async sendNotification(notification: Notification) {
-    console.log('sendNotification', notification)
+    const shouldSilent = getDoNotDisturb() ?? !!notification.silent
+
     // 使用 Electron Notification API
     const electronNotification = new ElectronNotification({
       title: notification.title,
       body: notification.message,
-      silent: !!notification.silent
+      silent: shouldSilent
     })
 
     electronNotification.on('click', () => {

@@ -1,4 +1,3 @@
-/* eslint-disable simple-import-sort/imports */
 import Logger from '@renderer/config/logger'
 import db from '@renderer/databases'
 import { upgradeToV7 } from '@renderer/databases/upgrades'
@@ -44,7 +43,7 @@ export async function restore() {
         type: 'success',
         title: i18n.t('common.success'),
         message: i18n.t('message.restore.success'),
-        silent: true,
+        silent: false,
         timestamp: Date.now(),
         source: 'backup'
       })
@@ -136,7 +135,7 @@ export async function backupToWebdav({
         type: 'success',
         title: i18n.t('common.success'),
         message: i18n.t('message.backup.success'),
-        silent: true,
+        silent: false,
         timestamp: Date.now(),
         source: 'backup'
       })
@@ -204,7 +203,7 @@ export async function backupToWebdav({
       type: 'error',
       title: i18n.t('common.error'),
       message: i18n.t('message.backup.failed'),
-      silent: true,
+      silent: false,
       timestamp: Date.now(),
       source: 'backup'
     })

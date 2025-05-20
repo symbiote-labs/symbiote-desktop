@@ -143,7 +143,7 @@ class KnowledgeQueue {
         type: 'success',
         title: t('knowledge.status_completed"'),
         message: `Successfully added ${item.type} to knowledge base`,
-        silent: true,
+        silent: false,
         timestamp: Date.now(),
         source: 'knowledgeEmbed'
       })
@@ -176,7 +176,7 @@ class KnowledgeQueue {
         type: 'error',
         title: t('common.knowledge'),
         message: `Failed to add ${item.type} to knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        silent: true,
+        silent: false,
         timestamp: Date.now(),
         source: 'knowledgeEmbed'
       })
