@@ -1,8 +1,8 @@
 import { nanoid } from '@reduxjs/toolkit'
 import { isMac } from '@renderer/config/constant'
 import { DEFAULT_MIN_APPS } from '@renderer/config/minapps'
+import { SYSTEM_MODELS } from '@renderer/config/models'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
-import { SYSTEM_MODELS } from '@renderer/config/systemModels'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { Assistant, WebSearchProvider } from '@renderer/types'
@@ -839,6 +839,7 @@ const migrateConfig = {
   },
   '66': (state: RootState) => {
     try {
+      addProvider(state, 'burncloud')
       addProvider(state, 'gitee-ai')
       addProvider(state, 'ppio')
       addMiniApp(state, 'aistudio')
@@ -1025,6 +1026,7 @@ const migrateConfig = {
   },
   '78': (state: RootState) => {
     try {
+      state.llm.providers = moveProvider(state.llm.providers, 'burncloud', 9)
       state.llm.providers = moveProvider(state.llm.providers, 'ppio', 9)
       state.llm.providers = moveProvider(state.llm.providers, 'infini', 10)
       removeMiniAppIconsFromState(state)

@@ -883,6 +883,7 @@
     },
     "provider": {
       "aihubmix": "AiHubMix",
+      "burncloud": "BurnCloud",
       "alayanew": "Alaya NeW",
       "anthropic": "Anthropic",
       "azure-openai": "Azure OpenAI",

@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { isLocalAi } from '@renderer/config/env'
-import { SYSTEM_MODELS } from '@renderer/config/systemModels'
+import { SYSTEM_MODELS } from '@renderer/config/models'
 import { Model, Provider } from '@renderer/types'
 import { uniqBy } from 'lodash'
 
@@ -43,6 +43,16 @@ export const INITIAL_PROVIDERS: Provider[] = [
     apiKey: '',
     apiHost: 'https://aihubmix.com',
     models: SYSTEM_MODELS.aihubmix,
+    isSystem: true,
+    enabled: false
+  },
+  {
+    id: 'burncloud',
+    name: 'BurnCloud',
+    type: 'openai',
+    apiKey: '',
+    apiHost: 'https://ai.burncloud.com',
+    models: SYSTEM_MODELS.burncloud,
     isSystem: true,
     enabled: false
   },
