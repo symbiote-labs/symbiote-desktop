@@ -1,5 +1,7 @@
 import { Provider } from '@renderer/types'
 
+import { wrapProviderWithMiddleware } from '../middleware'
+import { loggingMiddleware } from '../middleware/sampleLoggingMiddleware'
 import AihubmixProvider from './AihubmixProvider'
 import AnthropicProvider from './AnthropicProvider'
 import BaseProvider from './BaseProvider'
@@ -13,18 +15,25 @@ export default class ProviderFactory {
       return new AihubmixProvider(provider)
     }
 
+    let instance: BaseProvider
+
     switch (provider.type) {
       case 'openai':
-        return new OpenAIProvider(provider)
+        instance = new OpenAIProvider(provider)
+        break
       case 'openai-response':
-        return new OpenAIResponseProvider(provider)
+        instance = new OpenAIResponseProvider(provider)
+        break
       case 'anthropic':
-        return new AnthropicProvider(provider)
+        instance = new AnthropicProvider(provider)
+        break
       case 'gemini':
-        return new GeminiProvider(provider)
+        instance = new GeminiProvider(provider)
+        break
       default:
-        return new OpenAIProvider(provider)
+        instance = new OpenAIProvider(provider)
     }
+    return wrapProviderWithMiddleware(instance, [loggingMiddleware])
   }
 }
 

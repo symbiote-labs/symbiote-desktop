@@ -19,7 +19,6 @@ import {
 import { getStoreSetting } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { extractReasoningMiddleware } from '@renderer/middlewares/extractReasoningMiddleware'
-import { wrapProviderWithMiddleware } from '@renderer/providers/middleware'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
 import {
@@ -75,10 +74,7 @@ import {
   ChatCompletionToolMessageParam
 } from 'openai/resources'
 
-import { AiProviderMiddleware } from '../middleware/AiProviderMiddlewareTypes'
-import { loggingMiddleware } from '../middleware/sampleLoggingMiddleware'
 import { CompletionsParams } from '.'
-import BaseProvider from './BaseProvider'
 import { BaseOpenAIProvider } from './OpenAIResponseProvider'
 
 // 1. 定义联合类型
@@ -88,7 +84,7 @@ export type OpenAIStreamChunk =
   | { type: 'finish'; finishReason: any; usage: any; delta: any; chunk: any }
 
 export default class OpenAIProvider extends BaseOpenAIProvider {
-  constructor(provider: Provider, middlewares?: AiProviderMiddleware | AiProviderMiddleware[]) {
+  constructor(provider: Provider) {
     super(provider)
 
     if (provider.id === 'azure-openai' || provider.type === 'azure-openai') {
@@ -98,7 +94,6 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         apiVersion: provider.apiVersion,
         endpoint: provider.apiHost
       })
-      this.completions = this._originalCompletions.bind(this)
       return
     }
 
@@ -112,22 +107,6 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         ...(this.provider.id === 'copilot' ? { 'copilot-vision-request': 'true' } : {})
       }
     })
-
-    const providerLogicToWrap = {
-      provider: this.provider,
-      host: this.host,
-      apiKey: this.apiKey,
-      useSystemPromptForTools: this.useSystemPromptForTools,
-      completions: this._originalCompletions.bind(this)
-    } as unknown as BaseProvider
-
-    const middlewaresToApply =
-      middlewares && (Array.isArray(middlewares) ? middlewares.length > 0 : middlewares)
-        ? middlewares
-        : [loggingMiddleware]
-
-    const wrappedProviderBehavior = wrapProviderWithMiddleware(providerLogicToWrap, middlewaresToApply)
-    this.completions = wrappedProviderBehavior.completions
   }
 
   /**
@@ -389,7 +368,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
    * @param onFilterMessages - The onFilterMessages callback
    * @returns The completions
    */
-  private async _originalCompletions({
+  public async completions({
     messages,
     assistant,
     mcpTools,
