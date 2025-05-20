@@ -25,18 +25,11 @@ interface Props {
   registerMessageElement?: (id: string, element: HTMLElement | null) => void
 }
 
-const MessageGroup = ({
-  messages,
-  topic,
-  hidePresetMessages,
-  isMultiSelectMode = false,
-  selectedMessages = new Set(),
-  onSelectMessage,
-  registerMessageElement
-}: Props) => {
+const MessageGroup = ({ messages, topic, hidePresetMessages }: Props) => {
   const { editMessage } = useMessageOperations(topic)
   const { multiModelMessageStyle: multiModelMessageStyleSetting, gridColumns, gridPopoverTrigger } = useSettings()
-  const { registerMessageElement: contextRegisterMessageElement } = useChatContext()
+  const { isMultiSelectMode, selectedMessageIds, handleSelectMessage, registerMessageElement } = useChatContext()
+  const selectedMessages = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds])
 
   const [multiModelMessageStyle, setMultiModelMessageStyle] = useState<MultiModelMessageStyle>(
     messages[0].multiModelMessageStyle || multiModelMessageStyleSetting
@@ -90,8 +83,7 @@ const MessageGroup = ({
       }
     }
     prevMessageLengthRef.current = messageLength
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messageLength])
+  }, [messageLength, messages, selectedMessageId, setSelectedMessage])
 
   // 添加对流程图节点点击事件的监听
   useEffect(() => {
@@ -123,23 +115,22 @@ const MessageGroup = ({
     return () => {
       document.removeEventListener('flow-navigate-to-message', handleFlowNavigate as EventListener)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, selectedIndex, isGrouped, messageLength])
+  }, [messages, selectedIndex, isGrouped, messageLength, setSelectedMessage])
 
   useEffect(() => {
     messages.forEach((message) => {
       const element = document.getElementById(`message-${message.id}`)
       if (element) {
-        contextRegisterMessageElement(message.id, element)
+        registerMessageElement(message.id, element)
       }
     })
 
     return () => {
       messages.forEach((message) => {
-        contextRegisterMessageElement(message.id, null)
+        registerMessageElement(message.id, null)
       })
     }
-  }, [messages, contextRegisterMessageElement])
+  }, [messages, registerMessageElement])
 
   const renderMessage = useCallback(
     (message: Message & { index: number }) => {
@@ -177,7 +168,7 @@ const MessageGroup = ({
           messageId={message.id}
           isMultiSelectMode={isMultiSelectMode}
           isSelected={selectedMessages.has(message.id)}
-          onSelect={(selected) => onSelectMessage?.(message.id, selected)}
+          onSelect={(selected) => handleSelectMessage(message.id, selected)}
           registerElement={registerMessageElement}
           isClearMessage={message.type === 'clear'}>
           {messageContent}
@@ -218,7 +209,7 @@ const MessageGroup = ({
       isMultiSelectMode,
       selectedMessages,
       registerMessageElement,
-      onSelectMessage,
+      handleSelectMessage,
       gridPopoverTrigger
     ]
   )
