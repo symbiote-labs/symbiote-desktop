@@ -6,7 +6,7 @@ import { Topic } from '@renderer/types'
 import { Modal } from 'antd'
 import { createContext, FC, ReactNode, use, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSelector } from 'react-redux'
+import { useStore } from 'react-redux'
 
 interface ChatContextProps {
   isMultiSelectMode: boolean
@@ -44,8 +44,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
   const [messagesToDelete, setMessagesToDelete] = useState<string[]>([])
   const [messageRefs, setMessageRefs] = useState<Map<string, HTMLElement>>(new Map())
 
-  const messages = useSelector((state: RootState) => selectMessagesForTopic(state, activeTopic.id))
-  const messageBlocks = useSelector(messageBlocksSelectors.selectEntities)
+  const store = useStore<RootState>()
 
   const toggleMultiSelectMode = (value: boolean) => {
     setIsMultiSelectMode(value)
@@ -75,6 +74,8 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
       if (display === 'none') {
         // 如果消息隐藏，需要处理显示逻辑
         // 查找消息并设置为选中状态
+        const state = store.getState()
+        const messages = selectMessagesForTopic(state, activeTopic.id)
         const message = messages.find((m) => m.id === messageId)
         if (message) {
           // 这里需要实现设置消息为选中状态的逻辑
@@ -104,6 +105,10 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
       window.message.warning(t('chat.multiple.select.empty'))
       return
     }
+
+    const state = store.getState()
+    const messages = selectMessagesForTopic(state, activeTopic.id)
+    const messageBlocks = messageBlocksSelectors.selectEntities(state)
 
     switch (actionType) {
       case 'delete':
