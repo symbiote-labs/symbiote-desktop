@@ -178,7 +178,8 @@ const MessageGroup = ({
           isMultiSelectMode={isMultiSelectMode}
           isSelected={selectedMessages.has(message.id)}
           onSelect={(selected) => onSelectMessage?.(message.id, selected)}
-          registerElement={registerMessageElement}>
+          registerElement={registerMessageElement}
+          isClearMessage={message.type === 'clear'}>
           {messageContent}
         </SelectableMessage>
       )

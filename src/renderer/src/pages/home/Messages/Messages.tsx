@@ -122,8 +122,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
 
       const MIN_SELECTION_SIZE = 5
       const isValidSelection =
-        Math.abs(right - left) > MIN_SELECTION_SIZE &&
-        Math.abs(bottom - top) > MIN_SELECTION_SIZE
+        Math.abs(right - left) > MIN_SELECTION_SIZE && Math.abs(bottom - top) > MIN_SELECTION_SIZE
 
       if (isValidSelection) {
         // 处理元素选择

@@ -1,11 +1,12 @@
+import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { RootState } from '@renderer/store'
 import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import { newMessagesActions, selectMessagesForTopic } from '@renderer/store/newMessage'
+import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import { Topic } from '@renderer/types'
 import { Modal } from 'antd'
 import { createContext, FC, ReactNode, use, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 
 interface ChatContextProps {
   isMultiSelectMode: boolean
@@ -36,7 +37,7 @@ export const useChatContext = () => {
 
 export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) => {
   const { t } = useTranslation()
-  const dispatch = useDispatch()
+  const { deleteMessage } = useMessageOperations(activeTopic)
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false)
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([])
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false)
@@ -163,12 +164,7 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children, activeTopic }) =
 
   const confirmDelete = async () => {
     try {
-      dispatch(
-        newMessagesActions.removeMessages({
-          topicId: activeTopic.id,
-          messageIds: messagesToDelete
-        })
-      )
+      await Promise.all(messagesToDelete.map((messageId) => deleteMessage(messageId)))
       window.message.success(t('message.delete.success'))
       setMessagesToDelete([])
       toggleMultiSelectMode(false)

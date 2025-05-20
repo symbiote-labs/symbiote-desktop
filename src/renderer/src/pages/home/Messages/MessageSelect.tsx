@@ -11,6 +11,7 @@ interface SelectableMessageProps {
   onSelect: (selected: boolean) => void
   messageId: string
   registerElement?: (id: string, element: HTMLElement | null) => void
+  isClearMessage?: boolean
 }
 
 const SelectableMessage: FC<SelectableMessageProps> = ({
@@ -19,7 +20,8 @@ const SelectableMessage: FC<SelectableMessageProps> = ({
   isSelected,
   onSelect,
   messageId,
-  registerElement
+  registerElement,
+  isClearMessage = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const { registerMessageElement: contextRegister } = useChatContext()
@@ -43,7 +45,7 @@ const SelectableMessage: FC<SelectableMessageProps> = ({
 
   return (
     <Container ref={containerRef}>
-      {isMultiSelectMode && (
+      {isMultiSelectMode && !isClearMessage && (
         <CheckboxWrapper>
           <Checkbox checked={isSelected} onChange={(e) => onSelect(e.target.checked)} />
         </CheckboxWrapper>
