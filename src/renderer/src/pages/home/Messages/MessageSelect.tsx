@@ -6,48 +6,36 @@ import { useChatContext } from './ChatContext'
 
 interface SelectableMessageProps {
   children: ReactNode
-  isMultiSelectMode: boolean
-  isSelected: boolean
-  onSelect: (selected: boolean) => void
   messageId: string
-  registerElement?: (id: string, element: HTMLElement | null) => void
   isClearMessage?: boolean
 }
 
-const SelectableMessage: FC<SelectableMessageProps> = ({
-  children,
-  isMultiSelectMode,
-  isSelected,
-  onSelect,
-  messageId,
-  registerElement,
-  isClearMessage = false
-}) => {
+const SelectableMessage: FC<SelectableMessageProps> = ({ children, messageId, isClearMessage = false }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { registerMessageElement: contextRegister } = useChatContext()
+  const {
+    registerMessageElement: contextRegister,
+    isMultiSelectMode,
+    selectedMessageIds,
+    handleSelectMessage
+  } = useChatContext()
+
+  const isSelected = selectedMessageIds?.includes(messageId)
 
   useEffect(() => {
     if (containerRef.current) {
-      if (registerElement) {
-        registerElement(messageId, containerRef.current)
-      }
       contextRegister(messageId, containerRef.current)
-
       return () => {
-        if (registerElement) {
-          registerElement(messageId, null)
-        }
         contextRegister(messageId, null)
       }
     }
     return undefined
-  }, [messageId, registerElement, contextRegister])
+  }, [messageId, contextRegister])
 
   return (
     <Container ref={containerRef}>
       {isMultiSelectMode && !isClearMessage && (
         <CheckboxWrapper>
-          <Checkbox checked={isSelected} onChange={(e) => onSelect(e.target.checked)} />
+          <Checkbox checked={isSelected} onChange={(e) => handleSelectMessage(messageId, e.target.checked)} />
         </CheckboxWrapper>
       )}
       <MessageContent isMultiSelectMode={isMultiSelectMode}>{children}</MessageContent>

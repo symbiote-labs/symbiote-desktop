@@ -28,7 +28,7 @@ const ChatContent: FC<Props> = (props) => {
   const { assistant } = useAssistant(props.assistant.id)
   const { topicPosition, messageStyle, showAssistants } = useSettings()
   const { showTopics } = useShowTopics()
-  const { isMultiSelectMode, toggleMultiSelectMode, handleMultiSelectAction } = useChatContext()
+  const { isMultiSelectMode } = useChatContext()
 
   const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
@@ -127,14 +127,7 @@ const ChatContent: FC<Props> = (props) => {
         </MessagesContainer>
         <QuickPanelProvider>
           <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
-          {isMultiSelectMode && (
-            <MultiSelectActionPopup
-              visible={isMultiSelectMode}
-              onClose={() => toggleMultiSelectMode(false)}
-              onAction={handleMultiSelectAction}
-              topic={props.activeTopic}
-            />
-          )}
+          {isMultiSelectMode && <MultiSelectActionPopup />}
         </QuickPanelProvider>
       </Main>
       {topicPosition === 'right' && showTopics && (

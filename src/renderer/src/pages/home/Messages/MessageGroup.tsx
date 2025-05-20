@@ -165,10 +165,6 @@ const MessageGroup = ({ messages, topic, hidePresetMessages, registerMessageElem
         <SelectableMessage
           key={`selectable-${message.id}`}
           messageId={message.id}
-          isMultiSelectMode={isMultiSelectMode}
-          isSelected={selectedMessages.has(message.id)}
-          onSelect={(selected) => handleSelectMessage(message.id, selected)}
-          registerElement={registerMessageElement}
           isClearMessage={message.type === 'clear'}>
           {messageContent}
         </SelectableMessage>

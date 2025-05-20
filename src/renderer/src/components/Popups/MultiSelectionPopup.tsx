@@ -5,28 +5,19 @@ import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
-interface MultiSelectActionPopupProps {
-  visible: boolean
-  onClose: () => void
-  onAction?: (action: string, messageIds: string[]) => void
-  topic: any
-}
-const MultiSelectActionPopup: FC<MultiSelectActionPopupProps> = ({ visible, onClose, onAction }) => {
+const MultiSelectActionPopup: FC = () => {
   const { t } = useTranslation()
-  const { toggleMultiSelectMode, selectedMessageIds } = useChatContext()
+  const { toggleMultiSelectMode, selectedMessageIds, isMultiSelectMode, handleMultiSelectAction } = useChatContext()
 
   const handleAction = (action: string) => {
-    if (onAction) {
-      onAction(action, selectedMessageIds)
-    }
+    handleMultiSelectAction(action, selectedMessageIds)
   }
 
   const handleClose = () => {
     toggleMultiSelectMode(false)
-    onClose()
   }
 
-  if (!visible) return null
+  if (!isMultiSelectMode) return null
 
   // TODO: 视情况调整
   // const isActionDisabled = selectedMessages.some((msg) => msg.role === 'user')
