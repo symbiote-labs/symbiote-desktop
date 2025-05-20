@@ -49,6 +49,10 @@ const defaultOptions = {
 export async function getShikiInstance(theme: ThemeMode) {
   const highlighter = await getHighlighter()
 
+  if (!highlighter) {
+    throw new Error('Shiki highlighter not initialized')
+  }
+
   const options = {
     ...defaultOptions,
     defaultColor: theme
