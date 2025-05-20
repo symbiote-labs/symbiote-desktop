@@ -1294,6 +1294,7 @@
         "dependenciesInstall": "Install Dependencies",
         "dependenciesInstalling": "Installing dependencies...",
         "description": "Description",
+        "noDescriptionAvailable": "No description available",
         "duplicateName": "A server with this name already exists",
         "editJson": "Edit JSON",
         "editServer": "Edit Server",

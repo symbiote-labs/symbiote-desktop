@@ -4,7 +4,7 @@ import {
   getHighlighter,
   loadLanguageIfNeeded,
   loadThemeIfNeeded
-} from '@renderer/utils/highlighter'
+} from '@renderer/utils/shiki'
 import { LRUCache } from 'lru-cache'
 import type { HighlighterGeneric, ThemedToken } from 'shiki/core'
 
