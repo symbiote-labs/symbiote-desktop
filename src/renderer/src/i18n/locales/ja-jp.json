@@ -774,7 +774,9 @@
       "show_sidebar": "サイドバーを表示"
     },
     "notification": {
-      "assistant": "助手回應"
+      "assistant": "助手回應",
+      "knowledge.success": "ナレッジベースに{{type}}を正常に追加しました",
+      "knowledge.error": "ナレッジベースへの{{type}}の追加に失敗しました: {{error}}"
     },
     "ollama": {
       "keep_alive_time.description": "モデルがメモリに保持される時間（デフォルト：5分）",
@@ -1702,6 +1704,12 @@
         "service_tier.auto": "自動",
         "service_tier.default": "デフォルト",
         "service_tier.flex": "フレックス"
+      },
+      "notification": {
+        "title": "通知設定",
+        "assistant": "アシスタントメッセージ",
+        "backup": "バックアップメッセージ",
+        "knowledge_embed": "ナレッジベースメッセージ"
       }
     },
     "translate": {

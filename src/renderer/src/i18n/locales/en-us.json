@@ -774,7 +774,9 @@
       "show_sidebar": "Show Sidebar"
     },
     "notification": {
-      "assistant": "Assistant Response"
+      "assistant": "Assistant Response",
+      "knowledge.success": "Successfully added {{type}} to the knowledge base",
+      "knowledge.error": "Failed to add {{type}} to knowledge base: {{error}}"
     },
     "ollama": {
       "keep_alive_time.description": "The time in minutes to keep the connection alive, default is 5 minutes.",

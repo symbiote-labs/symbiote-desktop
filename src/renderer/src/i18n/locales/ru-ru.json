@@ -774,7 +774,9 @@
       "show_sidebar": "Показать боковую панель"
     },
     "notification": {
-      "assistant": "Ответ ассистента"
+      "assistant": "Ответ ассистента",
+      "knowledge.success": "Успешно добавлено {{type}} в базу знаний",
+      "knowledge.error": "Не удалось добавить {{type}} в базу знаний: {{error}}"
     },
     "ollama": {
       "keep_alive_time.description": "Время в минутах, в течение которого модель остается активной, по умолчанию 5 минут.",
@@ -1702,7 +1704,13 @@
         "service_tier.flex": "Гибкий"
       },
       "about.debug.title": "Отладка",
-      "about.debug.open": "Открыть"
+      "about.debug.open": "Открыть",
+      "notification": {
+        "title": "Настройки уведомлений",
+        "assistant": "Сообщение ассистента",
+        "backup": "Резервное сообщение",
+        "knowledge_embed": "Сообщение базы знаний"
+      }
     },
     "translate": {
       "any.language": "Любой язык",

@@ -393,7 +393,6 @@
       "save": "保存",
       "search": "搜索",
       "select": "选择",
-      "success": "成功",
       "topics": "话题",
       "warning": "警告",
       "you": "用户",
@@ -775,7 +774,9 @@
       "show_sidebar": "显示侧边栏"
     },
     "notification": {
-      "assistant": "助手响应"
+      "assistant": "助手响应",
+      "knowledge.success": "成功添加 {{type}} 到知识库",
+      "knowledge.error": "添加 {{type}} 到知识库失败: {{error}}"
     },
     "ollama": {
       "keep_alive_time.description": "对话后模型在内存中保持的时间（默认：5分钟）",
