@@ -403,6 +403,10 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
                 messages={groupMessages}
                 topic={topic}
                 hidePresetMessages={assistant.settings?.hideMessages}
+                isMultiSelectMode={isMultiSelectMode}
+                selectedMessages={selectedMessagesSet}
+                onSelectMessage={handleSelectMessage}
+                registerMessageElement={registerMessageElement}
               />
             ))}
             {isLoadingMore && (
