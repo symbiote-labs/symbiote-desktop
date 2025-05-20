@@ -4,7 +4,6 @@ import i18next from 'i18next'
 
 // Token storage constants and utilities
 const TOKEN_STORAGE_KEY = 'tokenflux_token'
-// const HOST = 'http://localhost:1323'
 export const TOKENFLUX_HOST = 'https://tokenflux.ai'
 
 export const saveTokenFluxToken = (token: string): void => {
@@ -23,6 +22,12 @@ export const hasTokenFluxToken = (): boolean => {
   return !!getTokenFluxToken()
 }
 
+interface TokenFluxServerAuthSchemaApiKey {
+  location: string
+  name: string
+  prefix: string
+}
+
 interface TokenFluxServer {
   name: string
   display_name?: string
@@ -30,6 +35,7 @@ interface TokenFluxServer {
   version: string
   categories?: string[]
   logo?: string
+  security_schemes?: Record<string, unknown>
 }
 
 interface TokenFluxSyncResult {
@@ -47,7 +53,7 @@ export const syncTokenFluxServers = async (
   const t = i18next.t
 
   try {
-    const response = await fetch(`${TOKENFLUX_HOST}/v1/mcps`, {
+    const response = await fetch(`${TOKENFLUX_HOST}/v1/mcps?enabled=true`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -95,6 +101,14 @@ export const syncTokenFluxServers = async (
         // Skip if server already exists
         if (existingServers.some((s) => s.id === `@tokenflux/${server.name}`)) continue
 
+        const authHeaders = {}
+        if (server.security_schemes && server.security_schemes.api_key) {
+          const keyAuth = server.security_schemes.api_key as TokenFluxServerAuthSchemaApiKey
+          if (keyAuth.location === 'header') {
+            authHeaders[keyAuth.name] = `${keyAuth.prefix || ''} {set your key here}`.trim()
+          }
+        }
+
         const mcpServer: MCPServer = {
           id: `@tokenflux/${server.name}`,
           name: server.display_name || server.name || `TokenFlux Server ${nanoid()}`,
@@ -105,7 +119,8 @@ export const syncTokenFluxServers = async (
           provider: 'TokenFlux',
           providerUrl: `${TOKENFLUX_HOST}/mcps/${server.name}`,
           logoUrl: server.logo || '',
-          tags: server.categories || []
+          tags: server.categories || [],
+          headers: authHeaders
         }
 
         addedServers.push(mcpServer)
