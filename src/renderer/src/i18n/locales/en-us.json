@@ -1481,6 +1481,12 @@
       "moresetting.check.confirm": "Confirm Selection",
       "moresetting.check.warn": "Please be cautious when selecting this option. Incorrect selection may cause the model to malfunction!",
       "moresetting.warn": "Risk Warning",
+      "notification": {
+        "title": "Notification Settings",
+        "assistant": "Assistant Message",
+        "backup": "Backup Message",
+        "knowledge_embed": "KnowledgeBase Message"
+      },
       "provider": {
         "add.name": "Provider Name",
         "add.name.placeholder": "Example: OpenAI",

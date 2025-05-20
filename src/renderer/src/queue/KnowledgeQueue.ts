@@ -141,11 +141,11 @@ class KnowledgeQueue {
       notificationService.send({
         id: uuid(),
         type: 'success',
-        title: t('common.success'),
+        title: t('knowledge.status_completed"'),
         message: `Successfully added ${item.type} to knowledge base`,
         silent: true,
-        channel: 'system',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        source: 'knowledgeEmbed'
       })
 
       store.dispatch(
@@ -177,8 +177,8 @@ class KnowledgeQueue {
         title: t('common.knowledge'),
         message: `Failed to add ${item.type} to knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`,
         silent: true,
-        channel: 'system',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        source: 'knowledgeEmbed'
       })
 
       store.dispatch(

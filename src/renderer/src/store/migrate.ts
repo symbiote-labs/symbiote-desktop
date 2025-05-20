@@ -1,8 +1,8 @@
 import { nanoid } from '@reduxjs/toolkit'
 import { isMac } from '@renderer/config/constant'
 import { DEFAULT_MIN_APPS } from '@renderer/config/minapps'
-import { SYSTEM_MODELS } from '@renderer/config/models'
 import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
+import { SYSTEM_MODELS } from '@renderer/config/systemModels'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { Assistant, WebSearchProvider } from '@renderer/types'
@@ -1406,6 +1406,14 @@ const migrateConfig = {
           searchMessageShortcut.shortcut = [isMac ? 'Command' : 'Ctrl', 'Shift', 'F']
         }
       }
+      return state
+    } catch (error) {
+      return state
+    }
+  },
+  '104': (state: RootState) => {
+    try {
+      state.settings.notification = settingsInitialState.notification
       return state
     } catch (error) {
       return state

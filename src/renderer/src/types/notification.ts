@@ -1,4 +1,5 @@
 export type NotificationType = 'progress' | 'success' | 'error' | 'warning' | 'info' | 'action'
+export type NotificationSource = 'assistant' | 'backup' | 'knowledgeEmbed'
 
 export interface Notification<T = any> {
   /** 通知唯一标识 */
@@ -23,6 +24,6 @@ export interface Notification<T = any> {
   channel?: 'system' | 'in-app'
   /** 点击回调函数，仅在 type 为 'action' 时有效 */
   onClick?: () => void
-  /** 自定义图标 */
-  icon?: string
+  /** 通知源 */
+  source: NotificationSource
 }

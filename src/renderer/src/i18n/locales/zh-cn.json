@@ -393,6 +393,7 @@
       "save": "保存",
       "search": "搜索",
       "select": "选择",
+      "success": "成功",
       "topics": "话题",
       "warning": "警告",
       "you": "用户",
@@ -1481,6 +1482,12 @@
       "moresetting.check.confirm": "确认勾选",
       "moresetting.check.warn": "请慎重勾选此选项，勾选错误会导致模型无法正常使用！！！",
       "moresetting.warn": "风险警告",
+      "notification": {
+        "title": "通知设置",
+        "assistant": "助手消息",
+        "backup": "备份",
+        "knowledge_embed": "知识嵌入"
+      },
       "provider": {
         "add.name": "提供商名称",
         "add.name.placeholder": "例如 OpenAI",

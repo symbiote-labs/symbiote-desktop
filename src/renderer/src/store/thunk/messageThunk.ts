@@ -595,8 +595,8 @@ const fetchAndProcessAssistantResponseImpl = async (
           title: t('notification.assistant'),
           message: serializableError.message,
           silent: true,
-          channel: 'system',
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          source: 'assistant'
         })
 
         if (lastBlockId) {
@@ -652,8 +652,8 @@ const fetchAndProcessAssistantResponseImpl = async (
             title: t('notification.assistant'),
             message: content.length > 50 ? content.slice(0, 47) + '...' : content,
             silent: true,
-            channel: 'system',
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            source: 'assistant'
           })
 
           // 更新topic的name

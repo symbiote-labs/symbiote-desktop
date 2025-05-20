@@ -11,9 +11,9 @@ import {
   isReasoningModel,
   isRerankModel,
   isVisionModel,
-  isWebSearchModel,
-  SYSTEM_MODELS
+  isWebSearchModel
 } from '@renderer/config/models'
+import { SYSTEM_MODELS } from '@renderer/config/systemModels'
 import { useProvider } from '@renderer/hooks/useProvider'
 import FileItem from '@renderer/pages/files/FileItem'
 import { fetchModels } from '@renderer/services/ApiService'

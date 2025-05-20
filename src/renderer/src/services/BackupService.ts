@@ -44,7 +44,8 @@ export async function restore() {
         title: i18n.t('common.success'),
         message: i18n.t('message.restore.success'),
         silent: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        source: 'backup'
       })
     } catch (error) {
       Logger.error('[Backup] restore: Error restoring backup file:', error)
@@ -135,8 +136,8 @@ export async function backupToWebdav({
         title: i18n.t('common.success'),
         message: i18n.t('message.backup.success'),
         silent: true,
-        channel: 'system',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        source: 'backup'
       })
 
       if (showMessage && !autoBackupProcess) {
@@ -203,8 +204,8 @@ export async function backupToWebdav({
       title: i18n.t('common.error'),
       message: i18n.t('message.backup.failed'),
       silent: true,
-      channel: 'system',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      source: 'backup'
     })
     store.dispatch(setWebDAVSyncState({ lastSyncError: error.message }))
     console.error('[Backup] backupToWebdav: Error uploading file to WebDAV:', error)

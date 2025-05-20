@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { isLocalAi } from '@renderer/config/env'
-import { SYSTEM_MODELS } from '@renderer/config/models'
+import { SYSTEM_MODELS } from '@renderer/config/systemModels'
 import { Model, Provider } from '@renderer/types'
 import { uniqBy } from 'lodash'
 

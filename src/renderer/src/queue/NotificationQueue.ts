@@ -1,5 +1,17 @@
+import { getStoreSetting } from '@renderer/hooks/useSettings'
 import type { Notification } from '@renderer/types/notification'
+import { isFocused } from '@renderer/utils/window'
+import { notification as appNotification } from 'antd'
 import PQueue from 'p-queue'
+
+const typeMap: Record<string, 'info' | 'success' | 'warning' | 'error'> = {
+  error: 'error',
+  success: 'success',
+  warning: 'warning',
+  info: 'info',
+  progress: 'info',
+  action: 'info'
+}
 
 export class NotificationQueue {
   private static instance: NotificationQueue
@@ -20,9 +32,22 @@ export class NotificationQueue {
    * @param notification 要发送的通知
    */
   public async add(notification: Notification): Promise<void> {
+    const notificationSettings = getStoreSetting('notification')
+    if (notification.source && !notificationSettings![notification.source]) return
     await this.queue.add(async () => {
       try {
-        await window.api.notification.send(notification)
+        if (isFocused()) {
+          appNotification.open({
+            message: notification.title,
+            description: notification.message,
+            duration: 3,
+            placement: 'topRight',
+            type: typeMap[notification.type] || 'info',
+            key: notification.id
+          })
+        } else {
+          await window.api.notification.send({ ...notification, channel: 'system' })
+        }
       } catch (error) {
         console.error('Failed to send notification:', error)
       }
