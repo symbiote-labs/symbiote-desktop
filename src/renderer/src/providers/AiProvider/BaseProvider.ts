@@ -42,6 +42,11 @@ export default abstract class BaseProvider {
     this.apiKey = this.getApiKey()
   }
 
+  // Added public getter for provider info
+  public getProviderInfo(): Provider {
+    return this.provider
+  }
+
   abstract completions({ messages, assistant, onChunk, onFilterMessages }: CompletionsParams): Promise<void>
   abstract translate(
     content: string,
@@ -63,6 +68,12 @@ export default abstract class BaseProvider {
     resp: MCPCallToolResponse,
     model: Model
   ): any
+
+  // Optional hook for middlewares to finalize SDK-specific request params
+  public async finalizeSdkRequestParams?(
+    sdkRequestParams: any,
+    context: any // AiProviderMiddlewareCompletionsContext, but using any to avoid circular deps here
+  ): Promise<any>
 
   public getBaseURL(): string {
     const host = this.provider.apiHost

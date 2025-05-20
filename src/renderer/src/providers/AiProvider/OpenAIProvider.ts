@@ -74,6 +74,7 @@ import {
   ChatCompletionToolMessageParam
 } from 'openai/resources'
 
+import { AiProviderMiddlewareCompletionsContext } from '../middleware/AiProviderMiddlewareTypes'
 import { CompletionsParams } from '.'
 import { BaseOpenAIProvider } from './OpenAIResponseProvider'
 
@@ -361,30 +362,30 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
 
   /**
    * Generate completions for the assistant
-   * @param messages - The messages
-   * @param assistant - The assistant
-   * @param mcpTools - The MCP tools
-   * @param onChunk - The onChunk callback
-   * @param onFilterMessages - The onFilterMessages callback
+   * @param context - The context
    * @returns The completions
    */
-  public async completions({
-    messages,
-    assistant,
-    mcpTools,
-    onChunk,
-    onFilterMessages
-  }: CompletionsParams): Promise<void> {
+  public async completions(context: AiProviderMiddlewareCompletionsContext): Promise<void> {
+    const {
+      assistant,
+      mcpTools,
+      onChunk,
+      onFilterMessages,
+      messages: initialMessages,
+      model: contextModel,
+      originalParams
+    } = context
+
     if (assistant.enableGenerateImage) {
-      await this.generateImageByChat({ messages, assistant, mcpTools, onChunk, onFilterMessages } as CompletionsParams)
+      await this.generateImageByChat(originalParams as CompletionsParams)
       return
     }
     const defaultModel = getDefaultModel()
-    const model = assistant.model || defaultModel
+    const model = contextModel || assistant.model || defaultModel
 
     const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
     const isEnabledBultinWebSearch = assistant.enableWebSearch
-    messages = addImageFileToContents(messages)
+    const messages = addImageFileToContents(initialMessages)
     const enableReasoning =
       ((isSupportedThinkingTokenModel(model) || isSupportedReasoningEffortModel(model)) &&
         assistant.settings?.reasoning_effort !== undefined) ||
@@ -417,9 +418,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
       userMessages.push(await this.getMessageParam(message, model))
     }
 
-    const isSupportStreamOutput = () => {
-      return streamOutput
-    }
+    const currentStreamSetting = streamOutput
 
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
     const { abortController, cleanup, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
@@ -472,27 +471,30 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
       console.debug('[tool] reqMessages', model.id, reqMessages)
 
       onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
-      const newStream = await this.sdk.chat.completions
-        // @ts-ignore key is not typed
-        .create(
-          {
-            model: model.id,
-            messages: reqMessages,
-            temperature: this.getTemperature(assistant, model),
-            top_p: this.getTopP(assistant, model),
-            max_tokens: maxTokens,
-            keep_alive: this.keepAliveTime,
-            stream: isSupportStreamOutput(),
-            tools: !isEmpty(tools) ? tools : undefined,
-            ...getOpenAIWebSearchParams(assistant, model),
-            ...this.getReasoningEffort(assistant, model),
-            ...this.getProviderSpecificParameters(assistant, model),
-            ...this.getCustomParameters(assistant)
-          },
-          {
-            signal
-          }
-        )
+
+      const sdkBaseParams = {
+        model: model.id,
+        messages: reqMessages,
+        temperature: this.getTemperature(assistant, model),
+        top_p: this.getTopP(assistant, model),
+        max_tokens: maxTokens,
+        keep_alive: this.keepAliveTime,
+        stream: currentStreamSetting,
+        tools: !isEmpty(tools) ? tools : undefined,
+        ...getOpenAIWebSearchParams(assistant, model),
+        ...this.getReasoningEffort(assistant, model),
+        ...this.getProviderSpecificParameters(assistant, model),
+        ...this.getCustomParameters(assistant)
+      }
+
+      let finalizedSdkParams: any = sdkBaseParams
+      if (this.finalizeSdkRequestParams) {
+        finalizedSdkParams = await this.finalizeSdkRequestParams(sdkBaseParams, context)
+      }
+
+      const newStream = await this.sdk.chat.completions.create(finalizedSdkParams, {
+        signal
+      })
       await processStream(newStream, idx + 1)
     }
 
@@ -545,7 +547,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
       let time_first_token_millsec = 0
 
       // Handle non-streaming case (already returns early, no change needed here)
-      if (!isSupportStreamOutput()) {
+      if (!currentStreamSetting) {
         // Calculate final metrics once
         finalMetrics.completion_tokens = stream.usage?.completion_tokens
         finalMetrics.time_completion_millsec = new Date().getTime() - start_time_millsec
@@ -863,29 +865,32 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     // 等待接口返回流
     onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     const start_time_millsec = new Date().getTime()
-    const stream = await this.sdk.chat.completions
-      // @ts-ignore key is not typed
-      .create(
-        {
-          model: model.id,
-          messages: reqMessages,
-          temperature: this.getTemperature(assistant, model),
-          top_p: this.getTopP(assistant, model),
-          max_tokens: maxTokens,
-          keep_alive: this.keepAliveTime,
-          stream: isSupportStreamOutput(),
-          tools: !isEmpty(tools) ? tools : undefined,
-          service_tier: this.getServiceTier(model),
-          ...getOpenAIWebSearchParams(assistant, model),
-          ...this.getReasoningEffort(assistant, model),
-          ...this.getProviderSpecificParameters(assistant, model),
-          ...this.getCustomParameters(assistant)
-        },
-        {
-          signal,
-          timeout: this.getTimeout(model)
-        }
-      )
+
+    const mainSdkBaseParams = {
+      model: model.id,
+      messages: reqMessages,
+      temperature: this.getTemperature(assistant, model),
+      top_p: this.getTopP(assistant, model),
+      max_tokens: maxTokens,
+      keep_alive: this.keepAliveTime,
+      tools: !isEmpty(tools) ? tools : undefined,
+      stream: currentStreamSetting,
+      service_tier: this.getServiceTier(model) as ChatCompletionCreateParamsNonStreaming['service_tier'],
+      ...getOpenAIWebSearchParams(assistant, model),
+      ...this.getReasoningEffort(assistant, model),
+      ...this.getProviderSpecificParameters(assistant, model),
+      ...this.getCustomParameters(assistant)
+    }
+
+    let finalizedMainSdkParams: any = mainSdkBaseParams
+    if (this.finalizeSdkRequestParams) {
+      finalizedMainSdkParams = await this.finalizeSdkRequestParams(mainSdkBaseParams, context)
+    }
+
+    const stream = await this.sdk.chat.completions.create(finalizedMainSdkParams, {
+      signal,
+      timeout: this.getTimeout(model)
+    })
 
     await processStream(stream, 0).finally(cleanup)
 

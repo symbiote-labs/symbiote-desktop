@@ -33,7 +33,7 @@ const getMessageContentForLogging = (message: any): string => {
 export const loggingMiddleware: AiProviderMiddleware = {
   id: 'sample-logging-middleware',
 
-  transformCompletionsParams: async (context: AiProviderMiddlewareCompletionsContext) => {
+  transformCompletionsInput: async (context: AiProviderMiddlewareCompletionsContext) => {
     console.log(
       `[LoggingMiddleware (${context.assistant.id}-${context.model.id})] transformCompletionsParams. Messages:`,
       context.messages.map(getMessageContentForLogging) // Use helper for safer logging
@@ -46,7 +46,6 @@ export const loggingMiddleware: AiProviderMiddleware = {
     //   return msg;
     // });
     // return { ...context, messages: newMessages };
-    return context // No actual modification in this example
   },
 
   wrapOnChunk: (originalOnChunk, context: AiProviderMiddlewareCompletionsContext) => {

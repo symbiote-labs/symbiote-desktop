@@ -1,6 +1,7 @@
 import { Provider } from '@renderer/types'
 
 import { wrapProviderWithMiddleware } from '../middleware'
+import { AiProviderMiddleware } from '../middleware/AiProviderMiddlewareTypes'
 import { loggingMiddleware } from '../middleware/sampleLoggingMiddleware'
 import AihubmixProvider from './AihubmixProvider'
 import AnthropicProvider from './AnthropicProvider'
@@ -11,29 +12,30 @@ import OpenAIResponseProvider from './OpenAIResponseProvider'
 
 export default class ProviderFactory {
   static create(provider: Provider): BaseProvider {
-    if (provider.id === 'aihubmix') {
-      return new AihubmixProvider(provider)
-    }
-
     let instance: BaseProvider
+    const middlewares: AiProviderMiddleware[] = [loggingMiddleware] // 通用中间件
 
-    switch (provider.type) {
-      case 'openai':
-        instance = new OpenAIProvider(provider)
-        break
-      case 'openai-response':
-        instance = new OpenAIResponseProvider(provider)
-        break
-      case 'anthropic':
-        instance = new AnthropicProvider(provider)
-        break
-      case 'gemini':
-        instance = new GeminiProvider(provider)
-        break
-      default:
-        instance = new OpenAIProvider(provider)
+    if (provider.id === 'aihubmix') {
+      instance = new AihubmixProvider(provider)
+    } else {
+      switch (provider.type) {
+        case 'openai':
+          instance = new OpenAIProvider(provider)
+          break
+        case 'openai-response':
+          instance = new OpenAIResponseProvider(provider)
+          break
+        case 'anthropic':
+          instance = new AnthropicProvider(provider)
+          break
+        case 'gemini':
+          instance = new GeminiProvider(provider)
+          break
+        default:
+          instance = new OpenAIProvider(provider)
+      }
     }
-    return wrapProviderWithMiddleware(instance, [loggingMiddleware])
+    return wrapProviderWithMiddleware(instance, middlewares)
   }
 }
 

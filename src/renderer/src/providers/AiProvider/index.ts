@@ -5,11 +5,13 @@ import { Chunk } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
 
+export type OnFilterMessagesFunction = (messages: Message[]) => void
+
 export interface CompletionsParams {
   messages: Message[]
   assistant: Assistant
   onChunk: (chunk: Chunk) => void
-  onFilterMessages: (messages: Message[]) => void
+  onFilterMessages: OnFilterMessagesFunction
   mcpTools?: MCPTool[]
 }
 

@@ -1,66 +1,91 @@
-import { Assistant, MCPTool, Model } from '@renderer/types' // 从 @renderer/types 导入
-import { Chunk } from '@renderer/types/chunk' // 从 @renderer/types/chunk 导入 Chunk 联合类型
+import { Assistant, MCPTool, Model } from '@renderer/types'
+import { Chunk, ErrorChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 
-import { CompletionsParams } from '../AiProvider' // 确保 '.' 正确指向 index.ts 或 CompletionsParams 定义的地方
+import { CompletionsParams, OnFilterMessagesFunction } from '../AiProvider'
 
-// --- Chunk: 直接使用从 chunk.ts 导入的 Chunk 联合类型 ---
+/**
+ * Defines the structure for the onChunk callback function.
+ * This function is called with data chunks during a streaming operation.
+ */
+export type OnChunkFunction = (chunk: Chunk | ErrorChunk) => void
 
-// --- AiProviderMiddlewareCompletionsContext ---
+/**
+ * Represents the 'next' function in the middleware chain for completions.
+ * It takes the current context and calls the next middleware or the original provider logic.
+ */
+export type NextCompletionsFunction = (context: AiProviderMiddlewareCompletionsContext) => Promise<any> // The return type might need to be standardized based on what completions resolves to.
+
+/**
+ * Defines the structure for the completion context object that is passed through the middleware chain.
+ * This context holds all necessary data and callbacks for a completions call.
+ */
 export interface AiProviderMiddlewareCompletionsContext {
-  params: CompletionsParams // 原始或已转换的参数
-  assistant: Assistant
-  model: Model // 在包装器中确保这个字段总是被填充
-  messages: Message[]
-  mcpTools?: MCPTool[]
-  onChunk: (chunk: Chunk) => void // 原始或包装过的 onChunk
-  onFilterMessages: (messages: Message[]) => void // 原始或包装过的 onFilterMessages
-  // 可选: 如果中间件需要访问特定Provider的原始SDK实例或特殊配置
-  // providerInstance?: import('./BaseProvider').BaseProvider;
+  originalParams: CompletionsParams // The initial params as passed to the provider's completions method
+  assistant: Assistant // The assistant (from originalParams.assistant)
+  model: Model // Resolved model (derived, not directly from originalParams)
+  messages: Message[] // Current state of messages (from originalParams.messages, potentially modified by middlewares)
+  mcpTools?: MCPTool[] // Current state of MCP tools (from originalParams.mcpTools, potentially modified)
+  onChunk: OnChunkFunction // Current onChunk callback (potentially wrapped)
+  onFilterMessages: OnFilterMessagesFunction // Current onFilterMessages callback (potentially wrapped)
+  providerId?: string // ID of the provider being wrapped
+  // ... any other state or resolved values added by the middleware system or specific middlewares
 }
 
-// --- NextCompletionsFunction ---
-export type NextCompletionsFunction = (context: AiProviderMiddlewareCompletionsContext) => Promise<void>
+// Represents the actual function that executes a tool and returns its response
+// MCPCallToolResponse is from @renderer/types - ensure it's imported if not already
+// For now, assuming it's available or will be imported where this type is used.
+export type NextToolExecutionFunction = (toolCallData: any) => Promise<any> // Replace 'any' with MCPToolResponse and MCPCallToolResponse
 
-// --- AiProviderMiddleware Interface ---
-export interface AiProviderMiddleware {
-  /**
-   * 可选的唯一标识符，用于日志、调试或有条件地应用中间件。
-   */
-  id?: string
+/**
+ * Base interface for all middlewares, can include common properties like an ID.
+ */
+interface BaseMiddleware {
+  id?: string // Optional identifier for the middleware
+}
 
+/**
+ * Defines the interface for an AI Provider Middleware.
+ * Middlewares can hook into different stages of the completions lifecycle.
+ */
+export interface AiProviderMiddleware extends BaseMiddleware {
   /**
-   * 可选方法。
-   * 在核心 'completions' 操作之前转换参数或上下文。
-   * @param context 当前的上下文，包含原始或先前中间件转换过的参数。
-   * @returns 一个 Promise，解析为更新后的上下文。
+   * Transforms the input parameters for a completions call.
+   * This hook can directly modify the passed-in context.
+   * @param context The current completions context, which can be modified by this hook.
    */
-  transformCompletionsParams?: (
-    context: AiProviderMiddlewareCompletionsContext
-  ) => Promise<AiProviderMiddlewareCompletionsContext>
-
-  /**
-   * 可选方法。
-   * 包装核心的 'completions' 操作。
-   * 中间件可以在调用 'next' 函数前后执行逻辑，或者完全自定义行为。
-   * @param context 当前的上下文。
-   * @param next 一个函数，调用它将执行链中的下一个中间件或原始的 'completions' 实现。
-   * @returns 一个 Promise，在 'completions' 操作完成时解析。
-   */
-  wrapCompletions?: (context: AiProviderMiddlewareCompletionsContext, next: NextCompletionsFunction) => Promise<void>
+  transformCompletionsInput?: (context: AiProviderMiddlewareCompletionsContext) => Promise<void>
 
   /**
-   * 可选方法。
-   * 允许中间件包装原始的 onChunk 回调函数。
-   * 这对于在数据块传递给UI或下一层之前修改、记录或过滤数据块非常有用。
-   * @param originalOnChunk 上一层（或原始的）onChunk 函数。
-   * @param context 提供调用 wrapCompletions 时的上下文，以便 onChunk 包装器可以访问。
-   * @returns 一个新的 onChunk 函数，它将替换原始的 onChunk。
+   * Wraps the core completions logic.
+   * Allows executing code before and after the main operation, and controls the call to 'next'.
+   * @param context The current completions context.
+   * @param next The function to call to proceed to the next middleware or the original provider logic.
    */
-  wrapOnChunk?: (
-    originalOnChunk: (chunk: Chunk) => void,
-    context: Readonly<AiProviderMiddlewareCompletionsContext> // 提供只读上下文，避免在 wrapOnChunk 中意外修改
-  ) => (chunk: Chunk) => void
+  wrapCompletions?: (context: AiProviderMiddlewareCompletionsContext, next: NextCompletionsFunction) => Promise<any> // The return type should align with what NextCompletionsFunction returns.
+
+  /**
+   * Wraps the onChunk callback to intercept or transform data chunks from a streaming response.
+   * @param onChunk The original onChunk function.
+   * @param context The current completions context.
+   * @returns A new onChunk function that wraps the original.
+   */
+  wrapOnChunk?: (onChunk: OnChunkFunction, context: AiProviderMiddlewareCompletionsContext) => OnChunkFunction
+
+  /**
+   * Finalizes the SDK-specific request parameters right before they are sent to the AI provider's SDK.
+   * @param sdkRequestParams The provider-specific request parameters (e.g., OpenAI.Chat.Completions.ChatCompletionCreateParams).
+   * @param context The current completions context.
+   * @returns A Promise resolving to the (potentially modified) SDK-specific request parameters.
+   */
+  finalizeSdkRequestParams?: (sdkRequestParams: any, context: AiProviderMiddlewareCompletionsContext) => Promise<any>
+
+  // Placeholder for wrapToolExecution if we add it later
+  // wrapToolExecution?: (
+  //   toolCallData: any, // Replace with MCPToolResponse
+  //   context: AiProviderMiddlewareCompletionsContext,
+  //   next: NextToolExecutionFunction
+  // ) => Promise<any>; // Replace with MCPCallToolResponse
 }
 
 export type { Chunk as OnChunkArg } from '@renderer/types/chunk'
