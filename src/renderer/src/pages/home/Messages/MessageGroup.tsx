@@ -19,24 +19,14 @@ interface Props {
   messages: (Message & { index: number })[]
   topic: Topic
   hidePresetMessages?: boolean
-  isMultiSelectMode?: boolean
-  selectedMessages?: Set<string>
-  onSelectMessage?: (messageId: string, selected: boolean) => void
   registerMessageElement?: (id: string, element: HTMLElement | null) => void
 }
 
-const MessageGroup = ({
-  messages,
-  topic,
-  hidePresetMessages,
-  isMultiSelectMode = false,
-  selectedMessages = new Set(),
-  onSelectMessage,
-  registerMessageElement
-}: Props) => {
+const MessageGroup = ({ messages, topic, hidePresetMessages, registerMessageElement }: Props) => {
   const { editMessage } = useMessageOperations(topic)
   const { multiModelMessageStyle: multiModelMessageStyleSetting, gridColumns, gridPopoverTrigger } = useSettings()
-  const { registerMessageElement: contextRegisterMessageElement } = useChatContext()
+  const { isMultiSelectMode, selectedMessageIds, handleSelectMessage } = useChatContext()
+  const selectedMessages = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds])
 
   const [multiModelMessageStyle, setMultiModelMessageStyle] = useState<MultiModelMessageStyle>(
     messages[0].multiModelMessageStyle || multiModelMessageStyleSetting
@@ -130,16 +120,16 @@ const MessageGroup = ({
     messages.forEach((message) => {
       const element = document.getElementById(`message-${message.id}`)
       if (element) {
-        contextRegisterMessageElement(message.id, element)
+        registerMessageElement?.(message.id, element)
       }
     })
 
     return () => {
       messages.forEach((message) => {
-        contextRegisterMessageElement(message.id, null)
+        registerMessageElement?.(message.id, null)
       })
     }
-  }, [messages, contextRegisterMessageElement])
+  }, [messages, registerMessageElement])
 
   const renderMessage = useCallback(
     (message: Message & { index: number }) => {
@@ -177,7 +167,7 @@ const MessageGroup = ({
           messageId={message.id}
           isMultiSelectMode={isMultiSelectMode}
           isSelected={selectedMessages.has(message.id)}
-          onSelect={(selected) => onSelectMessage?.(message.id, selected)}
+          onSelect={(selected) => handleSelectMessage(message.id, selected)}
           registerElement={registerMessageElement}
           isClearMessage={message.type === 'clear'}>
           {messageContent}
@@ -218,7 +208,7 @@ const MessageGroup = ({
       isMultiSelectMode,
       selectedMessages,
       registerMessageElement,
-      onSelectMessage,
+      handleSelectMessage,
       gridPopoverTrigger
     ]
   )
@@ -317,18 +307,6 @@ interface MessageWrapperProps {
 
 const MessageWrapper = styled(Scrollbar)<MessageWrapperProps>`
   width: 100%;
-  &.horizontal {
-    display: inline-block;
-  }
-  &.grid {
-    display: inline-block;
-  }
-  &.fold {
-    display: none;
-    &.selected {
-      display: inline-block;
-    }
-  }
 
   ${({ $layout, $isGrouped }) => {
     if ($layout === 'horizontal' && $isGrouped) {

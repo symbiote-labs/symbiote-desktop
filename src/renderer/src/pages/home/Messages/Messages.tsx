@@ -53,7 +53,7 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   )
   const { t } = useTranslation()
   const { showPrompt, showTopics, topicPosition, showAssistants, messageNavigation } = useSettings()
-  const { isMultiSelectMode, selectedMessageIds, handleSelectMessage } = useChatContext()
+  const { isMultiSelectMode, handleSelectMessage } = useChatContext()
   const { updateTopic, addTopic } = useAssistant(assistant.id)
   const dispatch = useAppDispatch()
   const [displayMessages, setDisplayMessages] = useState<Message[]>([])
@@ -68,8 +68,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
   const messages = useTopicMessages(topic.id)
   const { displayCount, clearTopicMessages, deleteMessage, createTopicBranch } = useMessageOperations(topic)
   const messagesRef = useRef<Message[]>(messages)
-
-  const selectedMessagesSet = useMemo(() => new Set(selectedMessageIds), [selectedMessageIds])
 
   useEffect(() => {
     messagesRef.current = messages
@@ -403,9 +401,6 @@ const Messages: React.FC<MessagesProps> = ({ assistant, topic, setActiveTopic, o
                 messages={groupMessages}
                 topic={topic}
                 hidePresetMessages={assistant.settings?.hideMessages}
-                isMultiSelectMode={isMultiSelectMode}
-                selectedMessages={selectedMessagesSet}
-                onSelectMessage={handleSelectMessage}
                 registerMessageElement={registerMessageElement}
               />
             ))}
