@@ -180,6 +180,7 @@ export abstract class BaseOpenAIProvider extends BaseProvider {
 
   protected getServiceTier(model: Model) {
     if (!isOpenAIModel(model)) return undefined
+    if (model.provider === 'github' || model.provider === 'copilot') return undefined
     const openAI = getStoreSetting('openAI') as any
     let serviceTier = 'auto' as OpenAIServiceTier
 
