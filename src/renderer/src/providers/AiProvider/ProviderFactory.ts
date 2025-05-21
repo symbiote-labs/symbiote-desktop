@@ -2,7 +2,7 @@ import { Provider } from '@renderer/types'
 
 import { wrapProviderWithMiddleware } from '../middleware'
 import { AiProviderMiddleware } from '../middleware/AiProviderMiddlewareTypes'
-import { loggingMiddleware } from '../middleware/sampleLoggingMiddleware'
+import { loggingMiddleware } from '../middleware/common/LoggingMiddleware'
 import AihubmixProvider from './AihubmixProvider'
 import AnthropicProvider from './AnthropicProvider'
 import BaseProvider from './BaseProvider'
