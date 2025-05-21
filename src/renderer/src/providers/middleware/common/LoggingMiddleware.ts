@@ -1,105 +1,69 @@
-import { Chunk, ErrorChunk } from '@renderer/types/chunk'
+import { AiProviderMiddlewareBaseContext, MiddlewareAPI, ProviderMethodMiddleware } from '../AiProviderMiddlewareTypes'
 
-import {
-  AiProviderMiddleware,
-  AiProviderMiddlewareCompletionsContext,
-  FinalizeSdkParamsNextFunction,
-  NextExecutionFunction,
-  OnChunkFunction
-} from '../AiProviderMiddlewareTypes'
-
-// Helper to get message content safely for logging
-const getMessageContentForLogging = (message: any): string => {
-  if (!message) return '[Null/Undefined Message]'
-  if (typeof message.content === 'string') {
-    return message.content.substring(0, 100) + (message.content.length > 100 ? '...' : '')
+/**
+ * Helper function to safely stringify arguments for logging, handling circular references and large objects. /
+ * 安全地字符串化日志参数的辅助函数，处理循环引用和大型对象。
+ * @param args - The arguments array to stringify. / 要字符串化的参数数组。
+ * @returns A string representation of the arguments. / 参数的字符串表示形式。
+ */
+const stringifyArgsForLogging = (args: any[]): string => {
+  try {
+    return args
+      .map((arg) => {
+        if (typeof arg === 'function') return '[Function]'
+        if (typeof arg === 'object' && arg !== null && arg.constructor === Object && Object.keys(arg).length > 20) {
+          return '[Object with >20 keys]'
+        }
+        // Truncate long strings to avoid flooding logs / 截断长字符串以避免日志泛滥
+        const stringifiedArg = JSON.stringify(arg, null, 2)
+        return stringifiedArg && stringifiedArg.length > 200 ? stringifiedArg.substring(0, 200) + '...' : stringifiedArg
+      })
+      .join(', ')
+  } catch (e) {
+    return '[Error serializing arguments]' // Handle potential errors during stringification / 处理字符串化期间的潜在错误
   }
-  if (
-    Array.isArray(message.blocks) &&
-    message.blocks.length > 0 &&
-    message.blocks[0] &&
-    typeof message.blocks[0].content === 'string'
-  ) {
-    return message.blocks[0].content.substring(0, 50) + (message.blocks[0].content.length > 50 ? '...' : '')
-  }
-  if (typeof message.text === 'string') {
-    return message.text.substring(0, 100) + (message.text.length > 100 ? '...' : '')
-  }
-  if (message.role && typeof message.role === 'string') {
-    return `[Message Role: ${message.role}`
-  }
-  return '[Unable to display message content]'
 }
 
-export const loggingMiddleware: AiProviderMiddleware = {
-  name: 'LoggingMiddleware',
+/**
+ * Creates a generic logging middleware for provider methods. /
+ * 为提供者方法创建一个通用的日志中间件。
+ * This middleware logs the initiation, success/failure, and duration of a method call. /
+ * 此中间件记录方法调用的启动、成功/失败以及持续时间。
+ * It uses a helper to stringify arguments for logging, preventing issues with complex objects. /
+ * 它使用一个辅助函数来字符串化日志参数，以防止复杂对象带来的问题。
+ * @returns A `ProviderMethodMiddleware` instance. / 一个 `ProviderMethodMiddleware` 实例。
+ */
+export const createGenericLoggingMiddleware: () => ProviderMethodMiddleware = () => {
+  const middlewareName = 'GenericLoggingMiddleware'
 
-  prepareCompletionsContext: async (context: AiProviderMiddlewareCompletionsContext) => {
-    const assistantId = context.assistant?.id || 'unknown-assistant'
-    const modelId = context.model?.id || 'unknown-model'
-    console.log(
-      `[${loggingMiddleware.name} (${assistantId}-${modelId})] prepareCompletionsContext. Messages:`,
-      context.messages?.map(getMessageContentForLogging) || '[No Messages]'
-    )
-    return context
-  },
+  return (api: MiddlewareAPI<AiProviderMiddlewareBaseContext, any[]>) => {
+    const providerId = api.getProviderId() || 'unknown-provider'
 
-  wrapCompletionsOnChunkCallback: (
-    originalOnChunk: OnChunkFunction,
-    context: AiProviderMiddlewareCompletionsContext
-  ) => {
-    const assistantId = context.assistant?.id || 'unknown-assistant'
-    const modelId = context.model?.id || 'unknown-model'
-    console.log(`[${loggingMiddleware.name} (${assistantId}-${modelId})] wrapCompletionsOnChunkCallback setup.`)
-    return (chunk: Chunk | ErrorChunk) => {
-      console.log(`[${loggingMiddleware.name} (${assistantId}-${modelId})] onChunk: type=${chunk.type}`, chunk)
-      originalOnChunk(chunk)
+    return (next) => {
+      return async (context, args) => {
+        const methodName = context.methodName
+        const logPrefix = `[${middlewareName} (${providerId}-${methodName})]`
+
+        // Log initiation of the method call with stringified arguments. /
+        // 使用字符串化的参数记录方法调用的启动。
+        console.log(`${logPrefix} Initiating. Args:`, stringifyArgsForLogging(args))
+
+        const startTime = Date.now()
+        try {
+          const result = await next(context, args)
+          const duration = Date.now() - startTime
+          // Log successful completion of the method call with duration. /
+          // 记录方法调用成功完成及其持续时间。
+          console.log(`${logPrefix} Successful. Duration: ${duration}ms`)
+          return result
+        } catch (error) {
+          const duration = Date.now() - startTime
+          // Log failure of the method call with duration and error information. /
+          // 记录方法调用失败及其持续时间和错误信息。
+          console.error(`${logPrefix} Failed. Duration: ${duration}ms`, error)
+          throw error // Re-throw the error to be handled by subsequent layers or the caller / 重新抛出错误，由后续层或调用者处理
+        }
+      }
     }
-  },
-
-  aroundCompletionsExecution: async (context: AiProviderMiddlewareCompletionsContext, next: NextExecutionFunction) => {
-    const assistantId = context.assistant?.id || 'unknown-assistant'
-    const modelId = context.model?.id || 'unknown-model'
-    console.log(
-      `[${loggingMiddleware.name} (${assistantId}-${modelId})] aroundCompletionsExecution: BEFORE next(). Messages:`,
-      context.messages?.map(getMessageContentForLogging) || '[No Messages]'
-    )
-
-    const startTime = Date.now()
-
-    try {
-      const result = await next(context)
-      const duration = Date.now() - startTime
-      console.log(
-        `[${loggingMiddleware.name} (${assistantId}-${modelId})] aroundCompletionsExecution: AFTER next() (SUCCESS). Duration: ${duration}ms`
-      )
-      return result
-    } catch (error) {
-      const duration = Date.now() - startTime
-      console.error(
-        `[${loggingMiddleware.name} (${assistantId}-${modelId})] aroundCompletionsExecution: AFTER next() (ERROR). Duration: ${duration}ms`,
-        error
-      )
-      throw error
-    }
-  },
-
-  finalizeCompletionsSdkParams: async (
-    sdkParams: any,
-    context: AiProviderMiddlewareCompletionsContext,
-    next: FinalizeSdkParamsNextFunction
-  ) => {
-    const assistantId = context.assistant?.id || 'unknown-assistant'
-    const modelId = context.model?.id || 'unknown-model'
-    console.log(
-      `[${loggingMiddleware.name} (${assistantId}-${modelId})] finalizeCompletionsSdkParams: BEFORE next(). SDK Params:`,
-      sdkParams
-    )
-    const resultParams = await next(sdkParams, context)
-    console.log(
-      `[${loggingMiddleware.name} (${assistantId}-${modelId})] finalizeCompletionsSdkParams: AFTER next(). Final SDK Params:`,
-      resultParams
-    )
-    return resultParams
   }
 }

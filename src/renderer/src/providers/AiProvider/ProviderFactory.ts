@@ -1,8 +1,7 @@
 import { Provider } from '@renderer/types'
 
 import { wrapProviderWithMiddleware } from '../middleware'
-import { AiProviderMiddleware } from '../middleware/AiProviderMiddlewareTypes'
-import { loggingMiddleware } from '../middleware/common/LoggingMiddleware'
+import middlewareConfig from '../middleware/register'
 import AihubmixProvider from './AihubmixProvider'
 import AnthropicProvider from './AnthropicProvider'
 import BaseProvider from './BaseProvider'
@@ -13,7 +12,6 @@ import OpenAIResponseProvider from './OpenAIResponseProvider'
 export default class ProviderFactory {
   static create(provider: Provider): BaseProvider {
     let instance: BaseProvider
-    const middlewares: AiProviderMiddleware[] = [loggingMiddleware] // 通用中间件
 
     if (provider.id === 'aihubmix') {
       instance = new AihubmixProvider(provider)
@@ -35,7 +33,7 @@ export default class ProviderFactory {
           instance = new OpenAIProvider(provider)
       }
     }
-    return wrapProviderWithMiddleware(instance, middlewares)
+    return wrapProviderWithMiddleware(instance, middlewareConfig)
   }
 }
 

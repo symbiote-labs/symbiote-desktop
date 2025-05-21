@@ -24,7 +24,6 @@ import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isEmpty } from 'lodash'
 import type OpenAI from 'openai'
 
-import type { AiProviderMiddlewareCompletionsContext } from '../middleware/AiProviderMiddlewareTypes'
 import type { CompletionsParams } from '.'
 
 export default abstract class BaseProvider {
@@ -48,7 +47,7 @@ export default abstract class BaseProvider {
     return this.provider
   }
 
-  abstract completions(context: AiProviderMiddlewareCompletionsContext): Promise<void>
+  abstract completions(params: CompletionsParams): Promise<void>
   abstract translate(
     content: string,
     assistant: Assistant,
@@ -69,12 +68,6 @@ export default abstract class BaseProvider {
     resp: MCPCallToolResponse,
     model: Model
   ): any
-
-  // Optional hook for middlewares to finalize SDK-specific request params
-  public async finalizeSdkRequestParams?(
-    sdkRequestParams: any,
-    context: AiProviderMiddlewareCompletionsContext
-  ): Promise<any>
 
   public getBaseURL(): string {
     const host = this.provider.apiHost

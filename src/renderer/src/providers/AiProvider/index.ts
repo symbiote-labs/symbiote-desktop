@@ -5,8 +5,6 @@ import { Chunk } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
 
-import type { AiProviderMiddlewareCompletionsContext } from '../middleware/AiProviderMiddlewareTypes'
-
 export type OnFilterMessagesFunction = (messages: Message[]) => void
 
 export interface CompletionsParams {
@@ -28,8 +26,8 @@ export default class AiProvider {
     return this.sdk.fakeCompletions(params)
   }
 
-  public async completions(context: AiProviderMiddlewareCompletionsContext): Promise<void> {
-    return this.sdk.completions(context)
+  public async completions(params: CompletionsParams): Promise<void> {
+    return this.sdk.completions(params)
   }
 
   public async translate(
