@@ -179,12 +179,15 @@ export abstract class BaseOpenAIProvider extends BaseProvider {
   }
 
   protected getServiceTier(model: Model) {
-    if (!isOpenAIModel(model)) return undefined
-    if (model.provider === 'github' || model.provider === 'copilot') return undefined
+    if (!isOpenAIModel(model)) {
+      return undefined
+      if (model.provider === 'github' || model.provider === 'copilot') return undefined
+    }
+
     const openAI = getStoreSetting('openAI') as any
     let serviceTier = 'auto' as OpenAIServiceTier
 
-    if (openAI.serviceTier === 'flex') {
+    if (openAI && openAI?.serviceTier === 'flex') {
       if (isSupportedFlexServiceTier(model)) {
         serviceTier = 'flex'
       } else {
@@ -208,9 +211,12 @@ export abstract class BaseOpenAIProvider extends BaseProvider {
     if (!isSupportedReasoningEffortOpenAIModel(model)) {
       return {}
     }
+
     const openAI = getStoreSetting('openAI') as any
-    const summaryText = openAI.summaryText as OpenAISummaryText
+    const summaryText = (openAI?.summaryText as OpenAISummaryText) || 'off'
+
     let summary: string | undefined = undefined
+
     if (summaryText === 'off' || model.id.includes('o1-pro')) {
       summary = undefined
     } else {
