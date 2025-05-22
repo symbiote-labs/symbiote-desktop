@@ -4,6 +4,7 @@ import type { Assistant, GenerateImageParams, MCPTool, Model, Provider, Suggesti
 import { Chunk } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
+import type { Stream } from 'openai/streaming'
 
 export type OnFilterMessagesFunction = (messages: Message[]) => void
 
@@ -13,6 +14,13 @@ export interface CompletionsParams {
   onChunk: (chunk: Chunk) => void
   onFilterMessages: OnFilterMessagesFunction
   mcpTools?: MCPTool[]
+}
+
+// Re-export CompletionsResult
+export interface CompletionsResult {
+  stream: OpenAI.Chat.Completions.ChatCompletion & {
+    _request_id?: string | null
+  } & Stream<OpenAI.Chat.Completions.ChatCompletionChunk>
 }
 
 export default class AiProvider {
@@ -26,7 +34,7 @@ export default class AiProvider {
     return this.sdk.fakeCompletions(params)
   }
 
-  public async completions(params: CompletionsParams): Promise<void> {
+  public async completions(params: CompletionsParams): Promise<CompletionsResult> {
     return this.sdk.completions(params)
   }
 

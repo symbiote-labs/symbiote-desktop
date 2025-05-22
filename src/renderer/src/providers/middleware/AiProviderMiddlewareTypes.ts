@@ -76,16 +76,21 @@ export type ProviderMethodMiddleware = (
 ) => (context: AiProviderMiddlewareBaseContext, args: any[]) => Promise<any>
 
 /**
+ * Represents the result of a completions call, especially when streaming.
+ * It includes the stream of chunks and potentially final usage/metrics.
+ */
+
+/**
  * Specific middleware type for the 'completions' method. /
  * 针对 'completions' 方法的特定中间件类型。
- * The third layer and its 'next' function now directly accept 'CompletionsParams'. /
- * 第三层及其 'next' 函数现在直接接受 'CompletionsParams'。
+ * The third layer and its 'next' function now accept 'CompletionsParams' and return 'CompletionsResult'. /
+ * 第三层及其 'next' 函数现在接受 'CompletionsParams' 并返回 'CompletionsResult'。
  */
 export type CompletionsMiddleware = (
   api: MiddlewareAPI<AiProviderMiddlewareCompletionsContext, [CompletionsParams]>
 ) => (
-  next: (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<void>
-) => (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<void>
+  next: (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<any>
+) => (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<any>
 
 /**
  * Base configuration for any middleware, can include common properties like id or name. /

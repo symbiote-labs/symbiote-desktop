@@ -1,4 +1,5 @@
 import type { CompletionsParams } from '../AiProvider' // For createCompletionsContext typing
+import CompletionsResult from '../AiProvider'
 import type BaseProvider from '../AiProvider/BaseProvider'
 import {
   AiProviderMiddlewareBaseContext,
@@ -140,9 +141,9 @@ export function applyMiddlewaresToMethod<
  */
 export function applyCompletionsMiddlewares(
   originalProviderInstance: BaseProvider,
-  originalCompletionsMethod: (params: CompletionsParams) => Promise<void>,
+  originalCompletionsMethod: (params: CompletionsParams) => Promise<CompletionsResult>,
   middlewares: CompletionsMiddleware[]
-): (params: CompletionsParams) => Promise<void> {
+): (params: CompletionsParams) => Promise<CompletionsResult> {
   // Returns a function matching the original method signature. /
   // 返回一个与原始方法签名匹配的函数。
 
@@ -167,7 +168,7 @@ export function applyCompletionsMiddlewares(
     }
   }
 
-  return async function enhancedCompletionsMethod(params: CompletionsParams): Promise<void> {
+  return async function enhancedCompletionsMethod(params: CompletionsParams): Promise<CompletionsResult> {
     // `originalCallArgs` for context creation is `[params]`. /
     // 用于上下文创建的 `originalCallArgs` 是 `[params]`。
     const originalCallArgs: [CompletionsParams] = [params]
@@ -192,7 +193,7 @@ export function applyCompletionsMiddlewares(
     const finalDispatch = async (
       _context: AiProviderMiddlewareCompletionsContext, // Context passed through / 上下文透传
       currentParams: CompletionsParams // Directly takes params / 直接接收参数
-    ): Promise<void> => {
+    ): Promise<CompletionsResult> => {
       // Call original method with original `this` and the params object. /
       // 使用原始的 `this` 和参数对象调用原始方法。
       return originalCompletionsMethod.call(originalProviderInstance, currentParams)
@@ -201,8 +202,8 @@ export function applyCompletionsMiddlewares(
     const chain = middlewares.map((middleware) => middleware(api))
     const composedMiddlewareLogic = compose(...chain)
 
-    // `enhancedDispatch` has the signature `(context, params) => Promise<void>`. /
-    // `enhancedDispatch` 的签名为 `(context, params) => Promise<void>`。
+    // `enhancedDispatch` has the signature `(context, params) => Promise<CompletionsResult>`. /
+    // `enhancedDispatch` 的签名为 `(context, params) => Promise<CompletionsResult>`。
     const enhancedDispatch = composedMiddlewareLogic(finalDispatch)
 
     // Execute with context and the single params object. /

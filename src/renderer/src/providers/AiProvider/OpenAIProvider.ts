@@ -75,7 +75,7 @@ import {
   ChatCompletionToolMessageParam
 } from 'openai/resources'
 
-import { CompletionsParams } from '.'
+import { CompletionsParams, CompletionsResult } from '.'
 import { BaseOpenAIProvider } from './OpenAIResponseProvider'
 
 // 1. 定义联合类型
@@ -360,11 +360,18 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
    * @param onFilterMessages - The onFilterMessages callback
    * @returns The completions
    */
-  async completions({ messages, assistant, mcpTools, onChunk, onFilterMessages }: CompletionsParams): Promise<void> {
-    if (assistant.enableGenerateImage) {
-      await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)
-      return
-    }
+  async completions({
+    messages,
+    assistant,
+    mcpTools,
+    onChunk,
+    onFilterMessages
+  }: CompletionsParams): Promise<CompletionsResult> {
+    // TODO: 图片生成
+    // if (assistant.enableGenerateImage) {
+    //   await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)
+    //   return
+    // }
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
 
@@ -880,12 +887,13 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
         }
       )
 
-    await processStream(stream, 0).finally(cleanup)
+    // await processStream(stream, 0).finally(cleanup)
+    return { stream }
 
     // 捕获signal的错误
-    await signalPromise?.promise?.catch((error) => {
-      throw error
-    })
+    // await signalPromise?.promise?.catch((error) => {
+    //   throw error
+    // })
   }
 
   /**

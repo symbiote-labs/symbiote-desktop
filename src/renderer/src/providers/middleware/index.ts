@@ -50,7 +50,7 @@ export function wrapProviderWithMiddleware(
       // Special handling for 'completions' method. /
       // 对 'completions' 方法的特殊处理。
       if (methodName === 'completions' && middlewareConfig.completions?.length) {
-        const completionsOriginalMethod = originalMethod as (params: CompletionsParams) => Promise<void>
+        const completionsOriginalMethod = originalMethod as (params: CompletionsParams) => Promise<any>
         wrappedMethod = applyCompletionsMiddlewares(
           target, // The original provider instance / 原始提供者实例
           completionsOriginalMethod,
