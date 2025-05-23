@@ -2,7 +2,7 @@ import { Assistant, MCPTool, Model } from '@renderer/types'
 import { Chunk, ErrorChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 
-import { CompletionsParams, CompletionsResult, OnFilterMessagesFunction } from '../AiProvider'
+import { CompletionsOpenAIResult, CompletionsParams, OnFilterMessagesFunction } from '../AiProvider'
 import type BaseProvider from '../AiProvider/BaseProvider'
 
 /**
@@ -89,8 +89,8 @@ export type ProviderMethodMiddleware = (
 export type CompletionsMiddleware = (
   api: MiddlewareAPI<AiProviderMiddlewareCompletionsContext, [CompletionsParams]>
 ) => (
-  next: (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<CompletionsResult>
-) => (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<CompletionsResult>
+  next: (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<CompletionsOpenAIResult>
+) => (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => Promise<CompletionsOpenAIResult>
 
 /**
  * Base configuration for any middleware, can include common properties like id or name. /

@@ -17,11 +17,13 @@ export interface CompletionsParams {
 }
 
 // Re-export CompletionsResult
-export interface CompletionsResult {
-  stream:
-    | (OpenAI.Chat.Completions.ChatCompletion & {
+export interface CompletionsOpenAIResult {
+  stream: // openai sdk stream
+  | (OpenAI.Chat.Completions.ChatCompletion & {
         _request_id?: string | null
       } & Stream<OpenAI.Chat.Completions.ChatCompletionChunk>)
+    // our app-specific stream
+    | ReadableStream<OpenAI.Chat.Completions.ChatCompletionChunk>
     | ReadableStream<Chunk>
 }
 
@@ -36,7 +38,7 @@ export default class AiProvider {
     return this.sdk.fakeCompletions(params)
   }
 
-  public async completions(params: CompletionsParams): Promise<CompletionsResult> {
+  public async completions(params: CompletionsParams): Promise<CompletionsOpenAIResult> {
     return this.sdk.completions(params)
   }
 

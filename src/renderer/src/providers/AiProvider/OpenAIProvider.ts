@@ -75,7 +75,7 @@ import {
   ChatCompletionToolMessageParam
 } from 'openai/resources'
 
-import { CompletionsParams, CompletionsResult } from '.'
+import { CompletionsOpenAIResult, CompletionsParams } from '.'
 import { BaseOpenAIProvider } from './OpenAIResponseProvider'
 
 // 1. 定义联合类型
@@ -366,7 +366,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     mcpTools,
     onChunk,
     onFilterMessages
-  }: CompletionsParams): Promise<CompletionsResult> {
+  }: CompletionsParams): Promise<CompletionsOpenAIResult> {
     // TODO: 图片生成
     // if (assistant.enableGenerateImage) {
     //   await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)

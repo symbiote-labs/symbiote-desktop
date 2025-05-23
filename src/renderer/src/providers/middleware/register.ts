@@ -1,13 +1,20 @@
 import { AiProviderMiddlewareConfig } from './AiProviderMiddlewareTypes'
 import { createCompletionsLoggingMiddleware } from './common/CompletionsLoggingMiddleware'
 import { createGenericLoggingMiddleware } from './common/LoggingMiddleware'
+import { FinalChunkConsumerAndNotifierMiddleware } from './openai/FinalChunkConsumerAndNotifierMiddleware'
+import { OpenAISDKChunkToStandardChunkMiddleware } from './openai/OpenAISDKChunkToStandardChunkMiddleware'
 import { StreamAdapterMiddleware } from './openai/StreamAdapterMiddleware'
 
 // Construct AiProviderMiddlewareConfig
 // Assuming loggingMiddleware is a ProviderMethodMiddleware. Adjust if it's a CompletionsMiddleware.
 const middlewareConfig: AiProviderMiddlewareConfig = {
   // Use the specialized logger for 'completions'. This array expects CompletionsMiddleware.
-  completions: [createCompletionsLoggingMiddleware(), StreamAdapterMiddleware],
+  completions: [
+    createCompletionsLoggingMiddleware(),
+    FinalChunkConsumerAndNotifierMiddleware,
+    OpenAISDKChunkToStandardChunkMiddleware,
+    StreamAdapterMiddleware
+  ],
 
   // Use the generic logger for other methods. These arrays expect ProviderMethodMiddleware.
   methods: {
