@@ -1445,6 +1445,14 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '107': (state: RootState) => {
+    try {
+      addProvider(state, 'vertexai')
+      return state
+    } catch (error) {
+      return state
+    }
   }
 }
 

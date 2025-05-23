@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { isLocalAi } from '@renderer/config/env'
 import { SYSTEM_MODELS } from '@renderer/config/models'
-import { Model, Provider } from '@renderer/types'
+import { Model, Provider, VertexAIMode } from '@renderer/types'
 import { uniqBy } from 'lodash'
 
 type LlmSettings = {
@@ -13,6 +13,11 @@ type LlmSettings = {
   }
   gpustack: {
     keepAliveTime: number
+  }
+  vertexai: {
+    projectId: string
+    location: string
+    mode: VertexAIMode
   }
 }
 
@@ -497,6 +502,16 @@ export const INITIAL_PROVIDERS: Provider[] = [
     models: SYSTEM_MODELS.tokenflux,
     isSystem: true,
     enabled: false
+  },
+  {
+    id: 'vertexai',
+    name: 'VertexAI',
+    type: 'vertexai',
+    apiKey: '',
+    apiHost: 'https://aiplatform.googleapis.com',
+    models: [],
+    isSystem: true,
+    enabled: false
   }
 ]
 
@@ -515,6 +530,11 @@ const initialState: LlmState = {
     },
     gpustack: {
       keepAliveTime: 0
+    },
+    vertexai: {
+      projectId: '',
+      location: '',
+      mode: 'full'
     }
   }
 }
@@ -623,6 +643,15 @@ const llmSlice = createSlice({
     setGPUStackKeepAliveTime: (state, action: PayloadAction<number>) => {
       state.settings.gpustack.keepAliveTime = action.payload
     },
+    setVertexAIProjectId: (state, action: PayloadAction<string>) => {
+      state.settings.vertexai.projectId = action.payload
+    },
+    setVertexAILocation: (state, action: PayloadAction<string>) => {
+      state.settings.vertexai.location = action.payload
+    },
+    setVertexAIMode: (state, action: PayloadAction<VertexAIMode>) => {
+      state.settings.vertexai.mode = action.payload
+    },
     updateModel: (
       state,
       action: PayloadAction<{
@@ -655,6 +684,9 @@ export const {
   setOllamaKeepAliveTime,
   setLMStudioKeepAliveTime,
   setGPUStackKeepAliveTime,
+  setVertexAIProjectId,
+  setVertexAILocation,
+  setVertexAIMode,
   updateModel
 } = llmSlice.actions
 
