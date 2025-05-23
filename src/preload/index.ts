@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { IpcChannel } from '@shared/IpcChannel'
 import { FileType, KnowledgeBaseParams, KnowledgeItem, MCPServer, Shortcut, WebDavConfig } from '@types'
 import { contextBridge, ipcRenderer, OpenDialogOptions, shell, webUtils } from 'electron'
+import { Notification } from 'src/renderer/src/types/notification'
 import { CreateDirectoryOptions } from 'webdav'
 
 // Custom APIs for renderer
@@ -25,6 +26,9 @@ const api = {
   openWebsite: (url: string) => ipcRenderer.invoke(IpcChannel.Open_Website, url),
   getCacheSize: () => ipcRenderer.invoke(IpcChannel.App_GetCacheSize),
   clearCache: () => ipcRenderer.invoke(IpcChannel.App_ClearCache),
+  notification: {
+    send: (notification: Notification) => ipcRenderer.invoke(IpcChannel.Notification_Send, notification)
+  },
   system: {
     getDeviceType: () => ipcRenderer.invoke(IpcChannel.System_GetDeviceType),
     getHostname: () => ipcRenderer.invoke(IpcChannel.System_GetHostname)
@@ -55,7 +59,6 @@ const api = {
   },
   file: {
     select: (options?: OpenDialogOptions) => ipcRenderer.invoke(IpcChannel.File_Select, options),
-    resolveFilePath: (name: string) => ipcRenderer.invoke(IpcChannel.File_ResolveFilePath, name),
     upload: (file: FileType) => ipcRenderer.invoke(IpcChannel.File_Upload, file),
     delete: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_Delete, fileId),
     read: (fileId: string) => ipcRenderer.invoke(IpcChannel.File_Read, fileId),
@@ -113,7 +116,8 @@ const api = {
     resetMinimumSize: () => ipcRenderer.invoke(IpcChannel.Windows_ResetMinimumSize)
   },
   gemini: {
-    uploadFile: (file: FileType, apiKey: string) => ipcRenderer.invoke(IpcChannel.Gemini_UploadFile, file, apiKey),
+    uploadFile: (file: FileType, { apiKey, baseURL }: { apiKey: string; baseURL: string }) =>
+      ipcRenderer.invoke(IpcChannel.Gemini_UploadFile, file, { apiKey, baseURL }),
     base64File: (file: FileType) => ipcRenderer.invoke(IpcChannel.Gemini_Base64File, file),
     retrieveFile: (file: FileType, apiKey: string) => ipcRenderer.invoke(IpcChannel.Gemini_RetrieveFile, file, apiKey),
     listFiles: (apiKey: string) => ipcRenderer.invoke(IpcChannel.Gemini_ListFiles, apiKey),
@@ -149,7 +153,8 @@ const api = {
     listResources: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListResources, server),
     getResource: ({ server, uri }: { server: MCPServer; uri: string }) =>
       ipcRenderer.invoke(IpcChannel.Mcp_GetResource, { server, uri }),
-    getInstallInfo: () => ipcRenderer.invoke(IpcChannel.Mcp_GetInstallInfo)
+    getInstallInfo: () => ipcRenderer.invoke(IpcChannel.Mcp_GetInstallInfo),
+    checkMcpConnectivity: (server: any) => ipcRenderer.invoke(IpcChannel.Mcp_CheckConnectivity, server)
   },
   shell: {
     openExternal: (url: string, options?: Electron.OpenExternalOptions) => shell.openExternal(url, options)

@@ -1415,7 +1415,32 @@ const migrateConfig = {
   },
   '104': (state: RootState) => {
     try {
+      addProvider(state, 'burncloud')
+      state.llm.providers = moveProvider(state.llm.providers, 'burncloud', 10)
+      return state
+    } catch (error) {
+      return state
+    }
+  },
+  '105': (state: RootState) => {
+    try {
+      state.settings.notification = settingsInitialState.notification
+      addMiniApp(state, 'google')
+      if (!state.settings.openAI) {
+        state.settings.openAI = {
+          summaryText: 'off',
+          serviceTier: 'auto'
+        }
+      }
+      return state
+    } catch (error) {
+      return state
+    }
+  },
+  '106': (state: RootState) => {
+    try {
       addProvider(state, 'tokenflux')
+      state.llm.providers = moveProvider(state.llm.providers, 'tokenflux', 15)
       return state
     } catch (error) {
       return state

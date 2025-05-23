@@ -157,6 +157,8 @@ const visionAllowedModels = [
   'gemini-2\\.5',
   'gemini-exp',
   'claude-3',
+  'claude-sonnet-4',
+  'claude-opus-4',
   'vision',
   'glm-4v',
   'qwen-vl',
@@ -243,7 +245,7 @@ export const FUNCTION_CALLING_REGEX = new RegExp(
 )
 
 export const CLAUDE_SUPPORTED_WEBSEARCH_REGEX = new RegExp(
-  `\\b(?:claude-3(-|\\.)(7|5)-sonnet(?:-[\\w-]+)|claude-3(-|\\.)5-haiku(?:-[\\w-]+))\\b`,
+  `\\b(?:claude-3(-|\\.)(7|5)-sonnet(?:-[\\w-]+)|claude-3(-|\\.)5-haiku(?:-[\\w-]+)|claude-sonnet-4(?:-[\\w-]+)?|claude-opus-4(?:-[\\w-]+)?)\\b`,
   'i'
 )
 
@@ -431,6 +433,30 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       group: 'Qwen'
     }
   ],
+
+  burncloud: [
+    { id: 'claude-3-7-sonnet-20250219-thinking', provider: 'burncloud', name: 'Claude 3.7 thinking', group: 'Claude' },
+    { id: 'claude-3-7-sonnet-20250219', provider: 'burncloud', name: 'Claude 3.7 Sonnet', group: 'Claude 3.7' },
+    { id: 'claude-3-5-sonnet-20241022', provider: 'burncloud', name: 'Claude 3.5 Sonnet', group: 'Claude 3.5' },
+    { id: 'claude-3-5-haiku-20241022', provider: 'burncloud', name: 'Claude 3.5 Haiku', group: 'Claude 3.5' },
+
+    { id: 'gpt-4.5-preview', provider: 'burncloud', name: 'gpt-4.5-preview', group: 'gpt-4.5' },
+    { id: 'gpt-4o', provider: 'burncloud', name: 'GPT-4o', group: 'GPT 4o' },
+    { id: 'gpt-4o-mini', provider: 'burncloud', name: 'GPT-4o-mini', group: 'GPT 4o' },
+    { id: 'o3', provider: 'burncloud', name: 'GPT-o1-mini', group: 'o1' },
+    { id: 'o3-mini', provider: 'burncloud', name: 'GPT-o1-preview', group: 'o1' },
+    { id: 'o1-mini', provider: 'burncloud', name: 'GPT-o1-mini', group: 'o1' },
+
+    { id: 'gemini-2.5-pro-preview-03-25', provider: 'burncloud', name: 'Gemini 2.5 Preview', group: 'Geminit 2.5' },
+    { id: 'gemini-2.5-pro-exp-03-25', provider: 'burncloud', name: 'Gemini 2.5 Pro Exp', group: 'Geminit 2.5' },
+    { id: 'gemini-2.0-flash-lite', provider: 'burncloud', name: 'Gemini 2.0 Flash Lite', group: 'Geminit 2.0' },
+    { id: 'gemini-2.0-flash-exp', provider: 'burncloud', name: 'Gemini 2.0 Flash Exp', group: 'Geminit 2.0' },
+    { id: 'gemini-2.0-flash', provider: 'burncloud', name: 'Gemini 2.0 Flash', group: 'Geminit 2.0' },
+
+    { id: 'deepseek-r1', name: 'DeepSeek-R1', provider: 'burncloud', group: 'deepseek-ai' },
+    { id: 'deepseek-v3', name: 'DeepSeek-V3', provider: 'burncloud', group: 'deepseek-ai' }
+  ],
+
   o3: [
     {
       id: 'gpt-4o',
@@ -698,6 +724,18 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
     }
   ],
   anthropic: [
+    {
+      id: 'claude-sonnet-4-20250514',
+      provider: 'anthropic',
+      name: 'Claude Sonnet 4',
+      group: 'Claude 4'
+    },
+    {
+      id: 'claude-opus-4-20250514',
+      provider: 'anthropic',
+      name: 'Claude Opus 4',
+      group: 'Claude 4'
+    },
     {
       id: 'claude-3-7-sonnet-20250219',
       provider: 'anthropic',
@@ -2456,7 +2494,12 @@ export function isClaudeReasoningModel(model?: Model): boolean {
   if (!model) {
     return false
   }
-  return model.id.includes('claude-3-7-sonnet') || model.id.includes('claude-3.7-sonnet')
+  return (
+    model.id.includes('claude-3-7-sonnet') ||
+    model.id.includes('claude-3.7-sonnet') ||
+    model.id.includes('claude-sonnet-4') ||
+    model.id.includes('claude-opus-4')
+  )
 }
 
 export const isSupportedThinkingTokenClaudeModel = isClaudeReasoningModel
@@ -2590,6 +2633,10 @@ export function isWebSearchModel(model: Model): boolean {
     return true
   }
 
+  if (provider.id === 'grok') {
+    return true
+  }
+
   return false
 }
 
@@ -2619,6 +2666,16 @@ export function getOpenAIWebSearchParams(assistant: Assistant, model: Model): Re
   if (isWebSearchModel(model)) {
     if (assistant.enableWebSearch) {
       const webSearchTools = getWebSearchTools(model)
+
+      if (model.provider === 'grok') {
+        return {
+          search_parameters: {
+            mode: 'auto',
+            return_citations: true,
+            sources: [{ type: 'web' }, { type: 'x' }, { type: 'news' }]
+          }
+        }
+      }
 
       if (model.provider === 'hunyuan') {
         return { enable_enhancement: true, citation: true, search_info: true }
@@ -2722,7 +2779,8 @@ export const THINKING_TOKEN_MAP: Record<string, { min: number; max: number }> = 
   'qwen3-.*$': { min: 1024, max: 38912 },
 
   // Claude models
-  'claude-3[.-]7.*sonnet.*$': { min: 1024, max: 64000 }
+  'claude-3[.-]7.*sonnet.*$': { min: 1024, max: 64000 },
+  'claude-(:?sonnet|opus)-4.*$': { min: 1024, max: 64000 }
 }
 
 export const findTokenLimit = (modelId: string): { min: number; max: number } | undefined => {

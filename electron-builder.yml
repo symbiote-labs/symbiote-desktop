@@ -45,6 +45,8 @@ win:
   target:
     - target: nsis
     - target: portable
+  signtoolOptions:
+    sign: scripts/win-sign.js
 nsis:
   artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: ${productName}
@@ -92,9 +94,9 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     ⚠️ 注意：升级前请备份数据，否则将无法降级
-    优化软件启动速度
-    优化软件进入后台后性能问题
-    修复导出对话时自动重命名失败问题
-    防止输入法切换期间误发消息问题
-    修复群组消息重发功能问题及富文本粘贴兼容性问题
-    改进 MCP 服务处理及 IPC 注册逻辑
+    增加 Claude 4 模型支持
+    Grok 模型增加联网能力
+    修复无法搜索历史消息问题
+    修复 MCP 代理问题
+    修复精简备份恢复覆盖文件问题
+    修复@模型回复插入位置错误问题
