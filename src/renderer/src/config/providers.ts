@@ -38,7 +38,7 @@ import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.p
 import StepProviderLogo from '@renderer/assets/images/providers/step.png'
 import TencentCloudProviderLogo from '@renderer/assets/images/providers/tencent-cloud-ti.png'
 import TogetherProviderLogo from '@renderer/assets/images/providers/together.png'
-import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.svg'
+import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.png'
 import BytedanceProviderLogo from '@renderer/assets/images/providers/volcengine.png'
 import VoyageAIProviderLogo from '@renderer/assets/images/providers/voyageai.png'
 import XirangProviderLogo from '@renderer/assets/images/providers/xirang.png'

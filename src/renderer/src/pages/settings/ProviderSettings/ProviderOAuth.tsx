@@ -1,6 +1,6 @@
 import AiHubMixProviderLogo from '@renderer/assets/images/providers/aihubmix.webp'
 import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.png'
-import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.svg'
+import TokenFluxProviderLogo from '@renderer/assets/images/providers/tokenflux.png'
 import { HStack } from '@renderer/components/Layout'
 import OAuthButton from '@renderer/components/OAuth/OAuthButton'
 import { PROVIDER_CONFIG } from '@renderer/config/providers'
