@@ -75,9 +75,11 @@ export const createCompletionsLoggingMiddleware: () => CompletionsMiddleware = (
 
         const startTime = Date.now()
         try {
-          await next(context, newParams)
+          // 调用 next 并存储其结果
+          const result = await next(context, newParams)
           const duration = Date.now() - startTime
           console.log(`${logPrefix} 'completions' successful. Duration: ${duration}ms`)
+          return result // 返回 next 的结果
         } catch (error) {
           const duration = Date.now() - startTime
           console.error(`${logPrefix} 'completions' failed. Duration: ${duration}ms`, error)

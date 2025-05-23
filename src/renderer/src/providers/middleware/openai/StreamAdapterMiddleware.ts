@@ -14,9 +14,7 @@ import {
 
 // Adapter function to convert OpenAI SDK stream to Chunk stream
 async function* openAIStreamToChunkAdapter(
-  sdkStream: OpenAI.Chat.Completions.ChatCompletion & {
-    _request_id?: string | null
-  } & Stream<OpenAI.Chat.Completions.ChatCompletionChunk>
+  sdkStream: Stream<OpenAI.Chat.Completions.ChatCompletionChunk>
 ): AsyncGenerator<Chunk> {
   for await (const sdkChunk of sdkStream) {
     const choice = sdkChunk.choices?.[0]
@@ -62,37 +60,27 @@ async function* openAIStreamToChunkAdapter(
   }
 }
 
-export const StreamAdapterMiddleware: CompletionsMiddleware = (_) => (next) => async (context, args) => {
+export const StreamAdapterMiddleware: CompletionsMiddleware = () => (next) => async (context, args) => {
   // Get the CompletionsResult from the next middleware/provider.
   // Its `stream` property is expected to be the raw SDK stream.
   const originalResult = await next(context, args)
 
-  // Ensure the stream from the original result is indeed a RawSdkStream.
-  // This check might be more robust depending on how RawSdkStream is typed
-  // or if there's a flag in CompletionsResult.
+  console.log('🚀 StreamAdapterMiddleware: Original result received:', originalResult)
   if (
     originalResult.stream &&
-    typeof (originalResult.stream as any).getReader === 'function' &&
-    !(originalResult.stream instanceof ReadableStream)
+    !(originalResult.stream instanceof ReadableStream) && // Check if it's NOT already our target ReadableStream
+    typeof (originalResult.stream as any)[Symbol.asyncIterator] === 'function' // Check if it's an async iterable (like OpenAI's stream)
   ) {
-    const rawSdkStream = originalResult.stream
+    const rawSdkStream = originalResult.stream as Stream<OpenAI.Chat.Completions.ChatCompletionChunk>
 
-    // Adapt the raw SDK stream to our application's Chunk stream
     const adaptedChunkStream = asyncGeneratorToReadableStream(openAIStreamToChunkAdapter(rawSdkStream))
-
-    // Return a new CompletionsResult with the adapted stream
-    // and carry over other properties from the original result (like finalUsage, finalMetrics if they exist)
     const adaptedResult = {
       ...originalResult,
       stream: adaptedChunkStream // Assert the new stream type
     }
+    console.log('🚀 StreamAdapterMiddleware: Adapted result:', adaptedResult)
     return adaptedResult
   } else {
-    // If the stream is not in the expected raw format (e.g., it's already adapted or not a stream),
-    // or if there's no stream (which shouldn't happen if provider guarantees it for streaming calls),
-    // then return the original result. This case needs careful consideration based on type definitions.
-    // This implies that `originalResult.stream` was already an `AdaptedChunkStream` or `CompletionsResult` was for non-streaming.
-    // console.warn("StreamAdapterMiddleware: Stream from 'next()' was not in the expected RawSdkStream format, was missing, or was already a ReadableStream.");
-    return originalResult // Return as is, assuming it's already a valid CompletionsResult for downstream
+    return originalResult
   }
 }

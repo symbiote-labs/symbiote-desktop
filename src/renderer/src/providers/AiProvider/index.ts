@@ -18,9 +18,11 @@ export interface CompletionsParams {
 
 // Re-export CompletionsResult
 export interface CompletionsResult {
-  stream: OpenAI.Chat.Completions.ChatCompletion & {
-    _request_id?: string | null
-  } & Stream<OpenAI.Chat.Completions.ChatCompletionChunk>
+  stream:
+    | (OpenAI.Chat.Completions.ChatCompletion & {
+        _request_id?: string | null
+      } & Stream<OpenAI.Chat.Completions.ChatCompletionChunk>)
+    | ReadableStream<Chunk>
 }
 
 export default class AiProvider {
