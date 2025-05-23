@@ -2,7 +2,7 @@ import { Chunk, ErrorChunk } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 
 import { CompletionsParams } from '../../AiProvider'
-import { CompletionsMiddleware } from '../AiProviderMiddlewareTypes'
+import { CompletionsMiddleware } from '../middlewareTypes'
 
 /**
  * Helper to get message content safely for logging. /

@@ -11,7 +11,7 @@ import type { CompletionsOpenAIResult } from '../../AiProvider'
 import {
   CompletionsMiddleware
   // AiProviderMiddlewareCompletionsContext // Not directly needed if we just pass context through
-} from '../AiProviderMiddlewareTypes'
+} from '../middlewareTypes'
 
 // This adapter takes an AsyncIterable of raw SDK chunks and yields them as an AsyncGenerator.
 // This is a common pattern to adapt various async iterable sources to an AsyncGenerator expected by asyncGeneratorToReadableStream.

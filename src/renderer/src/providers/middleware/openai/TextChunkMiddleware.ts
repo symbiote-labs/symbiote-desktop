@@ -5,7 +5,7 @@ import { isEmpty } from 'lodash'
 import OpenAI from 'openai'
 
 import type { CompletionsOpenAIResult, CompletionsParams } from '../../AiProvider'
-import { AiProviderMiddlewareCompletionsContext, CompletionsMiddleware } from '../AiProviderMiddlewareTypes'
+import { AiProviderMiddlewareCompletionsContext, CompletionsMiddleware } from '../middlewareTypes'
 
 const MIDDLEWARE_NAME = 'OpenAISDKChunkToStandardChunkMiddleware'
 
@@ -14,6 +14,7 @@ const MIDDLEWARE_NAME = 'OpenAISDKChunkToStandardChunkMiddleware'
 async function* openAISdkToStandardChunkConverter(
   // Input is a ReadableStream containing raw OpenAI SDK chunks
   sdkReadableStream: ReadableStream<OpenAI.Chat.Completions.ChatCompletionChunk>,
+  // 这个拿的是传参中的mcpTools
   mcpTools: MCPTool[] | undefined
 ): AsyncGenerator<Chunk> {
   const reader = sdkReadableStream.getReader()
@@ -116,7 +117,7 @@ async function* openAISdkToStandardChunkConverter(
   }
 }
 
-export const OpenAISDKChunkToStandardChunkMiddleware: CompletionsMiddleware =
+export const TextChunkMiddleware: CompletionsMiddleware =
   () => (next) => async (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => {
     const resultFromUpstream = await next(context, params)
 

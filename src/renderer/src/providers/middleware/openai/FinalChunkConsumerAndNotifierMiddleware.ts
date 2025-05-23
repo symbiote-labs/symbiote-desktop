@@ -1,7 +1,7 @@
 import type { Chunk, ChunkType } from '@renderer/types/chunk'
 
 import type { CompletionsOpenAIResult } from '../../AiProvider'
-import type { CompletionsMiddleware } from '../AiProviderMiddlewareTypes'
+import type { CompletionsMiddleware } from '../middlewareTypes'
 
 const MIDDLEWARE_NAME = 'FinalChunkConsumerAndNotifierMiddleware'
 

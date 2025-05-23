@@ -8,7 +8,7 @@ import {
   MIDDLEWARE_CONTEXT_SYMBOL,
   MiddlewareAPI,
   ProviderMethodMiddleware
-} from './AiProviderMiddlewareTypes'
+} from './middlewareTypes'
 
 /**
  * Creates the initial context for a method call, populating method-specific fields. /

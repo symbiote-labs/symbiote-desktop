@@ -1,4 +1,4 @@
-import { AiProviderMiddlewareBaseContext, MiddlewareAPI, ProviderMethodMiddleware } from '../AiProviderMiddlewareTypes'
+import { AiProviderMiddlewareBaseContext, MiddlewareAPI, ProviderMethodMiddleware } from '../middlewareTypes'
 
 /**
  * Helper function to safely stringify arguments for logging, handling circular references and large objects. /

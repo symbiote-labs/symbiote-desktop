@@ -1,12 +1,8 @@
 import { CompletionsParams } from '../AiProvider'
 import BaseProvider from '../AiProvider/BaseProvider'
-import {
-  AiProviderMiddlewareConfig,
-  CompletionsMiddleware,
-  ProviderMethodMiddleware
-} from './AiProviderMiddlewareTypes'
 import { applyCompletionsMiddlewares } from './composer'
 import { applyMiddlewaresToMethod } from './composer'
+import { AiProviderMiddlewareConfig, CompletionsMiddleware, ProviderMethodMiddleware } from './middlewareTypes'
 
 /**
  * Wraps a provider instance with middlewares defined in the AiProviderMiddlewareConfig. /

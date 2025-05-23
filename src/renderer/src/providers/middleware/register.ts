@@ -1,9 +1,9 @@
-import { AiProviderMiddlewareConfig } from './AiProviderMiddlewareTypes'
 import { createCompletionsLoggingMiddleware } from './common/CompletionsLoggingMiddleware'
 import { createGenericLoggingMiddleware } from './common/LoggingMiddleware'
+import { AiProviderMiddlewareConfig } from './middlewareTypes'
 import { FinalChunkConsumerAndNotifierMiddleware } from './openai/FinalChunkConsumerAndNotifierMiddleware'
-import { OpenAISDKChunkToStandardChunkMiddleware } from './openai/OpenAISDKChunkToStandardChunkMiddleware'
 import { StreamAdapterMiddleware } from './openai/StreamAdapterMiddleware'
+import { TextChunkMiddleware } from './openai/TextChunkMiddleware'
 
 // Construct AiProviderMiddlewareConfig
 // Assuming loggingMiddleware is a ProviderMethodMiddleware. Adjust if it's a CompletionsMiddleware.
@@ -12,7 +12,7 @@ const middlewareConfig: AiProviderMiddlewareConfig = {
   completions: [
     createCompletionsLoggingMiddleware(),
     FinalChunkConsumerAndNotifierMiddleware,
-    OpenAISDKChunkToStandardChunkMiddleware,
+    TextChunkMiddleware,
     StreamAdapterMiddleware
   ],
 
