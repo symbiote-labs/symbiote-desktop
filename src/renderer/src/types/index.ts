@@ -254,6 +254,16 @@ export interface ScalePainting extends PaintingParams {
   renderingSpeed?: string
 }
 
+export interface DmxapiPainting extends PaintingParams {
+  model?: string
+  prompt?: string
+  n?: number
+  aspect_ratio?: string
+  image_size?: string
+  seed?: string
+  style_type?: string
+}
+
 export type PaintingAction = Partial<GeneratePainting & RemixPainting & EditPainting & ScalePainting> & PaintingParams
 
 export interface PaintingsState {
@@ -262,6 +272,7 @@ export interface PaintingsState {
   remix: Partial<RemixPainting> & PaintingParams[]
   edit: Partial<EditPainting> & PaintingParams[]
   upscale: Partial<ScalePainting> & PaintingParams[]
+  DMXAPIPaintings: DmxapiPainting[]
 }
 
 export type MinAppType = {

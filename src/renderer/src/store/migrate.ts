@@ -1457,6 +1457,16 @@ const migrateConfig = {
   },
   '107': (state: RootState) => {
     try {
+      if (state.paintings && !state.paintings.DMXAPIPaintings) {
+        state.paintings.DMXAPIPaintings = []
+      }
+      return state
+    } catch (error) {
+      return state
+    }
+  },
+  '108': (state: RootState) => {
+    try {
       addProvider(state, 'vertexai')
       state.llm.providers = moveProvider(state.llm.providers, 'vertexai', 10)
       if (!state.llm.settings.vertexai) {

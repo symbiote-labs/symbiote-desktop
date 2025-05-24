@@ -1,17 +1,11 @@
 import { useVertexAISettings } from '@renderer/hooks/useVertexAI'
-import { Provider } from '@renderer/types'
 import { Alert, Input } from 'antd'
 import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SettingHelpText, SettingHelpTextRow, SettingSubtitle } from '..'
 
-interface VertexAISettingsProps {
-  provider: Provider
-}
-
-const VertexAISettings: FC<VertexAISettingsProps> = ({ provider }) => {
-  console.log('provider', provider)
+const VertexAISettings: FC = () => {
   const { t } = useTranslation()
   const {
     projectId,
