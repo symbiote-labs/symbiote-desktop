@@ -1585,26 +1585,23 @@
           "markdown_editor_default_value": "Preview area"
         },
         "vertex_ai": {
-          "mode": {
-            "title": "Authentication Mode",
-            "express": "Express Mode",
-            "express_desc": "Use API key for authentication, great for quick start",
-            "full": "Full Vertex AI Mode",
-            "full_desc": "Use Google Cloud project, requires ADC configuration"
-          },
-          "express": {
-            "title": "Express Mode Information",
-            "description": "In Express mode, you only need to provide an API key to use Vertex AI. Perfect for personal development and prototyping."
-          },
-          "full": {
-            "title": "Full Mode Configuration Requirements",
-            "description": "Full mode requires Google Cloud project ID and location configuration, as well as Application Default Credentials (ADC) setup. Suitable for production and enterprise applications."
-          },
           "project_id": "Project ID",
           "project_id_placeholder": "your-google-cloud-project-id",
           "project_id_help": "Your Google Cloud project ID",
           "location": "Location",
           "location_help": "Vertex AI service location, e.g., us-central1",
+          "service_account": {
+            "title": "Service Account Configuration",
+            "private_key": "Private Key",
+            "private_key_placeholder": "Enter Service Account private key",
+            "private_key_help": "The private_key field from the JSON key file downloaded from Google Cloud Console",
+            "client_email": "Client Email",
+            "client_email_placeholder": "Enter Service Account client email",
+            "client_email_help": "The client_email field from the JSON key file downloaded from Google Cloud Console",
+            "description": "Use Service Account for authentication, suitable for environments where ADC is not available",
+            "auth_success": "Service Account authenticated successfully",
+            "incomplete_config": "Please complete Service Account configuration first"
+          },
           "documentation": "View official documentation for more configuration details:",
           "learn_more": "Learn More"
         }

@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { isLocalAi } from '@renderer/config/env'
 import { SYSTEM_MODELS } from '@renderer/config/models'
-import { Model, Provider, VertexAIMode } from '@renderer/types'
+import { Model, Provider } from '@renderer/types'
 import { uniqBy } from 'lodash'
 
 type LlmSettings = {
@@ -15,9 +15,12 @@ type LlmSettings = {
     keepAliveTime: number
   }
   vertexai: {
+    serviceAccount: {
+      privateKey: string
+      clientEmail: string
+    }
     projectId: string
     location: string
-    mode: VertexAIMode
   }
 }
 
@@ -210,7 +213,8 @@ export const INITIAL_PROVIDERS: Provider[] = [
     apiHost: 'https://generativelanguage.googleapis.com',
     models: SYSTEM_MODELS.gemini,
     isSystem: true,
-    enabled: false
+    enabled: false,
+    isVertex: false
   },
   {
     id: 'zhipu',
@@ -511,11 +515,12 @@ export const INITIAL_PROVIDERS: Provider[] = [
     apiHost: 'https://aiplatform.googleapis.com',
     models: [],
     isSystem: true,
-    enabled: false
+    enabled: false,
+    isVertex: true
   }
 ]
 
-const initialState: LlmState = {
+export const initialState: LlmState = {
   defaultModel: SYSTEM_MODELS.silicon[1],
   topicNamingModel: SYSTEM_MODELS.silicon[2],
   translateModel: SYSTEM_MODELS.silicon[3],
@@ -532,9 +537,12 @@ const initialState: LlmState = {
       keepAliveTime: 0
     },
     vertexai: {
+      serviceAccount: {
+        privateKey: '',
+        clientEmail: ''
+      },
       projectId: '',
-      location: '',
-      mode: 'full'
+      location: ''
     }
   }
 }
@@ -649,8 +657,11 @@ const llmSlice = createSlice({
     setVertexAILocation: (state, action: PayloadAction<string>) => {
       state.settings.vertexai.location = action.payload
     },
-    setVertexAIMode: (state, action: PayloadAction<VertexAIMode>) => {
-      state.settings.vertexai.mode = action.payload
+    setVertexAIServiceAccountPrivateKey: (state, action: PayloadAction<string>) => {
+      state.settings.vertexai.serviceAccount.privateKey = action.payload
+    },
+    setVertexAIServiceAccountClientEmail: (state, action: PayloadAction<string>) => {
+      state.settings.vertexai.serviceAccount.clientEmail = action.payload
     },
     updateModel: (
       state,
@@ -686,7 +697,8 @@ export const {
   setGPUStackKeepAliveTime,
   setVertexAIProjectId,
   setVertexAILocation,
-  setVertexAIMode,
+  setVertexAIServiceAccountPrivateKey,
+  setVertexAIServiceAccountClientEmail,
   updateModel
 } = llmSlice.actions
 

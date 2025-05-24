@@ -1585,26 +1585,23 @@
           "markdown_editor_default_value": "预览区域"
         },
         "vertex_ai": {
-          "mode": {
-            "title": "认证模式",
-            "express": "Express 模式",
-            "express_desc": "使用 API 密钥进行认证，适合快速开始",
-            "full": "完整 Vertex AI 模式", 
-            "full_desc": "使用 Google Cloud 项目，需要配置 ADC 认证"
-          },
-          "express": {
-            "title": "Express 模式说明",
-            "description": "在 Express 模式下，您只需要提供 API 密钥即可使用 Vertex AI。适合个人开发和原型验证。"
-          },
-          "full": {
-            "title": "完整模式配置要求",
-            "description": "完整模式需要配置 Google Cloud 项目 ID 和地区，并设置 Application Default Credentials (ADC)。适用于生产环境和企业应用。"
-          },
           "project_id": "项目 ID",
           "project_id_placeholder": "your-google-cloud-project-id",
           "project_id_help": "您的 Google Cloud 项目 ID",
           "location": "地区",
           "location_help": "Vertex AI 服务的地区，例如 us-central1",
+          "service_account": {
+            "title": "Service Account 配置",
+            "private_key": "私钥",
+            "private_key_placeholder": "请输入 Service Account 私钥",
+            "private_key_help": "从 Google Cloud Console 下载的 JSON 密钥文件中的 private_key 字段",
+            "client_email": "客户端邮箱",
+            "client_email_placeholder": "请输入 Service Account 客户端邮箱",
+            "client_email_help": "从 Google Cloud Console 下载的 JSON 密钥文件中的 client_email 字段",
+            "description": "使用 Service Account 进行身份验证，适用于无法使用 ADC 的环境",
+            "auth_success": "Service Account 认证成功",
+            "incomplete_config": "请先完整配置 Service Account 信息"
+          },
           "documentation": "查看官方文档了解更多配置详情：",
           "learn_more": "了解更多"
         }

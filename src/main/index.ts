@@ -1,3 +1,4 @@
+console.log('--- My Electron Main Process Started ---')
 import '@main/config'
 
 import { electronApp, optimizer } from '@electron-toolkit/utils'

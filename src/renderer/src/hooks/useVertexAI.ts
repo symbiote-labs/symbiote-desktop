@@ -1,6 +1,10 @@
 import store, { useAppSelector } from '@renderer/store'
-import { setVertexAILocation, setVertexAIMode, setVertexAIProjectId } from '@renderer/store/llm'
-import { VertexAIMode } from '@renderer/types'
+import {
+  setVertexAILocation,
+  setVertexAIProjectId,
+  setVertexAIServiceAccountClientEmail,
+  setVertexAIServiceAccountPrivateKey
+} from '@renderer/store/llm'
 import { useDispatch } from 'react-redux'
 
 export function useVertexAISettings() {
@@ -11,10 +15,23 @@ export function useVertexAISettings() {
     ...settings,
     setProjectId: (projectId: string) => dispatch(setVertexAIProjectId(projectId)),
     setLocation: (location: string) => dispatch(setVertexAILocation(location)),
-    setMode: (mode: VertexAIMode) => dispatch(setVertexAIMode(mode))
+    setServiceAccountPrivateKey: (privateKey: string) => dispatch(setVertexAIServiceAccountPrivateKey(privateKey)),
+    setServiceAccountClientEmail: (clientEmail: string) => dispatch(setVertexAIServiceAccountClientEmail(clientEmail))
   }
 }
 
 export function getVertexAISettings() {
   return store.getState().llm.settings.vertexai
+}
+
+export function getVertexAILocation() {
+  return store.getState().llm.settings.vertexai.location
+}
+
+export function getVertexAIProjectId() {
+  return store.getState().llm.settings.vertexai.projectId
+}
+
+export function getVertexAIServiceAccount() {
+  return store.getState().llm.settings.vertexai.serviceAccount
 }

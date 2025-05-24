@@ -158,6 +158,7 @@ export type Provider = {
   isAuthed?: boolean
   rateLimit?: number
   isNotSupportArrayContent?: boolean
+  isVertex?: boolean
   notes?: string
 }
 
@@ -668,5 +669,3 @@ export interface StoreSyncAction {
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 export type OpenAIServiceTier = 'auto' | 'default' | 'flex'
-
-export type VertexAIMode = 'express' | 'full'
