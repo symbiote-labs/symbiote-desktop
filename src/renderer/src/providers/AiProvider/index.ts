@@ -25,6 +25,9 @@ export interface CompletionsOpenAIResult {
     // our app-specific stream
     | ReadableStream<OpenAI.Chat.Completions.ChatCompletionChunk>
     | ReadableStream<Chunk>
+    | ReadableStream<Chunk | OpenAI.Chat.Completions.ChatCompletionChunk>
+  // 添加 abort controller 用于中间件处理和控制 abort 事件
+  controller?: AbortController
 }
 
 export default class AiProvider {

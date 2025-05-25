@@ -49,7 +49,6 @@ export const StreamAdapterMiddleware: CompletionsMiddleware = () => (next) => as
       // The type of `stream` in `CompletionsResult` might need adjustment if it strictly expects `ReadableStream<Chunk>`
       // or the original SDK stream type. We are outputting a new type here.
       stream: whatwgReadableStream
-      // The next middleware will consume this and produce ReadableStream<Chunk>.
     }
     console.log(
       '🚀 StreamAdapterMiddleware (Raw): Adapted to WHATWG ReadableStream, content is raw SDK chunks.',

@@ -421,7 +421,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     }
 
     const lastUserMessage = _messages.findLast((m) => m.role === 'user')
-    const { abortController, cleanup, signalPromise } = this.createAbortController(lastUserMessage?.id, true)
+    const { abortController } = this.createAbortController(lastUserMessage?.id)
     const { signal } = abortController
     await this.checkIsCopilot()
 
@@ -886,12 +886,16 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
           timeout: this.getTimeout(model)
         }
       )
+    // stream.controller.signal.addEventListener('abort', () => {
+    //   console.log('addEventListener_abort')
+    // })
+    return { stream, controller: abortController }
 
+    // .finally(cleanup)
+    // stream
     // await processStream(stream, 0).finally(cleanup)
-    return { stream }
-
     // 捕获signal的错误
-    // await signalPromise?.promise?.catch((error) => {
+    // signalPromise?.promise?.catch((error) => {
     //   throw error
     // })
   }

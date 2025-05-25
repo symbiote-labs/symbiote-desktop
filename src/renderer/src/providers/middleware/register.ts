@@ -1,18 +1,22 @@
-import { createCompletionsLoggingMiddleware } from './common/CompletionsLoggingMiddleware'
+// import { createCompletionsLoggingMiddleware } from './common/CompletionsLoggingMiddleware'
 import { createGenericLoggingMiddleware } from './common/LoggingMiddleware'
 import { AiProviderMiddlewareConfig } from './middlewareTypes'
+import { AbortHandlerMiddleware } from './openai/AbortHandlerMiddleware'
 import { FinalChunkConsumerAndNotifierMiddleware } from './openai/FinalChunkConsumerAndNotifierMiddleware'
 import { StreamAdapterMiddleware } from './openai/StreamAdapterMiddleware'
 import { TextChunkMiddleware } from './openai/TextChunkMiddleware'
+import { ThinkChunkMiddleware } from './openai/ThinkChunkMiddleware'
 
 // Construct AiProviderMiddlewareConfig
 // Assuming loggingMiddleware is a ProviderMethodMiddleware. Adjust if it's a CompletionsMiddleware.
 const middlewareConfig: AiProviderMiddlewareConfig = {
   // Use the specialized logger for 'completions'. This array expects CompletionsMiddleware.
   completions: [
-    createCompletionsLoggingMiddleware(),
+    // createCompletionsLoggingMiddleware(),
     FinalChunkConsumerAndNotifierMiddleware,
+    AbortHandlerMiddleware,
     TextChunkMiddleware,
+    ThinkChunkMiddleware,
     StreamAdapterMiddleware
   ],
 

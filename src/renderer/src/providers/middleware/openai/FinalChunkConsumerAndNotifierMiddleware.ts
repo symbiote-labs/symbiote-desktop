@@ -29,7 +29,6 @@ export const FinalChunkConsumerAndNotifierMiddleware: CompletionsMiddleware =
             console.log(`[${MIDDLEWARE_NAME}] Input stream finished.`)
             break
           }
-
           // Ensure chunk is not undefined before accessing its properties
           if (chunk) {
             const chunkType: ChunkType = chunk.type
