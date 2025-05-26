@@ -37,7 +37,7 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
-        external: ['@libsql/client']
+        external: ['@libsql/client', 'bufferutil', 'utf-8-validate']
       },
       sourcemap: process.env.NODE_ENV === 'development'
     },
@@ -89,7 +89,9 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
-          miniWindow: resolve(__dirname, 'src/renderer/miniWindow.html')
+          miniWindow: resolve(__dirname, 'src/renderer/miniWindow.html'),
+          selectionToolbar: resolve(__dirname, 'src/renderer/selectionToolbar.html'),
+          selectionAction: resolve(__dirname, 'src/renderer/selectionAction.html')
         }
       }
     }
