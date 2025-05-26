@@ -6,7 +6,7 @@ import { FinalChunkConsumerAndNotifierMiddleware } from './openai/FinalChunkCons
 import { McpToolChunkMiddleware } from './openai/McpToolChunkMiddleware'
 import { StreamAdapterMiddleware } from './openai/StreamAdapterMiddleware'
 import { TextChunkMiddleware } from './openai/TextChunkMiddleware'
-import { ThinkChunkMiddleware } from './openai/ThinkChunkMiddleware'
+// import { ThinkChunkMiddleware } from './openai/ThinkChunkMiddleware'
 import { TransformParamsBeforeCompletions } from './openai/TransformParamsBeforeCompletions'
 
 // Construct AiProviderMiddlewareConfig
@@ -16,10 +16,10 @@ const middlewareConfig: AiProviderMiddlewareConfig = {
   completions: [
     // createCompletionsLoggingMiddleware(),
     FinalChunkConsumerAndNotifierMiddleware,
-    AbortHandlerMiddleware,
     TransformParamsBeforeCompletions, // 参数转换中间件 - 最早执行，为其他中间件提供标准化参数
+    AbortHandlerMiddleware,
     TextChunkMiddleware,
-    ThinkChunkMiddleware,
+    // ThinkChunkMiddleware,
     McpToolChunkMiddleware, // 工具处理中间件
     StreamAdapterMiddleware
   ],

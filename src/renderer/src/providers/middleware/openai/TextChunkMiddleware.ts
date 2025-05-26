@@ -69,10 +69,10 @@ export const TextChunkMiddleware: CompletionsMiddleware =
         ...resultFromUpstream,
         stream: standardChunkStream
       }
-      console.log(
-        `[${MIDDLEWARE_NAME}] Converted mixed stream to standard Chunks using TransformStream.`,
-        adaptedResult
-      )
+      // console.log(
+      //   `[${MIDDLEWARE_NAME}] Converted mixed stream to standard Chunks using TransformStream.`,
+      //   adaptedResult
+      // )
       return adaptedResult
     } else {
       console.log(`[${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)

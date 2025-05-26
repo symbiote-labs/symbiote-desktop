@@ -27,21 +27,15 @@ export const AbortHandlerMiddleware: CompletionsMiddleware = () => (next) => asy
   console.log(`🔄 [${MIDDLEWARE_NAME}] AbortController created for message: ${messageId}`)
 
   // 将controller添加到params._internal中
-  const paramsWithController = {
-    ...params,
-    _internal: {
-      ...params._internal,
-      controller: abortController
-    }
-  }
-
+  if (params._internal) params._internal.controller = abortController
+  console.log('params._internal', params)
   try {
-    const resultFromUpstream = await next(context, paramsWithController)
+    const resultFromUpstream = await next(context, params)
 
     if (resultFromUpstream.stream && resultFromUpstream.stream instanceof ReadableStream) {
       const originalStream = resultFromUpstream.stream
 
-      console.log(`🔄 [${MIDDLEWARE_NAME}] Setting up abort handling for stream`)
+      // console.log(`🔄 [${MIDDLEWARE_NAME}] Setting up abort handling for stream`)
 
       // 检查abort状态
       if (abortSignal.aborted) {
@@ -92,26 +86,26 @@ export const AbortHandlerMiddleware: CompletionsMiddleware = () => (next) => asy
       )
 
       // 添加 abort 事件监听器，用于主动检测 abort
-      abortSignal.addEventListener(
-        'abort',
-        () => {
-          console.log(`🔄 [${MIDDLEWARE_NAME}] Abort event triggered`)
-          // TransformStream 会在下次 transform 调用时检测到 aborted 状态
-        },
-        { once: true }
-      )
+      // abortSignal.addEventListener(
+      //   'abort',
+      //   () => {
+      //     console.log(`🔄 [${MIDDLEWARE_NAME}] Abort event triggered`)
+      //     // TransformStream 会在下次 transform 调用时检测到 aborted 状态
+      //   },
+      //   { once: true }
+      // )
 
       const adaptedResult: CompletionsOpenAIResult = {
         ...resultFromUpstream,
         stream: streamWithAbortHandler
       }
 
-      console.log(`🔄 [${MIDDLEWARE_NAME}] Set up abort handling with TransformStream`)
+      // console.log(`🔄 [${MIDDLEWARE_NAME}] Set up abort handling with TransformStream`)
       return adaptedResult
     }
 
     // 对于非流式响应，直接返回原始结果
-    console.log(`🔄 [${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)
+    // console.log(`🔄 [${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)
     return resultFromUpstream
   } catch (error) {
     console.error(`🔄 [${MIDDLEWARE_NAME}] Error occurred, cleaning up:`, error)

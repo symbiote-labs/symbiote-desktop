@@ -32,6 +32,12 @@ export const TransformParamsBeforeCompletions: CompletionsMiddleware =
     console.log(`🔄 [${MIDDLEWARE_NAME}] Starting parameter transformation`)
 
     try {
+      // 检查参数是否已经包含转换后的数据（递归调用时避免重复转换）
+      if (params._internal?.sdkParams) {
+        console.log(`🔄 [${MIDDLEWARE_NAME}] Parameters already transformed, skipping transformation`)
+        return next(context, params)
+      }
+
       // 获取 provider 实例
       const provider = context._providerInstance
       if (!provider) {
@@ -117,26 +123,24 @@ export const TransformParamsBeforeCompletions: CompletionsMiddleware =
       reqMessages = processReqMessages(model, reqMessages)
 
       // 将转换后的参数附加到 params 的 _internal 字段中
-      // 这样 OpenAI Provider 就可以直接使用预处理的参数，避免重复计算
-      const paramsWithTransformed = {
-        ...params,
-        _internal: {
-          // SDK接口需要的参数
-          sdkParams: {
-            reqMessages,
-            tools,
-            systemMessage,
-            model,
-            maxTokens,
-            streamOutput
-          },
-          // 内部处理可能会需要的参数
-          enableReasoning,
-          userMessages,
-          contextCount,
-          processedMessages: _messages
-        }
+
+      const _internal = {
+        // SDK接口需要的参数
+        sdkParams: {
+          reqMessages,
+          tools,
+          systemMessage,
+          model,
+          maxTokens,
+          streamOutput
+        },
+        // 内部处理可能会需要的参数
+        enableReasoning,
+        userMessages,
+        contextCount,
+        processedMessages: _messages
       }
+      params._internal = _internal
 
       console.log(`🔄 [${MIDDLEWARE_NAME}] Parameter transformation completed`)
       console.log(`🔄 [${MIDDLEWARE_NAME}] Model: ${model.id}`)
@@ -146,7 +150,7 @@ export const TransformParamsBeforeCompletions: CompletionsMiddleware =
       console.log(`🔄 [${MIDDLEWARE_NAME}] Stream output: ${streamOutput}`)
       console.log(`🔄 [${MIDDLEWARE_NAME}] Enable reasoning: ${enableReasoning}`)
 
-      return next(context, paramsWithTransformed)
+      return next(context, params)
     } catch (error) {
       console.error(`🔄 [${MIDDLEWARE_NAME}] Error during parameter transformation:`, error)
       throw error

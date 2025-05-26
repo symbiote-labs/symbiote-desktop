@@ -50,10 +50,10 @@ export const StreamAdapterMiddleware: CompletionsMiddleware = () => (next) => as
       // or the original SDK stream type. We are outputting a new type here.
       stream: whatwgReadableStream
     }
-    console.log(
-      '🚀 StreamAdapterMiddleware (Raw): Adapted to WHATWG ReadableStream, content is raw SDK chunks.',
-      adaptedResult
-    )
+    // console.log(
+    //   '🚀 StreamAdapterMiddleware (Raw): Adapted to WHATWG ReadableStream, content is raw SDK chunks.',
+    //   adaptedResult
+    // )
     return adaptedResult
   } else if (originalResult.stream instanceof ReadableStream) {
     // If it's already a ReadableStream, perhaps it was already processed or is from a different source.

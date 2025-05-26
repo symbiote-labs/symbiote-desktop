@@ -8,7 +8,7 @@ import {
 import { ChatCompletionMessageParam, ChatCompletionMessageToolCall } from 'openai/resources'
 
 import { CompletionsOpenAIResult, CompletionsParams } from '../../AiProvider'
-import { CompletionsMiddleware } from '../middlewareTypes'
+import { AiProviderMiddlewareCompletionsContext, CompletionsMiddleware } from '../middlewareTypes'
 
 const MIDDLEWARE_NAME = 'McpToolChunkMiddleware'
 const MAX_TOOL_RECURSION_DEPTH = 10 // 防止无限递归
@@ -41,8 +41,35 @@ export const McpToolChunkMiddleware: CompletionsMiddleware = () => (next) => asy
       throw new Error(`Maximum tool recursion depth ${MAX_TOOL_RECURSION_DEPTH} exceeded`)
     }
 
-    // 调用下一个中间件获取结果
-    const result = await next(context, currentParams)
+    // 如果是第一次调用（depth=0），使用正常的中间件链
+    // 如果是递归调用（depth>0），使用保存的 enhancedDispatch
+    let result: CompletionsOpenAIResult
+
+    if (depth === 0) {
+      // 第一次调用，保持 isRecursiveCall = false（或不设置）
+      console.log(`🔧 [${MIDDLEWARE_NAME}] Initial call (depth=0), keeping isRecursiveCall = false`)
+
+      // 第一次调用，使用正常的中间件链
+      result = await next(context, currentParams)
+    } else {
+      // 递归调用，使用保存的 enhancedDispatch 来重新执行整个中间件链
+      const enhancedDispatch = context._internal?.enhancedDispatch
+      if (!enhancedDispatch) {
+        throw new Error('Enhanced dispatch function not found in context._internal')
+      }
+
+      console.log(`🔧 [${MIDDLEWARE_NAME}] Using enhanced dispatch for recursive call at depth ${depth}`)
+      console.log(`🔧 [${MIDDLEWARE_NAME}] Current context state:`, {
+        isRecursive: context._internal?.isRecursiveCall,
+        depth: context._internal?.recursionDepth
+      })
+
+      // 创建新的上下文对象用于递归调用
+      context._internal!.isRecursiveCall = true
+      context._internal!.recursionDepth = depth
+
+      result = await enhancedDispatch(context, currentParams)
+    }
 
     if (!result.stream) {
       console.log(`🔧 [${MIDDLEWARE_NAME}] No stream in result, returning as-is`)
@@ -51,7 +78,7 @@ export const McpToolChunkMiddleware: CompletionsMiddleware = () => (next) => asy
 
     // 使用 TransformStream 来处理工具调用
     const toolHandledStream = (result.stream as ReadableStream<any>).pipeThrough(
-      createToolHandlingTransform(currentParams, mcpTools, depth, executeWithToolHandling)
+      createToolHandlingTransform(context, currentParams, mcpTools, depth, executeWithToolHandling)
     )
 
     return { ...result, stream: toolHandledStream }
@@ -65,6 +92,7 @@ export const McpToolChunkMiddleware: CompletionsMiddleware = () => (next) => asy
  * 创建工具处理的 TransformStream
  */
 function createToolHandlingTransform(
+  context: AiProviderMiddlewareCompletionsContext, // 添加 context 参数
   currentParams: CompletionsParams,
   mcpTools: MCPTool[],
   depth: number,
@@ -79,31 +107,30 @@ function createToolHandlingTransform(
   return new TransformStream({
     async transform(chunk, controller) {
       try {
-        console.log(`🔧 [${MIDDLEWARE_NAME}] Processing chunk at depth ${depth}`)
-
+        if (!context._internal.isRecursiveCall) context._internal.isRecursiveCall = true // 即将进行递归
+        context._internal.recursionDepth = depth
         // 检测工具调用相关的chunks
         if (isToolCallChunk(chunk)) {
           const extractedToolCalls = extractToolCallsFromChunk(chunk)
           if (extractedToolCalls.length > 0) {
             toolCalls.push(...extractedToolCalls)
             hasToolCalls = true
-            console.log(`🔧 [${MIDDLEWARE_NAME}] Detected ${extractedToolCalls.length} tool calls`)
-
-            // 不需要手动发送状态，parseAndCallTools 会自动处理
+            console.log(
+              `🔧 [${MIDDLEWARE_NAME}] ✅ Detected ${extractedToolCalls.length} tool calls:`,
+              extractedToolCalls.map((tc) => tc.function.name)
+            )
           }
           // 不转发原始工具调用chunks，避免重复处理
           console.log(`🔧 [${MIDDLEWARE_NAME}] Intercepting tool call chunk to prevent duplicate processing`)
           return
         }
-        console.log('chunk', chunk)
         // 收集助手的文本内容（从原始 OpenAI chunk 格式中提取）
         if (chunk.choices && chunk.choices[0]?.delta?.content) {
           assistantContent += chunk.choices[0].delta.content
-          console.log(`🔧 [${MIDDLEWARE_NAME}] Collected content:`, chunk.choices[0].delta.content)
         }
 
         // 转发非工具调用的chunks给下游
-        console.log(`🔧 [${MIDDLEWARE_NAME}] Forwarding non-tool chunk:`, chunk)
+        // console.log(`🔧 [${MIDDLEWARE_NAME}] Forwarding non-tool chunk:`, chunk)
         controller.enqueue(chunk)
       } catch (error) {
         console.error(`🔧 [${MIDDLEWARE_NAME}] Error processing chunk:`, error)
@@ -113,31 +140,28 @@ function createToolHandlingTransform(
 
     async flush(controller) {
       try {
-        console.log('flush', hasToolCalls, toolCalls.length, assistantContent.length)
         // 按照旧逻辑：只有在有工具调用或内容时才处理
         const shouldProcessTools = (hasToolCalls && toolCalls.length > 0) || assistantContent.length > 0
-        console.log(
-          `🔧 [${MIDDLEWARE_NAME}] shouldProcessTools:`,
+
+        console.log(`🔧 [${MIDDLEWARE_NAME}] Stream flush check:`, {
+          streamEnded,
           shouldProcessTools,
-          'hasToolCalls:',
           hasToolCalls,
-          'toolCalls.length:',
-          toolCalls.length,
-          'assistantContent.length:',
-          assistantContent.length
-        )
+          toolCallsLength: toolCalls.length,
+          contentLength: assistantContent.length,
+          depth
+        })
+
         if (!streamEnded && shouldProcessTools) {
           streamEnded = true
           console.log(
-            `🔧 [${MIDDLEWARE_NAME}] Stream ended, processing tools. ToolCalls: ${toolCalls.length}, Content length: ${assistantContent.length}`
+            `🔧 [${MIDDLEWARE_NAME}] ⚡ Stream ended, processing tools. ToolCalls: ${toolCalls.length}, Content length: ${assistantContent.length}`
           )
 
           // 1. 执行工具调用（完全按照旧逻辑的顺序）
           let toolResults: ChatCompletionMessageParam[] = []
-          console.log('toolCalls', toolCalls)
           // Function Call 方式（对应旧逻辑的 processToolCalls）
           if (toolCalls.length > 0) {
-            console.log(`🔧 [${MIDDLEWARE_NAME}] Processing Function Call tools`)
             const functionCallResults = await executeToolCalls(
               toolCalls,
               mcpTools,
@@ -150,7 +174,6 @@ function createToolHandlingTransform(
 
           // Prompt 方式（对应旧逻辑的 processToolUses）
           if (assistantContent.length > 0) {
-            console.log(`🔧 [${MIDDLEWARE_NAME}] Processing Prompt tools from content`)
             const promptToolResults = await executeToolUses(
               assistantContent,
               mcpTools,
@@ -165,46 +188,35 @@ function createToolHandlingTransform(
           if (toolResults.length > 0) {
             console.log(`🔧 [${MIDDLEWARE_NAME}] Found ${toolResults.length} tool results, starting recursion`)
 
+            // 注意：递归标记已经在transform阶段设置了，这里不需要重复设置
+            console.log(`🔧 [${MIDDLEWARE_NAME}] Flush阶段 - Context state:`, context._internal)
+            console.log(`🔧 [${MIDDLEWARE_NAME}] 递归标记应该已在transform阶段设置`)
+
             // 构建包含工具结果的新参数
             const newParams = buildParamsWithToolResults(currentParams, toolResults, assistantContent, toolCalls)
 
             // 递归调用处理工具结果
-            console.log(`🔧 [${MIDDLEWARE_NAME}] Recursively calling at depth ${depth + 1}`)
-            const nextResult = await executeWithToolHandling(newParams, depth + 1)
-
-            // 将递归结果的流内容直接写入当前流
-            // 假设从递归调用返回的流中的数据块应当已经被
-            // 后续中间件（如 TextChunkMiddleware）转换为应用所需的格式。
-            if (nextResult.stream) {
-              console.log(`🔧 [${MIDDLEWARE_NAME}] Processing recursive result stream`)
-              const reader = (nextResult.stream as ReadableStream<any>).getReader()
-
-              try {
-                while (true) {
-                  const { done, value } = await reader.read()
-                  if (done) {
-                    console.log(`🔧 [${MIDDLEWARE_NAME}] Recursive stream reading completed`)
-                    break
-                  }
-                  // 直接转发 value，因为它应该已经是应用格式的 chunk
-                  console.log(`🔧 [${MIDDLEWARE_NAME}] Forwarding chunk from recursive call:`, value)
-                  controller.enqueue(value)
-                }
-              } catch (streamError) {
-                console.error(`🔧 [${MIDDLEWARE_NAME}] Error reading recursive stream:`, streamError)
-                controller.error(streamError)
-              } finally {
-                reader.releaseLock()
-              }
-            } else {
-              console.log(`🔧 [${MIDDLEWARE_NAME}] No stream in recursive result`)
-            }
+            // console.log(`🔧 [${MIDDLEWARE_NAME}] Recursively calling at depth ${depth + 1}`)
+            await executeWithToolHandling(newParams, depth + 1)
+            // const reader = (result.stream as ReadableStream<any>).getReader()
+            // while (true) {
+            //   const { value, done } = await reader.read()
+            //   if (done) break
+            //   controller.enqueue(value) // 推送新流的数据
+            // }
+            // console.log(`🔧 [${MIDDLEWARE_NAME}] Recursive call completed, result has stream: ${!!nextResult.stream}`)
           } else {
-            console.log(`🔧 [${MIDDLEWARE_NAME}] No tool results found, ending processing`)
+            console.log(`🔧 [${MIDDLEWARE_NAME}] ❌ No tool results found, ending processing`)
           }
         }
 
         console.log(`🔧 [${MIDDLEWARE_NAME}] Completed processing at depth ${depth}`)
+
+        // 在最外层处理完成时重置递归标记
+        console.log(`🔧 [${MIDDLEWARE_NAME}] 🔄 重置递归标记 - 顶层处理完成`)
+        context._internal.isRecursiveCall = false
+        context._internal.recursionDepth = 0
+        console.log(`🔧 [${MIDDLEWARE_NAME}] 递归标记已重置:`, context._internal)
       } catch (error) {
         console.error(`🔧 [${MIDDLEWARE_NAME}] Error in flush at depth ${depth}:`, error)
 

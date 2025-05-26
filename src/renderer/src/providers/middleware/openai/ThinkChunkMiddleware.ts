@@ -242,7 +242,7 @@ export const ThinkChunkMiddleware: CompletionsMiddleware =
         stream: mixedStream
       }
 
-      console.log(`[${MIDDLEWARE_NAME}] Set up thinking content processing with mixed stream output.`)
+      // console.log(`[${MIDDLEWARE_NAME}] Set up thinking content processing with mixed stream output.`)
       return adaptedResult
     } else {
       console.log(`[${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)

@@ -164,7 +164,8 @@ export function applyCompletionsMiddlewares(
       messages: params.messages,
       mcpTools: params.mcpTools,
       onChunk: params.onChunk,
-      onFilterMessages: params.onFilterMessages
+      onFilterMessages: params.onFilterMessages,
+      _internal: {}
     }
   }
 
@@ -205,6 +206,13 @@ export function applyCompletionsMiddlewares(
     // `enhancedDispatch` has the signature `(context, params) => Promise<CompletionsResult>`. /
     // `enhancedDispatch` 的签名为 `(context, params) => Promise<CompletionsResult>`。
     const enhancedDispatch = composedMiddlewareLogic(finalDispatch)
+
+    // 将 enhancedDispatch 保存到 context 中，供中间件进行递归调用
+    // 这样可以避免重复执行整个中间件链
+    ctx._internal = {
+      ...ctx._internal,
+      enhancedDispatch
+    }
 
     // Execute with context and the single params object. /
     // 使用上下文和单个参数对象执行。

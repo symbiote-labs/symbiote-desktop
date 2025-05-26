@@ -58,19 +58,24 @@ export interface AiProviderMiddlewareCompletionsContext extends AiProviderMiddle
   // 绕过机制 - 标示应该使用 transformedData 而不是重新处理参数
   _useTransformedData?: boolean // Added by StreamAdapterMiddleware
 
-  transformedData?: {
-    // Added by TransformParamsBeforeCompletions
-    // 由 TransformParamsBeforeCompletions 添加的转换后数据
-    reqMessages: any[]
-    tools: any[]
-    systemMessage: any
-    userMessages: any[]
-    model: Model
-    maxTokens: number
-    streamOutput: boolean
-    enableReasoning: boolean
-    contextCount: number
-    processedMessages: Message[]
+  // Internal fields for middleware communication
+  // 中间件通信的内部字段
+  _internal: {
+    // Enhanced dispatch function for recursive calls
+    // 用于递归调用的增强分发函数
+    enhancedDispatch?: (
+      context: AiProviderMiddlewareCompletionsContext,
+      params: CompletionsParams
+    ) => Promise<CompletionsOpenAIResult>
+    // Flag to indicate if this is a recursive call
+    // 标记是否为递归调用
+    isRecursiveCall?: boolean
+    // Current recursion depth
+    // 当前递归深度
+    recursionDepth?: number
+    // Add other internal fields as needed
+    // 根据需要添加其他内部字段
+    [key: string]: any
   }
 }
 
