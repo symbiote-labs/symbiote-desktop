@@ -1,21 +1,8 @@
 import { FrownOutlined, MehOutlined, ReloadOutlined, SettingOutlined, SmileOutlined } from '@ant-design/icons'
-import {
-  Button,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  Layout,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-  Typography
-} from 'antd'
+import { Button, Col, DatePicker, Form, Input, Layout, Row, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import { useState } from 'react'
+
+import MemoriesSettingsModal from './memories-settings-modal'
 
 const { Content } = Layout
 const { Title, Text } = Typography
@@ -264,46 +251,12 @@ const MemoriesPage = () => {
         </Space>
 
         {/* Settings Modal */}
-        <Modal
-          title="Memory Settings"
-          open={settingsModalVisible}
-          onOk={form.submit}
+        <MemoriesSettingsModal
+          visible={settingsModalVisible}
+          onSubmit={handleSettingsSubmit}
           onCancel={handleSettingsCancel}
-          width={500}>
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSettingsSubmit}
-            initialValues={{
-              llmModel: 'gpt-4',
-              embeddingModel: 'text-embedding-ada-002'
-            }}>
-            <Form.Item
-              label="LLM Model"
-              name="llmModel"
-              rules={[{ required: true, message: 'Please select an LLM model' }]}>
-              <Select placeholder="Select LLM Model">
-                <Option value="gpt-4">GPT-4</Option>
-                <Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Option>
-                <Option value="claude-3">Claude 3</Option>
-                <Option value="llama-2">Llama 2</Option>
-                <Option value="gemini-pro">Gemini Pro</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              label="Embedding Model"
-              name="embeddingModel"
-              rules={[{ required: true, message: 'Please select an embedding model' }]}>
-              <Select placeholder="Select Embedding Model">
-                <Option value="text-embedding-ada-002">OpenAI Ada-002</Option>
-                <Option value="text-embedding-3-small">OpenAI Embedding-3 Small</Option>
-                <Option value="text-embedding-3-large">OpenAI Embedding-3 Large</Option>
-                <Option value="sentence-transformers">Sentence Transformers</Option>
-                <Option value="cohere-embed">Cohere Embed</Option>
-              </Select>
-            </Form.Item>
-          </Form>
-        </Modal>
+          form={form}
+        />
       </Content>
     </Layout>
   )
