@@ -558,6 +558,7 @@
       "dimensions_size_too_large": "埋め込み次元はモデルのコンテキスト制限（{{max_context}}）を超えてはなりません。"
     },
     "languages": {
+      "auto-detect": "自動検出",
       "arabic": "アラビア語",
       "chinese": "中国語",
       "chinese-traditional": "繁体字中国語",

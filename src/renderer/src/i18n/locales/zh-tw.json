@@ -558,6 +558,7 @@
       "dimensions_size_too_large": "嵌入維度不能超過模型上下文限制（{{max_context}}）"
     },
     "languages": {
+      "auto-detect": "自動偵測",
       "arabic": "阿拉伯文",
       "chinese": "簡體中文",
       "chinese-traditional": "繁體中文",

@@ -558,6 +558,7 @@
       "urls": "网址"
     },
     "languages": {
+      "auto-detect": "自动检测",
       "arabic": "阿拉伯文",
       "chinese": "简体中文",
       "chinese-traditional": "繁体中文",

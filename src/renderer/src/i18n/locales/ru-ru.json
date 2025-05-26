@@ -558,6 +558,7 @@
       "dimensions_size_too_large": "Размерность вложения не может превышать ограничение контекста модели ({{max_context}})"
     },
     "languages": {
+      "auto-detect": "Автоопределение",
       "arabic": "Арабский",
       "chinese": "Китайский",
       "chinese-traditional": "Китайский традиционный",

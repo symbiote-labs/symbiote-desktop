@@ -558,6 +558,7 @@
       "dimensions_size_too_large": "The embedding dimension cannot exceed the model's context limit ({{max_context}})."
     },
     "languages": {
+      "auto-detect": "Auto Detect",
       "arabic": "Arabic",
       "chinese": "Chinese",
       "chinese-traditional": "Traditional Chinese",

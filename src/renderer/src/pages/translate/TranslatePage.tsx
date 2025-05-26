@@ -5,6 +5,7 @@ import { isLocalAi } from '@renderer/config/env'
 import { translateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
+import i18n from '@renderer/i18n'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
 import type { Assistant, TranslateHistory } from '@renderer/types'
@@ -83,7 +84,20 @@ const TranslatePage: FC = () => {
       return
     }
 
-    const assistant: Assistant = getDefaultTranslateAssistant(targetLanguage, text)
+    let assistant: Assistant
+
+    if (targetLanguage === 'auto-detect') {
+      const currentLanguage = i18n.language
+      const targetLang = currentLanguage === 'en' ? 'Chinese' : 'English'
+
+      assistant = {
+        ...getDefaultTranslateAssistant(currentLanguage === 'en' ? 'chinese' : 'english', text),
+        name: 'Auto Translator',
+        prompt: `You are a translator. If input is in ${targetLang}, translate to ${currentLanguage === 'en' ? 'English' : 'Chinese'}. Otherwise translate to ${targetLang}. Output translation only. Text: ${text}`
+      }
+    } else {
+      assistant = getDefaultTranslateAssistant(targetLanguage, text)
+    }
 
     setLoading(true)
     let translatedText = ''
@@ -342,8 +356,20 @@ const TranslatePage: FC = () => {
                 db.settings.put({ id: 'translate:target:language', value })
               }}
               optionRender={(option) => (
-                <Space>
-                  <span role="img" aria-label={option.data.label}>
+                <Space align="center">
+                  <span
+                    role="img"
+                    aria-label={option.data.label}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '16px',
+                      verticalAlign: 'middle',
+                      lineHeight: 1
+                    }}>
                     {option.data.emoji}
                   </span>
                   {option.label}

@@ -1,6 +1,18 @@
 import i18n from '@renderer/i18n'
 
-export const TranslateLanguageOptions = [
+type LanguageOption = {
+  value: string
+  label: string
+  emoji: string
+  style?: React.CSSProperties
+}
+
+export const TranslateLanguageOptions: LanguageOption[] = [
+  {
+    value: 'auto-detect',
+    label: i18n.t('languages.auto-detect'),
+    emoji: '🌐'
+  },
   {
     value: 'english',
     label: i18n.t('languages.english'),
@@ -63,12 +75,17 @@ export const TranslateLanguageOptions = [
   }
 ]
 
-export const translateLanguageOptions = (): typeof TranslateLanguageOptions => {
+export const translateLanguageOptions = (): LanguageOption[] => {
   return TranslateLanguageOptions.map((option) => {
     return {
       value: option.value,
       label: i18n.t(`languages.${option.value}`),
-      emoji: option.emoji
+      emoji: option.emoji,
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }
     }
   })
 }
