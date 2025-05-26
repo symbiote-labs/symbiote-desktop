@@ -1,5 +1,20 @@
-import { FrownOutlined, MehOutlined, ReloadOutlined, SmileOutlined } from '@ant-design/icons'
-import { Button, Col, DatePicker, Input, Layout, Row, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { FrownOutlined, MehOutlined, ReloadOutlined, SettingOutlined, SmileOutlined } from '@ant-design/icons'
+import {
+  Button,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  Layout,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography
+} from 'antd'
 import { useState } from 'react'
 
 const { Content } = Layout
@@ -62,6 +77,8 @@ const MemoriesPage = () => {
   const [searchText, setSearchText] = useState('')
   const [dateRange, setDateRange] = useState(null)
   const [selectedUser, setSelectedUser] = useState('all') // 'all' or a specific user ID
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false)
+  const [form] = Form.useForm()
 
   // --- Filter Logic (Basic examples, expand as needed) ---
   const handleSearch = (e) => {
@@ -112,6 +129,17 @@ const MemoriesPage = () => {
     setDataSource(initialData)
     // Clear AntD component states if necessary (e.g., Input value)
     // For controlled components, clearing the state variable is enough.
+  }
+
+  const handleSettingsSubmit = (values) => {
+    console.log('Settings saved:', values)
+    // Here you would typically save the settings to your backend or local storage
+    setSettingsModalVisible(false)
+  }
+
+  const handleSettingsCancel = () => {
+    setSettingsModalVisible(false)
+    form.resetFields()
   }
 
   const columns = [
@@ -190,13 +218,18 @@ const MemoriesPage = () => {
               <Text type="secondary">A summary of your memories</Text>
             </Col>
             <Col>
-              <Tooltip title="Refresh">
-                <Button
-                  shape="circle"
-                  icon={<ReloadOutlined />}
-                  onClick={() => filterData(searchText, dateRange, selectedUser)}
-                />
-              </Tooltip>
+              <Space>
+                <Tooltip title="Settings">
+                  <Button shape="circle" icon={<SettingOutlined />} onClick={() => setSettingsModalVisible(true)} />
+                </Tooltip>
+                <Tooltip title="Refresh">
+                  <Button
+                    shape="circle"
+                    icon={<ReloadOutlined />}
+                    onClick={() => filterData(searchText, dateRange, selectedUser)}
+                  />
+                </Tooltip>
+              </Space>
             </Col>
           </Row>
 
@@ -229,6 +262,48 @@ const MemoriesPage = () => {
             bordered
           />
         </Space>
+
+        {/* Settings Modal */}
+        <Modal
+          title="Memory Settings"
+          open={settingsModalVisible}
+          onOk={form.submit}
+          onCancel={handleSettingsCancel}
+          width={500}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSettingsSubmit}
+            initialValues={{
+              llmModel: 'gpt-4',
+              embeddingModel: 'text-embedding-ada-002'
+            }}>
+            <Form.Item
+              label="LLM Model"
+              name="llmModel"
+              rules={[{ required: true, message: 'Please select an LLM model' }]}>
+              <Select placeholder="Select LLM Model">
+                <Option value="gpt-4">GPT-4</Option>
+                <Option value="gpt-3.5-turbo">GPT-3.5 Turbo</Option>
+                <Option value="claude-3">Claude 3</Option>
+                <Option value="llama-2">Llama 2</Option>
+                <Option value="gemini-pro">Gemini Pro</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              label="Embedding Model"
+              name="embeddingModel"
+              rules={[{ required: true, message: 'Please select an embedding model' }]}>
+              <Select placeholder="Select Embedding Model">
+                <Option value="text-embedding-ada-002">OpenAI Ada-002</Option>
+                <Option value="text-embedding-3-small">OpenAI Embedding-3 Small</Option>
+                <Option value="text-embedding-3-large">OpenAI Embedding-3 Large</Option>
+                <Option value="sentence-transformers">Sentence Transformers</Option>
+                <Option value="cohere-embed">Cohere Embed</Option>
+              </Select>
+            </Form.Item>
+          </Form>
+        </Modal>
       </Content>
     </Layout>
   )
