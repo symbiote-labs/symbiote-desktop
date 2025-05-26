@@ -4,6 +4,7 @@ import type { Assistant, GenerateImageParams, MCPTool, Model, Provider, Suggesti
 import { Chunk } from '@renderer/types/chunk'
 import type { Message } from '@renderer/types/newMessage'
 import OpenAI from 'openai'
+import { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources'
 import type { Stream } from 'openai/streaming'
 
 export type OnFilterMessagesFunction = (messages: Message[]) => void
@@ -14,6 +15,24 @@ export interface CompletionsParams {
   onChunk: (chunk: Chunk) => void
   onFilterMessages: OnFilterMessagesFunction
   mcpTools?: MCPTool[]
+  _internal?: {
+    // SDK接口需要的参数
+    sdkParams?: {
+      reqMessages: ChatCompletionMessageParam[]
+      tools: ChatCompletionTool[]
+      systemMessage: any
+      model: any
+      maxTokens: number | undefined
+      streamOutput: boolean
+    }
+    // 内部处理需要的参数
+    enableReasoning?: boolean
+    userMessages?: ChatCompletionMessageParam[]
+    contextCount?: number
+    processedMessages?: Message[]
+    // Abort控制器
+    controller?: AbortController
+  }
 }
 
 // Re-export CompletionsResult

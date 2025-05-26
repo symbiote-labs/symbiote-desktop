@@ -6,83 +6,117 @@ import type { CompletionsMiddleware } from '../middlewareTypes'
 const MIDDLEWARE_NAME = 'AbortHandlerMiddleware'
 
 export const AbortHandlerMiddleware: CompletionsMiddleware = () => (next) => async (context, params) => {
-  const resultFromUpstream = await next(context, params)
+  console.log(`🔄 [${MIDDLEWARE_NAME}] Creating AbortController for request`)
 
-  if (resultFromUpstream.stream && resultFromUpstream.stream instanceof ReadableStream) {
-    const originalStream = resultFromUpstream.stream
+  // 从context获取provider实例
+  const provider = context._providerInstance
+  if (!provider) {
+    throw new Error('Provider instance not found in context')
+  }
 
-    // 从 result.controller 获取 abort controller
-    const abortController = resultFromUpstream.controller
-    const abortSignal = abortController?.signal
-    console.log('abortSignal', abortSignal)
-    if (!abortSignal) {
-      console.log(`[${MIDDLEWARE_NAME}] No abort controller/signal found, returning original stream`)
-      return resultFromUpstream
+  // 获取当前消息的ID用于abort管理
+  // 优先使用处理过的消息，如果没有则使用原始消息
+  const processedMessages = params._internal?.processedMessages || params.messages
+  const lastUserMessage = processedMessages.findLast((m) => m.role === 'user')
+  const messageId = lastUserMessage?.id
+
+  // 使用BaseProvider的createAbortController方法创建AbortController
+  const { abortController, cleanup } = provider.createAbortController(messageId, false)
+  const abortSignal = abortController.signal
+
+  console.log(`🔄 [${MIDDLEWARE_NAME}] AbortController created for message: ${messageId}`)
+
+  // 将controller添加到params._internal中
+  const paramsWithController = {
+    ...params,
+    _internal: {
+      ...params._internal,
+      controller: abortController
     }
+  }
 
-    const error = new DOMException('Request was aborted', 'AbortError')
+  try {
+    const resultFromUpstream = await next(context, paramsWithController)
 
-    // 使用 TransformStream 处理 abort 检测
-    const streamWithAbortHandler = (originalStream as ReadableStream<Chunk>).pipeThrough(
-      new TransformStream<Chunk, Chunk | ErrorChunk>({
-        transform(chunk, controller) {
-          // 检查 abort 状态
-          if (abortSignal.aborted) {
-            console.log(`[${MIDDLEWARE_NAME}] Abort detected, converting to ErrorChunk`)
+    if (resultFromUpstream.stream && resultFromUpstream.stream instanceof ReadableStream) {
+      const originalStream = resultFromUpstream.stream
 
-            // 转换为 ErrorChunk
-            // TODO: 也可以手动throw error，更贴合现有的onError处理方式，但是会破坏流转换的统一逻辑，还没想好怎么处理比较好
-            const errorChunk: ErrorChunk = {
-              type: ChunkType.ERROR,
-              error
+      console.log(`🔄 [${MIDDLEWARE_NAME}] Setting up abort handling for stream`)
+
+      // 检查abort状态
+      if (abortSignal.aborted) {
+        console.log(`🔄 [${MIDDLEWARE_NAME}] Request already aborted, cleaning up`)
+        cleanup()
+        throw new DOMException('Request was aborted', 'AbortError')
+      }
+
+      const error = new DOMException('Request was aborted', 'AbortError')
+
+      // 使用 TransformStream 处理 abort 检测
+      const streamWithAbortHandler = (originalStream as ReadableStream<Chunk>).pipeThrough(
+        new TransformStream<Chunk, Chunk | ErrorChunk>({
+          transform(chunk, controller) {
+            // 检查 abort 状态
+            if (abortSignal.aborted) {
+              console.log(`🔄 [${MIDDLEWARE_NAME}] Abort detected, converting to ErrorChunk`)
+
+              // 转换为 ErrorChunk
+              const errorChunk: ErrorChunk = {
+                type: ChunkType.ERROR,
+                error
+              }
+
+              controller.enqueue(errorChunk)
+              controller.close()
+              return
             }
 
-            controller.enqueue(errorChunk)
-            controller.close()
-            return
-          }
+            // 正常传递 chunk
+            controller.enqueue(chunk)
+          },
 
-          // 正常传递 chunk
-          controller.enqueue(chunk)
-        },
+          flush(controller) {
+            // 在流结束时再次检查 abort 状态
+            if (abortSignal.aborted) {
+              console.log(`🔄 [${MIDDLEWARE_NAME}] Abort detected at flush, converting to ErrorChunk`)
+              // TODO: 也可以手动throw error，更贴合现有的onError处理方式，但是会破坏流转换的统一逻辑，还没想好怎么处理比较好
+              const errorChunk: ErrorChunk = {
+                type: ChunkType.ERROR,
+                error
+              }
 
-        flush(controller) {
-          // 在流结束时再次检查 abort 状态
-          if (abortSignal!.aborted) {
-            console.log(`[${MIDDLEWARE_NAME}] Abort detected at flush, converting to ErrorChunk`)
-            // TODO: 也可以手动throw error，更贴合现有的onError处理方式，但是会破坏流转换的统一逻辑，还没想好怎么处理比较好
-            const errorChunk: ErrorChunk = {
-              type: ChunkType.ERROR,
-              error
+              controller.enqueue(errorChunk)
             }
-
-            controller.enqueue(errorChunk)
           }
-        }
-      })
-    )
+        })
+      )
 
-    // 添加 abort 事件监听器，用于主动检测 abort
-    if (abortSignal) {
+      // 添加 abort 事件监听器，用于主动检测 abort
       abortSignal.addEventListener(
         'abort',
         () => {
-          console.log(`[${MIDDLEWARE_NAME}] Abort event triggered`)
+          console.log(`🔄 [${MIDDLEWARE_NAME}] Abort event triggered`)
           // TransformStream 会在下次 transform 调用时检测到 aborted 状态
         },
         { once: true }
       )
+
+      const adaptedResult: CompletionsOpenAIResult = {
+        ...resultFromUpstream,
+        stream: streamWithAbortHandler
+      }
+
+      console.log(`🔄 [${MIDDLEWARE_NAME}] Set up abort handling with TransformStream`)
+      return adaptedResult
     }
 
-    const adaptedResult: CompletionsOpenAIResult = {
-      ...resultFromUpstream,
-      stream: streamWithAbortHandler
-    }
-
-    console.log(`[${MIDDLEWARE_NAME}] Set up abort handling with TransformStream`)
-    return adaptedResult
-  } else {
-    console.log(`[${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)
+    // 对于非流式响应，直接返回原始结果
+    console.log(`🔄 [${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)
     return resultFromUpstream
+  } catch (error) {
+    console.error(`🔄 [${MIDDLEWARE_NAME}] Error occurred, cleaning up:`, error)
+    throw error
+  } finally {
+    cleanup()
   }
 }

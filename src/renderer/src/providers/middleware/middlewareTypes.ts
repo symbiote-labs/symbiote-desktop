@@ -47,6 +47,31 @@ export interface AiProviderMiddlewareCompletionsContext extends AiProviderMiddle
   mcpTools?: MCPTool[]
   onChunk?: OnChunkFunction
   onFilterMessages?: OnFilterMessagesFunction
+
+  // Additional fields added by middleware during processing
+  // 在处理过程中由中间件添加的额外字段
+  abortController?: AbortController // Added by AbortHandlerMiddleware
+  abortSignal?: AbortSignal // Added by AbortHandlerMiddleware
+  cleanup?: () => void // Added by AbortHandlerMiddleware
+
+  // Bypass mechanism - signals that transformedData should be used instead of re-processing
+  // 绕过机制 - 标示应该使用 transformedData 而不是重新处理参数
+  _useTransformedData?: boolean // Added by StreamAdapterMiddleware
+
+  transformedData?: {
+    // Added by TransformParamsBeforeCompletions
+    // 由 TransformParamsBeforeCompletions 添加的转换后数据
+    reqMessages: any[]
+    tools: any[]
+    systemMessage: any
+    userMessages: any[]
+    model: Model
+    maxTokens: number
+    streamOutput: boolean
+    enableReasoning: boolean
+    contextCount: number
+    processedMessages: Message[]
+  }
 }
 
 /**

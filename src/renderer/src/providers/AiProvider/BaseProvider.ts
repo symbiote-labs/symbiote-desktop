@@ -24,7 +24,7 @@ import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { isEmpty } from 'lodash'
 import type OpenAI from 'openai'
 
-import type { CompletionsParams, CompletionsResult } from '.'
+import type { CompletionsOpenAIResult, CompletionsParams } from '.'
 
 export default abstract class BaseProvider {
   // Threshold for determining whether to use system prompt for tools
@@ -34,7 +34,7 @@ export default abstract class BaseProvider {
   protected host: string
   protected apiKey: string
 
-  protected useSystemPromptForTools: boolean = true
+  public useSystemPromptForTools: boolean = true
 
   constructor(provider: Provider) {
     this.provider = provider
@@ -47,7 +47,7 @@ export default abstract class BaseProvider {
     return this.provider
   }
 
-  abstract completions(params: CompletionsParams): Promise<CompletionsResult>
+  abstract completions(params: CompletionsParams): Promise<CompletionsOpenAIResult>
   abstract translate(
     content: string,
     assistant: Assistant,
@@ -68,6 +68,7 @@ export default abstract class BaseProvider {
     resp: MCPCallToolResponse,
     model: Model
   ): any
+  public abstract getMessageParam(message: Message, model?: Model): Promise<any>
 
   public getBaseURL(): string {
     const host = this.provider.apiHost
@@ -214,7 +215,7 @@ export default abstract class BaseProvider {
     )
   }
 
-  protected createAbortController(messageId?: string, isAddEventListener?: boolean) {
+  public createAbortController(messageId?: string, isAddEventListener?: boolean) {
     const abortController = new AbortController()
     const abortFn = () => abortController.abort()
 
@@ -260,7 +261,7 @@ export default abstract class BaseProvider {
   }
 
   // Setup tools configuration based on provided parameters
-  protected setupToolsConfig<T>(params: { mcpTools?: MCPTool[]; model: Model; enableToolUse?: boolean }): {
+  public setupToolsConfig<T>(params: { mcpTools?: MCPTool[]; model: Model; enableToolUse?: boolean }): {
     tools: T[]
   } {
     const { mcpTools, model, enableToolUse } = params
