@@ -1455,6 +1455,14 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '108': (state: RootState) => {
+    try {
+      state.settings.sidebarIcons.visible = [...state.settings.sidebarIcons.visible, 'memory']
+      return state
+    } catch (error) {
+      return state
+    }
   }
 }
 
