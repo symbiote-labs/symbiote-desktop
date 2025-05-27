@@ -8,6 +8,7 @@ import { StreamAdapterMiddleware } from './openai/StreamAdapterMiddleware'
 import { TextChunkMiddleware } from './openai/TextChunkMiddleware'
 import { ThinkChunkMiddleware } from './openai/ThinkChunkMiddleware'
 import { TransformParamsBeforeCompletions } from './openai/TransformParamsBeforeCompletions'
+import { WebSearchMiddleware } from './openai/WebSearchMiddleware'
 
 // Construct AiProviderMiddlewareConfig
 // Assuming loggingMiddleware is a ProviderMethodMiddleware. Adjust if it's a CompletionsMiddleware.
@@ -19,6 +20,7 @@ const middlewareConfig: AiProviderMiddlewareConfig = {
     TransformParamsBeforeCompletions, // 参数转换中间件 - 最早执行，为其他中间件提供标准化参数
     AbortHandlerMiddleware,
     TextChunkMiddleware,
+    WebSearchMiddleware, // Web搜索处理中间件 - 处理链接转换和搜索结果
     McpToolChunkMiddleware, // 工具处理中间件
     ThinkChunkMiddleware,
     StreamAdapterMiddleware
