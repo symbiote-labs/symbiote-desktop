@@ -9,12 +9,13 @@ import {
   setAssistantIconType,
   setClickAssistantToShowTopic,
   setCustomCss,
+  setPinTopicsToTop,
   setShowTopicTime,
   setSidebarIcons
 } from '@renderer/store/settings'
 import { ThemeMode } from '@renderer/types'
 import { Button, Input, Segmented, Switch } from 'antd'
-import { Minus, Plus } from 'lucide-react'
+import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { FC, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
@@ -32,6 +33,7 @@ const DisplaySettings: FC = () => {
     setTopicPosition,
     clickAssistantToShowTopic,
     showTopicTime,
+    pinTopicsToTop,
     customCss,
     sidebarIcons,
     assistantIconType
@@ -141,12 +143,10 @@ const DisplaySettings: FC = () => {
             <ZoomValue>{Math.round(currentZoom * 100)}%</ZoomValue>
             <Button onClick={() => handleZoomFactor(0.1)} icon={<Plus size="14" />} />
             <Button
-              onClick={() => {
-                handleZoomFactor(0, true)
-              }}
-              style={{ marginLeft: 8 }}>
-              {t('settings.zoom.reset')}
-            </Button>
+              onClick={() => handleZoomFactor(0, true)}
+              style={{ marginLeft: 8 }}
+              icon={<RotateCcw size="14" />}
+            />
           </ZoomButtonGroup>
         </SettingRow>
         {isMac && (
@@ -190,6 +190,11 @@ const DisplaySettings: FC = () => {
         <SettingRow>
           <SettingRowTitle>{t('settings.topic.show.time')}</SettingRowTitle>
           <Switch checked={showTopicTime} onChange={(checked) => dispatch(setShowTopicTime(checked))} />
+        </SettingRow>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{t('settings.topic.pin_to_top')}</SettingRowTitle>
+          <Switch checked={pinTopicsToTop} onChange={(checked) => dispatch(setPinTopicsToTop(checked))} />
         </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>
@@ -239,6 +244,7 @@ const DisplaySettings: FC = () => {
             minHeight: 200,
             fontFamily: 'monospace'
           }}
+          spellCheck={false}
         />
       </SettingGroup>
     </SettingContainer>

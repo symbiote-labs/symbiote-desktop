@@ -1,6 +1,7 @@
 import {
   Content,
   File,
+  FinishReason,
   FunctionCall,
   GenerateContentConfig,
   GenerateContentResponse,
@@ -53,6 +54,7 @@ import type { Message, Response } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import {
   geminiFunctionCallToMcpTool,
+  isEnabledToolUse,
   mcpToolCallResponseToGeminiMessage,
   mcpToolsToGeminiTools,
   parseAndCallTools
@@ -111,7 +113,10 @@ export default class GeminiProvider extends BaseProvider {
     }
 
     // If file is not found, upload it to Gemini
-    const result = await window.api.gemini.uploadFile(file, this.apiKey)
+    const result = await window.api.gemini.uploadFile(file, {
+      apiKey: this.apiKey,
+      baseURL: this.getBaseURL()
+    })
 
     return {
       fileData: {
@@ -285,7 +290,8 @@ export default class GeminiProvider extends BaseProvider {
       if (reasoningEffort === undefined) {
         return {
           thinkingConfig: {
-            includeThoughts: false
+            includeThoughts: false,
+            thinkingBudget: 0
           } as ThinkingConfig
         }
       }
@@ -339,7 +345,7 @@ export default class GeminiProvider extends BaseProvider {
       await this.generateImageByChat({ messages, assistant, onChunk })
       return
     }
-    const { contextCount, maxTokens, streamOutput, enableToolUse } = getAssistantSettings(assistant)
+    const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
 
     const userMessages = filterUserRoleStartMessages(
       filterEmptyMessages(filterContextMessages(takeRight(messages, contextCount + 2)))
@@ -359,7 +365,7 @@ export default class GeminiProvider extends BaseProvider {
     const { tools } = this.setupToolsConfig<Tool>({
       mcpTools,
       model,
-      enableToolUse
+      enableToolUse: isEnabledToolUse(assistant)
     })
 
     if (this.useSystemPromptForTools) {
@@ -379,8 +385,8 @@ export default class GeminiProvider extends BaseProvider {
       safetySettings: this.getSafetySettings(),
       // generate image don't need system instruction
       systemInstruction: isGemmaModel(model) ? undefined : systemInstruction,
-      temperature: assistant?.settings?.temperature,
-      topP: assistant?.settings?.topP,
+      temperature: this.getTemperature(assistant, model),
+      topP: this.getTopP(assistant, model),
       maxOutputTokens: maxTokens,
       tools: tools,
       ...this.getBudgetToken(assistant, model),
@@ -502,7 +508,6 @@ export default class GeminiProvider extends BaseProvider {
       let time_first_token_millsec = 0
 
       if (stream instanceof GenerateContentResponse) {
-        let content = ''
         const time_completion_millsec = new Date().getTime() - start_time_millsec
 
         const toolResults: Awaited<ReturnType<typeof parseAndCallTools>> = []
@@ -517,16 +522,18 @@ export default class GeminiProvider extends BaseProvider {
               if (part.functionCall) {
                 functionCalls.push(part.functionCall)
               }
-              if (part.text) {
-                content += part.text
-                onChunk({ type: ChunkType.TEXT_DELTA, text: part.text })
+              const text = part.text || ''
+              if (part.thought) {
+                onChunk({ type: ChunkType.THINKING_DELTA, text })
+                onChunk({ type: ChunkType.THINKING_COMPLETE, text })
+              } else if (part.text) {
+                onChunk({ type: ChunkType.TEXT_DELTA, text })
+                onChunk({ type: ChunkType.TEXT_COMPLETE, text })
               }
             })
           }
         })
-        if (content.length) {
-          onChunk({ type: ChunkType.TEXT_COMPLETE, text: content })
-        }
+
         if (functionCalls.length) {
           toolResults.push(...(await processToolCalls(functionCalls)))
         }
@@ -559,16 +566,35 @@ export default class GeminiProvider extends BaseProvider {
         } as BlockCompleteChunk)
       } else {
         let content = ''
+        let thinkingContent = ''
         for await (const chunk of stream) {
           if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) break
 
-          if (time_first_token_millsec == 0) {
-            time_first_token_millsec = new Date().getTime()
-          }
-
-          if (chunk.text !== undefined) {
-            content += chunk.text
-            onChunk({ type: ChunkType.TEXT_DELTA, text: chunk.text })
+          if (chunk.candidates?.[0]?.content?.parts && chunk.candidates[0].content.parts.length > 0) {
+            const parts = chunk.candidates[0].content.parts
+            for (const part of parts) {
+              if (!part.text) {
+                continue
+              } else if (part.thought) {
+                if (time_first_token_millsec === 0) {
+                  time_first_token_millsec = new Date().getTime()
+                }
+                thinkingContent += part.text
+                onChunk({ type: ChunkType.THINKING_DELTA, text: part.text || '' })
+              } else {
+                if (time_first_token_millsec == 0) {
+                  time_first_token_millsec = new Date().getTime()
+                } else {
+                  onChunk({
+                    type: ChunkType.THINKING_COMPLETE,
+                    text: thinkingContent,
+                    thinking_millsec: new Date().getTime() - time_first_token_millsec
+                  })
+                }
+                content += part.text
+                onChunk({ type: ChunkType.TEXT_DELTA, text: part.text })
+              }
+            }
           }
 
           if (chunk.candidates?.[0]?.finishReason) {
@@ -633,7 +659,11 @@ export default class GeminiProvider extends BaseProvider {
       }
     }
 
+    // 在发起请求之前开始计时
+    const start_time_millsec = new Date().getTime()
+
     if (!streamOutput) {
+      onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
       const response = await chat.sendMessage({
         message: messageContents as PartUnion,
         config: {
@@ -641,12 +671,10 @@ export default class GeminiProvider extends BaseProvider {
           abortSignal: abortController.signal
         }
       })
-      onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
       return await processStream(response, 0).then(cleanup)
     }
 
     onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
-    const start_time_millsec = new Date().getTime()
     const userMessagesStream = await chat.sendMessageStream({
       message: messageContents as PartUnion,
       config: {
@@ -910,14 +938,33 @@ export default class GeminiProvider extends BaseProvider {
       return { valid: false, error: new Error('No model found') }
     }
 
+    let config: GenerateContentConfig = {
+      maxOutputTokens: 1
+    }
+    if (isGeminiReasoningModel(model)) {
+      config = {
+        ...config,
+        thinkingConfig: {
+          includeThoughts: false,
+          thinkingBudget: 0
+        } as ThinkingConfig
+      }
+    }
+
+    if (isGenerateImageModel(model)) {
+      config = {
+        ...config,
+        responseModalities: [Modality.TEXT, Modality.IMAGE],
+        responseMimeType: 'text/plain'
+      }
+    }
+
     try {
       if (!stream) {
         const result = await this.sdk.models.generateContent({
           model: model.id,
           contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-          config: {
-            maxOutputTokens: 1
-          }
+          config: config
         })
         if (isEmpty(result.text)) {
           throw new Error('Empty response')
@@ -926,14 +973,12 @@ export default class GeminiProvider extends BaseProvider {
         const response = await this.sdk.models.generateContentStream({
           model: model.id,
           contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-          config: {
-            maxOutputTokens: 1
-          }
+          config: config
         })
         // 等待整个流式响应结束
         let hasContent = false
         for await (const chunk of response) {
-          if (chunk.text && chunk.text.length > 0) {
+          if (chunk.candidates && chunk.candidates[0].finishReason === FinishReason.MAX_TOKENS) {
             hasContent = true
             break
           }
