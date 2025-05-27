@@ -12,6 +12,13 @@ import { getDefaultTranslateAssistant } from '@renderer/services/AssistantServic
 import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
 import type { Model, TranslateHistory } from '@renderer/types'
 import { runAsyncFunction, uuid } from '@renderer/utils'
+import {
+  createInputScrollHandler,
+  createOutputScrollHandler,
+  detectLanguage,
+  getTargetLanguageForBidirectional,
+  isLanguageInPair
+} from '@renderer/utils/translate'
 import { Button, Divider, Empty, Flex, Modal, Popconfirm, Select, Space, Switch, Tooltip } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
@@ -268,70 +275,6 @@ const TranslatePage: FC = () => {
     await db.translate_history.clear()
   }
 
-  const detectLanguage = async (inputText: string): Promise<string> => {
-    if (!inputText.trim()) return 'any'
-
-    const langPatterns = {
-      chinese: /[\u4e00-\u9fa5]/,
-      japanese: /[\u3040-\u30ff\u3400-\u4dbf]/,
-      korean: /[\uAC00-\uD7AF]/,
-      russian: /[\u0400-\u04FF]/,
-      arabic: /[\u0600-\u06FF]/
-    }
-
-    for (const [lang, pattern] of Object.entries(langPatterns)) {
-      if (pattern.test(inputText)) return lang
-    }
-
-    try {
-      const prompt = `Identify language: "${inputText.substring(0, 50)}". Reply with one word only: english, chinese, japanese, korean, russian, spanish, french, german, italian, portuguese, arabic.`
-
-      let detectedCode = ''
-      await fetchTranslate({
-        content: inputText.substring(0, 50),
-        assistant: {
-          id: 'lang-detector',
-          name: 'Language Detector',
-          prompt,
-          topics: [],
-          type: 'translator'
-        },
-        onResponse: (response) => {
-          detectedCode = response.trim().toLowerCase()
-        }
-      })
-
-      const validCodes = [
-        'english',
-        'chinese',
-        'japanese',
-        'korean',
-        'russian',
-        'spanish',
-        'french',
-        'italian',
-        'portuguese',
-        'arabic',
-        'german'
-      ]
-
-      return validCodes.find((code) => detectedCode.includes(code)) || 'english'
-    } catch (error) {
-      console.error('语言检测错误:', error)
-      return 'english'
-    }
-  }
-
-  const getTargetLanguageForBidirectional = (sourceLanguage: string): string => {
-    if (sourceLanguage === bidirectionalPair[0]) {
-      return bidirectionalPair[1]
-    } else if (sourceLanguage === bidirectionalPair[1]) {
-      return bidirectionalPair[0]
-    }
-
-    return bidirectionalPair[0] === sourceLanguage ? bidirectionalPair[1] : bidirectionalPair[0]
-  }
-
   const onTranslate = async () => {
     if (!text.trim()) return
     if (!translateModel) {
@@ -350,7 +293,7 @@ const TranslatePage: FC = () => {
       let actualTargetLanguage = targetLanguage
 
       if (isBidirectional) {
-        if (![bidirectionalPair[0], bidirectionalPair[1]].includes(sourceLanguage)) {
+        if (!isLanguageInPair(sourceLanguage, bidirectionalPair)) {
           window.message.warning({
             content: t('translate.language.not_pair'),
             key: 'translate-message'
@@ -358,7 +301,7 @@ const TranslatePage: FC = () => {
           setLoading(false)
           return
         }
-        actualTargetLanguage = getTargetLanguageForBidirectional(sourceLanguage)
+        actualTargetLanguage = getTargetLanguageForBidirectional(sourceLanguage, bidirectionalPair)
         setTargetLanguage(actualTargetLanguage)
       } else {
         if (sourceLanguage === targetLanguage) {
@@ -453,41 +396,8 @@ const TranslatePage: FC = () => {
     }
   }
 
-  // Handle input area scroll event
-  const handleInputScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    if (!isScrollSyncEnabled || !outputTextRef.current || isProgrammaticScroll.current) return
-
-    isProgrammaticScroll.current = true
-
-    const inputEl = e.currentTarget
-    const outputEl = outputTextRef.current
-
-    // Calculate scroll position by ratio
-    const inputScrollRatio = inputEl.scrollTop / (inputEl.scrollHeight - inputEl.clientHeight || 1)
-    outputEl.scrollTop = inputScrollRatio * (outputEl.scrollHeight - outputEl.clientHeight || 1)
-
-    requestAnimationFrame(() => {
-      isProgrammaticScroll.current = false
-    })
-  }
-
-  // Handle output area scroll event
-  const handleOutputScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const inputEl = textAreaRef.current?.resizableTextArea?.textArea
-    if (!isScrollSyncEnabled || !inputEl || isProgrammaticScroll.current) return
-
-    isProgrammaticScroll.current = true
-
-    const outputEl = e.currentTarget
-
-    // Calculate scroll position by ratio
-    const outputScrollRatio = outputEl.scrollTop / (outputEl.scrollHeight - outputEl.clientHeight || 1)
-    inputEl.scrollTop = outputScrollRatio * (inputEl.scrollHeight - inputEl.clientHeight || 1)
-
-    requestAnimationFrame(() => {
-      isProgrammaticScroll.current = false
-    })
-  }
+  const handleInputScroll = createInputScrollHandler(outputTextRef, isProgrammaticScroll, isScrollSyncEnabled)
+  const handleOutputScroll = createOutputScrollHandler(textAreaRef, isProgrammaticScroll, isScrollSyncEnabled)
 
   // 获取当前语言状态显示
   const getLanguageDisplay = () => {
