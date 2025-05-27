@@ -24,7 +24,7 @@ const MessageErrorInfo: React.FC<{ block: ErrorMessageBlock }> = ({ block }) => 
   if (block?.error?.message) {
     const errorKey = `error.${block.error.message}`
     const pauseErrorLanguagePlaceholder = i18n.exists(errorKey) ? t(errorKey) : block.error.message
-    return <Alert description={pauseErrorLanguagePlaceholder} message={t('error.chat.response')} type="error" />
+    return <Alert description={pauseErrorLanguagePlaceholder} type="error" />
   }
 
   return <Alert description={t('error.chat.response')} type="error" />
@@ -35,5 +35,4 @@ const Alert = styled(AntdAlert)`
   padding: 10px;
   font-size: 12px;
 `
-
 export default React.memo(ErrorBlock)
