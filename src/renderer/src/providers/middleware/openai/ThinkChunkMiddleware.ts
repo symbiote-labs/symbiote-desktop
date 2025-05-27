@@ -221,7 +221,7 @@ export const ThinkChunkMiddleware: CompletionsMiddleware =
             }
 
             // 处理结束标记
-            const finishReason = sdkChunk.choices[0]?.finish_reason
+            const finishReason = sdkChunk.choices?.[0]?.finish_reason
             if (!isEmpty(finishReason) && thinkingContent && isFirstNonThinkingChunk) {
               const thinkingCompleteChunk: ThinkingCompleteChunk = {
                 type: ChunkType.THINKING_COMPLETE,
@@ -232,21 +232,21 @@ export const ThinkChunkMiddleware: CompletionsMiddleware =
             }
 
             // 清理 reasoning 字段后传递给下游
-            const cleanedChunk: OpenAI.Chat.Completions.ChatCompletionChunk = {
-              ...sdkChunk,
-              choices:
-                sdkChunk.choices?.map((choice) => ({
-                  ...choice,
-                  delta: choice.delta
-                    ? {
-                        ...choice.delta,
-                        reasoning_content: undefined,
-                        reasoning: undefined
-                      }
-                    : choice.delta
-                })) || []
-            }
-            controller.enqueue(cleanedChunk as any)
+            // const cleanedChunk: OpenAI.Chat.Completions.ChatCompletionChunk = {
+            //   ...sdkChunk,
+            //   choices:
+            //     sdkChunk.choices?.map((choice) => ({
+            //       ...choice,
+            //       delta: choice.delta
+            //         ? {
+            //             ...choice.delta,
+            //             reasoning_content: undefined,
+            //             reasoning: undefined
+            //           }
+            //         : choice.delta
+            //     })) || []
+            // }
+            controller.enqueue(sdkChunk)
           }
         })
       )

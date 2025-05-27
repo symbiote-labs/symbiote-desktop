@@ -241,7 +241,7 @@ function createToolHandlingTransform(
  */
 function isToolCallChunk(chunk: any): boolean {
   // 检查原始 OpenAI chunk 格式中的工具调用
-  return !!(chunk.choices && chunk.choices[0]?.delta?.tool_calls)
+  return !!(chunk.choices && chunk.choices?.[0]?.delta?.tool_calls)
 }
 
 /**
@@ -253,7 +253,7 @@ function extractToolCallsFromChunk(chunk: any): ChatCompletionMessageToolCall[] 
 
   try {
     // 处理原始 OpenAI API 格式
-    if (chunk.choices && chunk.choices[0]?.delta?.tool_calls) {
+    if (chunk.choices && chunk.choices?.[0]?.delta?.tool_calls) {
       for (const toolCall of chunk.choices[0].delta.tool_calls) {
         if (toolCall.id && toolCall.function) {
           toolCalls.push({
