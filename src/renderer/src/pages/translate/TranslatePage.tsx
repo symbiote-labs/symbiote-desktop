@@ -65,10 +65,6 @@ const TranslateSettings: FC<{
     setLocalPair(bidirectionalPair)
   }, [bidirectionalPair, visible])
 
-  const handleRemoveModel = () => {
-    db.settings.put({ id: 'translate:model', value: null })
-  }
-
   const handleSave = () => {
     if (localPair[0] === localPair[1]) {
       window.message.warning({
@@ -118,7 +114,6 @@ const TranslateSettings: FC<{
               options={selectOptions}
               showSearch
             />
-            {translateModel && <Button icon={<DeleteOutlined />} type="text" onClick={handleRemoveModel} danger />}
           </HStack>
           {!translateModel && (
             <div style={{ marginTop: 8, color: 'var(--color-warning)' }}>
