@@ -3,7 +3,8 @@ import {
   isSupportedReasoningEffortModel,
   isSupportedReasoningEffortOpenAIModel,
   isSupportedThinkingTokenModel,
-  isSupportedThinkingTokenQwenModel
+  isSupportedThinkingTokenQwenModel,
+  isWebSearchModel
 } from '@renderer/config/models'
 import { getAssistantSettings, getDefaultModel } from '@renderer/services/AssistantService'
 import {
@@ -51,6 +52,8 @@ export const TransformParamsBeforeCompletions: CompletionsMiddleware =
 
       // 2. 消息预处理 - 完整实现
       const processedMessages = addImageFileToContents(params.messages)
+      // 内置网络搜索
+      const isEnabledBultinWebSearch = params.assistant.enableWebSearch && isWebSearchModel(model)
 
       // 3. 推理模式检测 - 完整实现
       const enableReasoning =
@@ -138,7 +141,8 @@ export const TransformParamsBeforeCompletions: CompletionsMiddleware =
         enableReasoning,
         userMessages,
         contextCount,
-        processedMessages: _messages
+        processedMessages: _messages,
+        isEnabledBultinWebSearch
       }
       params._internal = _internal
 

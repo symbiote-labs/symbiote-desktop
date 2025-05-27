@@ -840,7 +840,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     // const start_time_millsec = new Date().getTime()
     if (!_internal?.sdkParams) {
       console.warn('🚀 [OpenAIProvider] transformedData is not found')
-      return
+      return {} as CompletionsOpenAIResult
     }
     const { reqMessages, tools, model, maxTokens, streamOutput } = _internal?.sdkParams ?? {}
     const { signal } = _internal?.controller ?? {}
