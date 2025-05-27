@@ -30,7 +30,6 @@ import {
   Provider,
   Suggestion
 } from '@renderer/types'
-import { ChunkType } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToOpenAICompatibleMessage, mcpToolsToOpenAIChatTools } from '@renderer/utils/mcp-tools'
@@ -293,7 +292,9 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
       return {
         thinking: {
           type: 'enabled',
-          budget_tokens: Math.max(1024, Math.min(budgetTokens, (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio))
+          budget_tokens: Math.floor(
+            Math.max(1024, Math.min(budgetTokens, (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio))
+          )
         }
       }
     }
@@ -329,7 +330,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
    * @param onFilterMessages - The onFilterMessages callback
    * @returns The completions
    */
-  async completions({ assistant, onChunk, _internal }: CompletionsParams): Promise<CompletionsOpenAIResult> {
+  async completions({ assistant, _internal }: CompletionsParams): Promise<CompletionsOpenAIResult> {
     // TODO: 图片生成
     // if (assistant.enableGenerateImage) {
     //   await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)
@@ -339,7 +340,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     // const model = assistant.model || defaultModel
 
     // const { contextCount, maxTokens, streamOutput } = getAssistantSettings(assistant)
-    // const isEnabledBultinWebSearch = assistant.enableWebSearch
+    // const isEnabledBultinWebSearch = assistant.enableWebSearch && isWebSearchModel(model)
     // messages = addImageFileToContents(messages)
     // const enableReasoning =
     //   ((isSupportedThinkingTokenModel(model) || isSupportedReasoningEffortModel(model)) &&
@@ -358,11 +359,6 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     //     content: `Formatting re-enabled${systemMessage ? '\n' + systemMessage.content : ''}`
     //   }
     // }
-    // const { tools } = this.setupToolsConfig<ChatCompletionTool>({
-    //   mcpTools,
-    //   model,
-    //   enableToolUse: isEnabledToolUse(assistant)
-    // })
 
     // if (this.useSystemPromptForTools) {
     //   systemMessage.content = buildSystemPrompt(systemMessage.content || '', mcpTools)
@@ -508,34 +504,38 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     //   let time_first_token_millsec = 0
 
     //   // Handle non-streaming case (already returns early, no change needed here)
-    //   if (!isSupportStreamOutput()) {
-    //     // Calculate final metrics once
-    //     finalMetrics.completion_tokens = stream.usage?.completion_tokens
-    //     finalMetrics.time_completion_millsec = new Date().getTime() - start_time_millsec
+    // if (!isSupportStreamOutput()) {
+    // Calculate final metrics once
+    // finalMetrics.completion_tokens = stream.usage?.completion_tokens
+    // finalMetrics.time_completion_millsec = new Date().getTime() - start_time_millsec
 
-    //     // Create a synthetic usage object if stream.usage is undefined
-    //     finalUsage = { ...stream.usage }
-    //     // Separate onChunk calls for text and usage/metrics
-    //     let content = ''
-    //     stream.choices.forEach((choice) => {
-    //       // reasoning
-    //       if (choice.message.reasoning) {
-    //         onChunk({ type: ChunkType.THINKING_DELTA, text: choice.message.reasoning })
-    //         onChunk({
-    //           type: ChunkType.THINKING_COMPLETE,
-    //           text: choice.message.reasoning,
-    //           thinking_millsec: new Date().getTime() - start_time_millsec
-    //         })
-    //       }
-    //       // text
-    //       if (choice.message.content) {
-    //         content += choice.message.content
-    //         onChunk({ type: ChunkType.TEXT_DELTA, text: choice.message.content })
-    //       }
-    //       // tool call
-    //       if (choice.message.tool_calls && choice.message.tool_calls.length) {
-    //         choice.message.tool_calls.forEach((t) => toolCalls.push(t))
-    //       }
+    // // Create a synthetic usage object if stream.usage is undefined
+    // finalUsage = { ...stream.usage }
+    // // Separate onChunk calls for text and usage/metrics
+    // let content = ''
+    // stream.choices.forEach((choice) => {
+    //   const reasoning = choice.message.reasoning || choice.message.reasoning_content
+    //   // reasoning
+    //   if (reasoning) {
+    //     onChunk({
+    //       type: ChunkType.THINKING_DELTA,
+    //       text: reasoning
+    //     })
+    //     onChunk({
+    //       type: ChunkType.THINKING_COMPLETE,
+    //       text: reasoning,
+    //       thinking_millsec: new Date().getTime() - start_time_millsec
+    //     })
+    //   }
+    //   // text
+    //   if (choice.message.content) {
+    //     content += choice.message.content
+    //     onChunk({ type: ChunkType.TEXT_DELTA, text: choice.message.content })
+    //   }
+    //   // tool call
+    //   if (choice.message.tool_calls && choice.message.tool_calls.length) {
+    //     choice.message.tool_calls.forEach((t) => toolCalls.push(t))
+    //   }
 
     //       reqMessages.push({
     //         role: choice.message.role,
@@ -572,7 +572,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     //     // Always send usage and metrics data
     //     onChunk({ type: ChunkType.BLOCK_COMPLETE, response: { usage: finalUsage, metrics: finalMetrics } })
     //     return
-    //   }
+    // }
 
     //   let content = ''
     //   let thinkingContent = ''
@@ -733,58 +733,70 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
     //           if (originalFinishDelta?.annotations) {
     //             if (assistant.model?.provider === 'copilot') return
 
-    //             onChunk({
-    //               type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
-    //               llm_web_search: {
-    //                 results: originalFinishDelta.annotations,
-    //                 source: WebSearchSource.OPENAI_RESPONSE
-    //               }
-    //             } as LLMWebSearchCompleteChunk)
-    //           }
-    //           if (assistant.model?.provider === 'perplexity') {
-    //             const citations = originalFinishRawChunk.citations
-    //             if (citations) {
-    //               onChunk({
-    //                 type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
-    //                 llm_web_search: {
-    //                   results: citations,
-    //                   source: WebSearchSource.PERPLEXITY
-    //                 }
-    //               } as LLMWebSearchCompleteChunk)
+    //           onChunk({
+    //             type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+    //             llm_web_search: {
+    //               results: originalFinishDelta.annotations,
+    //               source: WebSearchSource.OPENAI_RESPONSE
     //             }
-    //           }
-    //           if (
-    //             isEnabledBultinWebSearch &&
-    //             isZhipuModel(model) &&
-    //             finishReason === 'stop' &&
-    //             originalFinishRawChunk?.web_search
-    //           ) {
+    //           } as LLMWebSearchCompleteChunk)
+    //         }
+    //         if (assistant.model?.provider === 'grok') {
+    //           const citations = originalFinishRawChunk.citations
+    //           if (citations) {
     //             onChunk({
     //               type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
     //               llm_web_search: {
-    //                 results: originalFinishRawChunk.web_search,
-    //                 source: WebSearchSource.ZHIPU
-    //               }
-    //             } as LLMWebSearchCompleteChunk)
-    //           }
-    //           if (
-    //             isEnabledBultinWebSearch &&
-    //             isHunyuanSearchModel(model) &&
-    //             originalFinishRawChunk?.search_info?.search_results
-    //           ) {
-    //             onChunk({
-    //               type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
-    //               llm_web_search: {
-    //                 results: originalFinishRawChunk.search_info.search_results,
-    //                 source: WebSearchSource.HUNYUAN
+    //                 results: citations,
+    //                 source: WebSearchSource.GROK
     //               }
     //             } as LLMWebSearchCompleteChunk)
     //           }
     //         }
-    //         break
+    //         if (assistant.model?.provider === 'perplexity') {
+    //           const citations = originalFinishRawChunk.citations
+    //           if (citations) {
+    //             onChunk({
+    //               type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+    //               llm_web_search: {
+    //                 results: citations,
+    //                 source: WebSearchSource.PERPLEXITY
+    //               }
+    //             } as LLMWebSearchCompleteChunk)
+    //           }
+    //         }
+    //         if (
+    //           isEnabledBultinWebSearch &&
+    //           isZhipuModel(model) &&
+    //           finishReason === 'stop' &&
+    //           originalFinishRawChunk?.web_search
+    //         ) {
+    //           onChunk({
+    //             type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+    //             llm_web_search: {
+    //               results: originalFinishRawChunk.web_search,
+    //               source: WebSearchSource.ZHIPU
+    //             }
+    //           } as LLMWebSearchCompleteChunk)
+    //         }
+    //         if (
+    //           isEnabledBultinWebSearch &&
+    //           isHunyuanSearchModel(model) &&
+    //           originalFinishRawChunk?.search_info?.search_results
+    //         ) {
+    //           onChunk({
+    //             type: ChunkType.LLM_WEB_SEARCH_COMPLETE,
+    //             llm_web_search: {
+    //               results: originalFinishRawChunk.search_info.search_results,
+    //               source: WebSearchSource.HUNYUAN
+    //             }
+    //           } as LLMWebSearchCompleteChunk)
+    //         }
     //       }
+    //       break
     //     }
     //   }
+    // }
 
     //   reqMessages.push({
     //     role: 'assistant',
@@ -824,7 +836,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
 
     // reqMessages = processReqMessages(model, reqMessages)
     // 等待接口返回流
-    onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
+    // onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     // const start_time_millsec = new Date().getTime()
     if (!_internal?.sdkParams) {
       console.warn('🚀 [OpenAIProvider] transformedData is not found')

@@ -314,6 +314,10 @@
       "input.web_search.builtin.disabled_content": "The current model does not support web search",
       "input.web_search.no_web_search": "Disable Web Search",
       "input.web_search.no_web_search.description": "Do not enable web search",
+      "input.tools.collapse": "Collapse",
+      "input.tools.expand": "Expand",
+      "input.tools.collapse_in": "Collapse",
+      "input.tools.collapse_out": "Remove from collapse",
       "input.thinking": "Thinking",
       "input.thinking.mode.default": "Default",
       "input.thinking.mode.default.tip": "The model will automatically determine the number of tokens to think",
@@ -396,6 +400,7 @@
       "search": "Search",
       "select": "Select",
       "selectedMessages": "Selected {{count}} messages",
+      "success": "Success",
       "topics": "Topics",
       "warning": "Warning",
       "you": "You",
@@ -680,6 +685,8 @@
     "minapp": {
       "popup": {
         "refresh": "Refresh",
+        "goBack": "Go Back",
+        "goForward": "Go Forward",
         "close": "Close MinApp",
         "minimize": "Minimize MinApp",
         "devtools": "Developer Tools",
@@ -810,6 +817,7 @@
       "regenerate.confirm": "This will replace your existing generated images. Do you want to continue?",
       "seed": "Seed",
       "seed_tip": "The same seed and prompt can produce similar images",
+      "seed_desc_tip": "The same seed and prompt can generate similar images, setting -1 will generate different results each time",
       "title": "Images",
       "magic_prompt_option": "Magic Prompt",
       "model": "Model Version",
@@ -817,6 +825,7 @@
       "style_type": "Style",
       "rendering_speed": "Rendering Speed",
       "learn_more": "Learn More",
+      "paint_course":"tutorial",
       "prompt_placeholder_edit": "Enter your image description, text drawing uses \"double quotes\" to wrap",
       "proxy_required": "Currently, you need to open a proxy to view the generated images, it will be supported in the future",
       "image_file_required": "Please upload an image first",
@@ -882,7 +891,8 @@
         "number_images_tip": "Number of upscaled results to generate",
         "seed_tip": "Controls upscaling randomness",
         "magic_prompt_option_tip": "Intelligently enhances upscaling prompts"
-      }
+      },
+      "text_desc_required": "Please enter image description first"
     },
     "prompts": {
       "explanation": "Explain this concept to me",
@@ -936,7 +946,8 @@
       "zhinao": "360AI",
       "zhipu": "ZHIPU AI",
       "voyageai": "Voyage AI",
-      "qiniu": "Qiniu"
+      "qiniu": "Qiniu",
+      "tokenflux": "TokenFlux"
     },
     "restore": {
       "confirm": "Are you sure you want to restore data?",
@@ -1301,6 +1312,8 @@
         "stdio": "Standard Input/Output (stdio)",
         "inMemory": "Memory",
         "config_description": "Configure Model Context Protocol servers",
+        "disable": "Disable MCP Server",
+        "disable.description": "Do not enable MCP server functionality",
         "deleteError": "Failed to delete server",
         "deleteSuccess": "Server deleted successfully",
         "dependenciesInstall": "Install Dependencies",
@@ -1561,6 +1574,9 @@
           "rate_limit": "Rate limiting",
           "tooltip": "You need to log in to Github before using Github Copilot"
         },
+        "dmxapi": {
+          "select_platform": "Select the platform"
+        },
         "delete.content": "Are you sure you want to delete this provider?",
         "delete.title": "Delete Provider",
         "docs_check": "Check",
@@ -1634,6 +1650,7 @@
       "topic.position.left": "Left",
       "topic.position.right": "Right",
       "topic.show.time": "Show topic time",
+      "topic.pin_to_top": "Pin Topics to Top",
       "tray.onclose": "Minimize to Tray on Close",
       "tray.show": "Show Tray Icon",
       "tray.title": "Tray",
@@ -1762,6 +1779,141 @@
       "quit": "Quit",
       "show_window": "Show Window",
       "visualization": "Visualization"
+    },
+    "selection": {
+      "name": "Selection Assistant",
+      "action": {
+        "builtin": {
+          "translate": "Translate",
+          "explain": "Explain",
+          "summary": "Summarize",
+          "search": "Search",
+          "refine": "Refine",
+          "copy": "Copy"
+        },
+        "window": {
+          "pin": "Pin",
+          "pinned": "Pinned",
+          "opacity": "Window Opacity",
+          "original_show": "Show Original",
+          "original_hide": "Hide Original",
+          "original_copy": "Copy Original",
+          "esc_close": "Esc to Close",
+          "esc_stop": "Esc to Stop",
+          "c_copy": "C to Copy"
+        }
+      },
+      "settings": {
+        "experimental": "Experimental Features",
+        "enable": {
+          "title": "Enable",
+          "description": "Currently only supported on Windows systems"
+        },
+        "toolbar": {
+          "title": "Toolbar",
+          "trigger_mode": {
+            "title": "Trigger Mode",
+            "description": "Show toolbar immediately when text is selected, or show only when Ctrl key is held after selection.",
+            "description_note": "The Ctrl key may not work in some apps. If you use AHK or other tools to remap the Ctrl key, it may not work.",
+            "selected": "Selection",
+            "ctrlkey": "Ctrl Key"
+          },
+          "compact_mode": {
+            "title": "Compact Mode",
+            "description": "In compact mode, only icons are displayed without text"
+          }
+        },
+        "window": {
+          "title": "Action Window",
+          "follow_toolbar": {
+            "title": "Follow Toolbar",
+            "description": "Window position will follow the toolbar. When disabled, it will always be centered."
+          },
+          "auto_close": {
+            "title": "Auto Close",
+            "description": "Automatically close the window when it's not pinned and loses focus"
+          },
+          "auto_pin": {
+            "title": "Auto Pin",
+            "description": "Pin the window by default"
+          },
+          "opacity": {
+            "title": "Opacity",
+            "description": "Set the default opacity of the window, 100% is fully opaque"
+          }
+        },
+        "actions": {
+          "title": "Actions",
+          "reset": {
+            "button": "Reset",
+            "tooltip": "Reset to default actions. Custom actions will not be deleted.",
+            "confirm": "Are you sure you want to reset to default actions? Custom actions will not be deleted."
+          },
+          "add_tooltip": {
+            "enabled": "Add Custom Action",
+            "disabled": "Maximum number of custom actions reached ({{max}})"
+          },
+          "delete_confirm": "Are you sure you want to delete this custom action?",
+          "drag_hint": "Drag to reorder. Move above to enable action ({{enabled}}/{{max}})"
+        },
+        "user_modal": {
+          "title": {
+            "add": "Add Custom Action",
+            "edit": "Edit Custom Action"
+          },
+          "name": {
+            "label": "Name",
+            "hint": "Please enter action name"
+          },
+          "icon": {
+            "label": "Icon",
+            "placeholder": "Enter Lucide icon name",
+            "error": "Invalid icon name, please check your input",
+            "tooltip": "Lucide icon names are lowercase, e.g. arrow-right",
+            "view_all": "View All Icons",
+            "random": "Random Icon"
+          },
+          "model": {
+            "label": "Model",
+            "tooltip": "Using Assistant: Will use both the assistant's system prompt and model parameters",
+            "default": "Default Model",
+            "assistant": "Use Assistant"
+          },
+          "assistant": {
+            "label": "Select Assistant",
+            "default": "Default"
+          },
+          "prompt": {
+            "label": "User Prompt",
+            "tooltip": "User prompt serves as a supplement to user input and won't override the assistant's system prompt",
+            "placeholder": "Use placeholder {{text}} to represent selected text. When empty, selected text will be appended to this prompt",
+            "placeholder_text": "Placeholder",
+            "copy_placeholder": "Copy Placeholder"
+          }
+        },
+        "search_modal": {
+          "title": "Set Search Engine",
+          "engine": {
+            "label": "Search Engine",
+            "custom": "Custom"
+          },
+          "custom": {
+            "name": {
+              "label": "Custom Name",
+              "hint": "Please enter search engine name",
+              "max_length": "Name cannot exceed 16 characters"
+            },
+            "url": {
+              "label": "Custom Search URL",
+              "hint": "Use {{queryString}} to represent the search term",
+              "required": "Please enter search URL",
+              "invalid_format": "Please enter a valid URL starting with http:// or https://",
+              "missing_placeholder": "URL must contain {{queryString}} placeholder"
+            },
+            "test": "Test"
+          }
+        }
+      }
     }
   }
 }
