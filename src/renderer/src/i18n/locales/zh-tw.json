@@ -558,7 +558,6 @@
       "dimensions_size_too_large": "嵌入維度不能超過模型上下文限制（{{max_context}}）"
     },
     "languages": {
-      "auto-detect": "自動偵測",
       "arabic": "阿拉伯文",
       "chinese": "簡體中文",
       "chinese-traditional": "繁體中文",
@@ -1765,6 +1764,17 @@
       "processing": "翻譯中...",
       "scroll_sync.disable": "關閉滾動同步",
       "scroll_sync.enable": "開啟滾動同步",
+      "bidirectional.disable": "關閉雙向翻譯",
+      "bidirectional.enable": "開啟雙向翻譯",
+      "language.same": "源語言和目標語言相同",
+      "language.not_pair": "源語言與設定的語言不同",
+      "settings": {
+        "title": "翻譯設定",
+        "model": "模型設定",
+        "model_desc": "翻譯服務使用的模型",
+        "bidirectional": "雙向翻譯設定",
+        "scroll_sync": "滾動同步設定"
+      },
       "title": "翻譯",
       "tooltip.newline": "換行",
       "menu": {

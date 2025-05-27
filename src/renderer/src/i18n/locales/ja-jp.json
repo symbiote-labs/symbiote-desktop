@@ -558,7 +558,6 @@
       "dimensions_size_too_large": "埋め込み次元はモデルのコンテキスト制限（{{max_context}}）を超えてはなりません。"
     },
     "languages": {
-      "auto-detect": "自動検出",
       "arabic": "アラビア語",
       "chinese": "中国語",
       "chinese-traditional": "繁体字中国語",
@@ -1764,6 +1763,17 @@
       "processing": "翻訳中...",
       "scroll_sync.disable": "關閉滾動同步",
       "scroll_sync.enable": "開啟滾動同步",
+      "bidirectional.disable": "双方向翻訳を無効にする",
+      "bidirectional.enable": "双方向翻訳を有効にする",
+      "language.same": "ソース言語と目標言語が同じです",
+      "language.not_pair": "ソース言語が設定された言語と異なります",
+      "settings": {
+        "title": "翻訳設定",
+        "model": "モデル設定",
+        "model_desc": "翻訳サービスで使用されるモデル",
+        "bidirectional": "双方向翻訳設定",
+        "scroll_sync": "スクロール同期設定"
+      },
       "title": "翻訳",
       "tooltip.newline": "改行",
       "menu": {

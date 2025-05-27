@@ -558,7 +558,6 @@
       "dimensions_size_too_large": "The embedding dimension cannot exceed the model's context limit ({{max_context}})."
     },
     "languages": {
-      "auto-detect": "Auto Detect",
       "arabic": "Arabic",
       "chinese": "Chinese",
       "chinese-traditional": "Traditional Chinese",
@@ -1764,6 +1763,17 @@
       "processing": "Translation in progress...",
       "scroll_sync.disable": "Disable synced scroll",
       "scroll_sync.enable": "Enable synced scroll",
+      "bidirectional.disable": "Disable bidirectional translation",
+      "bidirectional.enable": "Enable bidirectional translation",
+      "language.same": "Source and target languages are the same",
+      "language.not_pair": "Source language is different from the set language",
+      "settings": {
+        "title": "Translation Settings",
+        "model": "Model Settings",
+        "model_desc": "Model used for translation service",
+        "bidirectional": "Bidirectional Translation Settings",
+        "scroll_sync": "Scroll Sync Settings"
+      },
       "title": "Translation",
       "tooltip.newline": "Newline",
       "menu": {

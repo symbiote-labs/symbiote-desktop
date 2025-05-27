@@ -1,50 +1,252 @@
 import { CheckOutlined, DeleteOutlined, HistoryOutlined, SendOutlined } from '@ant-design/icons'
 import { Navbar, NavbarCenter } from '@renderer/components/app/Navbar'
 import CopyIcon from '@renderer/components/Icons/CopyIcon'
-import { isLocalAi } from '@renderer/config/env'
+import { HStack } from '@renderer/components/Layout'
+import { isEmbeddingModel } from '@renderer/config/models'
 import { translateLanguageOptions } from '@renderer/config/translate'
 import db from '@renderer/databases'
 import { useDefaultModel } from '@renderer/hooks/useAssistant'
-import i18n from '@renderer/i18n'
+import { useProviders } from '@renderer/hooks/useProvider'
 import { fetchTranslate } from '@renderer/services/ApiService'
 import { getDefaultTranslateAssistant } from '@renderer/services/AssistantService'
-import type { Assistant, TranslateHistory } from '@renderer/types'
+import { getModelUniqId, hasModel } from '@renderer/services/ModelService'
+import type { Model, TranslateHistory } from '@renderer/types'
 import { runAsyncFunction, uuid } from '@renderer/utils'
-import { Button, Dropdown, Empty, Flex, Popconfirm, Select, Space, Tooltip } from 'antd'
+import { Button, Divider, Empty, Flex, Modal, Popconfirm, Select, Space, Switch, Tooltip } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { isEmpty } from 'lodash'
-import { Mouse, Settings2, TriangleAlert } from 'lucide-react'
-import { FC, useEffect, useRef, useState } from 'react'
+import { find, isEmpty, sortBy } from 'lodash'
+import { Settings2, TriangleAlert } from 'lucide-react'
+import { FC, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
 let _text = ''
 let _result = ''
 let _targetLanguage = 'english'
 
+const TranslateSettings: FC<{
+  visible: boolean
+  onClose: () => void
+  isScrollSyncEnabled: boolean
+  setIsScrollSyncEnabled: (value: boolean) => void
+  isBidirectional: boolean
+  setIsBidirectional: (value: boolean) => void
+  bidirectionalPair: [string, string]
+  setBidirectionalPair: (value: [string, string]) => void
+  translateModel: Model | undefined
+  onModelChange: (model: Model) => void
+  allModels: Model[]
+  selectOptions: any[]
+}> = ({
+  visible,
+  onClose,
+  isScrollSyncEnabled,
+  setIsScrollSyncEnabled,
+  isBidirectional,
+  setIsBidirectional,
+  bidirectionalPair,
+  setBidirectionalPair,
+  translateModel,
+  onModelChange,
+  allModels,
+  selectOptions
+}) => {
+  const { t } = useTranslation()
+  const [localPair, setLocalPair] = useState<[string, string]>(bidirectionalPair)
+
+  const defaultTranslateModel = useMemo(
+    () => (hasModel(translateModel) ? getModelUniqId(translateModel) : undefined),
+    [translateModel]
+  )
+
+  useEffect(() => {
+    setLocalPair(bidirectionalPair)
+  }, [bidirectionalPair, visible])
+
+  const handleRemoveModel = () => {
+    db.settings.put({ id: 'translate:model', value: null })
+  }
+
+  const handleSave = () => {
+    if (localPair[0] === localPair[1]) {
+      window.message.warning({
+        content: t('translate.language.same'),
+        key: 'translate-message'
+      })
+      return
+    }
+    setBidirectionalPair(localPair)
+    db.settings.put({ id: 'translate:bidirectional:pair', value: localPair })
+    db.settings.put({ id: 'translate:scroll:sync', value: isScrollSyncEnabled })
+    window.message.success({
+      content: t('message.save.success.title'),
+      key: 'translate-settings-save'
+    })
+    onClose()
+  }
+
+  return (
+    <Modal
+      title={<div style={{ fontSize: 16 }}>{t('translate.settings.title')}</div>}
+      open={visible}
+      onCancel={onClose}
+      footer={[
+        <Button key="cancel" onClick={onClose}>
+          {t('common.cancel')}
+        </Button>,
+        <Button key="save" type="primary" onClick={handleSave}>
+          {t('common.save')}
+        </Button>
+      ]}
+      width={420}>
+      <Flex vertical gap={16} style={{ marginTop: 16 }}>
+        <div>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('translate.settings.model')}</div>
+          <HStack alignItems="center" gap={5}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder={t('translate.settings.model_placeholder')}
+              value={defaultTranslateModel}
+              onChange={(value) => {
+                const selectedModel = find(allModels, JSON.parse(value)) as Model
+                if (selectedModel) {
+                  onModelChange(selectedModel)
+                }
+              }}
+              options={selectOptions}
+              showSearch
+            />
+            {translateModel && <Button icon={<DeleteOutlined />} type="text" onClick={handleRemoveModel} danger />}
+          </HStack>
+          {!translateModel && (
+            <div style={{ marginTop: 8, color: 'var(--color-warning)' }}>
+              <HStack alignItems="center" gap={5}>
+                <TriangleAlert size={14} />
+                <span style={{ fontSize: 12 }}>{t('translate.settings.no_model_warning')}</span>
+              </HStack>
+            </div>
+          )}
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-3)' }}>
+            {t('translate.settings.model_desc')}
+          </div>
+        </div>
+
+        <Divider style={{ margin: '8px 0' }} />
+
+        <div>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('translate.settings.bidirectional')}</div>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Flex align="center" justify="space-between">
+              <span>
+                {isBidirectional ? t('translate.bidirectional.disable') : t('translate.bidirectional.enable')}
+              </span>
+              <Switch checked={isBidirectional} onChange={setIsBidirectional} />
+            </Flex>
+            {isBidirectional && (
+              <Flex align="center" justify="space-between" gap={10}>
+                <Select
+                  style={{ flex: 1 }}
+                  value={localPair[0]}
+                  onChange={(value) => setLocalPair([value, localPair[1]])}
+                  options={translateLanguageOptions().map((lang) => ({
+                    value: lang.value,
+                    label: (
+                      <Space.Compact direction="horizontal" block>
+                        <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
+                          {lang.emoji}
+                        </span>
+                        <Space.Compact block>{lang.label}</Space.Compact>
+                      </Space.Compact>
+                    )
+                  }))}
+                />
+                <span>⇆</span>
+                <Select
+                  style={{ flex: 1 }}
+                  value={localPair[1]}
+                  onChange={(value) => setLocalPair([localPair[0], value])}
+                  options={translateLanguageOptions().map((lang) => ({
+                    value: lang.value,
+                    label: (
+                      <Space.Compact direction="horizontal" block>
+                        <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
+                          {lang.emoji}
+                        </span>
+                        <div style={{ textAlign: 'left', flex: 1 }}>{lang.label}</div>
+                      </Space.Compact>
+                    )
+                  }))}
+                />
+              </Flex>
+            )}
+          </Space>
+        </div>
+
+        <Divider style={{ margin: '8px 0' }} />
+
+        <div>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('translate.settings.scroll_sync')}</div>
+          <Flex align="center" justify="space-between">
+            <span>{isScrollSyncEnabled ? t('translate.scroll_sync.disable') : t('translate.scroll_sync.enable')}</span>
+            <Switch checked={isScrollSyncEnabled} onChange={setIsScrollSyncEnabled} />
+          </Flex>
+        </div>
+      </Flex>
+    </Modal>
+  )
+}
+
 const TranslatePage: FC = () => {
   const { t } = useTranslation()
   const [targetLanguage, setTargetLanguage] = useState(_targetLanguage)
   const [text, setText] = useState(_text)
   const [result, setResult] = useState(_result)
-  const { translateModel } = useDefaultModel()
+  const { translateModel, setTranslateModel } = useDefaultModel()
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [historyDrawerVisible, setHistoryDrawerVisible] = useState(false)
   const [isScrollSyncEnabled, setIsScrollSyncEnabled] = useState(false)
+  const [isBidirectional, setIsBidirectional] = useState(false)
+  const [bidirectionalPair, setBidirectionalPair] = useState<[string, string]>(['english', 'chinese'])
+  const [settingsVisible, setSettingsVisible] = useState(false)
+  const [originalTargetLanguage, setOriginalTargetLanguage] = useState<string | null>(null)
   const contentContainerRef = useRef<HTMLDivElement>(null)
   const textAreaRef = useRef<TextAreaRef>(null)
   const outputTextRef = useRef<HTMLDivElement>(null)
   const isProgrammaticScroll = useRef(false)
+
+  const { providers } = useProviders()
+  const allModels = useMemo(() => providers.map((p) => p.models).flat(), [providers])
 
   const translateHistory = useLiveQuery(() => db.translate_history.orderBy('createdAt').reverse().toArray(), [])
 
   _text = text
   _result = result
   _targetLanguage = targetLanguage
+
+  const selectOptions = useMemo(
+    () =>
+      providers
+        .filter((p) => p.models.length > 0)
+        .map((p) => ({
+          label: p.isSystem ? t(`provider.${p.id}`) : p.name,
+          title: p.name,
+          options: sortBy(p.models, 'name')
+            .filter((m) => !isEmbeddingModel(m))
+            .map((m) => ({
+              label: `${m.name} | ${p.isSystem ? t(`provider.${p.id}`) : p.name}`,
+              value: getModelUniqId(m)
+            }))
+        })),
+    [providers, t]
+  )
+
+  const handleModelChange = (model: Model) => {
+    setTranslateModel(model)
+    db.settings.put({ id: 'translate:model', value: model.id })
+  }
 
   const saveTranslateHistory = async (
     sourceText: string,
@@ -64,18 +266,79 @@ const TranslatePage: FC = () => {
   }
 
   const deleteHistory = async (id: string) => {
-    db.translate_history.delete(id)
+    await db.translate_history.delete(id)
   }
 
   const clearHistory = async () => {
-    db.translate_history.clear()
+    await db.translate_history.clear()
+  }
+
+  const detectLanguage = async (inputText: string): Promise<string> => {
+    if (!inputText.trim()) return 'any'
+
+    const langPatterns = {
+      chinese: /[\u4e00-\u9fa5]/,
+      japanese: /[\u3040-\u30ff\u3400-\u4dbf]/,
+      korean: /[\uAC00-\uD7AF]/,
+      russian: /[\u0400-\u04FF]/,
+      arabic: /[\u0600-\u06FF]/
+    }
+
+    for (const [lang, pattern] of Object.entries(langPatterns)) {
+      if (pattern.test(inputText)) return lang
+    }
+
+    try {
+      const prompt = `Identify language: "${inputText.substring(0, 50)}". Reply with one word only: english, chinese, japanese, korean, russian, spanish, french, german, italian, portuguese, arabic.`
+
+      let detectedCode = ''
+      await fetchTranslate({
+        content: inputText.substring(0, 50),
+        assistant: {
+          id: 'lang-detector',
+          name: 'Language Detector',
+          prompt,
+          topics: [],
+          type: 'translator'
+        },
+        onResponse: (response) => {
+          detectedCode = response.trim().toLowerCase()
+        }
+      })
+
+      const validCodes = [
+        'english',
+        'chinese',
+        'japanese',
+        'korean',
+        'russian',
+        'spanish',
+        'french',
+        'italian',
+        'portuguese',
+        'arabic',
+        'german'
+      ]
+
+      return validCodes.find((code) => detectedCode.includes(code)) || 'english'
+    } catch (error) {
+      console.error('语言检测错误:', error)
+      return 'english'
+    }
+  }
+
+  const getTargetLanguageForBidirectional = (sourceLanguage: string): string => {
+    if (sourceLanguage === bidirectionalPair[0]) {
+      return bidirectionalPair[1]
+    } else if (sourceLanguage === bidirectionalPair[1]) {
+      return bidirectionalPair[0]
+    }
+
+    return bidirectionalPair[0] === sourceLanguage ? bidirectionalPair[1] : bidirectionalPair[0]
   }
 
   const onTranslate = async () => {
-    if (!text.trim()) {
-      return
-    }
-
+    if (!text.trim()) return
     if (!translateModel) {
       window.message.error({
         content: t('translate.error.not_configured'),
@@ -84,44 +347,66 @@ const TranslatePage: FC = () => {
       return
     }
 
-    let assistant: Assistant
-
-    if (targetLanguage === 'auto-detect') {
-      const currentLanguage = i18n.language
-      const targetLang = currentLanguage === 'en' ? 'Chinese' : 'English'
-
-      assistant = {
-        ...getDefaultTranslateAssistant(currentLanguage === 'en' ? 'chinese' : 'english', text),
-        name: 'Auto Translator',
-        prompt: `You are a translator. If input is in ${targetLang}, translate to ${currentLanguage === 'en' ? 'English' : 'Chinese'}. Otherwise translate to ${targetLang}. Output translation only. Text: ${text}`
-      }
-    } else {
-      assistant = getDefaultTranslateAssistant(targetLanguage, text)
-    }
-
     setLoading(true)
-    let translatedText = ''
     try {
+      const sourceLanguage = await detectLanguage(text)
+      console.log('检测到的源语言:', sourceLanguage)
+
+      let actualTargetLanguage = targetLanguage
+
+      if (isBidirectional) {
+        if (![bidirectionalPair[0], bidirectionalPair[1]].includes(sourceLanguage)) {
+          window.message.warning({
+            content: t('translate.language.not_pair'),
+            key: 'translate-message'
+          })
+          setLoading(false)
+          return
+        }
+        actualTargetLanguage = getTargetLanguageForBidirectional(sourceLanguage)
+        setTargetLanguage(actualTargetLanguage)
+      } else {
+        if (sourceLanguage === targetLanguage) {
+          window.message.warning({
+            content: t('translate.language.same'),
+            key: 'translate-message'
+          })
+          setLoading(false)
+          return
+        }
+      }
+
+      const assistant = getDefaultTranslateAssistant(actualTargetLanguage, text)
+      let translatedText = ''
       await fetchTranslate({
         content: text,
         assistant,
-        onResponse: (text) => {
-          translatedText = text.replace(/^\s*\n+/g, '')
+        onResponse: (responseText) => {
+          translatedText = responseText.replace(/^\s*\n+/g, '')
           setResult(translatedText)
         }
       })
+
+      await saveTranslateHistory(text, translatedText, sourceLanguage, actualTargetLanguage)
     } catch (error) {
-      console.error('Translation error:', error)
+      console.error('翻译错误:', error)
       window.message.error({
         content: String(error),
         key: 'translate-message'
       })
+    } finally {
       setLoading(false)
-      return
     }
+  }
 
-    await saveTranslateHistory(text, translatedText, 'any', targetLanguage)
-    setLoading(false)
+  const toggleBidirectional = (value: boolean) => {
+    setIsBidirectional(value)
+    db.settings.put({ id: 'translate:bidirectional:enabled', value })
+
+    if (!value && originalTargetLanguage) {
+      setTargetLanguage(originalTargetLanguage)
+      setOriginalTargetLanguage(null)
+    }
   }
 
   const onCopy = () => {
@@ -144,6 +429,24 @@ const TranslatePage: FC = () => {
     runAsyncFunction(async () => {
       const targetLang = await db.settings.get({ id: 'translate:target:language' })
       targetLang && setTargetLanguage(targetLang.value)
+
+      const bidirectionalPairSetting = await db.settings.get({ id: 'translate:bidirectional:pair' })
+      if (bidirectionalPairSetting) {
+        const langPair = bidirectionalPairSetting.value
+        if (Array.isArray(langPair) && langPair.length === 2 && langPair[0] !== langPair[1]) {
+          setBidirectionalPair(langPair as [string, string])
+        } else {
+          const defaultPair: [string, string] = ['english', 'chinese']
+          setBidirectionalPair(defaultPair)
+          db.settings.put({ id: 'translate:bidirectional:pair', value: defaultPair })
+        }
+      }
+
+      const bidirectionalSetting = await db.settings.get({ id: 'translate:bidirectional:enabled' })
+      setIsBidirectional(bidirectionalSetting ? bidirectionalSetting.value : false)
+
+      const scrollSyncSetting = await db.settings.get({ id: 'translate:scroll:sync' })
+      setIsScrollSyncEnabled(scrollSyncSetting ? scrollSyncSetting.value : false)
     })
   }, [])
 
@@ -153,31 +456,6 @@ const TranslatePage: FC = () => {
       e.preventDefault()
       onTranslate()
     }
-  }
-
-  const SettingButton = () => {
-    if (isLocalAi) {
-      return null
-    }
-
-    if (translateModel) {
-      return (
-        <Link to="/settings/model" style={{ color: 'var(--color-text-2)', display: 'flex' }}>
-          <Settings2 size={18} />
-        </Link>
-      )
-    }
-
-    return (
-      <Link to="/settings/model" style={{ marginLeft: -10, display: 'flex' }}>
-        <Button
-          type="link"
-          style={{ color: 'var(--color-error)', textDecoration: 'underline' }}
-          icon={<TriangleAlert size={16} />}>
-          {t('translate.error.not_configured')}
-        </Button>
-      </Link>
-    )
   }
 
   // Handle input area scroll event
@@ -216,8 +494,39 @@ const TranslatePage: FC = () => {
     })
   }
 
-  const toggleScrollSync = () => {
-    setIsScrollSyncEnabled(!isScrollSyncEnabled)
+  // 获取当前语言状态显示
+  const getLanguageDisplay = () => {
+    if (isBidirectional) {
+      return (
+        <Flex align="center" style={{ width: 160 }}>
+          <BidirectionalLanguageDisplay>
+            {`${t(`languages.${bidirectionalPair[0]}`)} ⇆ ${t(`languages.${bidirectionalPair[1]}`)}`}
+          </BidirectionalLanguageDisplay>
+        </Flex>
+      )
+    }
+
+    return (
+      <Select
+        style={{ width: 160 }}
+        value={targetLanguage}
+        onChange={(value) => {
+          setTargetLanguage(value)
+          db.settings.put({ id: 'translate:target:language', value })
+        }}
+        options={translateLanguageOptions().map((lang) => ({
+          value: lang.value,
+          label: (
+            <Space.Compact direction="horizontal" block>
+              <span role="img" aria-label={lang.emoji} style={{ marginRight: 8 }}>
+                {lang.emoji}
+              </span>
+              <Space.Compact block>{lang.label}</Space.Compact>
+            </Space.Compact>
+          )
+        }))}
+      />
+    )
   }
 
   return (
@@ -239,94 +548,70 @@ const TranslatePage: FC = () => {
         <HistoryContainner $historyDrawerVisible={historyDrawerVisible}>
           <OperationBar>
             <span style={{ fontSize: 16 }}>{t('translate.history.title')}</span>
-            {!isEmpty(translateHistory) && (
-              <Popconfirm
-                title={t('translate.history.clear')}
-                description={t('translate.history.clear_description')}
-                onConfirm={clearHistory}>
-                <Button type="text" size="small" danger icon={<DeleteOutlined />}>
-                  {t('translate.history.clear')}
-                </Button>
-              </Popconfirm>
-            )}
+            <Popconfirm
+              title={t('translate.history.clear')}
+              description={t('translate.history.clear_description')}
+              onConfirm={clearHistory}
+              okText={t('settings.data.nutstore.new_folder.button.confirm')}
+              cancelText={t('settings.data.nutstore.new_folder.button.cancel')}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />}>
+                {t('translate.history.clear')}
+              </Button>
+            </Popconfirm>
           </OperationBar>
-          {translateHistory && translateHistory.length ? (
+          {translateHistory && translateHistory.length > 0 ? (
             <HistoryList>
-              {translateHistory.map((item) => (
-                <Dropdown
-                  key={item.id}
-                  trigger={['contextMenu']}
-                  menu={{
-                    items: [
-                      {
-                        key: 'delete',
-                        label: t('translate.history.delete'),
-                        icon: <DeleteOutlined />,
-                        danger: true,
-                        onClick: () => deleteHistory(item.id)
-                      }
-                    ]
-                  }}>
-                  <HistoryListItem onClick={() => onHistoryItemClick(item)}>
-                    <Flex justify="space-between" vertical gap={4} style={{ width: '100%' }}>
-                      <HistoryListItemTitle>{item.sourceText}</HistoryListItemTitle>
-                      <HistoryListItemTitle>{item.targetText}</HistoryListItemTitle>
-                      <HistoryListItemDate>{dayjs(item.createdAt).format('MM/DD HH:mm')}</HistoryListItemDate>
-                    </Flex>
-                  </HistoryListItem>
-                </Dropdown>
+              {translateHistory.map((history) => (
+                <HistoryListItem key={history.id} onClick={() => onHistoryItemClick(history)}>
+                  <HistoryListItemTitle>{history.sourceText}</HistoryListItemTitle>
+                  <Flex justify="space-between" style={{ marginTop: 5 }}>
+                    <HistoryListItemDate>{dayjs(history.createdAt).format('MM-DD HH:mm')}</HistoryListItemDate>
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteHistory(history.id)
+                      }}
+                    />
+                  </Flex>
+                </HistoryListItem>
               ))}
             </HistoryList>
           ) : (
-            <Flex justify="center" align="center" style={{ flex: 1 }}>
-              <Empty description={t('translate.history.empty')} />
-            </Flex>
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('translate.history.empty')} />
           )}
         </HistoryContainner>
 
         <InputContainer>
           <OperationBar>
-            <Flex align="center" gap={20}>
-              <Select
-                showSearch
-                value="any"
-                style={{ width: 180 }}
-                optionFilterProp="label"
-                disabled
-                options={[{ label: t('translate.any.language'), value: 'any' }]}
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <Button
+                type="text"
+                icon={<Settings2 size={18} color="var(--color-icon)" />}
+                onClick={() => setSettingsVisible(true)}
               />
-              <SettingButton />
               <Tooltip
                 mouseEnterDelay={0.5}
-                title={isScrollSyncEnabled ? t('translate.scroll_sync.disable') : t('translate.scroll_sync.enable')}>
-                <Mouse
-                  size={16}
-                  onClick={toggleScrollSync}
-                  style={{ cursor: 'pointer' }}
-                  color={isScrollSyncEnabled ? 'var(--color-primary)' : 'var(--color-icon)'}
-                />
+                styles={{ body: { fontSize: '12px' } }}
+                title={
+                  <div style={{ textAlign: 'center' }}>
+                    Enter: {t('translate.button.translate')}
+                    <br />
+                    Shift + Enter: {t('translate.tooltip.newline')}
+                  </div>
+                }>
+                <TranslateButton
+                  type="primary"
+                  loading={loading}
+                  onClick={onTranslate}
+                  disabled={!text.trim()}
+                  icon={<SendOutlined />}>
+                  {t('translate.button.translate')}
+                </TranslateButton>
               </Tooltip>
-            </Flex>
-
-            <Tooltip
-              mouseEnterDelay={0.5}
-              styles={{ body: { fontSize: '12px' } }}
-              title={
-                <div style={{ textAlign: 'center' }}>
-                  Enter: {t('translate.button.translate')}
-                  <br />
-                  Shift + Enter: {t('translate.tooltip.newline')}
-                </div>
-              }>
-              <TranslateButton
-                type="primary"
-                loading={loading}
-                onClick={onTranslate}
-                disabled={!text.trim()}
-                icon={<SendOutlined />}>
-                {t('translate.button.translate')}
-              </TranslateButton>
-            </Tooltip>
+            </div>
           </OperationBar>
 
           <Textarea
@@ -345,37 +630,9 @@ const TranslatePage: FC = () => {
 
         <OutputContainer>
           <OperationBar>
-            <Select
-              showSearch
-              value={targetLanguage}
-              style={{ width: 180 }}
-              optionFilterProp="label"
-              options={translateLanguageOptions()}
-              onChange={(value) => {
-                setTargetLanguage(value)
-                db.settings.put({ id: 'translate:target:language', value })
-              }}
-              optionRender={(option) => (
-                <Space align="center">
-                  <span
-                    role="img"
-                    aria-label={option.data.label}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '20px',
-                      height: '20px',
-                      fontSize: '16px',
-                      verticalAlign: 'middle',
-                      lineHeight: 1
-                    }}>
-                    {option.data.emoji}
-                  </span>
-                  {option.label}
-                </Space>
-              )}
-            />
+            <HStack alignItems="center" gap={5}>
+              {getLanguageDisplay()}
+            </HStack>
             <CopyButton
               onClick={onCopy}
               disabled={!result}
@@ -388,6 +645,21 @@ const TranslatePage: FC = () => {
           </OutputText>
         </OutputContainer>
       </ContentContainer>
+
+      <TranslateSettings
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        isScrollSyncEnabled={isScrollSyncEnabled}
+        setIsScrollSyncEnabled={setIsScrollSyncEnabled}
+        isBidirectional={isBidirectional}
+        setIsBidirectional={toggleBidirectional}
+        bidirectionalPair={bidirectionalPair}
+        setBidirectionalPair={setBidirectionalPair}
+        translateModel={translateModel}
+        onModelChange={handleModelChange}
+        allModels={allModels}
+        selectOptions={selectOptions}
+      />
     </Container>
   )
 }
@@ -462,6 +734,16 @@ const OutputText = styled.div`
 const TranslateButton = styled(Button)``
 
 const CopyButton = styled(Button)``
+
+const BidirectionalLanguageDisplay = styled.div`
+  padding: 4px 11px;
+  border-radius: 6px;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+  width: 100%;
+  text-align: center;
+`
 
 const HistoryContainner = styled.div<{ $historyDrawerVisible: boolean }>`
   width: ${({ $historyDrawerVisible }) => ($historyDrawerVisible ? '300px' : '0')};

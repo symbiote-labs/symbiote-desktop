@@ -558,7 +558,6 @@
       "urls": "网址"
     },
     "languages": {
-      "auto-detect": "自动检测",
       "arabic": "阿拉伯文",
       "chinese": "简体中文",
       "chinese-traditional": "繁体中文",
@@ -1767,6 +1766,17 @@
       "processing": "翻译中...",
       "scroll_sync.disable": "关闭滚动同步",
       "scroll_sync.enable": "开启滚动同步",
+      "bidirectional.disable": "关闭双向翻译",
+      "bidirectional.enable": "开启双向翻译",
+      "language.same": "源语言和目标语言相同",
+      "language.not_pair": "源语言与设置的语言不同",
+      "settings": {
+        "title": "翻译设置",
+        "model": "模型设置",
+        "model_desc": "翻译服务使用的模型",
+        "bidirectional": "双向翻译设置",
+        "scroll_sync": "滚动同步设置"
+      },
       "title": "翻译",
       "tooltip.newline": "换行"
     },
