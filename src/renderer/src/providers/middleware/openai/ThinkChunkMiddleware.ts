@@ -1,12 +1,5 @@
-import {
-  isReasoningModel,
-  isSupportedReasoningEffortModel,
-  isSupportedThinkingTokenModel
-} from '@renderer/config/models'
-import { extractReasoningMiddleware } from '@renderer/middlewares/extractReasoningMiddleware'
 import { Model } from '@renderer/types'
 import { Chunk, ChunkType, ThinkingCompleteChunk, ThinkingDeltaChunk } from '@renderer/types/chunk'
-import { asyncGeneratorToReadableStream } from '@renderer/utils/stream'
 import { isEmpty } from 'lodash'
 import OpenAI from 'openai'
 
@@ -15,42 +8,30 @@ import { AiProviderMiddlewareCompletionsContext, CompletionsMiddleware } from '.
 
 const MIDDLEWARE_NAME = 'ThinkChunkMiddleware'
 
+// 不同模型的思考标签配置（参照 OpenAIProvider 中的定义）
+const reasoningTags = [
+  { openingTag: '<think>', closingTag: '</think>', separator: '\n' },
+  { openingTag: '###Thinking', closingTag: '###Response', separator: '\n' }
+]
+
+const getAppropriateTag = (model?: Model) => {
+  if (model?.id?.includes('qwen3')) return reasoningTags[0]
+  // 可以在这里添加更多模型特定的标签配置
+  return reasoningTags[0] // 默认使用 <think> 标签
+}
+
 /**
  * 处理思考内容的中间件
+ * 参照 extractReasoningMiddleware 的逻辑，处理两种 thinking 内容来源：
+ * 1. reasoning_content/reasoning 字段中的思考内容
+ * 2. 文本流中的思考标签内容（支持不同模型的标签格式）
+ *
  * 职责：
- * 1. 从OpenAI SDK chunks中提取reasoning内容
- * 2. 将reasoning内容转换为标准的THINKING_DELTA和THINKING_COMPLETE chunks
- * 3. 清理SDK chunks中的reasoning字段
- * 4. 输出混合流：Chunk（thinking相关）+ ChatCompletionChunk（清理后的SDK chunks）
- * 5. 不直接调用onChunk，由FinalChunkConsumerAndNotifierMiddleware负责消费
- * 6. 使用TransformStream实现真正的流式处理
+ * 1. 识别并提取 reasoning 字段内容，生成 THINKING_DELTA chunks
+ * 2. 识别文本流中的思考标签，提取其中内容为 thinking
+ * 3. 在适当时机生成 THINKING_COMPLETE chunk
+ * 4. 清理处理过的内容，确保下游中间件收到干净的数据
  */
-
-// 定义OpenAI流chunk的类型，与原实现保持一致
-export type OpenAIStreamChunk =
-  | { type: 'reasoning' | 'text-delta'; textDelta: string; originalChunk: OpenAI.Chat.Completions.ChatCompletionChunk }
-  | { type: 'tool-calls'; delta: any; originalChunk: OpenAI.Chat.Completions.ChatCompletionChunk }
-  | { type: 'finish'; finishReason: any; usage: any; delta: any; chunk: any }
-
-// 获取适当的reasoning标签配置
-function getAppropriateTag(model: Model) {
-  const reasoningTags = [
-    { openingTag: '<think>', closingTag: '</think>', separator: '\n' },
-    { openingTag: '###Thinking', closingTag: '###Response', separator: '\n' }
-  ]
-  if (model.id.includes('qwen3')) return reasoningTags[0]
-  return reasoningTags[0]
-}
-
-// 检查是否启用reasoning
-function isReasoningEnabled(model: Model, assistant: any): boolean {
-  // 与原实现保持一致的reasoning启用逻辑
-  return (
-    ((isSupportedThinkingTokenModel(model) || isSupportedReasoningEffortModel(model)) &&
-      assistant.settings?.reasoning_effort !== undefined) ||
-    (isReasoningModel(model) && (!isSupportedThinkingTokenModel(model) || !isSupportedReasoningEffortModel(model)))
-  )
-}
 
 export const ThinkChunkMiddleware: CompletionsMiddleware =
   () => (next) => async (context: AiProviderMiddlewareCompletionsContext, params: CompletionsParams) => {
@@ -60,189 +41,224 @@ export const ThinkChunkMiddleware: CompletionsMiddleware =
       `[${MIDDLEWARE_NAME}] Received result from upstream. Stream is: ${resultFromUpstream.stream ? 'present' : 'absent'}`
     )
 
+    // 检查是否启用reasoning
+    const enableReasoning = params._internal?.enableReasoning || false
+    if (!enableReasoning) {
+      console.log(`[${MIDDLEWARE_NAME}] Reasoning not enabled, passing through unchanged.`)
+      return resultFromUpstream
+    }
+
     // 检查是否有流需要处理
     if (resultFromUpstream.stream && resultFromUpstream.stream instanceof ReadableStream) {
-      const rawSdkChunkStream = resultFromUpstream.stream as ReadableStream<OpenAI.Chat.Completions.ChatCompletionChunk>
-      const model = context.model!
-      const assistant = context.assistant!
-      const enableReasoning = isReasoningEnabled(model, assistant)
+      const inputStream = resultFromUpstream.stream as ReadableStream<
+        Chunk | OpenAI.Chat.Completions.ChatCompletionChunk
+      >
 
-      // 1. 将OpenAI SDK chunks转换为标准化的OpenAIStreamChunk格式
-      async function* openAIChunkToTextDelta(
-        stream: ReadableStream<OpenAI.Chat.Completions.ChatCompletionChunk>
-      ): AsyncGenerator<OpenAIStreamChunk> {
-        const reader = stream.getReader()
-        try {
-          while (true) {
-            const { done, value: chunk } = await reader.read()
-            if (done) break
+      // 获取当前模型的思考标签配置
+      const reasoningTag = getAppropriateTag(context.model)
+      const { openingTag, closingTag } = reasoningTag
 
-            if (!chunk) continue
+      console.log(
+        `[${MIDDLEWARE_NAME}] Using reasoning tags: ${openingTag} ... ${closingTag} for model: ${context.model?.id}`
+      )
 
-            const delta = chunk.choices[0]?.delta
-            if ((delta as any)?.reasoning_content || (delta as any)?.reasoning) {
-              yield {
-                type: 'reasoning',
-                textDelta: (delta as any).reasoning_content || (delta as any).reasoning,
-                originalChunk: chunk
-              }
-            }
-            if (delta?.content) {
-              yield { type: 'text-delta', textDelta: delta.content, originalChunk: chunk }
-            }
-            if (delta?.tool_calls) {
-              yield { type: 'tool-calls', delta: delta, originalChunk: chunk }
-            }
-
-            const finishReason = chunk.choices[0]?.finish_reason
-            if (!isEmpty(finishReason)) {
-              yield { type: 'finish', finishReason, usage: chunk.usage, delta, chunk }
-              break
-            }
-          }
-        } finally {
-          reader.releaseLock()
-        }
-      }
-
-      // 2. 使用extractReasoningMiddleware处理<think>标签
-      const reasoningTag = getAppropriateTag(model)
-      const { stream: processedStream } = await extractReasoningMiddleware<OpenAIStreamChunk>({
-        openingTag: reasoningTag?.openingTag,
-        closingTag: reasoningTag?.closingTag,
-        separator: reasoningTag?.separator,
-        enableReasoning
-      }).wrapStream({
-        doStream: async () => ({
-          stream: asyncGeneratorToReadableStream(openAIChunkToTextDelta(rawSdkChunkStream))
-        })
-      })
-
-      // 3. 使用TransformStream处理thinking内容并输出混合流
+      // thinking 处理状态
       let thinkingContent = ''
       let timeFirstTokenMillsec = 0
-      let isFirstChunk = true
+      let isFirstNonThinkingChunk = true
 
-      const mixedStream = processedStream.pipeThrough(
-        new TransformStream<OpenAIStreamChunk, Chunk | OpenAI.Chat.Completions.ChatCompletionChunk>({
-          transform(chunk, controller) {
-            switch (chunk.type) {
-              case 'reasoning': {
-                if (timeFirstTokenMillsec === 0) {
-                  timeFirstTokenMillsec = Date.now()
-                }
-                thinkingContent += chunk.textDelta
+      // 标签处理状态（参照 extractReasoningMiddleware）
+      // const isInThinkTag = false
+      // const textBuffer = ''
 
-                // 生成THINKING_DELTA chunk并输出到流
-                const thinkingDeltaChunk: ThinkingDeltaChunk = {
-                  type: ChunkType.THINKING_DELTA,
-                  text: chunk.textDelta,
-                  thinking_millsec: Date.now() - timeFirstTokenMillsec
-                }
-                controller.enqueue(thinkingDeltaChunk)
-                // reasoning chunks不传递给下游
-                break
-              }
-              case 'text-delta': {
-                // 在第一个text-delta时，如果有thinking内容，输出THINKING_COMPLETE
-                if (isFirstChunk) {
-                  isFirstChunk = false
-                  if (timeFirstTokenMillsec === 0) {
-                    timeFirstTokenMillsec = Date.now()
-                  } else if (thinkingContent) {
-                    const thinkingCompleteChunk: ThinkingCompleteChunk = {
-                      type: ChunkType.THINKING_COMPLETE,
-                      text: thinkingContent,
-                      thinking_millsec: Date.now() - timeFirstTokenMillsec
-                    }
-                    controller.enqueue(thinkingCompleteChunk)
-                  }
-                }
+      const processedStream = inputStream.pipeThrough(
+        new TransformStream<Chunk | OpenAI.Chat.Completions.ChatCompletionChunk, Chunk>({
+          transform(item, controller) {
+            // 处理已转换的 Chunk
+            // 理论上用不到这部分逻辑,因为上流的中间件没有对text和think做处理的
+            // if ('type' in item && typeof item.type === 'string') {
+            //   const chunk = item as Chunk
 
-                // 重建清理后的SDK chunk用于下游处理
-                const originalChunk = chunk.originalChunk
-                if (originalChunk && originalChunk.choices) {
-                  const reconstructedChunk: OpenAI.Chat.Completions.ChatCompletionChunk = {
-                    ...originalChunk,
-                    choices: originalChunk.choices.map((choice) => ({
-                      ...choice,
-                      delta: {
-                        ...choice.delta,
-                        content: chunk.textDelta,
-                        // 确保reasoning字段被清理
-                        reasoning_content: undefined,
-                        reasoning: undefined
-                      }
-                    }))
-                  }
-                  controller.enqueue(reconstructedChunk)
-                }
-                break
-              }
-              case 'tool-calls': {
-                // 在第一个tool-calls时，如果有thinking内容，输出THINKING_COMPLETE
-                if (isFirstChunk) {
-                  isFirstChunk = false
-                  if (timeFirstTokenMillsec === 0) {
-                    timeFirstTokenMillsec = Date.now()
-                  } else if (thinkingContent) {
-                    const thinkingCompleteChunk: ThinkingCompleteChunk = {
-                      type: ChunkType.THINKING_COMPLETE,
-                      text: thinkingContent,
-                      thinking_millsec: Date.now() - timeFirstTokenMillsec
-                    }
-                    controller.enqueue(thinkingCompleteChunk)
-                  }
-                }
+            //   // 如果是 TEXT_DELTA chunk，需要检查是否包含思考标签
+            //   if (chunk.type === ChunkType.TEXT_DELTA) {
+            //     const textDelta = chunk.text
+            //     textBuffer += textDelta
 
-                // 重建清理后的SDK chunk用于下游处理
-                const originalChunk = chunk.originalChunk
-                if (originalChunk && originalChunk.choices) {
-                  const reconstructedChunk: OpenAI.Chat.Completions.ChatCompletionChunk = {
-                    ...originalChunk,
-                    choices: originalChunk.choices.map((choice) => ({
-                      ...choice,
-                      delta: {
-                        ...choice.delta,
-                        tool_calls: chunk.delta.tool_calls,
-                        // 确保reasoning字段被清理
-                        reasoning_content: undefined,
-                        reasoning: undefined
-                      }
-                    }))
-                  }
-                  controller.enqueue(reconstructedChunk)
-                }
-                break
-              }
-              case 'finish': {
-                // 在finish时，如果有thinking内容且还没输出THINKING_COMPLETE，输出它
-                if (thinkingContent && isFirstChunk) {
-                  const thinkingCompleteChunk: ThinkingCompleteChunk = {
-                    type: ChunkType.THINKING_COMPLETE,
-                    text: thinkingContent,
-                    thinking_millsec: Date.now() - timeFirstTokenMillsec
-                  }
-                  controller.enqueue(thinkingCompleteChunk)
-                }
+            //     // 处理标签内容（优化后的逻辑，参照 extractReasoningMiddleware）
+            //     const publishText = (text: string, isThinking: boolean) => {
+            //       if (text.length > 0) {
+            //         if (isThinking) {
+            //           // 生成 THINKING_DELTA chunk
+            //           if (timeFirstTokenMillsec === 0) {
+            //             timeFirstTokenMillsec = Date.now()
+            //           }
+            //           thinkingContent += text
 
-                // 传递finish chunk
-                if (chunk.chunk) {
-                  controller.enqueue(chunk.chunk)
-                }
-                break
-              }
+            //           const thinkingDeltaChunk: ThinkingDeltaChunk = {
+            //             type: ChunkType.THINKING_DELTA,
+            //             text: text,
+            //             thinking_millsec: Date.now() - timeFirstTokenMillsec
+            //           }
+            //           controller.enqueue(thinkingDeltaChunk)
+            //         } else {
+            //           // 处理第一个非thinking内容
+            //           if (isFirstNonThinkingChunk && thinkingContent) {
+            //             isFirstNonThinkingChunk = false
+            //             const thinkingCompleteChunk: ThinkingCompleteChunk = {
+            //               type: ChunkType.THINKING_COMPLETE,
+            //               text: thinkingContent,
+            //               thinking_millsec: Date.now() - timeFirstTokenMillsec
+            //             }
+            //             controller.enqueue(thinkingCompleteChunk)
+            //           }
+
+            //           // 生成 TEXT_DELTA chunk
+            //           controller.enqueue({
+            //             ...chunk,
+            //             text: text
+            //           })
+            //         }
+            //       }
+            //     }
+
+            //     // 使用改进的标签处理逻辑
+            //     while (true) {
+            //       const nextTag = isInThinkTag ? closingTag : openingTag
+            //       const startIndex = getPotentialStartIndex(textBuffer, nextTag)
+
+            //       if (startIndex == null) {
+            //         // 没有找到标签，发布所有内容
+            //         publishText(textBuffer, isInThinkTag)
+            //         textBuffer = ''
+            //         break
+            //       }
+
+            //       // 发布标签前的内容
+            //       publishText(textBuffer.slice(0, startIndex), isInThinkTag)
+
+            //       // 检查是否找到完整的标签
+            //       const foundFullMatch = startIndex + nextTag.length <= textBuffer.length
+            //       if (foundFullMatch) {
+            //         // 找到完整标签，切换状态
+            //         textBuffer = textBuffer.slice(startIndex + nextTag.length)
+            //         isInThinkTag = !isInThinkTag
+            //       } else {
+            //         // 只找到部分标签，保留剩余内容等待下一个chunk
+            //         textBuffer = textBuffer.slice(startIndex)
+            //         break
+            //       }
+            //     }
+            //   } else {
+            //     // 其他类型的 chunk 直接传递
+            //     // 但需要检查是否是工具调用相关的 chunk，也要触发 THINKING_COMPLETE
+            //     if (
+            //       (chunk.type === ChunkType.MCP_TOOL_IN_PROGRESS ||
+            //         chunk.type === ChunkType.EXTERNEL_TOOL_IN_PROGRESS) &&
+            //       isFirstNonThinkingChunk &&
+            //       thinkingContent
+            //     ) {
+            //       isFirstNonThinkingChunk = false
+            //       const thinkingCompleteChunk: ThinkingCompleteChunk = {
+            //         type: ChunkType.THINKING_COMPLETE,
+            //         text: thinkingContent,
+            //         thinking_millsec: Date.now() - timeFirstTokenMillsec
+            //       }
+            //       controller.enqueue(thinkingCompleteChunk)
+            //     }
+
+            //     controller.enqueue(chunk)
+            //   }
+            //   return
+            // }
+
+            // 处理 SDK chunk
+            const sdkChunk = item as OpenAI.Chat.Completions.ChatCompletionChunk
+            const delta = sdkChunk.choices?.[0]?.delta
+
+            if (!delta) {
+              controller.enqueue(sdkChunk as any)
+              return
             }
+
+            // 处理 reasoning 字段中的思考内容
+            const reasoningText = (delta as any)?.reasoning_content || (delta as any)?.reasoning
+            if (reasoningText) {
+              if (timeFirstTokenMillsec === 0) {
+                timeFirstTokenMillsec = Date.now()
+              }
+              thinkingContent += reasoningText
+
+              // 生成 THINKING_DELTA chunk
+              const thinkingDeltaChunk: ThinkingDeltaChunk = {
+                type: ChunkType.THINKING_DELTA,
+                text: reasoningText,
+                thinking_millsec: Date.now() - timeFirstTokenMillsec
+              }
+              controller.enqueue(thinkingDeltaChunk)
+              return // reasoning chunks 不传递原始 SDK chunk
+            }
+
+            // 处理第一个非thinking内容
+            if (delta.content && isFirstNonThinkingChunk && thinkingContent) {
+              isFirstNonThinkingChunk = false
+              const thinkingCompleteChunk: ThinkingCompleteChunk = {
+                type: ChunkType.THINKING_COMPLETE,
+                text: thinkingContent,
+                thinking_millsec: Date.now() - timeFirstTokenMillsec
+              }
+              controller.enqueue(thinkingCompleteChunk)
+            }
+
+            // 处理 tool_calls 时也需要触发 THINKING_COMPLETE
+            if (delta.tool_calls && isFirstNonThinkingChunk && thinkingContent) {
+              isFirstNonThinkingChunk = false
+              const thinkingCompleteChunk: ThinkingCompleteChunk = {
+                type: ChunkType.THINKING_COMPLETE,
+                text: thinkingContent,
+                thinking_millsec: Date.now() - timeFirstTokenMillsec
+              }
+              controller.enqueue(thinkingCompleteChunk)
+            }
+
+            // 处理结束标记
+            const finishReason = sdkChunk.choices[0]?.finish_reason
+            if (!isEmpty(finishReason) && thinkingContent && isFirstNonThinkingChunk) {
+              const thinkingCompleteChunk: ThinkingCompleteChunk = {
+                type: ChunkType.THINKING_COMPLETE,
+                text: thinkingContent,
+                thinking_millsec: Date.now() - timeFirstTokenMillsec
+              }
+              controller.enqueue(thinkingCompleteChunk)
+            }
+
+            // 清理 reasoning 字段后传递给下游
+            const cleanedChunk: OpenAI.Chat.Completions.ChatCompletionChunk = {
+              ...sdkChunk,
+              choices:
+                sdkChunk.choices?.map((choice) => ({
+                  ...choice,
+                  delta: choice.delta
+                    ? {
+                        ...choice.delta,
+                        reasoning_content: undefined,
+                        reasoning: undefined
+                      }
+                    : choice.delta
+                })) || []
+            }
+            controller.enqueue(cleanedChunk as any)
           }
         })
       )
 
       const adaptedResult: CompletionsOpenAIResult = {
         ...resultFromUpstream,
-        stream: mixedStream
+        stream: processedStream
       }
 
-      // console.log(`[${MIDDLEWARE_NAME}] Set up thinking content processing with mixed stream output.`)
+      console.log(
+        `[${MIDDLEWARE_NAME}] Set up thinking content processing with tag support for model: ${context.model?.id}`
+      )
       return adaptedResult
     } else {
       console.log(`[${MIDDLEWARE_NAME}] No stream to process or not a ReadableStream. Returning original result.`)

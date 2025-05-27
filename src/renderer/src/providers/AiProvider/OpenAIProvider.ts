@@ -30,6 +30,7 @@ import {
   Provider,
   Suggestion
 } from '@renderer/types'
+import { ChunkType } from '@renderer/types/chunk'
 import { Message } from '@renderer/types/newMessage'
 import { removeSpecialCharactersForTopicName } from '@renderer/utils'
 import { mcpToolCallResponseToOpenAICompatibleMessage, mcpToolsToOpenAIChatTools } from '@renderer/utils/mcp-tools'
@@ -330,7 +331,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
    * @param onFilterMessages - The onFilterMessages callback
    * @returns The completions
    */
-  async completions({ assistant, _internal }: CompletionsParams): Promise<CompletionsOpenAIResult> {
+  async completions({ assistant, onChunk, _internal }: CompletionsParams): Promise<CompletionsOpenAIResult> {
     // TODO: 图片生成
     // if (assistant.enableGenerateImage) {
     //   await this.generateImageByChat({ messages, assistant, onChunk } as CompletionsParams)
@@ -836,7 +837,7 @@ export default class OpenAIProvider extends BaseOpenAIProvider {
 
     // reqMessages = processReqMessages(model, reqMessages)
     // 等待接口返回流
-    // onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
+    onChunk({ type: ChunkType.LLM_RESPONSE_CREATED })
     // const start_time_millsec = new Date().getTime()
     if (!_internal?.sdkParams) {
       console.warn('🚀 [OpenAIProvider] transformedData is not found')

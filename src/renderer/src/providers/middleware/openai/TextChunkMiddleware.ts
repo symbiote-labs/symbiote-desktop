@@ -33,8 +33,7 @@ export const TextChunkMiddleware: CompletionsMiddleware =
             // Check if this is already a Chunk (from ThinkChunkMiddleware)
             if ('type' in item && typeof item.type === 'string') {
               // This is already a Chunk, pass it through
-              const chunk = item as Chunk
-              controller.enqueue(chunk)
+              controller.enqueue(item)
               return
             }
 

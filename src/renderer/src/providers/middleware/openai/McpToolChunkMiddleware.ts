@@ -11,7 +11,7 @@ import { CompletionsOpenAIResult, CompletionsParams } from '../../AiProvider'
 import { AiProviderMiddlewareCompletionsContext, CompletionsMiddleware } from '../middlewareTypes'
 
 const MIDDLEWARE_NAME = 'McpToolChunkMiddleware'
-const MAX_TOOL_RECURSION_DEPTH = 10 // 防止无限递归
+const MAX_TOOL_RECURSION_DEPTH = 20 // 防止无限递归
 
 /**
  * MCP工具处理中间件
