@@ -12,7 +12,6 @@ Symbiote Desktop is a fork of Cherry Studio, extended to provide:
 - **AI assistant orchestration**
 - **MCP server management** (local, remote, and bundled)
 - **Creative workflow automation**
-- **Cross-platform support** (macOS, Windows, Linux)
 - **Configurable, self-contained MCP server bundling**
 
 It is designed for creative professionals who want to leverage AI and automation tools (like Blender MCP, memory servers, search, etc.) without complex setup or manual dependency management.
