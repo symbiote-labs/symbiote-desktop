@@ -146,10 +146,14 @@ export const builtinMCPServers: MCPServer[] = [
   {
     id: nanoid(),
     name: 'symbiote-mcp',
-    type: 'streamableHttp',
-    description: 'MCP server for interacting with Symbiote',
-    command: 'uvx',
-    args: ['symbiote-mcp'],
+    type: 'stdio',
+    description: 'MCP server for communicating with Symbiote Labs infrastructure (proxied)',
+    command: 'bun',
+    args: ['@remote-mcp/client'],
+    env: {
+      "REMOTE_MCP_URL": "https://mcp.symbiotelabs.ai/v1/mcp",
+      "HTTP_HEADER_Authorization": "Bearer <token>"
+    },
     isActive: false,
     provider: 'Symbiote'
   }
