@@ -6,6 +6,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 
 import Sidebar from './components/app/Sidebar'
+import { MCPInitializer } from './components/MCPInitializer'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
 import { CodeStyleProvider } from './context/CodeStyleProvider'
@@ -31,6 +32,7 @@ function App(): React.ReactElement {
             <NotificationProvider>
               <CodeStyleProvider>
                 <PersistGate loading={null} persistor={persistor}>
+                  <MCPInitializer />
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />

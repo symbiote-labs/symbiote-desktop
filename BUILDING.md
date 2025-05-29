@@ -110,6 +110,25 @@ Refer to the `scripts` section in `package.json` for the most up-to-date build c
 
 Build artifacts (installers, packaged apps) will be located in the `dist/` directory.
 
+## MCP (Model Context Protocol) Servers
+
+This fork includes three additional MCP servers that are automatically installed and configured:
+
+- **blender-mcp**: MCP server for controlling Blender 3D software
+- **symbiote-unreal-mcp**: MCP server for controlling Unreal Engine
+- **symbiote-mcp**: MCP server for talking to Symbiote Labs
+
+These servers are configured in `src/renderer/src/store/mcp.ts` and will be automatically added to new installations or during migration for existing users.
+
+### MCP Server Configuration
+
+The MCP servers are defined in the `builtinMCPServers` array and configured to use `uvx` (Python universal executor) on macOS/Linux and appropriate command wrappers on Windows. They are set to be active by default when installed.
+
+To modify the default MCP servers or add new ones:
+1. Edit the `builtinMCPServers` array in `src/renderer/src/store/mcp.ts`
+2. Add a migration step in `src/renderer/src/store/migrate.ts` for existing users
+3. Update the store version in `src/renderer/src/store/index.ts`
+
 ## Troubleshooting
 
 -   **Native Modules:** If you encounter issues related to native Node.js modules, ensure your development environment has the necessary compilers and tools (e.g., Python, C++ compiler like MSVC on Windows, Xcode Command Line Tools on macOS, build-essential on Linux). Cross-compiling native modules can sometimes be tricky, especially from macOS to Windows x64 if modules don't have prebuilt binaries for that target.

@@ -121,6 +121,37 @@ export const builtinMCPServers: MCPServer[] = [
       DIFY_KEY: 'YOUR_DIFY_KEY'
     },
     provider: 'CherryAI'
+  },
+  // Symbiote-specific MCP servers
+  {
+    id: nanoid(),
+    name: 'blender-mcp',
+    type: 'stdio',
+    description: 'MCP server for controlling Blender 3D software',
+    command: 'uvx',
+    args: ['blender-mcp'],
+    isActive: false,
+    provider: 'Symbiote'
+  },
+  {
+    id: nanoid(),
+    name: 'symbiote-unreal-mcp',
+    type: 'stdio',
+    description: 'MCP server for controlling Unreal Engine',
+    command: 'uvx',
+    args: ['symbiote-unreal-mcp'],
+    isActive: false,
+    provider: 'Symbiote'
+  },
+  {
+    id: nanoid(),
+    name: 'symbiote-mcp',
+    type: 'streamableHttp',
+    description: 'MCP server for interacting with Symbiote',
+    command: 'uvx',
+    args: ['symbiote-mcp'],
+    isActive: false,
+    provider: 'Symbiote'
   }
 ]
 
