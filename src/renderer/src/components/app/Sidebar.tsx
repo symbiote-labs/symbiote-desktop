@@ -33,7 +33,7 @@ import styled from 'styled-components'
 
 import DragableList from '../DragableList'
 import MinAppIcon from '../Icons/MinAppIcon'
-import UserPopup from '../Popups/UserPopup'
+import SymbioteUserPopup from '../Popups/SymbioteUserPopup'
 
 const Sidebar: FC = () => {
   const { hideMinappPopup, openMinapp } = useMinappPopup()
@@ -48,7 +48,7 @@ const Sidebar: FC = () => {
   const avatar = useAvatar()
   const { t } = useTranslation()
 
-  const onEditUser = () => UserPopup.show()
+  const onEditUser = () => SymbioteUserPopup.show()
 
   const backgroundColor = useNavBackgroundColor()
 

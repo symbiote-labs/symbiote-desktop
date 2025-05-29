@@ -13,6 +13,7 @@ import { FC, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 
+import AuthStatus from '@renderer/components/auth/AuthStatus'
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '.'
 
 const GeneralSettings: FC = () => {
@@ -117,6 +118,7 @@ const GeneralSettings: FC = () => {
 
   return (
     <SettingContainer theme={themeMode}>
+      <AuthStatus />
       <SettingGroup theme={theme}>
         <SettingTitle>{t('settings.general.title')}</SettingTitle>
         <SettingDivider />
