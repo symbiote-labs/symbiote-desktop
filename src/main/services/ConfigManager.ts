@@ -176,7 +176,7 @@ export class ConfigManager {
 
   // MCP Auto Install Binaries
   getAutoInstallMCPBinaries(): boolean {
-    return this.get<boolean>(ConfigKeys.AutoInstallMCPBinaries, false)
+    return this.get<boolean>(ConfigKeys.AutoInstallMCPBinaries, true)
   }
 
   setAutoInstallMCPBinaries(value: boolean) {

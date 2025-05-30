@@ -305,7 +305,7 @@ export const initialState: SettingsState = {
   },
   defaultPaintingProvider: 'aihubmix',
   // MCP Settings
-  autoInstallMCPBinaries: false
+  autoInstallMCPBinaries: true
 }
 
 const settingsSlice = createSlice({
