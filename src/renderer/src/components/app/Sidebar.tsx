@@ -34,6 +34,7 @@ import styled from 'styled-components'
 import DragableList from '../DragableList'
 import MinAppIcon from '../Icons/MinAppIcon'
 import SymbioteUserPopup from '../Popups/SymbioteUserPopup'
+import SymbioteLogo from '@renderer/assets/images/symbiote_logo_greyscale_blackbg.png'
 
 const Sidebar: FC = () => {
   const { hideMinappPopup, openMinapp } = useMinappPopup()
@@ -76,13 +77,7 @@ const Sidebar: FC = () => {
       $isFullscreen={isFullscreen}
       id="app-sidebar"
       style={{ backgroundColor, zIndex: minappShow ? 10000 : 'initial' }}>
-      {isEmoji(avatar) ? (
-        <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
-          {avatar}
-        </EmojiAvatar>
-      ) : (
-        <AvatarImg src={avatar || UserAvatar} draggable={false} className="nodrag" onClick={onEditUser} />
-      )}
+      <LogoImg src={SymbioteLogo} draggable={false} className="nodrag" onClick={onEditUser} />
       <MainMenusContainer>
         <Menus onClick={hideMinappPopup}>
           <MainMenus />
@@ -336,14 +331,18 @@ const Container = styled.div<{ $isFullscreen: boolean }>`
   }
 `
 
-const AvatarImg = styled(Avatar)`
+const LogoImg = styled.img`
   width: 31px;
   height: 31px;
-  background-color: var(--color-background-soft);
   margin-bottom: ${isMac ? '12px' : '12px'};
   margin-top: ${isMac ? '0px' : '2px'};
-  border: none;
   cursor: pointer;
+  transition: opacity 0.3s ease;
+  border-radius: 4px;
+
+  &:hover {
+    opacity: 0.8;
+  }
 `
 
 const MainMenusContainer = styled.div`

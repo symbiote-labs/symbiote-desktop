@@ -2,7 +2,7 @@ import { useTheme } from '@renderer/context/ThemeProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { RootState, useAppDispatch } from '@renderer/store'
-import { setEnableDataCollection, setLanguage, setNotificationSettings } from '@renderer/store/settings'
+import { setEnableDataCollection, setLanguage, setNotificationSettings, setAutoInstallMCPBinaries } from '@renderer/store/settings'
 import { setProxyMode, setProxyUrl as _setProxyUrl } from '@renderer/store/settings'
 import { LanguageVarious } from '@renderer/types'
 import { NotificationSource } from '@renderer/types/notification'
@@ -32,6 +32,7 @@ const GeneralSettings: FC = () => {
   } = useSettings()
   const [proxyUrl, setProxyUrl] = useState<string | undefined>(storeProxyUrl)
   const { theme: themeMode } = useTheme()
+  const autoInstallMCPBinaries = useSelector((state: RootState) => state.settings.autoInstallMCPBinaries)
 
   const updateTray = (isShowTray: boolean) => {
     setTray(isShowTray)
@@ -221,6 +222,20 @@ const GeneralSettings: FC = () => {
             onChange={(v) => {
               dispatch(setEnableDataCollection(v))
               window.api.config.set('enableDataCollection', v)
+            }}
+          />
+        </SettingRow>
+      </SettingGroup>
+      <SettingGroup theme={theme}>
+        <SettingTitle>{t('settings.mcp.title', 'MCP')}</SettingTitle>
+        <SettingDivider />
+        <SettingRow>
+          <SettingRowTitle>{t('settings.mcp.autoInstallBinaries', 'Automatically install required binaries')}</SettingRowTitle>
+          <Switch
+            checked={autoInstallMCPBinaries}
+            onChange={(checked) => {
+              dispatch(setAutoInstallMCPBinaries(checked))
+              window.api.config.set('autoInstallMCPBinaries', checked)
             }}
           />
         </SettingRow>
