@@ -19,7 +19,8 @@ export enum ConfigKeys {
   EnableDataCollection = 'enableDataCollection',
   SelectionAssistantEnabled = 'selectionAssistantEnabled',
   SelectionAssistantTriggerMode = 'selectionAssistantTriggerMode',
-  SelectionAssistantFollowToolbar = 'selectionAssistantFollowToolbar'
+  SelectionAssistantFollowToolbar = 'selectionAssistantFollowToolbar',
+  AutoInstallMCPBinaries = 'autoInstallMCPBinaries'
 }
 
 export class ConfigManager {
@@ -171,6 +172,15 @@ export class ConfigManager {
 
   setSelectionAssistantFollowToolbar(value: boolean) {
     this.setAndNotify(ConfigKeys.SelectionAssistantFollowToolbar, value)
+  }
+
+  // MCP Auto Install Binaries
+  getAutoInstallMCPBinaries(): boolean {
+    return this.get<boolean>(ConfigKeys.AutoInstallMCPBinaries, true)
+  }
+
+  setAutoInstallMCPBinaries(value: boolean) {
+    this.set(ConfigKeys.AutoInstallMCPBinaries, value)
   }
 
   setAndNotify(key: string, value: unknown) {

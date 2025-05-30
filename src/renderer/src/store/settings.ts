@@ -169,6 +169,8 @@ export interface SettingsState {
     knowledgeEmbed: boolean
   }
   defaultPaintingProvider: PaintingProvider
+  // MCP Settings
+  autoInstallMCPBinaries: boolean
 }
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -301,7 +303,9 @@ export const initialState: SettingsState = {
     backup: false,
     knowledgeEmbed: false
   },
-  defaultPaintingProvider: 'aihubmix'
+  defaultPaintingProvider: 'aihubmix',
+  // MCP Settings
+  autoInstallMCPBinaries: true
 }
 
 const settingsSlice = createSlice({
@@ -638,6 +642,9 @@ const settingsSlice = createSlice({
     },
     setDefaultPaintingProvider: (state, action: PayloadAction<PaintingProvider>) => {
       state.defaultPaintingProvider = action.payload
+    },
+    setAutoInstallMCPBinaries: (state, action: PayloadAction<boolean>) => {
+      state.autoInstallMCPBinaries = action.payload
     }
   }
 })
@@ -737,7 +744,8 @@ export const {
   setOpenAISummaryText,
   setOpenAIServiceTier,
   setNotificationSettings,
-  setDefaultPaintingProvider
+  setDefaultPaintingProvider,
+  setAutoInstallMCPBinaries
 } = settingsSlice.actions
 
 export default settingsSlice.reducer

@@ -1,17 +1,14 @@
-import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
 import { isMac } from '@renderer/config/constant'
-import { AppLogo, UserAvatar } from '@renderer/config/env'
+import { AppLogo } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
-import useAvatar from '@renderer/hooks/useAvatar'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { isEmoji } from '@renderer/utils'
 import type { MenuProps } from 'antd'
-import { Avatar, Dropdown, Tooltip } from 'antd'
+import { Dropdown, Tooltip } from 'antd'
 import {
   CircleHelp,
   FileSearch,
@@ -33,7 +30,8 @@ import styled from 'styled-components'
 
 import DragableList from '../DragableList'
 import MinAppIcon from '../Icons/MinAppIcon'
-import UserPopup from '../Popups/UserPopup'
+import SymbioteUserPopup from '../Popups/SymbioteUserPopup'
+import SymbioteLogo from '@renderer/assets/images/symbiote_logo_greyscale_blackbg.png'
 
 const Sidebar: FC = () => {
   const { hideMinappPopup, openMinapp } = useMinappPopup()
@@ -45,10 +43,9 @@ const Sidebar: FC = () => {
   const navigate = useNavigate()
 
   const { theme, settingTheme, toggleTheme } = useTheme()
-  const avatar = useAvatar()
   const { t } = useTranslation()
 
-  const onEditUser = () => UserPopup.show()
+  const onEditUser = () => SymbioteUserPopup.show()
 
   const backgroundColor = useNavBackgroundColor()
 
@@ -76,13 +73,7 @@ const Sidebar: FC = () => {
       $isFullscreen={isFullscreen}
       id="app-sidebar"
       style={{ backgroundColor, zIndex: minappShow ? 10000 : 'initial' }}>
-      {isEmoji(avatar) ? (
-        <EmojiAvatar onClick={onEditUser} className="sidebar-avatar" size={31} fontSize={18}>
-          {avatar}
-        </EmojiAvatar>
-      ) : (
-        <AvatarImg src={avatar || UserAvatar} draggable={false} className="nodrag" onClick={onEditUser} />
-      )}
+      <LogoImg src={SymbioteLogo} draggable={false} className="nodrag" onClick={onEditUser} />
       <MainMenusContainer>
         <Menus onClick={hideMinappPopup}>
           <MainMenus />
@@ -336,14 +327,18 @@ const Container = styled.div<{ $isFullscreen: boolean }>`
   }
 `
 
-const AvatarImg = styled(Avatar)`
+const LogoImg = styled.img`
   width: 31px;
   height: 31px;
-  background-color: var(--color-background-soft);
   margin-bottom: ${isMac ? '12px' : '12px'};
   margin-top: ${isMac ? '0px' : '2px'};
-  border: none;
   cursor: pointer;
+  transition: opacity 0.3s ease;
+  border-radius: 4px;
+
+  &:hover {
+    opacity: 0.8;
+  }
 `
 
 const MainMenusContainer = styled.div`
