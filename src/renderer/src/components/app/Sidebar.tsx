@@ -1,17 +1,14 @@
-import EmojiAvatar from '@renderer/components/Avatar/EmojiAvatar'
 import { isMac } from '@renderer/config/constant'
-import { AppLogo, UserAvatar } from '@renderer/config/env'
+import { AppLogo } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
-import useAvatar from '@renderer/hooks/useAvatar'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
 import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { isEmoji } from '@renderer/utils'
 import type { MenuProps } from 'antd'
-import { Avatar, Dropdown, Tooltip } from 'antd'
+import { Dropdown, Tooltip } from 'antd'
 import {
   CircleHelp,
   FileSearch,
@@ -46,7 +43,6 @@ const Sidebar: FC = () => {
   const navigate = useNavigate()
 
   const { theme, settingTheme, toggleTheme } = useTheme()
-  const avatar = useAvatar()
   const { t } = useTranslation()
 
   const onEditUser = () => SymbioteUserPopup.show()
