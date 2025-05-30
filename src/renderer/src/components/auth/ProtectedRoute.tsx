@@ -37,9 +37,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!isAuthenticated) {
     return (
       <Center style={{ height: '100vh' }}>
-        <Spin size="large" />
         <div style={{ marginTop: '16px', color: 'var(--color-text-secondary)' }}>
-          Please sign in to continue
         </div>
       </Center>
     )

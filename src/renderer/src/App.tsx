@@ -46,7 +46,11 @@ function AppContent(): React.ReactElement {
                       <NavigationHandler />
                       <Sidebar />
                       <Routes>
-                        <Route path="/" element={<HomePage />} />
+                        <Route path="/" element={
+                          <ProtectedRoute>
+                            <HomePage />
+                          </ProtectedRoute>
+                        } />
                         <Route path="/agents" element={<AgentsPage />} />
                         <Route path="/paintings/*" element={<PaintingsRoutePage />} />
                         <Route path="/translate" element={<TranslatePage />} />
