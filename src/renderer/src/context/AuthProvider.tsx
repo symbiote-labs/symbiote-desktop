@@ -25,25 +25,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthStatus = async () => {
     setIsLoading(true)
     try {
-      // First check local storage
       const storedUser = AuthService.getStoredUser()
       const hasToken = AuthService.isAuthenticated()
 
       if (storedUser && hasToken) {
-        // Verify with server
         const statusResponse = await AuthService.getUserStatus()
         if (statusResponse.authenticated && statusResponse.user) {
           setUser(statusResponse.user)
           setIsAuthenticated(true)
         } else {
-          // Server says not authenticated, clear local data
           await AuthService.logout()
           setUser(null)
           setIsAuthenticated(false)
         }
       } else {
-        setUser(null)
-        setIsAuthenticated(false)
+        const statusResponse = await AuthService.getUserStatus()
+        if (statusResponse.authenticated && statusResponse.user) {
+          setUser(statusResponse.user)
+          setIsAuthenticated(true)
+        } else {
+          setUser(null)
+          setIsAuthenticated(false)
+        }
       }
     } catch (error) {
       console.error('Auth status check failed:', error)

@@ -77,12 +77,15 @@ class AuthService {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        const bearerToken = this.generateBearerToken(request.email)
-        localStorage.setItem(this.tokenKey, bearerToken)
-
-        if (data.user) {
-          localStorage.setItem(this.userKey, JSON.stringify(data.user))
+        if (request.remember) {
+          const bearerToken = this.generateBearerToken(request.email)
+          localStorage.setItem(this.tokenKey, bearerToken)
+          if (data.user) {
+            localStorage.setItem(this.userKey, JSON.stringify(data.user))
+          }
         }
+        // If !request.remember, nothing is stored in localStorage.
+        // Session will rely on cookies if the server sets them.
 
         return {
           success: true,
