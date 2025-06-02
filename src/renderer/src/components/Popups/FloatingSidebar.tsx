@@ -1,8 +1,8 @@
 import HomeTabs from '@renderer/pages/home/Tabs/index'
+import TopicTabs from '@renderer/pages/home/Tabs/TopicTabs'
 import { Assistant, Topic } from '@renderer/types'
 import { Popover } from 'antd'
 import { FC, useEffect, useState } from 'react'
-import { useHotkeys } from 'react-hotkeys-hook'
 import styled from 'styled-components'
 
 interface Props {
@@ -12,6 +12,9 @@ interface Props {
   activeTopic: Topic
   setActiveTopic: (topic: Topic) => void
   position: 'left' | 'right'
+  isOpen: boolean
+  onVisibilityChange: (visible: boolean) => void
+  contentType?: 'home' | 'topicsOnly'
 }
 
 const FloatingSidebar: FC<Props> = ({
@@ -20,14 +23,11 @@ const FloatingSidebar: FC<Props> = ({
   setActiveAssistant,
   activeTopic,
   setActiveTopic,
-  position = 'left'
+  position = 'left',
+  isOpen,
+  onVisibilityChange,
+  contentType = 'home'
 }) => {
-  const [open, setOpen] = useState(false)
-
-  useHotkeys('esc', () => {
-    setOpen(false)
-  })
-
   const [maxHeight, setMaxHeight] = useState(Math.floor(window.innerHeight * 0.75))
 
   useEffect(() => {
@@ -42,33 +42,47 @@ const FloatingSidebar: FC<Props> = ({
     }
   }, [])
 
-  const content = (
+  const popoverContent = (
     <PopoverContent maxHeight={maxHeight}>
-      <HomeTabs
-        activeAssistant={activeAssistant}
-        activeTopic={activeTopic}
-        setActiveAssistant={setActiveAssistant}
-        setActiveTopic={setActiveTopic}
-        position={position}
-        forceToSeeAllTab={true}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          maxHeight: maxHeight
-        }}
-      />
+      {contentType === 'home' ? (
+        <HomeTabs
+          activeAssistant={activeAssistant}
+          activeTopic={activeTopic}
+          setActiveAssistant={setActiveAssistant}
+          setActiveTopic={setActiveTopic}
+          position={position}
+          forceToSeeAllTab={true}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            maxHeight: maxHeight
+          }}
+        />
+      ) : (
+        <TopicTabs
+          activeAssistant={activeAssistant}
+          activeTopic={activeTopic}
+          setActiveTopic={setActiveTopic}
+          position={position}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            maxHeight: maxHeight
+          }}
+        />
+      )}
     </PopoverContent>
   )
 
   return (
     <Popover
-      open={open}
-      onOpenChange={setOpen}
-      content={content}
-      trigger={['hover', 'click', 'contextMenu']}
-      placement="bottomRight"
+      open={isOpen}
+      onOpenChange={onVisibilityChange}
+      content={popoverContent}
+      trigger={['click', 'contextMenu']}
+      placement={position === 'left' ? 'rightTop' : 'leftTop'}
       showArrow
-      mouseEnterDelay={0.8} // 800ms delay before showing
+      mouseEnterDelay={0.8}
       mouseLeaveDelay={20}
       styles={{
         body: {

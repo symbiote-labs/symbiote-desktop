@@ -10,6 +10,7 @@ import styled from 'styled-components'
 
 import SymbioteChat from './SymbioteChat'
 import SymbioteNavbar from './SymbioteNavbar'
+import TopicTabs from './Tabs/TopicTabs'
 
 let _activeAssistant: Assistant
 
@@ -24,7 +25,6 @@ const HomePage: FC = () => {
   const { activeTopic, setActiveTopic } = useActiveTopic(activeAssistant, state?.topic)
   const { showTopics, topicPosition } = useSettings()
   const showAssistants = false
-
 
   _activeAssistant = activeAssistant
 
@@ -52,7 +52,7 @@ const HomePage: FC = () => {
   }, [assistants, setActiveAssistant])
 
   useEffect(() => {
-    const canMinimize = topicPosition == 'left' ? !showAssistants : !showAssistants && !showTopics
+    const canMinimize = topicPosition === 'left' ? !showTopics : !showTopics && !showAssistants
     window.api.window.setMinimumSize(canMinimize ? 520 : 1080, 600)
 
     return () => {
@@ -67,9 +67,16 @@ const HomePage: FC = () => {
         activeTopic={activeTopic}
         setActiveTopic={setActiveTopic}
         setActiveAssistant={setActiveAssistant}
-        position="left"
       />
       <ContentContainer id="content-container">
+        {showTopics && topicPosition === 'left' && (
+          <TopicTabs
+            activeAssistant={activeAssistant}
+            activeTopic={activeTopic}
+            setActiveTopic={setActiveTopic}
+            position="left"
+          />
+        )}
         <SymbioteChat
           assistant={activeAssistant}
           activeTopic={activeTopic}

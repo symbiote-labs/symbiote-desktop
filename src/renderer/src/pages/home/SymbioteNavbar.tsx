@@ -4,12 +4,15 @@ import MinAppsPopover from '@renderer/components/Popups/MinAppsPopover'
 import SearchPopup from '@renderer/components/Popups/SearchPopup'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcut } from '@renderer/hooks/useShortcuts'
+import { useShowTopics } from '@renderer/hooks/useStore'
 import { Assistant, Topic } from '@renderer/types'
 import { Tooltip } from 'antd'
 import { t } from 'i18next'
-import { LayoutGrid, Search } from 'lucide-react'
-import { FC } from 'react'
+import { LayoutGrid, PanelLeftClose, PanelRightClose, Search } from 'lucide-react'
+import { FC, useCallback } from 'react'
 import styled from 'styled-components'
+import { isMac } from '@renderer/config/constant'
+import { useFullscreen } from '@renderer/hooks/useFullscreen'
 
 import UpdateAppButton from './components/UpdateAppButton'
 
@@ -90,23 +93,38 @@ interface Props {
   activeTopic: Topic
   setActiveTopic: (topic: Topic) => void
   setActiveAssistant: (assistant: Assistant) => void
-  position: 'left' | 'right'
 }
 
-const SymbioteNavbar: FC<Props> = ({ activeTopic }) => {
-  const { sidebarIcons } = useSettings()
+const SymbioteNavbar: FC<Props> = ({ activeTopic /* activeAssistant, setActiveAssistant, setActiveTopic are not used here directly but kept for consistency with HomePage */ }) => {
+  const { sidebarIcons, topicPosition } = useSettings()
+  const { showTopics, toggleShowTopics } = useShowTopics()
+  const isFullscreen = useFullscreen()
 
   useShortcut('search_message', () => {
     SearchPopup.show()
   })
 
+  const handleToggleShowTopics = useCallback(() => {
+    toggleShowTopics()
+  }, [toggleShowTopics])
+
+  useShortcut('toggle_show_topics', handleToggleShowTopics)
+
   return (
     <Navbar className="symbiote-navbar">
-      {/* Topic name display */}
+      {topicPosition === 'left' && (
+        <Tooltip title={showTopics ? t('navbar.hide_sidebar') : t('navbar.show_sidebar')} mouseEnterDelay={0.8}>
+          <NavbarIcon
+            onClick={handleToggleShowTopics}
+            style={{ marginRight: 8, marginLeft: isMac && !isFullscreen ? 4 : -12 }}
+          >
+            {showTopics ? <PanelLeftClose size={18} /> : <PanelRightClose size={18} />}
+          </NavbarIcon>
+        </Tooltip>
+      )}
+
       <TopicNameContainer>
-        <TopicName title={activeTopic.name}>
-          {activeTopic.name}
-        </TopicName>
+        <TopicName title={activeTopic.name}>{activeTopic.name}</TopicName>
       </TopicNameContainer>
 
       <NavbarRight style={{ justifyContent: 'flex-end', flex: 1 }} className="symbiote-navbar-right">
@@ -117,7 +135,6 @@ const SymbioteNavbar: FC<Props> = ({ activeTopic }) => {
               <Search size={18} />
             </NarrowIcon>
           </Tooltip>
-          {/* Expand dialog button removed - keeping interface in expanded mode */}
           {sidebarIcons.visible.includes('minapp') && (
             <MinAppsPopover>
               <Tooltip title={t('minapp.title')} mouseEnterDelay={0.8}>
