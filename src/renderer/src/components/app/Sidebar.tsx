@@ -8,7 +8,6 @@ import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { ThemeMode } from '@renderer/types'
-import { isEmoji } from '@renderer/utils'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import {
@@ -45,7 +44,6 @@ const Sidebar: FC = () => {
   const navigate = useNavigate()
 
   const { theme, settedTheme, toggleTheme } = useTheme()
-  const avatar = useAvatar()
   const { t } = useTranslation()
 
   const onEditUser = () => SymbioteUserPopup.show()

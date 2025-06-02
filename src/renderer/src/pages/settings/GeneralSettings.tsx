@@ -118,7 +118,6 @@ const GeneralSettings: FC = () => {
 
   return (
     <SettingContainer theme={theme}>
-    <SettingContainer theme={themeMode}>
       <AuthStatus />
       <SettingGroup theme={theme}>
         <SettingTitle>{t('settings.general.title')}</SettingTitle>
