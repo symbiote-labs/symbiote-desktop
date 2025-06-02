@@ -844,7 +844,7 @@
       "prompt_placeholder_edit": "画像の説明を入力します。テキスト描画には '二重引用符' を使用します",
       "prompt_placeholder_en": "「英語」の説明を入力します。Imagenは現在、英語のプロンプト語のみをサポートしています",
       "paint_course": "チュートリアル",
-      "proxy_required": "打開代理並開啟”TUN模式“查看生成圖片或複製到瀏覽器開啟，後續會支持國內直連",
+      "proxy_required": "打開代理並開啟\"TUN模式\"查看生成圖片或複製到瀏覽器開啟，後續會支持國內直連",
       "image_file_required": "画像を先にアップロードしてください",
       "image_file_retry": "画像を先にアップロードしてください",
       "image_placeholder": "画像がありません",
@@ -998,7 +998,8 @@
       "zhipu": "智譜AI",
       "voyageai": "Voyage AI",
       "qiniu": "七牛云 AI 推理",
-      "tokenflux": "TokenFlux"
+      "tokenflux": "TokenFlux",
+      "symbiote-labs": "Symbiote Labs"
     },
     "restore": {
       "confirm": "データを復元しますか？",

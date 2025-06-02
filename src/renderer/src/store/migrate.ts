@@ -1473,6 +1473,75 @@ const migrateConfig = {
     } catch (error) {
       return state
     }
+  },
+  '110': (state: RootState) => {
+    try {
+      const providers = state.llm.providers;
+      let madeChanges = false;
+
+      const uuidProviderIndex = providers.findIndex(p =>
+        p.name === "Symbiote Labs" &&
+        p.id !== "symbiote-labs" &&
+        p.id.length === 36 && p.id.includes('-')
+      );
+
+      const correctSystemProviderExists = providers.some(p => p.id === "symbiote-labs");
+
+      if (uuidProviderIndex !== -1) {
+        const uuidProvider = providers[uuidProviderIndex];
+        if (correctSystemProviderExists && uuidProvider.id !== "symbiote-labs") {
+          // Correct provider exists, UUID one is a duplicate, remove it.
+          providers.splice(uuidProviderIndex, 1);
+          madeChanges = true;
+        } else if (!correctSystemProviderExists) {
+          // No correct provider exists, convert this UUID one.
+          const canonicalSymbiote = INITIAL_PROVIDERS.find(p => p.id === 'symbiote-labs');
+          providers[uuidProviderIndex] = {
+            ...uuidProvider,
+            id: "symbiote-labs",
+            type: "symbiote-labs",
+            isSystem: true,
+            models: canonicalSymbiote ? canonicalSymbiote.models : uuidProvider.models,
+            apiHost: canonicalSymbiote ? canonicalSymbiote.apiHost : uuidProvider.apiHost,
+            // Ensure other relevant fields from canonicalSymbiote are applied if necessary
+          };
+          madeChanges = true;
+        }
+      } else if (!correctSystemProviderExists) {
+        // No provider by name "Symbiote Labs" with UUID, and no correct "symbiote-labs" by ID.
+        // Add it using the helper, which pulls from INITIAL_PROVIDERS.
+        // This relies on INITIAL_PROVIDERS having a correct definition for "symbiote-labs".
+        // Note: addProvider itself checks if it already exists by id before pushing.
+        addProvider(state, "symbiote-labs");
+        // addProvider modifies state.llm.providers directly, so we check if it actually added one.
+        const newlyAddedProvider = providers.find(p => p.id === "symbiote-labs");
+        if (newlyAddedProvider) madeChanges = true;
+      }
+
+      // Final verification for the "symbiote-labs" provider
+      const finalSymbioteLabsProvider = providers.find(p => p.id === "symbiote-labs");
+      if (finalSymbioteLabsProvider) {
+        let changedInFinalVerification = false;
+        if (finalSymbioteLabsProvider.type !== "symbiote-labs") {
+          finalSymbioteLabsProvider.type = "symbiote-labs";
+          changedInFinalVerification = true;
+        }
+        if (!finalSymbioteLabsProvider.isSystem) {
+          finalSymbioteLabsProvider.isSystem = true;
+          changedInFinalVerification = true;
+        }
+        if (changedInFinalVerification) madeChanges = true;
+      }
+
+      if (madeChanges) {
+        // Ensure Redux picks up the change if the array instance itself wasn't replaced by addProvider
+        state.llm.providers = [...providers];
+      }
+      return state;
+    } catch (error) {
+      console.error("Migration 110 error:", error);
+      return state; // Return original state on error to prevent breaking app
+    }
   }
 }
 

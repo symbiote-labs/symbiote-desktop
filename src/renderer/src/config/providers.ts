@@ -44,7 +44,7 @@ import VoyageAIProviderLogo from '@renderer/assets/images/providers/voyageai.png
 import XirangProviderLogo from '@renderer/assets/images/providers/xirang.png'
 import ZeroOneProviderLogo from '@renderer/assets/images/providers/zero-one.png'
 import ZhipuProviderLogo from '@renderer/assets/images/providers/zhipu.png'
-
+import SymbioteLabsProviderLogo from '@renderer/assets/images/symbiote_logo_greyscale.png'
 import { TOKENFLUX_HOST } from './constant'
 
 const PROVIDER_LOGO_MAP = {
@@ -94,7 +94,8 @@ const PROVIDER_LOGO_MAP = {
   alayanew: AlayaNewProviderLogo,
   voyageai: VoyageAIProviderLogo,
   qiniu: QiniuProviderLogo,
-  tokenflux: TokenFluxProviderLogo
+  tokenflux: TokenFluxProviderLogo,
+  'symbiote-labs': SymbioteLabsProviderLogo
 } as const
 
 export function getProviderLogo(providerId: string) {
@@ -611,6 +612,16 @@ export const PROVIDER_CONFIG = {
       apiKey: `${TOKENFLUX_HOST}/dashboard/api-keys`,
       docs: `${TOKENFLUX_HOST}/docs`,
       models: `${TOKENFLUX_HOST}/models`
+    }
+  },
+  'symbiote-labs': {
+    api: {
+      url: 'https://chat.symbiotelabs.ai'
+    },
+    websites: {
+      official: 'https://symbiotelabs.ai',
+      docs: 'https://symbiotelabs.ai',
+      models: 'https://symbiotelabs.ai'
     }
   }
 }

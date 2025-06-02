@@ -880,7 +880,9 @@
       "zhinao": "360 ZhiNao",
       "zhipu": "ZhiPu IA",
       "voyageai": "Voyage AI",
-      "qiniu": "Qiniu AI"
+      "qiniu": "Qiniu AI",
+      "tokenflux": "TokenFlux",
+      "symbiote-labs": "Symbiote Labs"
     },
     "restore": {
       "confirm": "Êtes-vous sûr de vouloir restaurer les données ?",

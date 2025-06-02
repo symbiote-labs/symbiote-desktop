@@ -22,8 +22,8 @@ export enum ConfigKeys {
   SelectionAssistantFollowToolbar = 'selectionAssistantFollowToolbar',
   SelectionAssistantRemeberWinSize = 'selectionAssistantRemeberWinSize',
   SelectionAssistantFilterMode = 'selectionAssistantFilterMode',
-  SelectionAssistantFilterList = 'selectionAssistantFilterList'
-  SelectionAssistantFollowToolbar = 'selectionAssistantFollowToolbar',
+  SelectionAssistantFilterList = 'selectionAssistantFilterList',
+
   AutoInstallMCPBinaries = 'autoInstallMCPBinaries'
 }
 

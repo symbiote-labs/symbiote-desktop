@@ -880,7 +880,9 @@
       "zhinao": "360 Intelligent Brain",
       "zhipu": "Zhipu AI",
       "voyageai": "Voyage AI",
-      "qiniu": "Qiniu AI"
+      "qiniu": "Qiniu AI",
+      "tokenflux": "TokenFlux",
+      "symbiote-labs": "Symbiote Labs"
     },
     "restore": {
       "confirm": "Είστε σίγουροι ότι θέλετε να επαναφέρετε τα δεδομένα;",

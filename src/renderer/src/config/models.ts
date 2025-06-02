@@ -381,7 +381,8 @@ export function getModelLogo(modelId: string) {
     sonar: isLight ? PerplexityModelLogo : PerplexityModelLogoDark,
     'bge-': BgeModelLogo,
     'voyage-': VoyageModelLogo,
-    tokenflux: isLight ? TokenFluxModelLogo : TokenFluxModelLogoDark
+    tokenflux: isLight ? TokenFluxModelLogo : TokenFluxModelLogoDark,
+    'symbiote-labs': isLight ? NousResearchModelLogo : NousResearchModelLogoDark
   }
 
   for (const key in logoMap) {
@@ -2040,6 +2041,14 @@ export const SYSTEM_MODELS: Record<string, Model[]> = {
       provider: 'tokenflux',
       name: 'Qwen Plus',
       group: 'Qwen'
+    }
+  ],
+  'symbiote-labs': [
+    {
+      id: 'symbiote-assistant-current',
+      provider: 'symbiote-labs',
+      name: 'Symbiote Assistant Current',
+      group: 'Symbiote'
     }
   ]
 }

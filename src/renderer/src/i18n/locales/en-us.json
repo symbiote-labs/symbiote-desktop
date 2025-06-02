@@ -161,8 +161,8 @@
       "artifacts.preview.openExternal.error.content": "Error opening the external browser.",
       "assistant.search.placeholder": "Search",
       "deeply_thought": "Deeply thought ({{seconds}} seconds)",
-      "default.description": "Hello, I'm Default Assistant. You can start chatting with me right away",
-      "default.name": "Default Assistant",
+      "default.description": "Hey, I'm Symbiote Desktop. I'm here to help!",
+      "default.name": "Symbiote Labs",
       "default.topic.name": "Default Topic",
       "history": {
         "assistant_node": "Assistant",
@@ -999,7 +999,8 @@
       "zhipu": "ZHIPU AI",
       "voyageai": "Voyage AI",
       "qiniu": "Qiniu AI",
-      "tokenflux": "TokenFlux"
+      "tokenflux": "TokenFlux",
+      "symbiote-labs": "Symbiote Labs"
     },
     "restore": {
       "confirm": "Are you sure you want to restore data?",

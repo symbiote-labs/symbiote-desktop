@@ -174,7 +174,7 @@ export const INITIAL_PROVIDERS: Provider[] = [
     apiHost: 'https://api.anthropic.com/',
     models: SYSTEM_MODELS.anthropic,
     isSystem: true,
-    enabled: false
+    enabled: true
   },
   {
     id: 'openai',
@@ -487,14 +487,24 @@ export const INITIAL_PROVIDERS: Provider[] = [
     models: SYSTEM_MODELS.tokenflux,
     isSystem: true,
     enabled: false
+  },
+  {
+    id: 'symbiote-labs',
+    name: 'Symbiote Labs',
+    type: 'openai',
+    apiKey: '',
+    apiHost: 'https://chat.symbiotelabs.ai',
+    models: SYSTEM_MODELS['symbiote-labs'],
+    isSystem: true,
+    enabled: true
   }
 ]
 
 const initialState: LlmState = {
-  defaultModel: SYSTEM_MODELS.silicon[1],
+  defaultModel: SYSTEM_MODELS.anthropic[0],
   topicNamingModel: SYSTEM_MODELS.silicon[2],
   translateModel: SYSTEM_MODELS.silicon[3],
-  quickAssistantModel: SYSTEM_MODELS.silicon[1],
+  quickAssistantModel: SYSTEM_MODELS.anthropic[0],
   providers: INITIAL_PROVIDERS,
   settings: {
     ollama: {

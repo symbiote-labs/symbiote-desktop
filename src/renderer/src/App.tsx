@@ -7,7 +7,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { useSelector } from 'react-redux'
 
 import { RootState } from '@renderer/store'
-import Sidebar from './components/app/Sidebar'
+import SymbioteSidebar from './components/app/SymbioteSidebar'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AutoBinaryInstaller from './components/AutoBinaryInstaller'
 import { MCPInitializer } from './components/MCPInitializer'
@@ -22,10 +22,10 @@ import NavigationHandler from './handler/NavigationHandler'
 import AgentsPage from './pages/agents/AgentsPage'
 import AppsPage from './pages/apps/AppsPage'
 import FilesPage from './pages/files/FilesPage'
-import HomePage from './pages/home/HomePage'
+import SymbioteHomePage from './pages/home/SymbioteHomePage'
+import SymbioteSettingsPage from './pages/home/SymbioteSettingsPage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PaintingsRoutePage from './pages/paintings/PaintingsRoutePage'
-import SettingsPage from './pages/settings/SettingsPage'
 import TranslatePage from './pages/translate/TranslatePage'
 
 function AppContent(): React.ReactElement {
@@ -44,11 +44,11 @@ function AppContent(): React.ReactElement {
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />
-                      <Sidebar />
+                      <SymbioteSidebar />
                       <Routes>
                         <Route path="/" element={
                           <ProtectedRoute>
-                            <HomePage />
+                            <SymbioteHomePage />
                           </ProtectedRoute>
                         } />
                         <Route path="/agents" element={<AgentsPage />} />
@@ -59,7 +59,7 @@ function AppContent(): React.ReactElement {
                         <Route path="/apps" element={<AppsPage />} />
                         <Route path="/settings/*" element={
                           <ProtectedRoute>
-                            <SettingsPage />
+                            <SymbioteSettingsPage />
                           </ProtectedRoute>
                         } />
                       </Routes>
