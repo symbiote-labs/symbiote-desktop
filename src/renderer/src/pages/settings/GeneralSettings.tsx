@@ -20,7 +20,6 @@ const GeneralSettings: FC = () => {
   const {
     language,
     proxyUrl: storeProxyUrl,
-    theme,
     setLaunch,
     setTray,
     launchOnBoot,
@@ -31,7 +30,7 @@ const GeneralSettings: FC = () => {
     enableDataCollection
   } = useSettings()
   const [proxyUrl, setProxyUrl] = useState<string | undefined>(storeProxyUrl)
-  const { theme: themeMode } = useTheme()
+  const { theme } = useTheme()
   const autoInstallMCPBinaries = useSelector((state: RootState) => state.settings.autoInstallMCPBinaries)
 
   const updateTray = (isShowTray: boolean) => {
@@ -118,6 +117,7 @@ const GeneralSettings: FC = () => {
   }
 
   return (
+    <SettingContainer theme={theme}>
     <SettingContainer theme={themeMode}>
       <AuthStatus />
       <SettingGroup theme={theme}>
