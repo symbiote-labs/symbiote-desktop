@@ -20,7 +20,7 @@ import {
   Moon,
   Palette,
   Settings,
-  Sparkle,
+  Sparkles,
   Sun,
   SunMoon
 } from 'lucide-react'
@@ -65,11 +65,6 @@ const Sidebar: FC = () => {
       id="app-sidebar"
       style={{ backgroundColor, zIndex: minappShow ? 10000 : 'initial' }}>
       <LogoImg src={SymbioteLogo} draggable={false} className="nodrag" onClick={onEditUser} />
-      <Tooltip title={t('settings.shortcuts.new_topic')} mouseEnterDelay={0.8}>
-        <SidebarIcon onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)} style={{ marginBottom: 8 }}>
-          <MessageSquareDiff size={18} />
-        </SidebarIcon>
-      </Tooltip>
       <MainMenusContainer>
         <MainMenus />
         {showPinnedApps && (
@@ -126,9 +121,11 @@ const MainMenus: FC = () => {
   const isRoutes = (path: string): string => (pathname.startsWith(path) && !minappShow ? 'active' : '')
 
   const iconMap = {
+    assistants: <MessageSquareQuote size={18} className="icon" />,
   }
 
   const pathMap = {
+    assistants: '/',
   }
 
   return sidebarIcons.visible.map((icon) => {

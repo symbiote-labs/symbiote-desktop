@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Modal, Button, Avatar, Dropdown, Spin } from 'antd'
-import { LogOut, User, Settings } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import styled from 'styled-components'
 import { useAuth } from '@renderer/context/AuthProvider'
 import Login from '@renderer/components/auth/Login'
@@ -66,27 +66,6 @@ const PopupContainer: React.FC<Props> = ({ resolve }) => {
   // If authenticated, show user info and logout option
   if (isAuthenticated && user) {
     const userMenuItems = [
-      {
-        key: 'profile',
-        label: 'Profile',
-        icon: <User size={16} />,
-        onClick: () => {
-          // Could open profile settings
-          console.log('Profile clicked')
-        }
-      },
-      {
-        key: 'settings',
-        label: 'Settings',
-        icon: <Settings size={16} />,
-        onClick: () => {
-          // Could open app settings
-          console.log('Settings clicked')
-        }
-      },
-      {
-        type: 'divider' as const
-      },
       {
         key: 'logout',
         label: 'Logout',
