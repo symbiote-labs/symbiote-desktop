@@ -7,7 +7,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { useSelector } from 'react-redux'
 
 import { RootState } from '@renderer/store'
-import SymbioteSidebar from './components/app/SymbioteSidebar'
+import Sidebar from './components/app/Sidebar'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AutoBinaryInstaller from './components/AutoBinaryInstaller'
 import { MCPInitializer } from './components/MCPInitializer'
@@ -23,7 +23,7 @@ import AgentsPage from './pages/agents/AgentsPage'
 import AppsPage from './pages/apps/AppsPage'
 import FilesPage from './pages/files/FilesPage'
 import SymbioteHomePage from './pages/home/SymbioteHomePage'
-import SymbioteSettingsPage from './pages/home/SymbioteSettingsPage'
+import SettingsPage from './pages/settings/SettingsPage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PaintingsRoutePage from './pages/paintings/PaintingsRoutePage'
 import TranslatePage from './pages/translate/TranslatePage'
@@ -44,7 +44,7 @@ function AppContent(): React.ReactElement {
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />
-                      <SymbioteSidebar />
+                      <Sidebar />
                       <Routes>
                         <Route path="/" element={
                           <ProtectedRoute>
@@ -59,7 +59,7 @@ function AppContent(): React.ReactElement {
                         <Route path="/apps" element={<AppsPage />} />
                         <Route path="/settings/*" element={
                           <ProtectedRoute>
-                            <SymbioteSettingsPage />
+                            <SettingsPage />
                           </ProtectedRoute>
                         } />
                       </Routes>
