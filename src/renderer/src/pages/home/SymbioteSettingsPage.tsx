@@ -1,8 +1,11 @@
 import React, { useState } from 'react'
-import { Button, Input, Alert, Card, Typography, Space, Tooltip, Badge, Modal, message } from 'antd'
-import { useTranslation } from 'react-i18next'
+import { Button, Input, Alert, Typography, Space, Badge, Modal, message } from 'antd'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { setSymbioteBaseUrl } from '@renderer/store/settings'
+import { setSymbioteBaseUrl, setLastSymbioteConfigFetch, setSymbioteConfigSections, setSymbioteConfigErrors, clearSymbioteConfigErrors } from '@renderer/store/settings'
+import { setMCPServers } from '@renderer/store/mcp'
+import { updateAssistants } from '@renderer/store/assistants'
+import { updateProviders } from '@renderer/store/llm'
+import SymbioteApiService from '@renderer/services/SymbioteApiService'
 import { useAuth } from '@renderer/context/AuthProvider'
 import {
   Settings2,
@@ -22,11 +25,10 @@ import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbio
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '../settings'
 import { useTheme } from '@renderer/context/ThemeProvider'
 
-const { Text, Title, Paragraph } = Typography
+const { Text } = Typography
 const { TextArea } = Input
 
 const SymbioteSettings: React.FC = () => {
-  const { t } = useTranslation()
   const { theme } = useTheme()
   const dispatch = useAppDispatch()
   const { user, isAuthenticated, isLoading } = useAuth()
@@ -36,7 +38,10 @@ const SymbioteSettings: React.FC = () => {
     symbioteBaseUrl,
     symbioteAgentConfigured,
     symbioteAssistantConfigured,
-    lastSymbioteConfigUpdate
+    lastSymbioteConfigUpdate,
+    lastSymbioteConfigFetch,
+    symbioteConfigSections,
+    symbioteConfigErrors
   } = useAppSelector((state) => state.settings)
 
   // Get agent and assistant from store
@@ -47,10 +52,16 @@ const SymbioteSettings: React.FC = () => {
     state.assistants.assistants.find(assistant => assistant.id === SYMBIOTE_ASSISTANT_ID)
   )
 
+  // Get current store data for config processing
+  const mcpServers = useAppSelector((state) => state.mcp.servers)
+  const assistants = useAppSelector((state) => state.assistants.assistants)
+  const providers = useAppSelector((state) => state.llm.providers)
+
   const [localBaseUrl, setLocalBaseUrl] = useState(symbioteBaseUrl)
   const [isSaving, setIsSaving] = useState(false)
   const [showAgentJson, setShowAgentJson] = useState(false)
   const [showAssistantJson, setShowAssistantJson] = useState(false)
+  const [isFetchingConfig, setIsFetchingConfig] = useState(false)
 
   const handleSaveBaseUrl = async () => {
     setIsSaving(true)
@@ -76,6 +87,117 @@ const SymbioteSettings: React.FC = () => {
     }).catch(() => {
       message.error('Failed to copy JSON')
     })
+  }
+
+  const handleFetchConfig = async () => {
+    if (!isAuthenticated) {
+      message.error('Please sign in first to fetch configuration')
+      return
+    }
+
+    setIsFetchingConfig(true)
+    dispatch(clearSymbioteConfigErrors())
+
+    try {
+      // Fetch comprehensive config from API
+      const config = await SymbioteApiService.fetchSymbioteConfigWithRetry()
+
+      if (!config) {
+        message.error('Failed to fetch configuration from server')
+        dispatch(setSymbioteConfigErrors({ general: 'Failed to fetch configuration' }))
+        return
+      }
+
+      const sections: string[] = []
+      const errors: Record<string, string> = {}
+      let totalItemsAdded = 0
+
+      // Process MCP servers
+      if (config.mcp_servers && Array.isArray(config.mcp_servers) && config.mcp_servers.length > 0) {
+        try {
+          // Merge with existing servers, avoiding duplicates by name
+          const existingServerNames = mcpServers.map(server => server.name)
+          const newServers = config.mcp_servers.filter(
+            server => !existingServerNames.includes(server.name)
+          )
+
+          if (newServers.length > 0) {
+            const allServers = [...mcpServers, ...newServers]
+            dispatch(setMCPServers(allServers))
+            totalItemsAdded += newServers.length
+          }
+
+          sections.push(`mcp_servers (${config.mcp_servers.length} total, ${newServers.length} new)`)
+        } catch (error) {
+          console.error('Error processing MCP servers:', error)
+          errors.mcp_servers = 'Failed to process MCP servers'
+        }
+      }
+
+      // Process assistants
+      if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
+        try {
+          // Merge with existing assistants, avoiding duplicates by id
+          const existingAssistantIds = assistants.map(assistant => assistant.id)
+          const newAssistants = config.assistants.filter(
+            assistant => !existingAssistantIds.includes(assistant.id)
+          )
+
+          if (newAssistants.length > 0) {
+            const allAssistants = [...assistants, ...newAssistants]
+            dispatch(updateAssistants(allAssistants))
+            totalItemsAdded += newAssistants.length
+          }
+
+          sections.push(`assistants (${config.assistants.length} total, ${newAssistants.length} new)`)
+        } catch (error) {
+          console.error('Error processing assistants:', error)
+          errors.assistants = 'Failed to process assistants'
+        }
+      }
+
+      // Process model providers
+      if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
+        try {
+          // Merge with existing providers, avoiding duplicates by id
+          const existingProviderIds = providers.map(provider => provider.id)
+          const newProviders = config.model_providers.filter(
+            provider => !existingProviderIds.includes(provider.id)
+          )
+
+          if (newProviders.length > 0) {
+            const allProviders = [...providers, ...newProviders]
+            dispatch(updateProviders(allProviders))
+            totalItemsAdded += newProviders.length
+          }
+
+          sections.push(`model_providers (${config.model_providers.length} total, ${newProviders.length} new)`)
+        } catch (error) {
+          console.error('Error processing model providers:', error)
+          errors.model_providers = 'Failed to process model providers'
+        }
+      }
+
+      // Update state
+      dispatch(setLastSymbioteConfigFetch(Date.now()))
+      dispatch(setSymbioteConfigSections(sections))
+
+      if (Object.keys(errors).length > 0) {
+        dispatch(setSymbioteConfigErrors(errors))
+        message.warning(`Configuration fetched with some errors. Check details below.`)
+      } else if (totalItemsAdded > 0) {
+        message.success(`Configuration updated successfully! Added ${totalItemsAdded} new items.`)
+      } else {
+        message.info('Configuration is up to date. No new items to add.')
+      }
+
+    } catch (error) {
+      console.error('Error during config fetch:', error)
+      message.error('Failed to fetch configuration')
+      dispatch(setSymbioteConfigErrors({ general: 'Configuration fetch failed' }))
+    } finally {
+      setIsFetchingConfig(false)
+    }
   }
 
   const getStatusIcon = (configured: boolean) => {
@@ -133,7 +255,6 @@ const SymbioteSettings: React.FC = () => {
                   description="Click your avatar in the sidebar to sign in and enable auto-configuration."
                   type="warning"
                   showIcon
-                  size="small"
                 />
               )}
             </Space>
@@ -241,7 +362,7 @@ const SymbioteSettings: React.FC = () => {
                     <strong>Name:</strong> {symbioteAssistant.name}
                   </Text>
                   <Text style={{ fontSize: 12 }}>
-                    <strong>Model:</strong> {symbioteAssistant.modelId || 'Default'}
+                    <strong>Model:</strong> {symbioteAssistant.model?.name || 'Default'}
                   </Text>
                   <Text style={{ fontSize: 12 }}>
                     <strong>MCP Servers:</strong> {symbioteAssistant.mcpServers?.length || 0}
@@ -268,9 +389,78 @@ const SymbioteSettings: React.FC = () => {
               description="Some components are not configured. This will be attempted automatically when you sign in or can be triggered by restarting the application."
               type="info"
               showIcon
-              size="small"
             />
           )}
+        </SettingGroup>
+
+        {/* Comprehensive Configuration */}
+        <SettingGroup theme={theme}>
+          <SettingTitle>
+            <Settings2 size={18} style={{ marginRight: 8 }} />
+            Comprehensive Configuration
+          </SettingTitle>
+          <SettingDivider />
+
+          <SettingRow>
+            <SettingRowTitle>Fetch Updated Config</SettingRowTitle>
+            <Button
+              type="primary"
+              onClick={handleFetchConfig}
+              loading={isFetchingConfig}
+              disabled={!isAuthenticated}
+            >
+              Fetch Updated Symbiote Config
+            </Button>
+          </SettingRow>
+
+          <SettingRow>
+            <SettingRowTitle>Last Config Fetch</SettingRowTitle>
+            <Text style={{ fontSize: 12 }}>
+              {formatTimestamp(lastSymbioteConfigFetch)}
+            </Text>
+          </SettingRow>
+
+          {symbioteConfigSections.length > 0 && (
+            <SettingRow>
+              <SettingRowTitle>Config Sections Loaded</SettingRowTitle>
+              <Space direction="vertical" size="small">
+                {symbioteConfigSections.map((section, index) => (
+                  <Badge key={index} status="success" text={section} />
+                ))}
+              </Space>
+            </SettingRow>
+          )}
+
+          {Object.keys(symbioteConfigErrors).length > 0 && (
+            <SettingRow>
+              <div style={{ width: '100%' }}>
+                <Alert
+                  message="Configuration Errors"
+                  description={
+                    <Space direction="vertical" size="small">
+                      {Object.entries(symbioteConfigErrors).map(([section, error]) => (
+                        <Text key={section} style={{ fontSize: 12 }}>
+                          <strong>{section}:</strong> {error}
+                        </Text>
+                      ))}
+                    </Space>
+                  }
+                  type="error"
+                  showIcon
+                />
+              </div>
+            </SettingRow>
+          )}
+
+          <SettingRow>
+            <div style={{ width: '100%' }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                <strong>Comprehensive Config:</strong> Fetches MCP servers, assistants, and model providers
+                from your Symbiote Labs server. This supplements the basic agent/assistant auto-configuration
+                with additional resources and configurations.
+              </Text>
+            </div>
+          </SettingRow>
         </SettingGroup>
 
         {/* Help & Information */}

@@ -17,7 +17,12 @@ export function createSymbioteAgent(config: SymbioteAgentConfig): Agent {
     prompt: config.prompt,
     description: 'Auto-configured Symbiote Desktop agent',
     topics: [],
-    messages: [],
+    messages: [
+      {
+        role: 'assistant',
+        content: "Hey! I'm your Symbiote assistant. I can help you with Blender, Unreal Engine, and connecting to Symbiote Labs services. What would you like to work on today?"
+      }
+    ],
     type: 'agent',
     regularPhrases: []
   }
@@ -43,7 +48,12 @@ export function createSymbioteAssistant(
     prompt: agent.prompt,
     description: 'Auto-configured Symbiote Desktop assistant',
     topics: [defaultTopic],
-    messages: [],
+    messages: agent.messages || [
+      {
+        role: 'assistant',
+        content: "Hey! I'm your Symbiote assistant. I can help you with Blender, Unreal Engine, and connecting to Symbiote Labs services. What would you like to work on today?"
+      }
+    ],
     type: 'assistant',
     regularPhrases: agent.regularPhrases || [],
     // Set to function mode for tool calling

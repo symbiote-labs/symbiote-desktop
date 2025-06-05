@@ -15,7 +15,6 @@ import {
   SquareTerminal,
   TextCursorInput,
   Zap,
-  SettingsIcon,
   Bot
 } from 'lucide-react'
 // 导入useAppSelector

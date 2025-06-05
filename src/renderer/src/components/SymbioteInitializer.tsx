@@ -1,8 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setSymbioteAgent } from '@renderer/store/agents'
-import { setSymbioteAssistant } from '@renderer/store/assistants'
-import { setSymbioteAgentConfigured, setSymbioteAssistantConfigured, setLastSymbioteConfigUpdate } from '@renderer/store/settings'
+import { setSymbioteAssistant, updateAssistants } from '@renderer/store/assistants'
+import { setMCPServers } from '@renderer/store/mcp'
+import { updateProviders } from '@renderer/store/llm'
+import {
+  setSymbioteAgentConfigured,
+  setSymbioteAssistantConfigured,
+  setLastSymbioteConfigUpdate,
+  setLastSymbioteConfigFetch,
+  setSymbioteConfigSections,
+  setSymbioteConfigErrors,
+  clearSymbioteConfigErrors
+} from '@renderer/store/settings'
 import { useAuth } from '@renderer/context/AuthProvider'
 import SymbioteApiService from '@renderer/services/SymbioteApiService'
 import {
@@ -27,10 +37,11 @@ export const SymbioteInitializer: React.FC = () => {
     state.assistants.assistants.find(assistant => assistant.id === SYMBIOTE_ASSISTANT_ID)
   )
   const mcpServers = useAppSelector((state) => state.mcp.servers)
-    const {
+  const assistants = useAppSelector((state) => state.assistants.assistants)
+  const providers = useAppSelector((state) => state.llm.providers)
+  const {
     symbioteAgentConfigured,
-    symbioteAssistantConfigured,
-    lastSymbioteConfigUpdate
+    symbioteAssistantConfigured
   } = useAppSelector((state) => state.settings)
 
   // Track intervals to prevent duplicates
@@ -93,6 +104,116 @@ export const SymbioteInitializer: React.FC = () => {
     }
   }
 
+  const processSymbioteConfig = async () => {
+    if (!isAuthenticated) {
+      Logger.log('[SymbioteInitializer] Not authenticated, skipping config fetch')
+      return
+    }
+
+    try {
+      Logger.log('[SymbioteInitializer] Fetching comprehensive Symbiote config...')
+      dispatch(clearSymbioteConfigErrors())
+
+      // Fetch comprehensive config from API
+      const config = await SymbioteApiService.fetchSymbioteConfigWithRetry()
+
+      if (!config) {
+        Logger.warn('[SymbioteInitializer] Failed to fetch Symbiote config')
+        dispatch(setSymbioteConfigErrors({ general: 'Failed to fetch configuration' }))
+        return
+      }
+
+      const sections: string[] = []
+      const errors: Record<string, string> = {}
+
+      // Process MCP servers
+      if (config.mcp_servers && Array.isArray(config.mcp_servers) && config.mcp_servers.length > 0) {
+        try {
+          Logger.log(`[SymbioteInitializer] Processing ${config.mcp_servers.length} MCP servers`)
+
+          // Merge with existing servers, avoiding duplicates by name
+          const existingServerNames = mcpServers.map(server => server.name)
+          const newServers = config.mcp_servers.filter(
+            server => !existingServerNames.includes(server.name)
+          )
+
+          if (newServers.length > 0) {
+            const allServers = [...mcpServers, ...newServers]
+            dispatch(setMCPServers(allServers))
+            Logger.log(`[SymbioteInitializer] Added ${newServers.length} new MCP servers`)
+          }
+
+          sections.push('mcp_servers')
+        } catch (error) {
+          Logger.error('[SymbioteInitializer] Error processing MCP servers:', error)
+          errors.mcp_servers = 'Failed to process MCP servers'
+        }
+      }
+
+             // Process assistants
+       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
+         try {
+           Logger.log(`[SymbioteInitializer] Processing ${config.assistants.length} assistants`)
+
+           // Merge with existing assistants, avoiding duplicates by id
+           const existingAssistantIds = assistants.map(assistant => assistant.id)
+           const newAssistants = config.assistants.filter(
+             assistant => !existingAssistantIds.includes(assistant.id)
+           )
+
+           if (newAssistants.length > 0) {
+             const allAssistants = [...assistants, ...newAssistants]
+             dispatch(updateAssistants(allAssistants))
+             Logger.log(`[SymbioteInitializer] Added ${newAssistants.length} new assistants`)
+           }
+
+           sections.push('assistants')
+         } catch (error) {
+           Logger.error('[SymbioteInitializer] Error processing assistants:', error)
+           errors.assistants = 'Failed to process assistants'
+         }
+       }
+
+             // Process model providers
+       if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
+         try {
+           Logger.log(`[SymbioteInitializer] Processing ${config.model_providers.length} model providers`)
+
+           // Merge with existing providers, avoiding duplicates by id
+           const existingProviderIds = providers.map(provider => provider.id)
+           const newProviders = config.model_providers.filter(
+             provider => !existingProviderIds.includes(provider.id)
+           )
+
+           if (newProviders.length > 0) {
+             const allProviders = [...providers, ...newProviders]
+             dispatch(updateProviders(allProviders))
+             Logger.log(`[SymbioteInitializer] Added ${newProviders.length} new providers`)
+           }
+
+           sections.push('model_providers')
+         } catch (error) {
+           Logger.error('[SymbioteInitializer] Error processing model providers:', error)
+           errors.model_providers = 'Failed to process model providers'
+         }
+       }
+
+      // Update state
+      dispatch(setLastSymbioteConfigFetch(Date.now()))
+      dispatch(setSymbioteConfigSections(sections))
+
+      if (Object.keys(errors).length > 0) {
+        dispatch(setSymbioteConfigErrors(errors))
+      }
+
+      Logger.log(`[SymbioteInitializer] Symbiote config processing completed. Sections: ${sections.join(', ')}`)
+
+    } catch (error) {
+      Logger.error('[SymbioteInitializer] Error during Symbiote config processing:', error)
+      dispatch(setSymbioteConfigErrors({ general: 'Configuration processing failed' }))
+    }
+  }
+
   // Initialize on authentication or fresh login
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
@@ -114,8 +235,10 @@ export const SymbioteInitializer: React.FC = () => {
         }
 
         // Add a small delay to ensure auth state is fully settled
-        setTimeout(() => {
-          initializeSymbioteConfiguration()
+        setTimeout(async () => {
+          await initializeSymbioteConfiguration()
+          // Also fetch comprehensive config
+          await processSymbioteConfig()
         }, 500)
       }
     }
@@ -130,9 +253,10 @@ export const SymbioteInitializer: React.FC = () => {
       }
 
       // Set up new interval for periodic updates
-      intervalRef.current = setInterval(() => {
+      intervalRef.current = setInterval(async () => {
         Logger.log('[SymbioteInitializer] Periodic configuration update check...')
-        initializeSymbioteConfiguration()
+        await initializeSymbioteConfiguration()
+        await processSymbioteConfig()
       }, 15 * 60 * 1000) // 15 minutes
 
       Logger.log('[SymbioteInitializer] Periodic update timer set for 15 minutes')

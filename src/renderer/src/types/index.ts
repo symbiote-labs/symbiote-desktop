@@ -685,3 +685,11 @@ export interface StoreSyncAction {
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 export type OpenAIServiceTier = 'auto' | 'default' | 'flex'
+
+export interface SymbioteConfig {
+  mcp_servers?: MCPServer[]
+  assistants?: Assistant[]
+  model_providers?: Provider[]
+  // Future extensibility
+  [key: string]: any
+}

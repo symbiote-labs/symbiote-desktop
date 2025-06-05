@@ -1,11 +1,20 @@
 import Logger from '@renderer/config/logger'
 import store from '@renderer/store'
+import { MCPServer, Assistant, Provider } from '@renderer/types'
 
 interface SymbioteAgentConfig {
   emoji: string
   name: string
   prompt: string
   type: string
+}
+
+interface SymbioteConfigResponse {
+  mcp_servers?: MCPServer[]
+  assistants?: Assistant[]
+  model_providers?: Provider[]
+  // Future extensibility
+  [key: string]: any
 }
 
 class SymbioteApiService {
@@ -120,7 +129,95 @@ class SymbioteApiService {
     Logger.error('[SymbioteApiService] Failed to fetch agent configuration after all retries')
     return null
   }
+
+  async fetchSymbioteConfig(): Promise<SymbioteConfigResponse | null> {
+    try {
+      // Check for bearer token first (when "remember me" was used)
+      const bearerToken = localStorage.getItem(this.tokenKey)
+
+      // Build headers - include credentials for cookie-based auth
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+
+      // Add Authorization header if we have a bearer token
+      if (bearerToken) {
+        headers['Authorization'] = `Bearer ${bearerToken}`
+        Logger.log('[SymbioteApiService] Using bearer token authentication for config fetch')
+      } else {
+        Logger.log('[SymbioteApiService] Using cookie-based authentication for config fetch')
+
+        // For cookie-based requests, we might need CSRF token
+        const csrfToken = await this.getCsrfToken()
+        if (csrfToken) {
+          headers['X-CSRFToken'] = csrfToken
+        }
+      }
+
+      const response = await fetch(`${this.getBaseUrl()}/api/symbiote/config`, {
+        method: 'GET',
+        headers,
+        credentials: 'include' // Always include cookies
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          Logger.warn('[SymbioteApiService] Authentication failed during config fetch - user may need to log in again')
+        } else {
+          Logger.error(`[SymbioteApiService] Config API request failed with status: ${response.status}`)
+        }
+        return null
+      }
+
+      const data = await response.json()
+
+      // Validate that we have a valid config object
+      if (!data || typeof data !== 'object') {
+        Logger.error('[SymbioteApiService] Invalid config response: not an object')
+        return null
+      }
+
+      Logger.log('[SymbioteApiService] Successfully fetched Symbiote config')
+
+      // Log what sections were received
+      const sections = Object.keys(data).filter(key => Array.isArray(data[key]) && data[key].length > 0)
+      if (sections.length > 0) {
+        Logger.log(`[SymbioteApiService] Config sections received: ${sections.join(', ')}`)
+        sections.forEach(section => {
+          Logger.log(`[SymbioteApiService] ${section}: ${data[section]?.length || 0} items`)
+        })
+      } else {
+        Logger.log('[SymbioteApiService] Config response contained no populated sections')
+      }
+
+      return data as SymbioteConfigResponse
+
+    } catch (error) {
+      Logger.error('[SymbioteApiService] Error fetching Symbiote config:', error)
+      return null
+    }
+  }
+
+  async fetchSymbioteConfigWithRetry(maxRetries = 3, delayMs = 1000): Promise<SymbioteConfigResponse | null> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const result = await this.fetchSymbioteConfig()
+
+      if (result !== null) {
+        return result
+      }
+
+      if (attempt < maxRetries) {
+        Logger.log(`[SymbioteApiService] Config retry attempt ${attempt}/${maxRetries} in ${delayMs}ms`)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+        // Exponential backoff
+        delayMs *= 2
+      }
+    }
+
+    Logger.error('[SymbioteApiService] Failed to fetch Symbiote config after all retries')
+    return null
+  }
 }
 
 export default new SymbioteApiService()
-export type { SymbioteAgentConfig }
+export type { SymbioteAgentConfig, SymbioteConfigResponse }
