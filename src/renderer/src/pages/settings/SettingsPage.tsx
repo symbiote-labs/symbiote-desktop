@@ -14,7 +14,9 @@ import {
   Settings2,
   SquareTerminal,
   TextCursorInput,
-  Zap
+  Zap,
+  SettingsIcon,
+  Bot
 } from 'lucide-react'
 // 导入useAppSelector
 import { FC } from 'react'
@@ -35,6 +37,7 @@ import QuickPhraseSettings from './QuickPhraseSettings'
 import SelectionAssistantSettings from './SelectionAssistantSettings/SelectionAssistantSettings'
 import ShortcutSettings from './ShortcutSettings'
 import WebSearchSettings from './WebSearchSettings'
+import SymbioteSettings from '../home/SymbioteSettingsPage'
 
 const SettingsPage: FC = () => {
   const { pathname } = useLocation()
@@ -74,6 +77,12 @@ const SettingsPage: FC = () => {
             <MenuItem className={isRoute('/settings/mcp')}>
               <SquareTerminal size={18} />
               {t('settings.mcp.title')}
+            </MenuItem>
+          </MenuItemLink>
+          <MenuItemLink to="/settings/symbiote">
+            <MenuItem className={isRoute('/settings/symbiote')}>
+              <Bot size={18} />
+              Symbiote Configuration
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/general">
@@ -137,17 +146,18 @@ const SettingsPage: FC = () => {
           <Routes>
             <Route path="provider" element={<ProvidersList />} />
             <Route path="model" element={<ModelSettings />} />
-            <Route path="web-search" element={<WebSearchSettings />} />
+            <Route path="web-search/*" element={<WebSearchSettings />} />
             <Route path="mcp/*" element={<MCPSettings />} />
+            <Route path="symbiote" element={<SymbioteSettings />} />
             <Route path="general" element={<GeneralSettings />} />
             <Route path="display" element={<DisplaySettings />} />
             {showMiniAppSettings && <Route path="miniapps" element={<MiniAppSettings />} />}
             <Route path="shortcut" element={<ShortcutSettings />} />
             <Route path="quickAssistant" element={<QuickAssistantSettings />} />
-            <Route path="selectionAssistant" element={<SelectionAssistantSettings />} />
-            <Route path="data" element={<DataSettings />} />
-            <Route path="about" element={<AboutSettings />} />
+            <Route path="selectionAssistant/*" element={<SelectionAssistantSettings />} />
             <Route path="quickPhrase" element={<QuickPhraseSettings />} />
+            <Route path="data/*" element={<DataSettings />} />
+            <Route path="about" element={<AboutSettings />} />
           </Routes>
         </SettingContent>
       </ContentContainer>

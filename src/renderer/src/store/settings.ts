@@ -178,6 +178,11 @@ export interface SettingsState {
   defaultPaintingProvider: PaintingProvider
   // MCP Settings
   autoInstallMCPBinaries: boolean
+  // Symbiote Configuration
+  symbioteAgentConfigured: boolean
+  symbioteAssistantConfigured: boolean
+  lastSymbioteConfigUpdate: number
+  symbioteBaseUrl: string
 }
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -316,7 +321,12 @@ export const initialState: SettingsState = {
   },
   defaultPaintingProvider: 'aihubmix',
   // MCP Settings
-  autoInstallMCPBinaries: true
+  autoInstallMCPBinaries: true,
+  // Symbiote Configuration
+  symbioteAgentConfigured: false,
+  symbioteAssistantConfigured: false,
+  lastSymbioteConfigUpdate: 0,
+  symbioteBaseUrl: 'http://localhost:4500'
 }
 
 const settingsSlice = createSlice({
@@ -662,6 +672,18 @@ const settingsSlice = createSlice({
     },
     setAutoInstallMCPBinaries: (state, action: PayloadAction<boolean>) => {
       state.autoInstallMCPBinaries = action.payload
+    },
+    setSymbioteAgentConfigured: (state, action: PayloadAction<boolean>) => {
+      state.symbioteAgentConfigured = action.payload
+    },
+    setSymbioteAssistantConfigured: (state, action: PayloadAction<boolean>) => {
+      state.symbioteAssistantConfigured = action.payload
+    },
+    setLastSymbioteConfigUpdate: (state, action: PayloadAction<number>) => {
+      state.lastSymbioteConfigUpdate = action.payload
+    },
+    setSymbioteBaseUrl: (state, action: PayloadAction<string>) => {
+      state.symbioteBaseUrl = action.payload
     }
   }
 })
@@ -764,7 +786,11 @@ export const {
   setOpenAIServiceTier,
   setNotificationSettings,
   setDefaultPaintingProvider,
-  setAutoInstallMCPBinaries
+  setAutoInstallMCPBinaries,
+  setSymbioteAgentConfigured,
+  setSymbioteAssistantConfigured,
+  setLastSymbioteConfigUpdate,
+  setSymbioteBaseUrl
 } = settingsSlice.actions
 
 export default settingsSlice.reducer

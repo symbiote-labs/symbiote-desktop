@@ -1,4 +1,3 @@
-import { useSettings } from '@renderer/hooks/useSettings'
 import { Assistant, Topic } from '@renderer/types'
 import { FC } from 'react'
 import styled from 'styled-components'
@@ -14,8 +13,6 @@ interface Props {
 }
 
 const TopicTabs: FC<Props> = ({ activeAssistant, activeTopic, setActiveTopic, position, style }) => {
-  const { topicPosition } = useSettings()
-
   const borderStyle = '0.5px solid var(--color-border)'
   const border =
     position === 'left' ? { borderRight: borderStyle } : { borderLeft: borderStyle, borderTopLeftRadius: 0 }

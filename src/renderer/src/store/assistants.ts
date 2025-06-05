@@ -129,6 +129,24 @@ const assistantsSlice = createSlice({
             }
           : assistant
       )
+    },
+    setSymbioteAssistant: (state, action: PayloadAction<Assistant>) => {
+      // Replace or add the Symbiote assistant at the beginning
+      const symbioteIndex = state.assistants.findIndex(assistant => assistant.id === action.payload.id)
+      if (symbioteIndex >= 0) {
+        state.assistants[symbioteIndex] = action.payload
+      } else {
+        state.assistants.unshift(action.payload) // Add at beginning
+      }
+      // Also update default assistant to be the Symbiote assistant
+      state.defaultAssistant = action.payload
+    },
+    clearSymbioteAssistant: (state) => {
+      state.assistants = state.assistants.filter(assistant => assistant.id !== 'symbiote-desktop-assistant')
+      // Reset default assistant if it was the Symbiote one
+      if (state.defaultAssistant.id === 'symbiote-desktop-assistant') {
+        state.defaultAssistant = getDefaultAssistant()
+      }
     }
   }
 })
@@ -145,7 +163,13 @@ export const {
   updateTopics,
   removeAllTopics,
   setModel,
-  updateAssistantSettings
+  updateAssistantSettings,
+  setSymbioteAssistant,
+  clearSymbioteAssistant
 } = assistantsSlice.actions
+
+// Selectors
+export const selectSymbioteAssistant = (state: { assistants: AssistantsState }) =>
+  state.assistants.assistants.find(assistant => assistant.id === 'symbiote-desktop-assistant')
 
 export default assistantsSlice.reducer

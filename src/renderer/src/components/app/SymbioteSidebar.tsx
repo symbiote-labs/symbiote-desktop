@@ -6,21 +6,13 @@ import { useMinapps } from '@renderer/hooks/useMinapps'
 import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { ThemeMode } from '@renderer/types'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import {
-  FileSearch,
-  Folder,
-  Languages,
-  LayoutGrid,
   MessageSquareQuote,
-  MessageSquareDiff,
   Moon,
-  Palette,
   Settings,
-  Sparkles,
   Sun,
   SunMoon
 } from 'lucide-react'
@@ -112,7 +104,7 @@ const MainMenus: FC = () => {
   const { hideMinappPopup } = useMinappPopup()
   const { t } = useTranslation()
   const { pathname } = useLocation()
-  const { sidebarIcons, defaultPaintingProvider } = useSettings()
+  const { sidebarIcons } = useSettings()
   const { minappShow } = useRuntime()
   const navigate = useNavigate()
   const { theme } = useTheme()
@@ -440,25 +432,6 @@ const TabsWrapper = styled.div`
   background-color: rgba(128, 128, 128, 0.1);
   border-radius: 20px;
   overflow: hidden;
-`
-
-const SidebarIcon = styled.div`
-  -webkit-app-region: none;
-  border-radius: 8px;
-  height: 35px;
-  width: 35px;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease-in-out;
-  cursor: pointer;
-  color: var(--color-icon);
-
-  &:hover {
-    background-color: var(--color-background-mute);
-    color: var(--color-icon-white);
-  }
 `
 
 export default Sidebar

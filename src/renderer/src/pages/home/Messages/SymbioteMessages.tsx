@@ -1,23 +1,16 @@
-import { messageBlocksSelectors } from '@renderer/store/messageBlock'
-import { useAppSelector } from '@renderer/store'
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
-import type { Message } from '@renderer/types/newMessage'
-import { Alert } from 'antd'
 import { groupBy, isEmpty, minBy, orderBy } from 'lodash'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import { RootState } from '@renderer/store'
-import { useMessageOperations } from '@renderer/hooks/useMessageOperations'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { useChatContext } from '@renderer/hooks/useChatContext'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import styled from 'styled-components'
 
 import ChatNavigation from './ChatNavigation'
 import MessageAnchorLine from './MessageAnchorLine'
-import MessageGroup from './MessageGroup'
+import SymbioteMessageGroup from './SymbioteMessageGroup'
 import NarrowLayout from './NarrowLayout'
 import SymbiotePrompt from './SymbiotePrompt'
 
@@ -29,17 +22,13 @@ interface SymbioteMessagesProps {
   onFirstUpdate?(): void
 }
 
-const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, setActiveTopic, onComponentUpdate, onFirstUpdate }) => {
+const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, onComponentUpdate, onFirstUpdate }) => {
   const [displayLimit, setDisplayLimit] = useState(30)
-  const { t } = useTranslation()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const messageElements = useRef<{ [messageId: string]: HTMLElement }>({})
   const { messageNavigation } = useSettings()
-  const { isMultiSelectMode } = useChatContext(topic)
-  const messageOperations = useMessageOperations(topic)
 
   const messages = useSelector((state: RootState) => selectMessagesForTopic(state, topic.id))
-  const blockEntities = useAppSelector((state) => messageBlocksSelectors.selectEntities(state))
 
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
@@ -129,7 +118,7 @@ const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, s
           style={{ overflow: 'visible' }}>
           <ScrollContainer>
             {groupedMessages.map(([key, groupMessages]) => (
-              <MessageGroup
+              <SymbioteMessageGroup
                 key={key}
                 messages={groupMessages as any}
                 topic={topic}
