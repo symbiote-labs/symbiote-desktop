@@ -10,7 +10,7 @@ import styled from 'styled-components'
 
 import ChatNavigation from './ChatNavigation'
 import MessageAnchorLine from './MessageAnchorLine'
-import MessageGroup from './MessageGroup'
+import SymbioteMessageGroup from './SymbioteMessageGroup'
 import NarrowLayout from './NarrowLayout'
 import SymbiotePrompt from './SymbiotePrompt'
 
@@ -118,7 +118,7 @@ const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, o
           style={{ overflow: 'visible' }}>
           <ScrollContainer>
             {groupedMessages.map(([key, groupMessages]) => (
-              <MessageGroup
+              <SymbioteMessageGroup
                 key={key}
                 messages={groupMessages as any}
                 topic={topic}
