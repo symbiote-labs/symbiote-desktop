@@ -1,6 +1,8 @@
 import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
+import { useAppSelector } from '@renderer/store'
+import { selectSymbioteAssistant } from '@renderer/store/assistants'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { Assistant } from '@renderer/types'
@@ -16,12 +18,16 @@ let _activeAssistant: Assistant
 
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
+  const symbioteAssistant = useAppSelector(selectSymbioteAssistant)
   const navigate = useNavigate()
 
   const location = useLocation()
   const state = location.state
 
-  const [activeAssistant, setActiveAssistant] = useState(state?.assistant || _activeAssistant || assistants[0])
+  // Prioritize Symbiote assistant, then state, then previous active, then first available
+  const [activeAssistant, setActiveAssistant] = useState(
+    state?.assistant || _activeAssistant || symbioteAssistant || assistants[0]
+  )
   const { activeTopic, setActiveTopic } = useActiveTopic(activeAssistant, state?.topic)
   const { showTopics, topicPosition } = useSettings()
   const showAssistants = false
@@ -50,6 +56,14 @@ const HomePage: FC = () => {
       unsubscribe()
     }
   }, [assistants, setActiveAssistant])
+
+  // Auto-switch to Symbiote assistant when it becomes available
+  useEffect(() => {
+    if (symbioteAssistant && (!activeAssistant || activeAssistant.id !== symbioteAssistant.id)) {
+      console.log('[SymbioteHomePage] Switching to Symbiote assistant:', symbioteAssistant.name)
+      setActiveAssistant(symbioteAssistant)
+    }
+  }, [symbioteAssistant, activeAssistant])
 
   useEffect(() => {
     const canMinimize = topicPosition === 'left' ? !showTopics : !showTopics && !showAssistants

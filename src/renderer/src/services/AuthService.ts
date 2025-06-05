@@ -29,7 +29,8 @@ interface UserStatusResponse {
 }
 
 class AuthService {
-  private baseUrl = 'https://use.symbiotelabs.ai'
+  private baseUrl = 'http://100.85.215.64:4500'
+  //private baseUrl = 'https://use.symbiotelabs.ai'
   private tokenKey = 'symbiote_bearer_token'
   private userKey = 'symbiote_user'
 
@@ -77,15 +78,20 @@ class AuthService {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        if (request.remember) {
-          const bearerToken = this.generateBearerToken(request.email)
-          localStorage.setItem(this.tokenKey, bearerToken)
-          if (data.user) {
-            localStorage.setItem(this.userKey, JSON.stringify(data.user))
-          }
+        // Always generate and store a bearer token for API calls
+        const bearerToken = this.generateBearerToken(request.email)
+        localStorage.setItem(this.tokenKey, bearerToken)
+
+        if (data.user) {
+          localStorage.setItem(this.userKey, JSON.stringify(data.user))
         }
-        // If !request.remember, nothing is stored in localStorage.
-        // Session will rely on cookies if the server sets them.
+
+        // If remember me is not checked, we can set a shorter expiration
+        // But we still store the token to enable API access during this session
+        if (!request.remember) {
+          // For non-persistent sessions, we could add a timestamp check later
+          // For now, we'll rely on server-side session validation
+        }
 
         return {
           success: true,

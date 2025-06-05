@@ -11,6 +11,7 @@ import Sidebar from './components/app/Sidebar'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AutoBinaryInstaller from './components/AutoBinaryInstaller'
 import { MCPInitializer } from './components/MCPInitializer'
+import { SymbioteInitializer } from './components/SymbioteInitializer'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
 import { AuthProvider } from './context/AuthProvider'
@@ -41,6 +42,7 @@ function AppContent(): React.ReactElement {
                 <PersistGate loading={null} persistor={persistor}>
                   <AutoBinaryInstaller enabled={autoInstallMCPBinaries} />
                   <MCPInitializer />
+                  <SymbioteInitializer />
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />

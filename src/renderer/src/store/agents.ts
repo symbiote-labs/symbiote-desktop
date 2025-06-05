@@ -48,10 +48,26 @@ const assistantsSlice = createSlice({
           }
         }
       }
+    },
+    setSymbioteAgent: (state, action: PayloadAction<Agent>) => {
+      // Replace or add the Symbiote agent
+      const symbioteIndex = state.agents.findIndex(agent => agent.id === action.payload.id)
+      if (symbioteIndex >= 0) {
+        state.agents[symbioteIndex] = action.payload
+      } else {
+        state.agents.unshift(action.payload) // Add at beginning
+      }
+    },
+    clearSymbioteAgent: (state) => {
+      state.agents = state.agents.filter(agent => agent.id !== 'symbiote-desktop-agent')
     }
   }
 })
 
-export const { updateAgents, addAgent, removeAgent, updateAgent, updateAgentSettings } = assistantsSlice.actions
+export const { updateAgents, addAgent, removeAgent, updateAgent, updateAgentSettings, setSymbioteAgent, clearSymbioteAgent } = assistantsSlice.actions
+
+// Selectors
+export const selectSymbioteAgent = (state: { agents: AgentsState }) =>
+  state.agents.agents.find(agent => agent.id === 'symbiote-desktop-agent')
 
 export default assistantsSlice.reducer

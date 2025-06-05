@@ -9,6 +9,8 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<{ success: boolean; error?: string; message?: string }>
   logout: () => Promise<void>
   checkAuthStatus: () => Promise<void>
+  onLoginSuccess?: () => void // Callback for successful login
+  loginSuccessTimestamp: number | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,6 +23,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [loginSuccessTimestamp, setLoginSuccessTimestamp] = useState<number | null>(null)
 
   const checkAuthStatus = async () => {
     setIsLoading(true)
@@ -64,6 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.user) {
         setUser(response.user)
         setIsAuthenticated(true)
+        setLoginSuccessTimestamp(Date.now())
         return { success: true }
       } else {
         return { success: false, error: response.error || 'Login failed' }
@@ -100,6 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null)
       setIsAuthenticated(false)
+      setLoginSuccessTimestamp(null)
     }
   }
 
@@ -114,7 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    checkAuthStatus
+    checkAuthStatus,
+    loginSuccessTimestamp
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
