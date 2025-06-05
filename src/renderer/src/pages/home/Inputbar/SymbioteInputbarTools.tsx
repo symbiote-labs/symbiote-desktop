@@ -1,6 +1,5 @@
-import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { Assistant, FileType, KnowledgeBase, Model } from '@renderer/types'
-import { Dispatch, ReactNode, SetStateAction, useImperativeHandle, useRef } from 'react'
+import { Dispatch, SetStateAction, useImperativeHandle, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 import { Tooltip } from 'antd'
