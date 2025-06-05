@@ -1,3 +1,5 @@
+import store from '@renderer/store'
+
 export interface User {
   id: string
   email: string
@@ -29,14 +31,20 @@ interface UserStatusResponse {
 }
 
 class AuthService {
-  private baseUrl = 'http://100.85.215.64:4500'
-  //private baseUrl = 'https://use.symbiotelabs.ai'
   private tokenKey = 'symbiote_bearer_token'
   private userKey = 'symbiote_user'
 
+  private getBaseUrl(): string {
+    const state = store.getState()
+    const configuredUrl = state.settings.symbioteBaseUrl
+
+    // Use configured URL if available, otherwise fall back to default
+    return configuredUrl || 'http://localhost:4500'
+  }
+
   private async getCsrfToken(): Promise<string | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/login`, {
+      const response = await fetch(`${this.getBaseUrl()}/login`, {
         method: 'GET',
         credentials: 'include'
       })
@@ -65,7 +73,7 @@ class AuthService {
         return { success: false, error: 'Failed to get CSRF token' }
       }
 
-      const response = await fetch(`${this.baseUrl}/api/login`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +126,7 @@ class AuthService {
         return { success: false, error: 'Failed to get CSRF token' }
       }
 
-      const response = await fetch(`${this.baseUrl}/api/register`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +164,7 @@ class AuthService {
         return { authenticated: false }
       }
 
-      const response = await fetch(`${this.baseUrl}/api/user/status`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/user/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${bearerToken}`
@@ -187,7 +195,7 @@ class AuthService {
       const bearerToken = localStorage.getItem(this.tokenKey)
 
       if (bearerToken) {
-        await fetch(`${this.baseUrl}/api/logout`, {
+        await fetch(`${this.getBaseUrl()}/api/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${bearerToken}`

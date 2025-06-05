@@ -1,4 +1,5 @@
 import Logger from '@renderer/config/logger'
+import store from '@renderer/store'
 
 interface SymbioteAgentConfig {
   emoji: string
@@ -8,13 +9,19 @@ interface SymbioteAgentConfig {
 }
 
 class SymbioteApiService {
-  private baseUrl = 'http://100.85.215.64:4500'
-  //private baseUrl = 'https://use.symbiotelabs.ai' // Match AuthService URL
   private tokenKey = 'symbiote_bearer_token' // Match AuthService token key
+
+  private getBaseUrl(): string {
+    const state = store.getState()
+    const configuredUrl = state.settings.symbioteBaseUrl
+
+    // Use configured URL if available, otherwise fall back to default
+    return configuredUrl || 'http://localhost:4500'
+  }
 
   private async getCsrfToken(): Promise<string | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/login`, {
+      const response = await fetch(`${this.getBaseUrl()}/login`, {
         method: 'GET',
         credentials: 'include'
       })
@@ -55,7 +62,7 @@ class SymbioteApiService {
         }
       }
 
-      const response = await fetch(`${this.baseUrl}/api/mcp/tools/cherry-studio-agent`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-agent`, {
         method: 'GET',
         headers,
         credentials: 'include' // Always include cookies

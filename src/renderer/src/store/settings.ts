@@ -182,6 +182,7 @@ export interface SettingsState {
   symbioteAgentConfigured: boolean
   symbioteAssistantConfigured: boolean
   lastSymbioteConfigUpdate: number
+  symbioteBaseUrl: string
 }
 
 export type MultiModelMessageStyle = 'horizontal' | 'vertical' | 'fold' | 'grid'
@@ -324,7 +325,8 @@ export const initialState: SettingsState = {
   // Symbiote Configuration
   symbioteAgentConfigured: false,
   symbioteAssistantConfigured: false,
-  lastSymbioteConfigUpdate: 0
+  lastSymbioteConfigUpdate: 0,
+  symbioteBaseUrl: 'http://localhost:4500'
 }
 
 const settingsSlice = createSlice({
@@ -679,6 +681,9 @@ const settingsSlice = createSlice({
     },
     setLastSymbioteConfigUpdate: (state, action: PayloadAction<number>) => {
       state.lastSymbioteConfigUpdate = action.payload
+    },
+    setSymbioteBaseUrl: (state, action: PayloadAction<string>) => {
+      state.symbioteBaseUrl = action.payload
     }
   }
 })
@@ -784,7 +789,8 @@ export const {
   setAutoInstallMCPBinaries,
   setSymbioteAgentConfigured,
   setSymbioteAssistantConfigured,
-  setLastSymbioteConfigUpdate
+  setLastSymbioteConfigUpdate,
+  setSymbioteBaseUrl
 } = settingsSlice.actions
 
 export default settingsSlice.reducer
