@@ -32,6 +32,7 @@ interface UserStatusResponse {
 
 class AuthService {
   private tokenKey = 'symbiote_bearer_token'
+  private jwtTokenKey = 'symbiote_jwt_token'
   private userKey = 'symbiote_user'
 
   private getBaseUrl(): string {
@@ -44,19 +45,26 @@ class AuthService {
 
   private async getCsrfToken(): Promise<string | null> {
     try {
+      console.log('[AuthService] Fetching CSRF token from:', `${this.getBaseUrl()}/login`)
       const response = await fetch(`${this.getBaseUrl()}/login`, {
         method: 'GET',
         credentials: 'include'
       })
 
+      console.log('[AuthService] CSRF token fetch response status:', response.status)
+
       if (response.ok) {
         const html = await response.text()
         // Extract CSRF token from meta tag
         const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
-        return match ? match[1] : null
+        const token = match ? match[1] : null
+        console.log('[AuthService] CSRF token extracted:', !!token, token?.substring(0, 10) + '...')
+        return token
+      } else {
+        console.error('[AuthService] Failed to get CSRF token, status:', response.status)
       }
     } catch (error) {
-      console.error('Failed to get CSRF token:', error)
+      console.error('[AuthService] Exception while getting CSRF token:', error)
     }
     return null
   }
@@ -64,6 +72,121 @@ class AuthService {
   private generateBearerToken(email: string): string {
     const timestamp = Date.now()
     return btoa(`${email}:${timestamp}`)
+  }
+
+      async getJwtToken(): Promise<string | null> {
+    try {
+      console.log('[AuthService] Requesting JWT token from:', `${this.getBaseUrl()}/api/jwt/token`)
+
+      // Check if we have existing authentication
+      const bearerToken = localStorage.getItem(this.tokenKey)
+      console.log('[AuthService] Existing bearer token available:', !!bearerToken)
+
+      // Don't get CSRF token - JWT endpoints are CSRF-exempt and this breaks the session
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+
+      console.log('[AuthService] JWT request headers:', Object.keys(headers))
+
+      const response = await fetch(`${this.getBaseUrl()}/api/jwt/token`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({})
+      })
+
+      console.log('[AuthService] JWT token response status:', response.status)
+      console.log('[AuthService] JWT token response headers:', Object.fromEntries(response.headers.entries()))
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[AuthService] JWT token response data:', data)
+
+        if (data.access_token) {
+          localStorage.setItem(this.jwtTokenKey, data.access_token)
+          console.log('[AuthService] JWT token stored successfully in localStorage')
+          return data.access_token
+        } else {
+          console.warn('[AuthService] No access_token in response data')
+        }
+      } else {
+        const errorText = await response.text()
+        console.error('[AuthService] JWT token request failed:', response.status, response.statusText)
+        console.error('[AuthService] JWT token error response:', errorText)
+
+        // If we get 401, it means Flask-Security doesn't recognize the session
+        if (response.status === 401) {
+          console.error('[AuthService] 401 Unauthorized - Flask-Security session not recognized')
+          console.error('[AuthService] This might be a session cookie issue')
+        }
+      }
+    } catch (error) {
+      console.error('[AuthService] Exception during JWT token request:', error)
+    }
+    return null
+  }
+
+  getStoredJwtToken(): string | null {
+    const token = localStorage.getItem(this.jwtTokenKey)
+    console.log('[AuthService] getStoredJwtToken called, token found:', !!token)
+    return token
+  }
+
+  isJwtTokenValid(): boolean {
+    const token = this.getStoredJwtToken()
+    if (!token) return false
+
+    try {
+      // Simple JWT expiration check without verification
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const now = Math.floor(Date.now() / 1000)
+      return payload.exp && payload.exp > now
+    } catch (error) {
+      console.error('Failed to validate JWT token:', error)
+      return false
+    }
+  }
+
+  async refreshJwtToken(): Promise<string | null> {
+    try {
+      const currentToken = this.getStoredJwtToken()
+      if (!currentToken) {
+        console.log('[AuthService] No current token, getting new JWT token')
+        return await this.getJwtToken()
+      }
+
+      console.log('[AuthService] Refreshing JWT token')
+      const response = await fetch(`${this.getBaseUrl()}/api/jwt/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        credentials: 'include'
+      })
+
+      console.log('[AuthService] JWT refresh response status:', response.status)
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.access_token) {
+          localStorage.setItem(this.jwtTokenKey, data.access_token)
+          console.log('[AuthService] JWT token refreshed successfully')
+          return data.access_token
+        }
+      } else {
+        const errorText = await response.text()
+        console.warn('[AuthService] JWT refresh failed:', response.status, errorText)
+        // If refresh fails, try to get a new token
+        return await this.getJwtToken()
+      }
+    } catch (error) {
+      console.error('Failed to refresh JWT token:', error)
+      // Fall back to getting a new token
+      return await this.getJwtToken()
+    }
+    return null
   }
 
   async login(request: LoginRequest): Promise<AuthResponse> {
@@ -92,6 +215,28 @@ class AuthService {
 
         if (data.user) {
           localStorage.setItem(this.userKey, JSON.stringify(data.user))
+        }
+
+                // Get JWT token after successful login (with session verification)
+        try {
+          console.log('[AuthService] Login successful, verifying session status...')
+
+          // Verify the session is established by checking user status
+          const statusResponse = await this.getUserStatus()
+          if (statusResponse.authenticated) {
+            console.log('[AuthService] Session verified, attempting to get JWT token...')
+            const jwtToken = await this.getJwtToken()
+            if (jwtToken) {
+              console.log('[AuthService] Successfully obtained JWT token after login')
+            } else {
+              console.warn('[AuthService] Failed to obtain JWT token after login')
+            }
+          } else {
+            console.warn('[AuthService] Session not established properly after login')
+          }
+        } catch (error) {
+          console.warn('Failed to get JWT token after login:', error)
+          // Don't fail the login if JWT token fails
         }
 
         // If remember me is not checked, we can set a shorter expiration
@@ -213,7 +358,11 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = localStorage.getItem(this.tokenKey)
     const user = localStorage.getItem(this.userKey)
-    return !!(token && user)
+    const hasBasicAuth = !!(token && user)
+
+    // For backward compatibility, we consider user authenticated if they have session auth
+    // JWT token is an additional enhancement for MCP server access
+    return hasBasicAuth
   }
 
   getStoredUser(): User | null {
@@ -228,6 +377,7 @@ class AuthService {
 
   private clearStoredData(): void {
     localStorage.removeItem(this.tokenKey)
+    localStorage.removeItem(this.jwtTokenKey)
     localStorage.removeItem(this.userKey)
   }
 }

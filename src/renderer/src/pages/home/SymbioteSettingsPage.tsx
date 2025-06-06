@@ -31,7 +31,7 @@ const { TextArea } = Input
 const SymbioteSettings: React.FC = () => {
   const { theme } = useTheme()
   const dispatch = useAppDispatch()
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, getJwtToken } = useAuth()
 
   // Get settings from store
   const {
@@ -217,6 +217,15 @@ const SymbioteSettings: React.FC = () => {
     )
   }
 
+  const getJwtStatusIcon = () => {
+    const hasJwtToken = getJwtToken()
+    return hasJwtToken ? (
+      <CheckCircle size={14} style={{ color: '#52c41a' }} />
+    ) : (
+      <XCircle size={14} style={{ color: '#ff4d4f' }} />
+    )
+  }
+
   const formatTimestamp = (timestamp: number) => {
     if (!timestamp) return 'Never'
     return new Date(timestamp).toLocaleString()
@@ -248,6 +257,14 @@ const SymbioteSettings: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   Logged in as: {user.display_name || user.email}
                 </Text>
+              )}
+              {isAuthenticated && (
+                <Space align="center" style={{ marginTop: 8 }}>
+                  {getJwtStatusIcon()}
+                  <Text style={{ fontSize: 12 }}>
+                    JWT Token: {getJwtToken() ? 'Available' : 'Not Available'}
+                  </Text>
+                </Space>
               )}
               {!isAuthenticated && (
                 <Alert

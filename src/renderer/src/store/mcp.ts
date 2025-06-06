@@ -151,8 +151,7 @@ export const builtinMCPServers: MCPServer[] = [
     command: 'bun',
     args: ['@remote-mcp/client'],
     env: {
-      "REMOTE_MCP_URL": "https://mcp.symbiotelabs.ai/v1/mcp",
-      "HTTP_HEADER_Authorization": "Bearer <token>"
+      "REMOTE_MCP_URL": "https://mcp.symbiotelabs.ai/v1/mcp"
     },
     isActive: true,
     provider: 'Symbiote'

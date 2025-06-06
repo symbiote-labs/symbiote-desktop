@@ -32,6 +32,7 @@ import { memoize } from 'lodash'
 import { CacheService } from './CacheService'
 import { CallBackServer } from './mcp/oauth/callback'
 import { McpOAuthClientProvider } from './mcp/oauth/provider'
+import { SymbioteMcpAuthProvider } from './mcp/SymbioteMcpAuthProvider'
 import getLoginShellEnvironment from './mcp/shell-env'
 
 // Generic type for caching wrapped functions
@@ -136,12 +137,19 @@ class McpService {
         const args = [...(server.args || [])]
 
         // let transport: StdioClientTransport | SSEClientTransport | InMemoryTransport | StreamableHTTPClientTransport
-        const authProvider = new McpOAuthClientProvider({
-          serverUrlHash: crypto
-            .createHash('md5')
-            .update(server.baseUrl || '')
-            .digest('hex')
-        })
+        // Use SymbioteMcpAuthProvider for Symbiote servers, otherwise use OAuth provider
+        const isSymbioteServer = server.provider === 'Symbiote' ||
+                                 server.name.includes('symbiote') ||
+                                 (server.baseUrl && server.baseUrl.includes('symbiotelabs.ai'))
+
+        const authProvider = isSymbioteServer
+          ? new SymbioteMcpAuthProvider()
+          : new McpOAuthClientProvider({
+              serverUrlHash: crypto
+                .createHash('md5')
+                .update(server.baseUrl || '')
+                .digest('hex')
+            })
 
         const initTransport = async (): Promise<
           StdioClientTransport | SSEClientTransport | InMemoryTransport | StreamableHTTPClientTransport
@@ -268,14 +276,21 @@ class McpService {
         }
 
         const handleAuth = async (client: Client, transport: SSEClientTransport | StreamableHTTPClientTransport) => {
+          // Skip OAuth flow for Symbiote servers (they use JWT tokens)
+          if (isSymbioteServer) {
+            Logger.info(`[MCP] Symbiote server authentication handled via JWT tokens: ${server.name}`)
+            return
+          }
+
           Logger.info(`[MCP] Starting OAuth flow for server: ${server.name}`)
           // Create an event emitter for the OAuth callback
           const events = new EventEmitter()
 
-          // Create a callback server
+          // Create a callback server (only for OAuth providers)
+          const oauthProvider = authProvider as McpOAuthClientProvider
           const callbackServer = new CallBackServer({
-            port: authProvider.config.callbackPort,
-            path: authProvider.config.callbackPath || '/oauth/callback',
+            port: oauthProvider.config.callbackPort,
+            path: oauthProvider.config.callbackPath || '/oauth/callback',
             events
           })
 
