@@ -7,6 +7,7 @@ import { RootState } from '@renderer/store'
 import { useSettings } from '@renderer/hooks/useSettings'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import styled from 'styled-components'
+import { SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
 
 import ChatNavigation from './ChatNavigation'
 import MessageAnchorLine from './MessageAnchorLine'
@@ -59,12 +60,17 @@ const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, o
   const hasMore = orderedMessages.length > displayLimit
 
   const showPrompt = useMemo(() => {
+    // Don't show prompts for the Symbiote assistant
+    if (assistant.id === SYMBIOTE_ASSISTANT_ID) {
+      return false
+    }
+
     if (isEmpty(messages)) {
       return true
     }
     const firstMessage = minBy(messages, 'createdAt')
     return !firstMessage || !assistant.settings?.hideMessages
-  }, [messages, assistant.settings?.hideMessages])
+  }, [messages, assistant.settings?.hideMessages, assistant.id])
 
   const loadMoreMessages = useCallback(() => {
     if (isLoadingMore || !hasMore) return
