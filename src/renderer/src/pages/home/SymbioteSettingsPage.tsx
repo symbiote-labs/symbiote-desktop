@@ -40,8 +40,8 @@ const SymbioteSettings: React.FC = () => {
     symbioteAssistantConfigured,
     lastSymbioteConfigUpdate,
     lastSymbioteConfigFetch,
-    symbioteConfigSections,
-    symbioteConfigErrors
+    symbioteConfigSections = [],
+    symbioteConfigErrors = {}
   } = useAppSelector((state) => state.settings)
 
   // Get agent and assistant from store
@@ -112,7 +112,7 @@ const SymbioteSettings: React.FC = () => {
       const errors: Record<string, string> = {}
       let totalItemsAdded = 0
 
-      // Process MCP servers
+      // Process MCP servers (extracted from assistant config)
       if (config.mcp_servers && Array.isArray(config.mcp_servers) && config.mcp_servers.length > 0) {
         try {
           // Merge with existing servers, avoiding duplicates by name
@@ -134,7 +134,7 @@ const SymbioteSettings: React.FC = () => {
         }
       }
 
-      // Process assistants
+      // Process assistants (single assistant from cherry-studio-assistant endpoint)
       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
         try {
           // Merge with existing assistants, avoiding duplicates by id
@@ -156,7 +156,7 @@ const SymbioteSettings: React.FC = () => {
         }
       }
 
-      // Process model providers
+      // Process model providers (if included - currently not in the response)
       if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
         try {
           // Merge with existing providers, avoiding duplicates by id
@@ -182,7 +182,7 @@ const SymbioteSettings: React.FC = () => {
       dispatch(setLastSymbioteConfigFetch(Date.now()))
       dispatch(setSymbioteConfigSections(sections))
 
-      if (Object.keys(errors).length > 0) {
+      if (Object.keys(errors || {}).length > 0) {
         dispatch(setSymbioteConfigErrors(errors))
         message.warning(`Configuration fetched with some errors. Check details below.`)
       } else if (totalItemsAdded > 0) {
@@ -409,7 +409,7 @@ const SymbioteSettings: React.FC = () => {
               loading={isFetchingConfig}
               disabled={!isAuthenticated}
             >
-              Fetch Updated Symbiote Config
+              Fetch Symbiote Assistant Config
             </Button>
           </SettingRow>
 
@@ -420,7 +420,7 @@ const SymbioteSettings: React.FC = () => {
             </Text>
           </SettingRow>
 
-          {symbioteConfigSections.length > 0 && (
+          {symbioteConfigSections && symbioteConfigSections.length > 0 && (
             <SettingRow>
               <SettingRowTitle>Config Sections Loaded</SettingRowTitle>
               <Space direction="vertical" size="small">
@@ -431,14 +431,14 @@ const SymbioteSettings: React.FC = () => {
             </SettingRow>
           )}
 
-          {Object.keys(symbioteConfigErrors).length > 0 && (
+          {symbioteConfigErrors && Object.keys(symbioteConfigErrors).length > 0 && (
             <SettingRow>
               <div style={{ width: '100%' }}>
                 <Alert
                   message="Configuration Errors"
                   description={
                     <Space direction="vertical" size="small">
-                      {Object.entries(symbioteConfigErrors).map(([section, error]) => (
+                      {Object.entries(symbioteConfigErrors || {}).map(([section, error]) => (
                         <Text key={section} style={{ fontSize: 12 }}>
                           <strong>{section}:</strong> {error}
                         </Text>
@@ -455,9 +455,9 @@ const SymbioteSettings: React.FC = () => {
           <SettingRow>
             <div style={{ width: '100%' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                <strong>Comprehensive Config:</strong> Fetches MCP servers, assistants, and model providers
-                from your Symbiote Labs server. This supplements the basic agent/assistant auto-configuration
-                with additional resources and configurations.
+                <strong>Comprehensive Config:</strong> Fetches a complete assistant configuration
+                from your Symbiote Labs server, including embedded MCP servers and settings.
+                This supplements the basic agent auto-configuration with a full-featured assistant.
               </Text>
             </div>
           </SettingRow>

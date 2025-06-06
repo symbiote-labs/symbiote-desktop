@@ -154,7 +154,7 @@ class SymbioteApiService {
         }
       }
 
-      const response = await fetch(`${this.getBaseUrl()}/api/symbiote/config`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-assistant`, {
         method: 'GET',
         headers,
         credentials: 'include' // Always include cookies
@@ -171,26 +171,28 @@ class SymbioteApiService {
 
       const data = await response.json()
 
-      // Validate that we have a valid config object
-      if (!data || typeof data !== 'object') {
-        Logger.error('[SymbioteApiService] Invalid config response: not an object')
+      // Validate that we have a valid assistant object
+      if (!data || typeof data !== 'object' || !data.id || !data.name) {
+        Logger.error('[SymbioteApiService] Invalid config response: not a valid assistant object')
         return null
       }
 
-      Logger.log('[SymbioteApiService] Successfully fetched Symbiote config')
+      Logger.log('[SymbioteApiService] Successfully fetched Symbiote assistant config')
 
-      // Log what sections were received
-      const sections = Object.keys(data).filter(key => Array.isArray(data[key]) && data[key].length > 0)
-      if (sections.length > 0) {
-        Logger.log(`[SymbioteApiService] Config sections received: ${sections.join(', ')}`)
-        sections.forEach(section => {
-          Logger.log(`[SymbioteApiService] ${section}: ${data[section]?.length || 0} items`)
-        })
-      } else {
-        Logger.log('[SymbioteApiService] Config response contained no populated sections')
+      // Transform the single assistant response into the expected format
+      const config: SymbioteConfigResponse = {
+        assistants: [data]
       }
 
-      return data as SymbioteConfigResponse
+      // Extract MCP servers from the assistant if they exist
+      if (data.mcpServers && Array.isArray(data.mcpServers)) {
+        config.mcp_servers = data.mcpServers
+        Logger.log(`[SymbioteApiService] Extracted ${data.mcpServers.length} MCP servers from assistant config`)
+      }
+
+      Logger.log('[SymbioteApiService] Successfully processed Symbiote config')
+
+      return config
 
     } catch (error) {
       Logger.error('[SymbioteApiService] Error fetching Symbiote config:', error)

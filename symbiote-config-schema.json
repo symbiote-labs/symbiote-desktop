@@ -6,7 +6,7 @@
   "properties": {
     "mcp_servers": {
       "type": "array",
-      "description": "Array of MCP (Model Context Protocol) server configurations",
+      "description": "Array of MCP (Model Context Protocol) server configurations (extracted from assistant config)",
       "items": {
         "type": "object",
         "required": ["id", "name", "isActive"],
@@ -261,7 +261,7 @@
           },
           "mcpServers": {
             "type": "array",
-            "description": "MCP servers enabled for this assistant",
+            "description": "MCP servers embedded in this assistant configuration",
             "items": {
               "$ref": "#/properties/mcp_servers/items"
             }
@@ -318,7 +318,7 @@
     },
     "model_providers": {
       "type": "array",
-      "description": "Array of model provider configurations",
+      "description": "Array of model provider configurations (optional - not included in current response)",
       "items": {
         "type": "object",
         "required": ["id", "type", "name", "apiKey", "apiHost", "models"],

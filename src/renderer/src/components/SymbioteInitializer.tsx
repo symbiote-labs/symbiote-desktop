@@ -126,7 +126,7 @@ export const SymbioteInitializer: React.FC = () => {
       const sections: string[] = []
       const errors: Record<string, string> = {}
 
-      // Process MCP servers
+      // Process MCP servers (extracted from assistant config)
       if (config.mcp_servers && Array.isArray(config.mcp_servers) && config.mcp_servers.length > 0) {
         try {
           Logger.log(`[SymbioteInitializer] Processing ${config.mcp_servers.length} MCP servers`)
@@ -150,59 +150,59 @@ export const SymbioteInitializer: React.FC = () => {
         }
       }
 
-             // Process assistants
-       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
-         try {
-           Logger.log(`[SymbioteInitializer] Processing ${config.assistants.length} assistants`)
+      // Process assistants (single assistant from cherry-studio-assistant endpoint)
+      if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
+        try {
+          Logger.log(`[SymbioteInitializer] Processing ${config.assistants.length} assistants`)
 
-           // Merge with existing assistants, avoiding duplicates by id
-           const existingAssistantIds = assistants.map(assistant => assistant.id)
-           const newAssistants = config.assistants.filter(
-             assistant => !existingAssistantIds.includes(assistant.id)
-           )
+          // Merge with existing assistants, avoiding duplicates by id
+          const existingAssistantIds = assistants.map(assistant => assistant.id)
+          const newAssistants = config.assistants.filter(
+            assistant => !existingAssistantIds.includes(assistant.id)
+          )
 
-           if (newAssistants.length > 0) {
-             const allAssistants = [...assistants, ...newAssistants]
-             dispatch(updateAssistants(allAssistants))
-             Logger.log(`[SymbioteInitializer] Added ${newAssistants.length} new assistants`)
-           }
+          if (newAssistants.length > 0) {
+            const allAssistants = [...assistants, ...newAssistants]
+            dispatch(updateAssistants(allAssistants))
+            Logger.log(`[SymbioteInitializer] Added ${newAssistants.length} new assistants`)
+          }
 
-           sections.push('assistants')
-         } catch (error) {
-           Logger.error('[SymbioteInitializer] Error processing assistants:', error)
-           errors.assistants = 'Failed to process assistants'
-         }
-       }
+          sections.push('assistants')
+        } catch (error) {
+          Logger.error('[SymbioteInitializer] Error processing assistants:', error)
+          errors.assistants = 'Failed to process assistants'
+        }
+      }
 
-             // Process model providers
-       if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
-         try {
-           Logger.log(`[SymbioteInitializer] Processing ${config.model_providers.length} model providers`)
+      // Process model providers (if included - currently not in the response)
+      if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
+        try {
+          Logger.log(`[SymbioteInitializer] Processing ${config.model_providers.length} model providers`)
 
-           // Merge with existing providers, avoiding duplicates by id
-           const existingProviderIds = providers.map(provider => provider.id)
-           const newProviders = config.model_providers.filter(
-             provider => !existingProviderIds.includes(provider.id)
-           )
+          // Merge with existing providers, avoiding duplicates by id
+          const existingProviderIds = providers.map(provider => provider.id)
+          const newProviders = config.model_providers.filter(
+            provider => !existingProviderIds.includes(provider.id)
+          )
 
-           if (newProviders.length > 0) {
-             const allProviders = [...providers, ...newProviders]
-             dispatch(updateProviders(allProviders))
-             Logger.log(`[SymbioteInitializer] Added ${newProviders.length} new providers`)
-           }
+          if (newProviders.length > 0) {
+            const allProviders = [...providers, ...newProviders]
+            dispatch(updateProviders(allProviders))
+            Logger.log(`[SymbioteInitializer] Added ${newProviders.length} new providers`)
+          }
 
-           sections.push('model_providers')
-         } catch (error) {
-           Logger.error('[SymbioteInitializer] Error processing model providers:', error)
-           errors.model_providers = 'Failed to process model providers'
-         }
-       }
+          sections.push('model_providers')
+        } catch (error) {
+          Logger.error('[SymbioteInitializer] Error processing model providers:', error)
+          errors.model_providers = 'Failed to process model providers'
+        }
+      }
 
       // Update state
       dispatch(setLastSymbioteConfigFetch(Date.now()))
       dispatch(setSymbioteConfigSections(sections))
 
-      if (Object.keys(errors).length > 0) {
+      if (Object.keys(errors || {}).length > 0) {
         dispatch(setSymbioteConfigErrors(errors))
       }
 
