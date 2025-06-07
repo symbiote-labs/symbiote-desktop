@@ -85,7 +85,7 @@ export async function setupAppImageDeepLink(): Promise<void> {
     // %U allows passing the URL to the application
     // NoDisplay=true hides it from the regular application menu
     const desktopFileContent = `[Desktop Entry]
-Name=Cherry Studio
+Name=Symbiote Desktop
 Exec=${escapePathForExec(appPath)} %U
 Terminal=false
 Type=Application

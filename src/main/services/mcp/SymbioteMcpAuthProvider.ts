@@ -32,7 +32,7 @@ export class SymbioteMcpAuthProvider implements OAuthClientProvider {
   get clientMetadata(): OAuthClientMetadata {
     // Basic metadata - not used for JWT auth but required by interface
     return {
-      client_name: 'Cherry Studio Symbiote Client',
+      client_name: 'Symbiote Desktop Client',
       client_uri: 'https://github.com/CherryHQ/cherry-studio',
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: 'none',

@@ -1999,7 +1999,7 @@
         },
         "filter_modal": {
           "title": "Application Filter List",
-          "user_tips": "Please enter the executable file name of the application, one per line, case insensitive, can be fuzzy matched. For example: chrome.exe, weixin.exe, Cherry Studio.exe, etc."
+          "user_tips": "Please enter the executable file name of the application, one per line, case insensitive, can be fuzzy matched. For example: chrome.exe, weixin.exe, Symbiote Desktop.exe, etc."
         }
       }
     }

@@ -132,7 +132,7 @@ class McpService {
     const initPromise = (async () => {
       try {
         // Create new client instance for each connection
-        const client = new Client({ name: 'Cherry Studio', version: app.getVersion() }, { capabilities: {} })
+        const client = new Client({ name: 'Symbiote Desktop', version: app.getVersion() }, { capabilities: {} })
 
         const args = [...(server.args || [])]
 
