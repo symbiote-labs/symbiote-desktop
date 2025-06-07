@@ -1,6 +1,6 @@
 import { selectMessagesForTopic } from '@renderer/store/newMessage'
 import type { Assistant, Topic } from '@renderer/types'
-import { groupBy, isEmpty, minBy, orderBy } from 'lodash'
+import { isEmpty, minBy, orderBy } from 'lodash'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { RootState } from '@renderer/store'
@@ -51,10 +51,30 @@ const SymbioteMessages: React.FC<SymbioteMessagesProps> = ({ assistant, topic, o
   }, [orderedMessages, displayLimit])
 
   const groupedMessages = useMemo(() => {
-    const grouped = groupBy(displayMessages, (message) =>
-      message.role === 'assistant' ? 'assistant' : 'user'
-    )
-    return Object.entries(grouped)
+    const groups: Array<[string, typeof displayMessages]> = []
+    let currentGroup: typeof displayMessages = []
+    let currentRole = ''
+
+    displayMessages.forEach((message, index) => {
+      const messageRole = message.role === 'assistant' ? 'assistant' : 'user'
+
+      if (messageRole !== currentRole) {
+        if (currentGroup.length > 0) {
+          groups.push([currentRole, currentGroup])
+        }
+        currentGroup = [message]
+        currentRole = messageRole
+      } else {
+        currentGroup.push(message)
+      }
+
+      // Handle the last group
+      if (index === displayMessages.length - 1 && currentGroup.length > 0) {
+        groups.push([currentRole, currentGroup])
+      }
+    })
+
+    return groups
   }, [displayMessages])
 
   const hasMore = orderedMessages.length > displayLimit
