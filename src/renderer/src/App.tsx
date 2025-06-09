@@ -7,7 +7,7 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { useSelector } from 'react-redux'
 
 import { RootState } from '@renderer/store'
-import Sidebar from './components/app/Sidebar'
+import SymbioteSidebar from './components/app/SymbioteSidebar'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AutoBinaryInstaller from './components/AutoBinaryInstaller'
 import { MCPInitializer } from './components/MCPInitializer'
@@ -46,7 +46,7 @@ function AppContent(): React.ReactElement {
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />
-                      <Sidebar />
+                      <SymbioteSidebar />
                       <Routes>
                         <Route path="/" element={
                           <ProtectedRoute>
