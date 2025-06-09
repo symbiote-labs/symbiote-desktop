@@ -13,6 +13,7 @@ import styled from 'styled-components'
 import SymbioteChat from './SymbioteChat'
 import SymbioteNavbar from './SymbioteNavbar'
 import TopicTabs from './Tabs/TopicTabs'
+import HomeTabs from './Tabs'
 
 let _activeAssistant: Assistant
 
@@ -84,12 +85,19 @@ const HomePage: FC = () => {
       />
       <ContentContainer id="content-container">
         {showTopics && topicPosition === 'left' && (
-          <TopicTabs
+          <HomeTabs
             activeAssistant={activeAssistant}
             activeTopic={activeTopic}
+            setActiveAssistant={setActiveAssistant}
             setActiveTopic={setActiveTopic}
             position="left"
           />
+          // <TopicTabs
+          //   activeAssistant={activeAssistant}
+          //   activeTopic={activeTopic}
+          //   setActiveTopic={setActiveTopic}
+          //   position="left"
+          // />
         )}
         <SymbioteChat
           assistant={activeAssistant}
