@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -32,7 +31,6 @@ import { memoize } from 'lodash'
 import { CacheService } from './CacheService'
 import { createAuthProvider, isJwtProvider, isOAuthProvider } from './mcp/auth/factory'
 import { CallBackServer } from './mcp/oauth/callback'
-import { McpOAuthClientProvider } from './mcp/oauth/provider'
 import getLoginShellEnvironment from './mcp/shell-env'
 
 // Generic type for caching wrapped functions
@@ -164,7 +162,7 @@ class McpService {
                 requestInit: {
                   headers: server.headers || {}
                 },
-                authProvider
+                ...(isOAuthProvider(authProvider) && { authProvider })
               }
               return new StreamableHTTPClientTransport(new URL(server.baseUrl!), options)
             } else if (server.type === 'sse') {
@@ -191,7 +189,7 @@ class McpService {
                 requestInit: {
                   headers: server.headers || {}
                 },
-                authProvider
+                ...(isOAuthProvider(authProvider) && { authProvider })
               }
               return new SSEClientTransport(new URL(server.baseUrl!), options)
             } else {
