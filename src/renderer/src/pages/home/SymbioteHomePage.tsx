@@ -12,7 +12,6 @@ import styled from 'styled-components'
 
 import SymbioteChat from './SymbioteChat'
 import SymbioteNavbar from './SymbioteNavbar'
-import TopicTabs from './Tabs/TopicTabs'
 import HomeTabs from './Tabs'
 
 let _activeAssistant: Assistant
