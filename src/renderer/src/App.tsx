@@ -59,11 +59,7 @@ function AppContent(): React.ReactElement {
                         <Route path="/files" element={<FilesPage />} />
                         <Route path="/knowledge" element={<KnowledgePage />} />
                         <Route path="/apps" element={<AppsPage />} />
-                        <Route path="/settings/*" element={
-                          <ProtectedRoute>
-                            <SettingsPage />
-                          </ProtectedRoute>
-                        } />
+                        <Route path="/settings/*" element={<SettingsPage />} />
                       </Routes>
                     </HashRouter>
                   </TopViewContainer>

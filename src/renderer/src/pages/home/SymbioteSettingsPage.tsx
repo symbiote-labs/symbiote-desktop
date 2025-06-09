@@ -291,7 +291,7 @@ const SymbioteSettings: React.FC = () => {
               <Input
                 value={localBaseUrl}
                 onChange={(e) => setLocalBaseUrl(e.target.value)}
-                placeholder="http://localhost:4500"
+                placeholder="https://use.symbiotelabs.ai"
                 style={{ width: 240 }}
               />
               <Button

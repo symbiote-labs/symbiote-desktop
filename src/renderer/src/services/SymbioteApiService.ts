@@ -25,7 +25,7 @@ class SymbioteApiService {
     const configuredUrl = state.settings.symbioteBaseUrl
 
     // Use configured URL if available, otherwise fall back to default
-    return configuredUrl || 'http://localhost:4500'
+    return configuredUrl || 'https://use.symbiotelabs.ai'
   }
 
   private async getCsrfToken(): Promise<string | null> {

@@ -330,7 +330,7 @@ export const initialState: SettingsState = {
   symbioteAgentConfigured: false,
   symbioteAssistantConfigured: false,
   lastSymbioteConfigUpdate: 0,
-  symbioteBaseUrl: 'http://localhost:4500',
+  symbioteBaseUrl: 'https://use.symbiotelabs.ai',
   // Symbiote Config API tracking
   lastSymbioteConfigFetch: 0,
   symbioteConfigSections: [],
