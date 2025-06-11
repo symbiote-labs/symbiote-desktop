@@ -43,38 +43,12 @@ class AuthService {
     return configuredUrl || 'https://use.symbiotelabs.ai'
   }
 
-  private async getCsrfToken(): Promise<string | null> {
-    try {
-      console.log('[AuthService] Fetching CSRF token from:', `${this.getBaseUrl()}/login`)
-      const response = await fetch(`${this.getBaseUrl()}/login`, {
-        method: 'GET',
-        credentials: 'include'
-      })
-
-      console.log('[AuthService] CSRF token fetch response status:', response.status)
-
-      if (response.ok) {
-        const html = await response.text()
-        // Extract CSRF token from meta tag
-        const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
-        const token = match ? match[1] : null
-        console.log('[AuthService] CSRF token extracted:', !!token, token?.substring(0, 10) + '...')
-        return token
-      } else {
-        console.error('[AuthService] Failed to get CSRF token, status:', response.status)
-      }
-    } catch (error) {
-      console.error('[AuthService] Exception while getting CSRF token:', error)
-    }
-    return null
-  }
-
   private generateBearerToken(email: string): string {
     const timestamp = Date.now()
     return btoa(`${email}:${timestamp}`)
   }
 
-      async getJwtToken(): Promise<string | null> {
+  async getJwtToken(): Promise<string | null> {
     try {
       console.log('[AuthService] Requesting JWT token from:', `${this.getBaseUrl()}/api/jwt/token`)
 
@@ -82,7 +56,6 @@ class AuthService {
       const bearerToken = localStorage.getItem(this.tokenKey)
       console.log('[AuthService] Existing bearer token available:', !!bearerToken)
 
-      // Don't get CSRF token - JWT endpoints are CSRF-exempt and this breaks the session
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       }
@@ -191,16 +164,10 @@ class AuthService {
 
   async login(request: LoginRequest): Promise<AuthResponse> {
     try {
-      const csrfToken = await this.getCsrfToken()
-      if (!csrfToken) {
-        return { success: false, error: 'Failed to get CSRF token' }
-      }
-
       const response = await fetch(`${this.getBaseUrl()}/api/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify(request)
@@ -217,7 +184,7 @@ class AuthService {
           localStorage.setItem(this.userKey, JSON.stringify(data.user))
         }
 
-                // Get JWT token after successful login (with session verification)
+        // Get JWT token after successful login (with session verification)
         try {
           console.log('[AuthService] Login successful, verifying session status...')
 
@@ -266,16 +233,10 @@ class AuthService {
 
   async register(request: RegisterRequest): Promise<AuthResponse> {
     try {
-      const csrfToken = await this.getCsrfToken()
-      if (!csrfToken) {
-        return { success: false, error: 'Failed to get CSRF token' }
-      }
-
       const response = await fetch(`${this.getBaseUrl()}/api/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'Content-Type': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify(request)

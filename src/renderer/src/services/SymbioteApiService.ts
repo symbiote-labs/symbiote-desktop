@@ -28,25 +28,6 @@ class SymbioteApiService {
     return configuredUrl || 'https://use.symbiotelabs.ai'
   }
 
-  private async getCsrfToken(): Promise<string | null> {
-    try {
-      const response = await fetch(`${this.getBaseUrl()}/login`, {
-        method: 'GET',
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        const html = await response.text()
-        // Extract CSRF token from meta tag
-        const match = html.match(/<meta name="csrf-token" content="([^"]+)"/)
-        return match ? match[1] : null
-      }
-    } catch (error) {
-      Logger.error('[SymbioteApiService] Failed to get CSRF token:', error)
-    }
-    return null
-  }
-
   async fetchAgentConfig(): Promise<SymbioteAgentConfig | null> {
     try {
       // Check for bearer token first (when "remember me" was used)
@@ -63,12 +44,6 @@ class SymbioteApiService {
         Logger.log('[SymbioteApiService] Using bearer token authentication')
       } else {
         Logger.log('[SymbioteApiService] Using cookie-based authentication')
-
-        // For cookie-based requests, we might need CSRF token
-        const csrfToken = await this.getCsrfToken()
-        if (csrfToken) {
-          headers['X-CSRFToken'] = csrfToken
-        }
       }
 
       const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-agent`, {
@@ -146,12 +121,6 @@ class SymbioteApiService {
         Logger.log('[SymbioteApiService] Using bearer token authentication for config fetch')
       } else {
         Logger.log('[SymbioteApiService] Using cookie-based authentication for config fetch')
-
-        // For cookie-based requests, we might need CSRF token
-        const csrfToken = await this.getCsrfToken()
-        if (csrfToken) {
-          headers['X-CSRFToken'] = csrfToken
-        }
       }
 
       const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-assistant`, {
