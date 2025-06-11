@@ -3,10 +3,13 @@ import { Button, Input, Alert, Typography, Space, Badge, Modal, message } from '
 import { useAppDispatch, useAppSelector } from '@renderer/store'
 import { setSymbioteBaseUrl, setLastSymbioteConfigFetch, setSymbioteConfigSections, setSymbioteConfigErrors, clearSymbioteConfigErrors } from '@renderer/store/settings'
 import { setMCPServers } from '@renderer/store/mcp'
+import { setMinApps } from '@renderer/store/minapps'
 import { updateAssistants } from '@renderer/store/assistants'
 import { updateProviders } from '@renderer/store/llm'
 import SymbioteApiService from '@renderer/services/SymbioteApiService'
 import { useAuth } from '@renderer/context/AuthProvider'
+import { getLogo } from '@renderer/utils/logoMapping'
+import { MinAppType, MCPServer } from '@renderer/types'
 import {
   Settings2,
   Link,
@@ -56,6 +59,7 @@ const SymbioteSettings: React.FC = () => {
   const mcpServers = useAppSelector((state) => state.mcp.servers)
   const assistants = useAppSelector((state) => state.assistants.assistants)
   const providers = useAppSelector((state) => state.llm.providers)
+  const filesPath = useAppSelector((state) => state.runtime.filesPath)
 
   const [localBaseUrl, setLocalBaseUrl] = useState(symbioteBaseUrl)
   const [isSaving, setIsSaving] = useState(false)
@@ -89,6 +93,97 @@ const SymbioteSettings: React.FC = () => {
     })
   }
 
+  // Utility function to process miniApps from config response
+  const processMiniApps = (miniApps: any[]): MinAppType[] => {
+    const processedApps: MinAppType[] = []
+    let successfulMappings = 0
+    let failedMappings = 0
+
+    miniApps.forEach((app, index) => {
+      try {
+        const logoResult = getLogo(app.logo || '')
+        const isSuccessfulLogoMapping = app.logo && logoResult !== getLogo('')
+
+        if (isSuccessfulLogoMapping) {
+          successfulMappings++
+          console.log(`✓ Successfully mapped logo for "${app.name}": ${app.logo}`)
+        } else if (app.logo) {
+          failedMappings++
+          console.warn(`⚠ Failed to map logo for "${app.name}": ${app.logo} (using default)`)
+        }
+
+        const processedApp: MinAppType = {
+          id: app.id || `minapp-${Date.now()}-${Math.random()}-${index}`,
+          name: app.name || 'Unnamed App',
+          url: app.url || '',
+          logo: logoResult,
+          bodered: app.bordered || false,
+          background: app.background,
+          style: app.style,
+          type: 'Custom' as const
+        }
+
+        processedApps.push(processedApp)
+      } catch (error) {
+        failedMappings++
+        console.error('Failed to process miniApp:', app, error)
+
+        const fallbackApp: MinAppType = {
+          id: app.id || `minapp-${Date.now()}-${Math.random()}-${index}`,
+          name: app.name || 'Unnamed App',
+          url: app.url || '',
+          logo: getLogo(''), // Fallback to default logo
+          bodered: false,
+          type: 'Custom' as const
+        }
+
+        processedApps.push(fallbackApp)
+      }
+    })
+
+    console.log(`MiniApp processing summary: ${successfulMappings} successful logo mappings, ${failedMappings} failed/fallback mappings out of ${miniApps.length} total apps`)
+    return processedApps
+  }
+
+  // Utility function to process MCP servers and replace DATA_DIRECTORY_PATH_NAME
+  const processMCPServers = (servers: MCPServer[]): MCPServer[] => {
+    if (!filesPath) {
+      console.warn('Files path not available, DATA_DIRECTORY_PATH_NAME will not be replaced')
+      return servers
+    }
+
+    let totalReplacements = 0
+    const processedServers = servers.map(server => {
+      let serverReplacements = 0
+
+      const processedArgs = server.args?.map(arg => {
+        if (arg === 'DATA_DIRECTORY_PATH_NAME') {
+          serverReplacements++
+          totalReplacements++
+          return filesPath
+        }
+        return arg
+      }) || []
+
+      if (serverReplacements > 0) {
+        console.log(`✓ Replaced ${serverReplacements} DATA_DIRECTORY_PATH_NAME placeholder(s) in MCP server "${server.name}" with: ${filesPath}`)
+      }
+
+      return {
+        ...server,
+        args: processedArgs
+      }
+    })
+
+    if (totalReplacements > 0) {
+      console.log(`MCP server processing summary: ${totalReplacements} total DATA_DIRECTORY_PATH_NAME replacements across ${servers.length} servers`)
+    } else {
+      console.log(`MCP server processing: No DATA_DIRECTORY_PATH_NAME placeholders found in ${servers.length} servers`)
+    }
+
+    return processedServers
+  }
+
   const handleFetchConfig = async () => {
     if (!isAuthenticated) {
       message.error('Please sign in first to fetch configuration')
@@ -115,9 +210,12 @@ const SymbioteSettings: React.FC = () => {
       // Process MCP servers (extracted from assistant config)
       if (config.mcp_servers && Array.isArray(config.mcp_servers) && config.mcp_servers.length > 0) {
         try {
+          // Process servers to replace DATA_DIRECTORY_PATH_NAME placeholders
+          const processedServers = processMCPServers(config.mcp_servers)
+
           // Merge with existing servers, avoiding duplicates by name
           const existingServerNames = mcpServers.map(server => server.name)
-          const newServers = config.mcp_servers.filter(
+          const newServers = processedServers.filter(
             server => !existingServerNames.includes(server.name)
           )
 
@@ -131,6 +229,27 @@ const SymbioteSettings: React.FC = () => {
         } catch (error) {
           console.error('Error processing MCP servers:', error)
           errors.mcp_servers = 'Failed to process MCP servers'
+        }
+      }
+
+      // Process miniApps from the first assistant's miniApps property
+      if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
+        const firstAssistant = config.assistants[0]
+        if (firstAssistant && firstAssistant.miniApps && Array.isArray(firstAssistant.miniApps) && firstAssistant.miniApps.length > 0) {
+          try {
+            console.log(`Processing ${firstAssistant.miniApps.length} miniApps from assistant config`)
+            const processedMiniApps = processMiniApps(firstAssistant.miniApps)
+
+            // Replace existing miniApps completely
+            dispatch(setMinApps(processedMiniApps))
+            totalItemsAdded += processedMiniApps.length
+
+            sections.push(`miniApps (${processedMiniApps.length} apps replaced)`)
+            console.log('Successfully processed and replaced miniApps:', processedMiniApps.map(app => ({ name: app.name, logo: app.logo ? 'loaded' : 'missing' })))
+          } catch (error) {
+            console.error('Error processing miniApps:', error)
+            errors.miniApps = 'Failed to process miniApps'
+          }
         }
       }
 
