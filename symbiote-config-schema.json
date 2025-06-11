@@ -312,6 +312,37 @@
               "type": "string"
             },
             "description": "Group categories for agents"
+          },
+          "miniApps": {
+            "type": "array",
+            "description": "Mini applications available for this assistant",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "url"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the mini app"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name of the mini app"
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "URL to access the mini app"
+                },
+                "logo": {
+                  "type": "string",
+                  "description": "Logo identifier or name for the mini app"
+                },
+                "bordered": {
+                  "type": "boolean",
+                  "description": "Whether the mini app should have a bordered appearance"
+                }
+              }
+            }
           }
         }
       }
