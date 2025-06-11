@@ -1,32 +1,27 @@
-import React, { useState } from 'react'
-import { Button, Input, Alert, Typography, Space, Badge, Modal, message } from 'antd'
+import { useAuth } from '@renderer/context/AuthProvider'
+import { useTheme } from '@renderer/context/ThemeProvider'
+import SymbioteApiService from '@renderer/services/SymbioteApiService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { setSymbioteBaseUrl, setLastSymbioteConfigFetch, setSymbioteConfigSections, setSymbioteConfigErrors, clearSymbioteConfigErrors } from '@renderer/store/settings'
-import { setMCPServers } from '@renderer/store/mcp'
-import { setMinApps } from '@renderer/store/minapps'
 import { updateAssistants } from '@renderer/store/assistants'
 import { updateProviders } from '@renderer/store/llm'
-import SymbioteApiService from '@renderer/services/SymbioteApiService'
-import { useAuth } from '@renderer/context/AuthProvider'
-import { getLogo } from '@renderer/utils/logoMapping'
-import { MinAppType, MCPServer } from '@renderer/types'
+import { setMCPServers } from '@renderer/store/mcp'
+import { setMinApps } from '@renderer/store/minapps'
 import {
-  Settings2,
-  Link,
-  CheckCircle,
-  XCircle,
-  User,
-  Bot,
-  Wifi,
-  WifiOff,
-  Clock,
-  Eye,
-  Copy
-} from 'lucide-react'
-import styled from 'styled-components'
+  clearSymbioteConfigErrors,
+  setLastSymbioteConfigFetch,
+  setSymbioteBaseUrl,
+  setSymbioteConfigErrors,
+  setSymbioteConfigSections
+} from '@renderer/store/settings'
+import { MCPServer, MinAppType } from '@renderer/types'
+import { getLogo } from '@renderer/utils/logoMapping'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
+import { Alert, Badge, Button, Input, message, Modal, Space, Typography } from 'antd'
+import { Bot, CheckCircle, Clock, Copy, Eye, Link, Settings2, User, Wifi, WifiOff, XCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import styled from 'styled-components'
+
 import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowTitle, SettingTitle } from '../settings'
-import { useTheme } from '@renderer/context/ThemeProvider'
 
 const { Text } = Typography
 const { TextArea } = Input
@@ -48,11 +43,9 @@ const SymbioteSettings: React.FC = () => {
   } = useAppSelector((state) => state.settings)
 
   // Get agent and assistant from store
-  const symbioteAgent = useAppSelector((state) =>
-    state.agents.agents.find(agent => agent.id === SYMBIOTE_AGENT_ID)
-  )
+  const symbioteAgent = useAppSelector((state) => state.agents.agents.find((agent) => agent.id === SYMBIOTE_AGENT_ID))
   const symbioteAssistant = useAppSelector((state) =>
-    state.assistants.assistants.find(assistant => assistant.id === SYMBIOTE_ASSISTANT_ID)
+    state.assistants.assistants.find((assistant) => assistant.id === SYMBIOTE_ASSISTANT_ID)
   )
 
   // Get current store data for config processing
@@ -86,11 +79,14 @@ const SymbioteSettings: React.FC = () => {
   }
 
   const handleCopyJson = (jsonData: string) => {
-    navigator.clipboard.writeText(jsonData).then(() => {
-      message.success('JSON copied to clipboard!')
-    }).catch(() => {
-      message.error('Failed to copy JSON')
-    })
+    navigator.clipboard
+      .writeText(jsonData)
+      .then(() => {
+        message.success('JSON copied to clipboard!')
+      })
+      .catch(() => {
+        message.error('Failed to copy JSON')
+      })
   }
 
   // Utility function to process miniApps from config response
@@ -141,7 +137,9 @@ const SymbioteSettings: React.FC = () => {
       }
     })
 
-    console.log(`MiniApp processing summary: ${successfulMappings} successful logo mappings, ${failedMappings} failed/fallback mappings out of ${miniApps.length} total apps`)
+    console.log(
+      `MiniApp processing summary: ${successfulMappings} successful logo mappings, ${failedMappings} failed/fallback mappings out of ${miniApps.length} total apps`
+    )
     return processedApps
   }
 
@@ -153,20 +151,23 @@ const SymbioteSettings: React.FC = () => {
     }
 
     let totalReplacements = 0
-    const processedServers = servers.map(server => {
+    const processedServers = servers.map((server) => {
       let serverReplacements = 0
 
-      const processedArgs = server.args?.map(arg => {
-        if (arg === 'DATA_DIRECTORY_PATH_NAME') {
-          serverReplacements++
-          totalReplacements++
-          return filesPath
-        }
-        return arg
-      }) || []
+      const processedArgs =
+        server.args?.map((arg) => {
+          if (arg === 'DATA_DIRECTORY_PATH_NAME') {
+            serverReplacements++
+            totalReplacements++
+            return filesPath
+          }
+          return arg
+        }) || []
 
       if (serverReplacements > 0) {
-        console.log(`✓ Replaced ${serverReplacements} DATA_DIRECTORY_PATH_NAME placeholder(s) in MCP server "${server.name}" with: ${filesPath}`)
+        console.log(
+          `✓ Replaced ${serverReplacements} DATA_DIRECTORY_PATH_NAME placeholder(s) in MCP server "${server.name}" with: ${filesPath}`
+        )
       }
 
       return {
@@ -176,7 +177,9 @@ const SymbioteSettings: React.FC = () => {
     })
 
     if (totalReplacements > 0) {
-      console.log(`MCP server processing summary: ${totalReplacements} total DATA_DIRECTORY_PATH_NAME replacements across ${servers.length} servers`)
+      console.log(
+        `MCP server processing summary: ${totalReplacements} total DATA_DIRECTORY_PATH_NAME replacements across ${servers.length} servers`
+      )
     } else {
       console.log(`MCP server processing: No DATA_DIRECTORY_PATH_NAME placeholders found in ${servers.length} servers`)
     }
@@ -214,10 +217,8 @@ const SymbioteSettings: React.FC = () => {
           const processedServers = processMCPServers(config.mcp_servers)
 
           // Merge with existing servers, avoiding duplicates by name
-          const existingServerNames = mcpServers.map(server => server.name)
-          const newServers = processedServers.filter(
-            server => !existingServerNames.includes(server.name)
-          )
+          const existingServerNames = mcpServers.map((server) => server.name)
+          const newServers = processedServers.filter((server) => !existingServerNames.includes(server.name))
 
           if (newServers.length > 0) {
             const allServers = [...mcpServers, ...newServers]
@@ -235,7 +236,12 @@ const SymbioteSettings: React.FC = () => {
       // Process miniApps from the first assistant's miniApps property
       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
         const firstAssistant = config.assistants[0]
-        if (firstAssistant && firstAssistant.miniApps && Array.isArray(firstAssistant.miniApps) && firstAssistant.miniApps.length > 0) {
+        if (
+          firstAssistant &&
+          firstAssistant.miniApps &&
+          Array.isArray(firstAssistant.miniApps) &&
+          firstAssistant.miniApps.length > 0
+        ) {
           try {
             console.log(`Processing ${firstAssistant.miniApps.length} miniApps from assistant config`)
             const processedMiniApps = processMiniApps(firstAssistant.miniApps)
@@ -245,7 +251,10 @@ const SymbioteSettings: React.FC = () => {
             totalItemsAdded += processedMiniApps.length
 
             sections.push(`miniApps (${processedMiniApps.length} apps replaced)`)
-            console.log('Successfully processed and replaced miniApps:', processedMiniApps.map(app => ({ name: app.name, logo: app.logo ? 'loaded' : 'missing' })))
+            console.log(
+              'Successfully processed and replaced miniApps:',
+              processedMiniApps.map((app) => ({ name: app.name, logo: app.logo ? 'loaded' : 'missing' }))
+            )
           } catch (error) {
             console.error('Error processing miniApps:', error)
             errors.miniApps = 'Failed to process miniApps'
@@ -257,10 +266,8 @@ const SymbioteSettings: React.FC = () => {
       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
         try {
           // Merge with existing assistants, avoiding duplicates by id
-          const existingAssistantIds = assistants.map(assistant => assistant.id)
-          const newAssistants = config.assistants.filter(
-            assistant => !existingAssistantIds.includes(assistant.id)
-          )
+          const existingAssistantIds = assistants.map((assistant) => assistant.id)
+          const newAssistants = config.assistants.filter((assistant) => !existingAssistantIds.includes(assistant.id))
 
           if (newAssistants.length > 0) {
             const allAssistants = [...assistants, ...newAssistants]
@@ -279,10 +286,8 @@ const SymbioteSettings: React.FC = () => {
       if (config.model_providers && Array.isArray(config.model_providers) && config.model_providers.length > 0) {
         try {
           // Merge with existing providers, avoiding duplicates by id
-          const existingProviderIds = providers.map(provider => provider.id)
-          const newProviders = config.model_providers.filter(
-            provider => !existingProviderIds.includes(provider.id)
-          )
+          const existingProviderIds = providers.map((provider) => provider.id)
+          const newProviders = config.model_providers.filter((provider) => !existingProviderIds.includes(provider.id))
 
           if (newProviders.length > 0) {
             const allProviders = [...providers, ...newProviders]
@@ -309,7 +314,6 @@ const SymbioteSettings: React.FC = () => {
       } else {
         message.info('Configuration is up to date. No new items to add.')
       }
-
     } catch (error) {
       console.error('Error during config fetch:', error)
       message.error('Failed to fetch configuration')
@@ -380,9 +384,7 @@ const SymbioteSettings: React.FC = () => {
               {isAuthenticated && (
                 <Space align="center" style={{ marginTop: 8 }}>
                   {getJwtStatusIcon()}
-                  <Text style={{ fontSize: 12 }}>
-                    JWT Token: {getJwtToken() ? 'Available' : 'Not Available'}
-                  </Text>
+                  <Text style={{ fontSize: 12 }}>JWT Token: {getJwtToken() ? 'Available' : 'Not Available'}</Text>
                 </Space>
               )}
               {!isAuthenticated && (
@@ -417,8 +419,7 @@ const SymbioteSettings: React.FC = () => {
                 type="primary"
                 onClick={handleSaveBaseUrl}
                 loading={isSaving}
-                disabled={localBaseUrl === symbioteBaseUrl}
-              >
+                disabled={localBaseUrl === symbioteBaseUrl}>
                 Save
               </Button>
             </Space.Compact>
@@ -426,8 +427,7 @@ const SymbioteSettings: React.FC = () => {
           <SettingRow>
             <div style={{ width: '100%' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                This URL is used for both authentication and API calls.
-                Changes require a restart to take full effect.
+                This URL is used for both authentication and API calls. Changes require a restart to take full effect.
               </Text>
             </div>
           </SettingRow>
@@ -451,8 +451,7 @@ const SymbioteSettings: React.FC = () => {
                     size="small"
                     icon={<Eye size={14} />}
                     onClick={() => setShowAgentJson(true)}
-                    style={{ marginLeft: 'auto' }}
-                  >
+                    style={{ marginLeft: 'auto' }}>
                     View JSON
                   </Button>
                 )}
@@ -486,8 +485,7 @@ const SymbioteSettings: React.FC = () => {
                     size="small"
                     icon={<Eye size={14} />}
                     onClick={() => setShowAssistantJson(true)}
-                    style={{ marginLeft: 'auto' }}
-                  >
+                    style={{ marginLeft: 'auto' }}>
                     View JSON
                   </Button>
                 )}
@@ -514,9 +512,7 @@ const SymbioteSettings: React.FC = () => {
 
           <SettingRow>
             <SettingRowTitle>Last Update</SettingRowTitle>
-            <Text style={{ fontSize: 12 }}>
-              {formatTimestamp(lastSymbioteConfigUpdate)}
-            </Text>
+            <Text style={{ fontSize: 12 }}>{formatTimestamp(lastSymbioteConfigUpdate)}</Text>
           </SettingRow>
 
           {(!symbioteAgentConfigured || !symbioteAssistantConfigured) && isAuthenticated && (
@@ -539,21 +535,14 @@ const SymbioteSettings: React.FC = () => {
 
           <SettingRow>
             <SettingRowTitle>Fetch Updated Config</SettingRowTitle>
-            <Button
-              type="primary"
-              onClick={handleFetchConfig}
-              loading={isFetchingConfig}
-              disabled={!isAuthenticated}
-            >
+            <Button type="primary" onClick={handleFetchConfig} loading={isFetchingConfig} disabled={!isAuthenticated}>
               Fetch Symbiote Assistant Config
             </Button>
           </SettingRow>
 
           <SettingRow>
             <SettingRowTitle>Last Config Fetch</SettingRowTitle>
-            <Text style={{ fontSize: 12 }}>
-              {formatTimestamp(lastSymbioteConfigFetch)}
-            </Text>
+            <Text style={{ fontSize: 12 }}>{formatTimestamp(lastSymbioteConfigFetch)}</Text>
           </SettingRow>
 
           {symbioteConfigSections && symbioteConfigSections.length > 0 && (
@@ -591,9 +580,9 @@ const SymbioteSettings: React.FC = () => {
           <SettingRow>
             <div style={{ width: '100%' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                <strong>Comprehensive Config:</strong> Fetches a complete assistant configuration
-                from your Symbiote Labs server, including embedded MCP servers and settings.
-                This supplements the basic agent auto-configuration with a full-featured assistant.
+                <strong>Comprehensive Config:</strong> Fetches a complete assistant configuration from your Symbiote
+                Labs server, including embedded MCP servers and settings. This supplements the basic agent
+                auto-configuration with a full-featured assistant.
               </Text>
             </div>
           </SettingRow>
@@ -608,16 +597,16 @@ const SymbioteSettings: React.FC = () => {
           <SettingDivider />
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
             <Text style={{ fontSize: 12 }}>
-              <strong>Auto-configuration:</strong> When authenticated, the system automatically
-              fetches and configures a Symbiote agent and assistant based on your server settings.
+              <strong>Auto-configuration:</strong> When authenticated, the system automatically fetches and configures a
+              Symbiote agent and assistant based on your server settings.
             </Text>
             <Text style={{ fontSize: 12 }}>
-              <strong>Base URL:</strong> This should point to your Symbiote Labs server instance.
-              Both authentication and API calls use this URL.
+              <strong>Base URL:</strong> This should point to your Symbiote Labs server instance. Both authentication
+              and API calls use this URL.
             </Text>
             <Text style={{ fontSize: 12 }}>
-              <strong>MCP Integration:</strong> The auto-configured assistant includes all
-              available MCP servers for enhanced functionality.
+              <strong>MCP Integration:</strong> The auto-configured assistant includes all available MCP servers for
+              enhanced functionality.
             </Text>
           </Space>
         </SettingGroup>
@@ -633,20 +622,18 @@ const SymbioteSettings: React.FC = () => {
             key="copy"
             type="primary"
             icon={<Copy size={14} />}
-            onClick={() => symbioteAgent && handleCopyJson(formatJson(symbioteAgent))}
-          >
+            onClick={() => symbioteAgent && handleCopyJson(formatJson(symbioteAgent))}>
             Copy JSON
           </Button>,
           <Button key="close" onClick={() => setShowAgentJson(false)}>
             Close
           </Button>
         ]}
-        width={800}
-      >
+        width={800}>
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">
-            This is the complete configuration for the auto-configured Symbiote agent.
-            You can copy this JSON to use elsewhere or for debugging purposes.
+            This is the complete configuration for the auto-configured Symbiote agent. You can copy this JSON to use
+            elsewhere or for debugging purposes.
           </Text>
         </div>
         <TextArea
@@ -667,20 +654,18 @@ const SymbioteSettings: React.FC = () => {
             key="copy"
             type="primary"
             icon={<Copy size={14} />}
-            onClick={() => symbioteAssistant && handleCopyJson(formatJson(symbioteAssistant))}
-          >
+            onClick={() => symbioteAssistant && handleCopyJson(formatJson(symbioteAssistant))}>
             Copy JSON
           </Button>,
           <Button key="close" onClick={() => setShowAssistantJson(false)}>
             Close
           </Button>
         ]}
-        width={800}
-      >
+        width={800}>
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary">
-            This is the complete configuration for the auto-configured Symbiote assistant.
-            You can copy this JSON to use elsewhere or for debugging purposes.
+            This is the complete configuration for the auto-configured Symbiote assistant. You can copy this JSON to use
+            elsewhere or for debugging purposes.
           </Text>
         </div>
         <TextArea
