@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
 import AuthService, { User } from '@renderer/services/AuthService'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 interface AuthContextType {
   user: User | null
