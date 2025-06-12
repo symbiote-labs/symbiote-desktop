@@ -13,8 +13,8 @@ import {
   setSymbioteConfigErrors,
   setSymbioteConfigSections
 } from '@renderer/store/settings'
-import { MCPServer, MinAppType } from '@renderer/types'
-import { getLogo } from '@renderer/utils/logoMapping'
+import { MCPServer } from '@renderer/types'
+import { loadCustomMiniApp, ORIGIN_DEFAULT_MIN_APPS, updateDefaultMinApps } from '@renderer/config/minapps'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
 import { Alert, Badge, Button, Input, message, Modal, Space, Typography } from 'antd'
 import { Bot, CheckCircle, Clock, Copy, Eye, Link, Settings2, User, Wifi, WifiOff, XCircle } from 'lucide-react'
@@ -89,59 +89,7 @@ const SymbioteSettings: React.FC = () => {
       })
   }
 
-  // Utility function to process miniApps from config response
-  const processMiniApps = (miniApps: any[]): MinAppType[] => {
-    const processedApps: MinAppType[] = []
-    let successfulMappings = 0
-    let failedMappings = 0
 
-    miniApps.forEach((app, index) => {
-      try {
-        const logoResult = getLogo(app.logo || '')
-        const isSuccessfulLogoMapping = app.logo && logoResult !== getLogo('')
-
-        if (isSuccessfulLogoMapping) {
-          successfulMappings++
-          console.log(`✓ Successfully mapped logo for "${app.name}": ${app.logo}`)
-        } else if (app.logo) {
-          failedMappings++
-          console.warn(`⚠ Failed to map logo for "${app.name}": ${app.logo} (using default)`)
-        }
-
-        const processedApp: MinAppType = {
-          id: app.id || `minapp-${Date.now()}-${Math.random()}-${index}`,
-          name: app.name || 'Unnamed App',
-          url: app.url || '',
-          logo: logoResult,
-          bodered: app.bordered || false,
-          background: app.background,
-          style: app.style,
-          type: 'Custom' as const
-        }
-
-        processedApps.push(processedApp)
-      } catch (error) {
-        failedMappings++
-        console.error('Failed to process miniApp:', app, error)
-
-        const fallbackApp: MinAppType = {
-          id: app.id || `minapp-${Date.now()}-${Math.random()}-${index}`,
-          name: app.name || 'Unnamed App',
-          url: app.url || '',
-          logo: getLogo(''), // Fallback to default logo
-          bodered: false,
-          type: 'Custom' as const
-        }
-
-        processedApps.push(fallbackApp)
-      }
-    })
-
-    console.log(
-      `MiniApp processing summary: ${successfulMappings} successful logo mappings, ${failedMappings} failed/fallback mappings out of ${miniApps.length} total apps`
-    )
-    return processedApps
-  }
 
   // Utility function to process MCP servers and replace DATA_DIRECTORY_PATH_NAME
   const processMCPServers = (servers: MCPServer[]): MCPServer[] => {
@@ -233,7 +181,7 @@ const SymbioteSettings: React.FC = () => {
         }
       }
 
-      // Process miniApps from the first assistant's miniApps property
+      // Process miniApps by saving to file and reloading using existing infrastructure
       if (config.assistants && Array.isArray(config.assistants) && config.assistants.length > 0) {
         const firstAssistant = config.assistants[0]
         if (
@@ -243,21 +191,28 @@ const SymbioteSettings: React.FC = () => {
           firstAssistant.miniApps.length > 0
         ) {
           try {
-            console.log(`Processing ${firstAssistant.miniApps.length} miniApps from assistant config`)
-            const processedMiniApps = processMiniApps(firstAssistant.miniApps)
+            console.log(`Saving ${firstAssistant.miniApps.length} miniApps from assistant config to custom-minapps.json`)
 
-            // Replace existing miniApps completely
-            dispatch(setMinApps(processedMiniApps))
-            totalItemsAdded += processedMiniApps.length
+            // Save miniApps to the custom file
+            await window.api.file.writeWithId('custom-minapps.json', JSON.stringify(firstAssistant.miniApps, null, 2))
 
-            sections.push(`miniApps (${processedMiniApps.length} apps replaced)`)
+                        // Reload miniapps using existing infrastructure (replace all existing with server-provided apps)
+            const customApps = await loadCustomMiniApp()
+
+            // Update the current miniapp list and store with ONLY the server-provided apps
+            updateDefaultMinApps(customApps)
+            dispatch(setMinApps(customApps))
+
+            totalItemsAdded += firstAssistant.miniApps.length
+            sections.push(`miniApps (${firstAssistant.miniApps.length} apps saved to file)`)
+
             console.log(
-              'Successfully processed and replaced miniApps:',
-              processedMiniApps.map((app) => ({ name: app.name, logo: app.logo ? 'loaded' : 'missing' }))
+              'Successfully saved and loaded miniApps:',
+              firstAssistant.miniApps.map((app) => ({ name: app.name, url: app.url }))
             )
           } catch (error) {
             console.error('Error processing miniApps:', error)
-            errors.miniApps = 'Failed to process miniApps'
+            errors.miniApps = 'Failed to save or load miniApps'
           }
         }
       }
