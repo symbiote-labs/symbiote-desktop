@@ -1,6 +1,11 @@
-interface IBlacklist {
+interface IFilterList {
   WINDOWS: string[]
   MAC?: string[]
+}
+
+interface IFinetunedList {
+  EXCLUDE_CLIPBOARD_CURSOR_DETECT: IFilterList
+  INCLUDE_CLIPBOARD_DELAY_READ: IFilterList
 }
 
 /*************************************************************************
@@ -13,8 +18,9 @@ interface IBlacklist {
  *
  * Specification: must be all lowercase, need to accurately find the actual running program name
  *************************************************************************/
-export const SELECTION_PREDEFINED_BLACKLIST: IBlacklist = {
+export const SELECTION_PREDEFINED_BLACKLIST: IFilterList = {
   WINDOWS: [
+    'explorer.exe',
     // Screenshot
     'snipaste.exe',
     'pixpin.exe',
@@ -36,6 +42,17 @@ export const SELECTION_PREDEFINED_BLACKLIST: IBlacklist = {
     'maya.exe',
     // CAD
     'acad.exe',
-    'sldworks.exe'
+    'sldworks.exe',
+    // Remote Desktop
+    'mstsc.exe'
   ]
+}
+
+export const SELECTION_FINETUNED_LIST: IFinetunedList = {
+  EXCLUDE_CLIPBOARD_CURSOR_DETECT: {
+    WINDOWS: ['acrobat.exe', 'wps.exe', 'cajviewer.exe']
+  },
+  INCLUDE_CLIPBOARD_DELAY_READ: {
+    WINDOWS: ['acrobat.exe', 'wps.exe', 'cajviewer.exe', 'foxitphantom.exe']
+  }
 }

@@ -1,5 +1,5 @@
 import type { WebSearchResultBlock } from '@anthropic-ai/sdk/resources'
-import type { GenerateImagesConfig, GroundingMetadata } from '@google/genai'
+import type { GenerateImagesConfig, GroundingMetadata, PersonGeneration } from '@google/genai'
 import type OpenAI from 'openai'
 import type { CSSProperties } from 'react'
 
@@ -59,7 +59,6 @@ export type AssistantSettings = {
   maxTokens: number | undefined
   enableMaxTokens: boolean
   streamOutput: boolean
-  hideMessages: boolean
   defaultModel?: Model
   customParameters?: AssistantSettingCustomParameters[]
   reasoning_effort?: ReasoningEffortOptions
@@ -89,7 +88,6 @@ export type LegacyMessage = {
   metrics?: Metrics
   knowledgeBaseIds?: string[]
   type: 'text' | '@' | 'clear'
-  isPreset?: boolean
   mentions?: Model[]
   askId?: string
   useful?: boolean
@@ -266,6 +264,12 @@ export interface ScalePainting extends PaintingParams {
   renderingSpeed?: string
 }
 
+export enum generationModeType {
+  GENERATION = 'generation',
+  EDIT = 'edit',
+  MERGE = 'merge'
+}
+
 export interface DmxapiPainting extends PaintingParams {
   model?: string
   prompt?: string
@@ -275,9 +279,21 @@ export interface DmxapiPainting extends PaintingParams {
   seed?: string
   style_type?: string
   autoCreate?: boolean
+  generationMode?: generationModeType
 }
 
-export type PaintingAction = Partial<GeneratePainting & RemixPainting & EditPainting & ScalePainting> & PaintingParams
+export interface TokenFluxPainting extends PaintingParams {
+  generationId?: string
+  model?: string
+  prompt?: string
+  inputParams?: Record<string, any>
+  status?: 'starting' | 'processing' | 'succeeded' | 'failed' | 'cancelled'
+}
+
+export type PaintingAction = Partial<
+  GeneratePainting & RemixPainting & EditPainting & ScalePainting & DmxapiPainting & TokenFluxPainting
+> &
+  PaintingParams
 
 export interface PaintingsState {
   paintings: Painting[]
@@ -286,6 +302,7 @@ export interface PaintingsState {
   edit: Partial<EditPainting> & PaintingParams[]
   upscale: Partial<ScalePainting> & PaintingParams[]
   DMXAPIPaintings: DmxapiPainting[]
+  tokenFluxPaintings: TokenFluxPainting[]
 }
 
 export type MinAppType = {
@@ -345,9 +362,9 @@ export type CodeStyleVarious = 'auto' | string
 
 export type WebDavConfig = {
   webdavHost: string
-  webdavUser: string
-  webdavPass: string
-  webdavPath: string
+  webdavUser?: string
+  webdavPass?: string
+  webdavPath?: string
   fileName?: string
   skipBackupFile?: boolean
 }
@@ -414,6 +431,7 @@ export interface KnowledgeBase {
 export type KnowledgeBaseParams = {
   id: string
   model: string
+  provider: string
   dimensions?: number
   apiKey: string
   apiVersion?: string
@@ -434,10 +452,11 @@ export type GenerateImageParams = {
   imageSize: string
   batchSize: number
   seed?: string
-  numInferenceSteps: number
-  guidanceScale: number
+  numInferenceSteps?: number
+  guidanceScale?: number
   signal?: AbortSignal
   promptEnhancement?: boolean
+  personGeneration?: PersonGeneration
 }
 
 export type GenerateImageResponse = {
@@ -510,7 +529,7 @@ export enum WebSearchSource {
 }
 
 export type WebSearchResponse = {
-  results: WebSearchResults
+  results?: WebSearchResults
   source: WebSearchSource
 }
 
@@ -608,6 +627,8 @@ export interface GetMCPPromptResponse {
 
 export interface MCPConfig {
   servers: MCPServer[]
+  isUvInstalled: boolean
+  isBunInstalled: boolean
 }
 
 interface BaseToolResponse {
@@ -693,6 +714,7 @@ export interface StoreSyncAction {
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 export type OpenAIServiceTier = 'auto' | 'default' | 'flex'
+export type { Message } from './newMessage'
 
 export interface SymbioteConfig {
   mcp_servers?: MCPServer[]
