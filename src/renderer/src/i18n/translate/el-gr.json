@@ -1095,7 +1095,7 @@
           "box_id": "ID Υπολογιστή",
           "box_id_placeholder": "Εισάγετε το ID υπολογιστή",
           "root_path": "Κεντρική διαδρομή εγγράφων",
-          "root_path_placeholder": "Παράδειγμα: /CherryStudio"
+          "root_path_placeholder": "Παράδειγμα: /SymbioteDesktop"
         },
         "nutstore": {
           "title": "Ρυθμίσεις Jotunn Cloud",

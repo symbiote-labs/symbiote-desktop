@@ -381,10 +381,10 @@ export const PROVIDER_CONFIG = {
       url: 'https://deepseek.alayanew.com'
     },
     websites: {
-      official: 'https://www.alayanew.com/backend/register?id=cherrystudio',
-      apiKey: ' https://www.alayanew.com/backend/register?id=cherrystudio',
-      docs: 'https://docs.alayanew.com/docs/modelService/interview?utm_source=cherrystudio',
-      models: 'https://www.alayanew.com/product/deepseek?id=cherrystudio'
+      official: 'https://www.alayanew.com/backend/register?id=symbiotedesktop',
+      apiKey: ' https://www.alayanew.com/backend/register?id=symbiotedesktop',
+      docs: 'https://docs.alayanew.com/docs/modelService/interview?utm_source=symbiotedesktop',
+      models: 'https://www.alayanew.com/product/deepseek?id=symbiotedesktop'
     }
   },
   openrouter: {

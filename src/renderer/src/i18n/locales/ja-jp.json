@@ -1212,7 +1212,7 @@
           "box_id": "ノートブックID",
           "box_id_placeholder": "ノートブックIDを入力してください",
           "root_path": "ドキュメントルートパス",
-          "root_path_placeholder": "例：/CherryStudio",
+          "root_path_placeholder": "例：/SymbioteDesktop",
           "check": {
             "title": "接続チェック",
             "button": "チェック",

@@ -1,11 +1,11 @@
 {
-  "name": "CherryStudio",
+  "name": "SymbioteDesktop",
   "version": "1.4.0",
   "private": true,
-  "description": "A powerful AI assistant for producer.",
+  "description": "A powerful AI assistant for creatives.",
   "main": "./out/main/index.js",
-  "author": "support@cherry-ai.com",
-  "homepage": "https://github.com/CherryHQ/cherry-studio",
+  "author": "support@symbiotelabs.ai",
+  "homepage": "https://github.com/symbiote-labs/symbiote-desktop",
   "workspaces": {
     "packages": [
       "local",

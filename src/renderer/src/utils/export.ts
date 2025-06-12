@@ -584,7 +584,7 @@ export const exportMarkdownToSiyuan = async (title: string, content: string) => 
     }
 
     // 确保根路径以/开头
-    const rootPath = siyuanRootPath?.startsWith('/') ? siyuanRootPath : `/${siyuanRootPath || 'CherryStudio'}`
+    const rootPath = siyuanRootPath?.startsWith('/') ? siyuanRootPath : `/${siyuanRootPath || 'SymbioteDesktop'}`
 
     // 创建文档
     const docTitle = `${title.replace(/[#|\\^\\[\]]/g, '')}`

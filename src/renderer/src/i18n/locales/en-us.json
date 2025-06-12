@@ -1215,7 +1215,7 @@
           "box_id": "Siyuan Note Box ID",
           "box_id_placeholder": "Please enter Siyuan Note Box ID",
           "root_path": "Siyuan Note Root Path",
-          "root_path_placeholder": "e.g.: /CherryStudio",
+          "root_path_placeholder": "e.g.: /SymbioteDesktop",
           "check": {
             "title": "Connection Check",
             "button": "Check",

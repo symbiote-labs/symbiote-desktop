@@ -70,7 +70,7 @@ export function getAllFiles(dirPath: string, arrayOfFiles: FileType[] = []): Fil
 }
 
 export function getTempDir() {
-  return path.join(app.getPath('temp'), 'CherryStudio')
+  return path.join(app.getPath('temp'), 'SymbioteDesktop')
 }
 
 export function getFilesDir() {
@@ -78,7 +78,7 @@ export function getFilesDir() {
 }
 
 export function getConfigDir() {
-  return path.join(os.homedir(), '.cherrystudio', 'config')
+  return path.join(os.homedir(), '.symbiote', 'config')
 }
 
 export function getCacheDir() {

@@ -486,7 +486,7 @@ class McpService {
   }
 
   public async getInstallInfo() {
-    const dir = path.join(os.homedir(), '.cherrystudio', 'bin')
+    const dir = path.join(os.homedir(), '.symbiote', 'bin')
     const uvName = await getBinaryName('uv')
     const bunName = await getBinaryName('bun')
     const uvPath = path.join(dir, uvName)
@@ -655,7 +655,7 @@ class McpService {
     try {
       const loginEnv = await getLoginShellEnvironment()
       const pathSeparator = process.platform === 'win32' ? ';' : ':'
-      const cherryBinPath = path.join(os.homedir(), '.cherrystudio', 'bin')
+      const cherryBinPath = path.join(os.homedir(), '.symbiote', 'bin')
       loginEnv.PATH = `${loginEnv.PATH}${pathSeparator}${cherryBinPath}`
       Logger.info('[MCP] Successfully fetched login shell environment variables:')
       return loginEnv
