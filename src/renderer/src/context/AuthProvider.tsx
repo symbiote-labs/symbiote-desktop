@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
 import AuthService, { User } from '@renderer/services/AuthService'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 interface AuthContextType {
   user: User | null
@@ -9,6 +9,10 @@ interface AuthContextType {
   register: (email: string, password: string) => Promise<{ success: boolean; error?: string; message?: string }>
   logout: () => Promise<void>
   checkAuthStatus: () => Promise<void>
+  onLoginSuccess?: () => void // Callback for successful login
+  loginSuccessTimestamp: number | null
+  getJwtToken: () => string | null
+  refreshJwtToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,6 +25,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [loginSuccessTimestamp, setLoginSuccessTimestamp] = useState<number | null>(null)
 
   const checkAuthStatus = async () => {
     setIsLoading(true)
@@ -33,6 +38,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (statusResponse.authenticated && statusResponse.user) {
           setUser(statusResponse.user)
           setIsAuthenticated(true)
+
+          // Ensure we have a valid JWT token for MCP server access
+          if (!AuthService.isJwtTokenValid()) {
+            try {
+              await AuthService.refreshJwtToken()
+            } catch (error) {
+              console.warn('Failed to refresh JWT token:', error)
+            }
+          }
         } else {
           await AuthService.logout()
           setUser(null)
@@ -43,6 +57,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (statusResponse.authenticated && statusResponse.user) {
           setUser(statusResponse.user)
           setIsAuthenticated(true)
+
+          // Get JWT token if we don't have one
+          if (!AuthService.getStoredJwtToken()) {
+            try {
+              console.log('[AuthProvider] No stored JWT token found, attempting to get one...')
+              const jwtToken = await AuthService.getJwtToken()
+              if (jwtToken) {
+                console.log('[AuthProvider] Successfully obtained JWT token')
+              } else {
+                console.warn('[AuthProvider] Failed to obtain JWT token')
+              }
+            } catch (error) {
+              console.warn('Failed to get JWT token:', error)
+            }
+          } else {
+            console.log('[AuthProvider] JWT token already exists in storage')
+          }
         } else {
           setUser(null)
           setIsAuthenticated(false)
@@ -64,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && response.user) {
         setUser(response.user)
         setIsAuthenticated(true)
+        setLoginSuccessTimestamp(Date.now())
         return { success: true }
       } else {
         return { success: false, error: response.error || 'Login failed' }
@@ -100,12 +132,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setUser(null)
       setIsAuthenticated(false)
+      setLoginSuccessTimestamp(null)
     }
   }
 
   useEffect(() => {
     checkAuthStatus()
   }, [])
+
+  const getJwtToken = () => {
+    return AuthService.getStoredJwtToken()
+  }
+
+  const refreshJwtToken = async () => {
+    return await AuthService.refreshJwtToken()
+  }
 
   const value: AuthContextType = {
     user,
@@ -114,7 +155,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    checkAuthStatus
+    checkAuthStatus,
+    loginSuccessTimestamp,
+    getJwtToken,
+    refreshJwtToken
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

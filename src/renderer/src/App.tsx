@@ -11,6 +11,7 @@ import SymbioteSidebar from './components/app/SymbioteSidebar'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AutoBinaryInstaller from './components/AutoBinaryInstaller'
 import { MCPInitializer } from './components/MCPInitializer'
+import { SymbioteInitializer } from './components/SymbioteInitializer'
 import TopViewContainer from './components/TopView'
 import AntdProvider from './context/AntdProvider'
 import { AuthProvider } from './context/AuthProvider'
@@ -23,7 +24,7 @@ import AgentsPage from './pages/agents/AgentsPage'
 import AppsPage from './pages/apps/AppsPage'
 import FilesPage from './pages/files/FilesPage'
 import SymbioteHomePage from './pages/home/SymbioteHomePage'
-import SymbioteSettingsPage from './pages/home/SymbioteSettingsPage'
+import SettingsPage from './pages/settings/SettingsPage'
 import KnowledgePage from './pages/knowledge/KnowledgePage'
 import PaintingsRoutePage from './pages/paintings/PaintingsRoutePage'
 import TranslatePage from './pages/translate/TranslatePage'
@@ -41,6 +42,7 @@ function AppContent(): React.ReactElement {
                 <PersistGate loading={null} persistor={persistor}>
                   <AutoBinaryInstaller enabled={autoInstallMCPBinaries} />
                   <MCPInitializer />
+                  <SymbioteInitializer />
                   <TopViewContainer>
                     <HashRouter>
                       <NavigationHandler />
@@ -57,11 +59,7 @@ function AppContent(): React.ReactElement {
                         <Route path="/files" element={<FilesPage />} />
                         <Route path="/knowledge" element={<KnowledgePage />} />
                         <Route path="/apps" element={<AppsPage />} />
-                        <Route path="/settings/*" element={
-                          <ProtectedRoute>
-                            <SymbioteSettingsPage />
-                          </ProtectedRoute>
-                        } />
+                        <Route path="/settings/*" element={<SettingsPage />} />
                       </Routes>
                     </HashRouter>
                   </TopViewContainer>

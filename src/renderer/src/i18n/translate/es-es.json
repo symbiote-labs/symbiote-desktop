@@ -1094,7 +1094,7 @@
           "box_id": "ID del Cuaderno",
           "box_id_placeholder": "Por favor ingrese el ID del cuaderno",
           "root_path": "Ruta raíz del documento",
-          "root_path_placeholder": "Ejemplo: /CherryStudio"
+          "root_path_placeholder": "Ejemplo: /SymbioteDesktop"
         },
         "nutstore": {
           "title": "Configuración de Nutstore",

@@ -130,7 +130,7 @@ export const builtinMCPServers: MCPServer[] = [
     description: 'MCP server for controlling Blender 3D software',
     command: 'uvx',
     args: ['blender-mcp'],
-    isActive: false,
+    isActive: true,
     provider: 'Symbiote'
   },
   {
@@ -140,7 +140,7 @@ export const builtinMCPServers: MCPServer[] = [
     description: 'MCP server for controlling Unreal Engine',
     command: 'uvx',
     args: ['symbiote-unreal-mcp'],
-    isActive: false,
+    isActive: true,
     provider: 'Symbiote'
   },
   {
@@ -151,10 +151,9 @@ export const builtinMCPServers: MCPServer[] = [
     command: 'bun',
     args: ['@remote-mcp/client'],
     env: {
-      "REMOTE_MCP_URL": "https://mcp.symbiotelabs.ai/v1/mcp",
-      "HTTP_HEADER_Authorization": "Bearer <token>"
+      "REMOTE_MCP_URL": "https://mcp.symbiotelabs.ai/v1/mcp"
     },
-    isActive: false,
+    isActive: true,
     provider: 'Symbiote'
   }
 ]

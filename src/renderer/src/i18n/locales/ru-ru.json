@@ -1212,7 +1212,7 @@
           "box_id": "ID блокнота",
           "box_id_placeholder": "Введите ID блокнота",
           "root_path": "Корневой путь документа",
-          "root_path_placeholder": "Например: /CherryStudio",
+          "root_path_placeholder": "Например: /SymbioteDesktop",
           "check": {
             "title": "Проверка соединения",
             "button": "Проверить",

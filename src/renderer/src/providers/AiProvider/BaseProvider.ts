@@ -94,7 +94,7 @@ export default abstract class BaseProvider {
   public defaultHeaders() {
     return {
       'HTTP-Referer': 'https://cherry-ai.com',
-      'X-Title': 'Cherry Studio',
+      'X-Title': 'Symbiote Desktop',
       'X-Api-Key': this.apiKey
     }
   }

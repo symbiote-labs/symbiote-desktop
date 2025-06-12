@@ -44,11 +44,11 @@ export async function getBinaryName(name: string): Promise<string> {
 
 export async function getBinaryPath(name?: string): Promise<string> {
   if (!name) {
-    return path.join(os.homedir(), '.cherrystudio', 'bin')
+    return path.join(os.homedir(), '.symbiote', 'bin')
   }
 
   const binaryName = await getBinaryName(name)
-  const binariesDir = path.join(os.homedir(), '.cherrystudio', 'bin')
+  const binariesDir = path.join(os.homedir(), '.symbiote', 'bin')
   const binariesDirExists = await fs.existsSync(binariesDir)
   return binariesDirExists ? path.join(binariesDir, binaryName) : binaryName
 }

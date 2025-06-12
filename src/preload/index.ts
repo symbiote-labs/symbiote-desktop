@@ -204,6 +204,13 @@ const api = {
     setOpenLinkExternal: (webviewId: number, isExternal: boolean) =>
       ipcRenderer.invoke(IpcChannel.Webview_SetOpenLinkExternal, webviewId, isExternal)
   },
+  auth: {
+    getJwtToken: () => {
+      // Direct access to localStorage in renderer context
+      return localStorage.getItem('symbiote_jwt_token')
+    },
+    refreshJwtToken: () => ipcRenderer.invoke(IpcChannel.Auth_RefreshJwtToken)
+  },
   storeSync: {
     subscribe: () => ipcRenderer.invoke(IpcChannel.StoreSync_Subscribe),
     unsubscribe: () => ipcRenderer.invoke(IpcChannel.StoreSync_Unsubscribe),

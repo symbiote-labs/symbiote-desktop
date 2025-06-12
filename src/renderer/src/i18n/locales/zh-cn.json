@@ -1216,7 +1216,7 @@
           "box_id": "笔记本ID",
           "box_id_placeholder": "请输入笔记本ID",
           "root_path": "文档根路径",
-          "root_path_placeholder": "例如：/CherryStudio",
+          "root_path_placeholder": "例如：/SymbioteDesktop",
           "check": {
             "title": "连接检测",
             "button": "检测",

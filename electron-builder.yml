@@ -1,5 +1,5 @@
-appId: com.kangfenmao.CherryStudio
-productName: Cherry Studio
+appId: com.symbiotelabs.SymbioteDesktop
+productName: Symbiote Desktop
 electronLanguages:
   - zh-CN
   - zh-TW
@@ -92,12 +92,12 @@ linux:
   category: Utility
   desktop:
     entry:
-      StartupWMClass: CherryStudio
+      StartupWMClass: SymbioteDesktop
   mimeTypes:
-    - x-scheme-handler/cherrystudio
+    - x-scheme-handler/symbiotedesktop
 publish:
   provider: generic
-  url: https://releases.cherry-ai.com
+  url: https://releases.symbiotelabs.ai
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 afterPack: scripts/after-pack.js

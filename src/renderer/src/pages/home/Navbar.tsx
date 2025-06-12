@@ -111,7 +111,9 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant, setActiveAssistant, activeTo
               setActiveAssistant={setActiveAssistant}
               activeTopic={activeTopic}
               setActiveTopic={setActiveTopic}
-              position={'left'}>
+              position={'left'}
+              isOpen={showAssistants}
+              onVisibilityChange={toggleShowAssistants}>
               <Tooltip title={t('navbar.show_sidebar')} mouseEnterDelay={2}>
                 <NavbarIcon
                   onClick={() => toggleShowAssistants()}
@@ -160,7 +162,9 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant, setActiveAssistant, activeTo
               setActiveAssistant={setActiveAssistant}
               activeTopic={activeTopic}
               setActiveTopic={setActiveTopic}
-              position={'right'}>
+              position={'right'}
+              isOpen={showTopics}
+              onVisibilityChange={toggleShowTopics}>
               <Tooltip title={t('navbar.show_sidebar')} mouseEnterDelay={2}>
                 <NavbarIcon onClick={() => toggleShowTopics()}>
                   <PanelLeftClose size={18} />

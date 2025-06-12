@@ -1095,7 +1095,7 @@
           "box_id": "Идентификатор блокнота",
           "box_id_placeholder": "Введите идентификатор блокнота",
           "root_path": "Корневой путь документа",
-          "root_path_placeholder": "Например: /CherryStudio"
+          "root_path_placeholder": "Например: /SymbioteDesktop"
         },
         "nutstore": {
           "title": "Настройка坚果云",

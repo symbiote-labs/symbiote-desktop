@@ -26,6 +26,7 @@ export type Assistant = {
   knowledgeRecognition?: 'off' | 'on'
   regularPhrases?: QuickPhrase[] // Added for regular phrase
   tags?: string[] // 助手标签
+  miniApps?: MinAppType[] // Mini applications available for this assistant
 }
 
 export type AssistantsSortType = 'tags' | 'list'
@@ -164,7 +165,14 @@ export type Provider = {
   notes?: string
 }
 
-export type ProviderType = 'openai' | 'openai-response' | 'anthropic' | 'gemini' | 'qwenlm' | 'azure-openai' | 'symbiote-labs'
+export type ProviderType =
+  | 'openai'
+  | 'openai-response'
+  | 'anthropic'
+  | 'gemini'
+  | 'qwenlm'
+  | 'azure-openai'
+  | 'symbiote-labs'
 
 export type ModelType = 'text' | 'vision' | 'embedding' | 'reasoning' | 'function_calling' | 'web_search'
 
@@ -685,3 +693,11 @@ export interface StoreSyncAction {
 
 export type OpenAISummaryText = 'auto' | 'concise' | 'detailed' | 'off'
 export type OpenAIServiceTier = 'auto' | 'default' | 'flex'
+
+export interface SymbioteConfig {
+  mcp_servers?: MCPServer[]
+  assistants?: Assistant[]
+  model_providers?: Provider[]
+  // Future extensibility
+  [key: string]: any
+}

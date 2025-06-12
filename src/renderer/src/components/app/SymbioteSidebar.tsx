@@ -1,4 +1,5 @@
 import { isMac } from '@renderer/config/constant'
+import { AppLogo } from '@renderer/config/env'
 import { useTheme } from '@renderer/context/ThemeProvider'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
@@ -6,21 +7,20 @@ import { useMinapps } from '@renderer/hooks/useMinapps'
 import useNavBackgroundColor from '@renderer/hooks/useNavBackgroundColor'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { ThemeMode } from '@renderer/types'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import {
+  CircleHelp,
   FileSearch,
   Folder,
   Languages,
   LayoutGrid,
   MessageSquareQuote,
-  MessageSquareDiff,
   Moon,
   Palette,
   Settings,
-  Sparkles,
+  Sparkle,
   Sun,
   SunMoon
 } from 'lucide-react'
@@ -35,8 +35,8 @@ import SymbioteUserPopup from '../Popups/SymbioteUserPopup'
 import SymbioteLogo from '@renderer/assets/images/symbiote_logo_greyscale_blackbg.png'
 
 const Sidebar: FC = () => {
-  const { hideMinappPopup } = useMinappPopup()
-  const { minappShow } = useRuntime()
+  const { hideMinappPopup, openMinapp } = useMinappPopup()
+  const { minappShow, currentMinappId } = useRuntime()
   const { sidebarIcons } = useSettings()
   const { pinned } = useMinapps()
 
@@ -57,6 +57,16 @@ const Sidebar: FC = () => {
     navigate(path)
   }
 
+  const docsId = 'cherrystudio-docs'
+  const onOpenDocs = () => {
+    openMinapp({
+      id: docsId,
+      name: t('docs.title'),
+      url: 'https://docs.cherry-ai.com/',
+      logo: AppLogo
+    })
+  }
+
   const isFullscreen = useFullscreen()
 
   return (
@@ -66,7 +76,10 @@ const Sidebar: FC = () => {
       style={{ backgroundColor, zIndex: minappShow ? 10000 : 'initial' }}>
       <LogoImg src={SymbioteLogo} draggable={false} className="nodrag" onClick={onEditUser} />
       <MainMenusContainer>
-        <MainMenus />
+        <Menus onClick={hideMinappPopup}>
+          <MainMenus />
+        </Menus>
+        <SidebarOpenedMinappTabs />
         {showPinnedApps && (
           <AppsContainer>
             <Divider />
@@ -76,8 +89,12 @@ const Sidebar: FC = () => {
           </AppsContainer>
         )}
       </MainMenusContainer>
-      <SidebarOpenedMinappTabs />
       <Menus>
+        <Tooltip title={t('docs.title')} mouseEnterDelay={0.8} placement="right">
+          <Icon theme={theme} onClick={onOpenDocs} className={minappShow && currentMinappId === docsId ? 'active' : ''}>
+            <CircleHelp size={20} className="icon" />
+          </Icon>
+        </Tooltip>
         <Tooltip
           title={t('settings.theme.title') + ': ' + t(`settings.theme.${settedTheme}`)}
           mouseEnterDelay={0.8}
@@ -122,10 +139,22 @@ const MainMenus: FC = () => {
 
   const iconMap = {
     assistants: <MessageSquareQuote size={18} className="icon" />,
+    agents: <Sparkle size={18} className="icon" />,
+    paintings: <Palette size={18} className="icon" />,
+    translate: <Languages size={18} className="icon" />,
+    minapp: <LayoutGrid size={18} className="icon" />,
+    knowledge: <FileSearch size={18} className="icon" />,
+    files: <Folder size={17} className="icon" />
   }
 
   const pathMap = {
     assistants: '/',
+    agents: '/agents',
+    paintings: `/paintings/${defaultPaintingProvider}`,
+    translate: '/translate',
+    minapp: '/apps',
+    knowledge: '/knowledge',
+    files: '/files'
   }
 
   return sidebarIcons.visible.map((icon) => {
@@ -440,25 +469,6 @@ const TabsWrapper = styled.div`
   background-color: rgba(128, 128, 128, 0.1);
   border-radius: 20px;
   overflow: hidden;
-`
-
-const SidebarIcon = styled.div`
-  -webkit-app-region: none;
-  border-radius: 8px;
-  height: 35px;
-  width: 35px;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease-in-out;
-  cursor: pointer;
-  color: var(--color-icon);
-
-  &:hover {
-    background-color: var(--color-background-mute);
-    color: var(--color-icon-white);
-  }
 `
 
 export default Sidebar

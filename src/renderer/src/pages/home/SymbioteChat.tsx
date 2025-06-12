@@ -13,7 +13,7 @@ import React, { FC, useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import styled from 'styled-components'
 
-import SymbioteInputbar from './Inputbar/SymbioteInputbar'
+import Inputbar from './Inputbar/Inputbar'
 import SymbioteMessages from './Messages/SymbioteMessages'
 import Tabs from './Tabs'
 
@@ -124,7 +124,7 @@ const SymbioteChat: FC<Props> = (props) => {
           onFirstUpdate={messagesComponentFirstUpdateHandler}
         />
         <QuickPanelProvider>
-          <SymbioteInputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
+          <Inputbar assistant={assistant} setActiveTopic={props.setActiveTopic} topic={props.activeTopic} />
           {isMultiSelectMode && <MultiSelectActionPopup topic={props.activeTopic} />}
         </QuickPanelProvider>
       </Main>

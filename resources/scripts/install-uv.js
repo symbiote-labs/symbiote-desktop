@@ -49,7 +49,7 @@ async function downloadUvBinary(platform, arch, version = DEFAULT_UV_VERSION, is
   }
 
   // Create output directory structure
-  const binDir = path.join(os.homedir(), '.cherrystudio', 'bin')
+  const binDir = path.join(os.homedir(), '.symbiote', 'bin')
   // Ensure directories exist
   fs.mkdirSync(binDir, { recursive: true })
 

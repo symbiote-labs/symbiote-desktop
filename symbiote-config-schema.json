@@ -1,0 +1,460 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Symbiote Configuration API Response",
+  "description": "Schema for the comprehensive Symbiote configuration endpoint response",
+  "type": "object",
+  "properties": {
+    "mcp_servers": {
+      "type": "array",
+      "description": "Array of MCP (Model Context Protocol) server configurations (extracted from assistant config)",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "isActive"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the MCP server"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the MCP server"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["stdio", "sse", "inMemory", "streamableHttp"],
+            "description": "Type of MCP server connection"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the server's functionality"
+          },
+          "baseUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Base URL for HTTP-based MCP servers"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to execute for stdio-based servers"
+          },
+          "registryUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Registry URL where the server is published"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Command line arguments for stdio servers"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables for the server"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the server is enabled/active"
+          },
+          "disabledTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of tool names that are disabled for this server"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom headers for HTTP requests to this server"
+          },
+          "searchKey": {
+            "type": "string",
+            "description": "Search key for discovery"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provider name (e.g., ModelScope, Higress, Symbiote)"
+          },
+          "providerUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the provider's website or documentation"
+          },
+          "logoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the server's logo"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of tags associated with this server"
+          },
+          "timeout": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Timeout in seconds for requests to this server (default: 60)"
+          }
+        }
+      }
+    },
+    "assistants": {
+      "type": "array",
+      "description": "Array of assistant configurations",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "prompt", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the assistant"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the assistant"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "System prompt for the assistant"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the assistant"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of assistant (e.g., 'assistant')"
+          },
+          "emoji": {
+            "type": "string",
+            "description": "Emoji icon for the assistant"
+          },
+          "topics": {
+            "type": "array",
+            "description": "Array of conversation topics",
+            "items": {
+              "type": "object",
+              "required": ["id", "assistantId", "name", "createdAt", "updatedAt", "messages"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "assistantId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "messages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                },
+                "pinned": {
+                  "type": "boolean"
+                },
+                "prompt": {
+                  "type": "string"
+                },
+                "isNameManuallyEdited": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "messages": {
+            "type": "array",
+            "description": "Default messages for the assistant",
+            "items": {
+              "type": "object",
+              "required": ["role", "content"],
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": ["user", "assistant"]
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "model": {
+            "$ref": "#/definitions/Model"
+          },
+          "defaultModel": {
+            "$ref": "#/definitions/Model"
+          },
+          "settings": {
+            "type": "object",
+            "description": "Assistant-specific settings",
+            "properties": {
+              "contextCount": {
+                "type": "number",
+                "minimum": 1
+              },
+              "temperature": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 2
+              },
+              "topP": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "maxTokens": {
+                "type": ["number", "null"],
+                "minimum": 1
+              },
+              "enableMaxTokens": {
+                "type": "boolean"
+              },
+              "streamOutput": {
+                "type": "boolean"
+              },
+              "hideMessages": {
+                "type": "boolean"
+              },
+              "reasoning_effort": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "auto"]
+              },
+              "qwenThinkMode": {
+                "type": "boolean"
+              },
+              "toolUseMode": {
+                "type": "string",
+                "enum": ["function", "prompt"]
+              }
+            }
+          },
+          "enableWebSearch": {
+            "type": "boolean",
+            "description": "Whether to enable web search functionality"
+          },
+          "webSearchProviderId": {
+            "type": "string",
+            "description": "ID of the web search provider to use"
+          },
+          "enableGenerateImage": {
+            "type": "boolean",
+            "description": "Whether to enable image generation"
+          },
+          "mcpServers": {
+            "type": "array",
+            "description": "MCP servers embedded in this assistant configuration",
+            "items": {
+              "$ref": "#/properties/mcp_servers/items"
+            }
+          },
+          "knowledgeRecognition": {
+            "type": "string",
+            "enum": ["off", "on"],
+            "description": "Knowledge base recognition setting"
+          },
+          "regularPhrases": {
+            "type": "array",
+            "description": "Quick phrases available for this assistant",
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "content", "createdAt", "updatedAt"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "number"
+                },
+                "order": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags associated with this assistant"
+          },
+          "group": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Group categories for agents"
+          },
+          "miniApps": {
+            "type": "array",
+            "description": "Mini applications available for this assistant",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "url"],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique identifier for the mini app"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name of the mini app"
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "URL to access the mini app"
+                },
+                "logo": {
+                  "type": "string",
+                  "description": "Logo identifier or name for the mini app"
+                },
+                "bordered": {
+                  "type": "boolean",
+                  "description": "Whether the mini app should have a bordered appearance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "model_providers": {
+      "type": "array",
+      "description": "Array of model provider configurations (optional - not included in current response)",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name", "apiKey", "apiHost", "models"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the provider"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["openai", "openai-response", "anthropic", "gemini", "qwenlm", "azure-openai", "symbiote-labs"],
+            "description": "Type of provider API"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the provider"
+          },
+          "apiKey": {
+            "type": "string",
+            "description": "API key for authentication"
+          },
+          "apiHost": {
+            "type": "string",
+            "format": "uri",
+            "description": "Base URL for the provider's API"
+          },
+          "apiVersion": {
+            "type": "string",
+            "description": "API version (e.g., for Azure OpenAI)"
+          },
+          "models": {
+            "type": "array",
+            "description": "Available models from this provider",
+            "items": {
+              "$ref": "#/definitions/Model"
+            }
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this provider is enabled"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "Whether this is a system-provided provider"
+          },
+          "isAuthed": {
+            "type": "boolean",
+            "description": "Whether the provider is authenticated"
+          },
+          "rateLimit": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Rate limit for requests to this provider"
+          },
+          "isNotSupportArrayContent": {
+            "type": "boolean",
+            "description": "Whether the provider supports array content"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Additional notes about the provider"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "Model": {
+      "type": "object",
+      "required": ["id", "provider", "name", "group"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the model"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Provider that offers this model"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the model"
+        },
+        "group": {
+          "type": "string",
+          "description": "Group/family the model belongs to"
+        },
+        "owned_by": {
+          "type": "string",
+          "description": "Organization that owns the model"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the model's capabilities"
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["text", "vision", "embedding", "reasoning", "function_calling", "web_search"]
+          },
+          "description": "Types of capabilities this model supports"
+        }
+      }
+    }
+  }
+}

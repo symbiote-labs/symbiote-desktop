@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 
@@ -30,8 +29,8 @@ import { EventEmitter } from 'events'
 import { memoize } from 'lodash'
 
 import { CacheService } from './CacheService'
+import { createAuthProvider, isJwtProvider, isOAuthProvider } from './mcp/auth/factory'
 import { CallBackServer } from './mcp/oauth/callback'
-import { McpOAuthClientProvider } from './mcp/oauth/provider'
 import getLoginShellEnvironment from './mcp/shell-env'
 
 // Generic type for caching wrapped functions
@@ -131,17 +130,13 @@ class McpService {
     const initPromise = (async () => {
       try {
         // Create new client instance for each connection
-        const client = new Client({ name: 'Cherry Studio', version: app.getVersion() }, { capabilities: {} })
+        const client = new Client({ name: 'Symbiote Desktop', version: app.getVersion() }, { capabilities: {} })
 
         const args = [...(server.args || [])]
 
         // let transport: StdioClientTransport | SSEClientTransport | InMemoryTransport | StreamableHTTPClientTransport
-        const authProvider = new McpOAuthClientProvider({
-          serverUrlHash: crypto
-            .createHash('md5')
-            .update(server.baseUrl || '')
-            .digest('hex')
-        })
+        // Create appropriate auth provider based on server configuration
+        const authProvider = createAuthProvider(server)
 
         const initTransport = async (): Promise<
           StdioClientTransport | SSEClientTransport | InMemoryTransport | StreamableHTTPClientTransport
@@ -167,7 +162,7 @@ class McpService {
                 requestInit: {
                   headers: server.headers || {}
                 },
-                authProvider
+                ...(isOAuthProvider(authProvider) && { authProvider })
               }
               return new StreamableHTTPClientTransport(new URL(server.baseUrl!), options)
             } else if (server.type === 'sse') {
@@ -194,7 +189,7 @@ class McpService {
                 requestInit: {
                   headers: server.headers || {}
                 },
-                authProvider
+                ...(isOAuthProvider(authProvider) && { authProvider })
               }
               return new SSEClientTransport(new URL(server.baseUrl!), options)
             } else {
@@ -268,14 +263,23 @@ class McpService {
         }
 
         const handleAuth = async (client: Client, transport: SSEClientTransport | StreamableHTTPClientTransport) => {
-          Logger.info(`[MCP] Starting OAuth flow for server: ${server.name}`)
-          // Create an event emitter for the OAuth callback
-          const events = new EventEmitter()
+          // Check if this is a JWT provider (no OAuth flow needed)
+          if (isJwtProvider(authProvider)) {
+            Logger.info(`[MCP] JWT authentication handled automatically: ${server.name}`)
+            return
+          }
 
-          // Create a callback server
+          // Handle OAuth flow for OAuth providers
+          if (isOAuthProvider(authProvider)) {
+            Logger.info(`[MCP] Starting OAuth flow for server: ${server.name}`)
+            // Create an event emitter for the OAuth callback
+            const events = new EventEmitter()
+
+          // Create a callback server (only for OAuth providers)
+          const oauthProvider = authProvider
           const callbackServer = new CallBackServer({
-            port: authProvider.config.callbackPort,
-            path: authProvider.config.callbackPath || '/oauth/callback',
+            port: oauthProvider.config.callbackPort,
+            path: oauthProvider.config.callbackPath || '/oauth/callback',
             events
           })
 
@@ -309,6 +313,10 @@ class McpService {
             // Clear the timeout and close the callback server
             clearTimeout(timeoutId)
             callbackServer.close()
+          }
+          } else {
+            Logger.warn(`[MCP] Unknown auth provider type for server: ${server.name}`)
+            throw new Error('Unsupported authentication provider type')
           }
         }
 
@@ -478,7 +486,7 @@ class McpService {
   }
 
   public async getInstallInfo() {
-    const dir = path.join(os.homedir(), '.cherrystudio', 'bin')
+    const dir = path.join(os.homedir(), '.symbiote', 'bin')
     const uvName = await getBinaryName('uv')
     const bunName = await getBinaryName('bun')
     const uvPath = path.join(dir, uvName)
@@ -647,7 +655,7 @@ class McpService {
     try {
       const loginEnv = await getLoginShellEnvironment()
       const pathSeparator = process.platform === 'win32' ? ';' : ':'
-      const cherryBinPath = path.join(os.homedir(), '.cherrystudio', 'bin')
+      const cherryBinPath = path.join(os.homedir(), '.symbiote', 'bin')
       loginEnv.PATH = `${loginEnv.PATH}${pathSeparator}${cherryBinPath}`
       Logger.info('[MCP] Successfully fetched login shell environment variables:')
       return loginEnv

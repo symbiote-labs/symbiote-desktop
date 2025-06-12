@@ -2,12 +2,12 @@ import { session, shell, webContents } from 'electron'
 
 /**
  * init the useragent of the webview session
- * remove the CherryStudio and Electron from the useragent
+ * remove the SymbioteDesktop and Electron from the useragent
  */
 export function initSessionUserAgent() {
   const wvSession = session.fromPartition('persist:webview')
   const originUA = wvSession.getUserAgent()
-  const newUA = originUA.replace(/CherryStudio\/\S+\s/, '').replace(/Electron\/\S+\s/, '')
+  const newUA = originUA.replace(/SymbioteDesktop\/\S+\s/, '').replace(/Electron\/\S+\s/, '')
 
   wvSession.setUserAgent(newUA)
 }

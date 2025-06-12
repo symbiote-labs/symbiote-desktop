@@ -1215,7 +1215,7 @@
           "box_id": "Siyuan Note Box ID",
           "box_id_placeholder": "Please enter Siyuan Note Box ID",
           "root_path": "Siyuan Note Root Path",
-          "root_path_placeholder": "e.g.: /CherryStudio",
+          "root_path_placeholder": "e.g.: /SymbioteDesktop",
           "check": {
             "title": "Connection Check",
             "button": "Check",
@@ -1999,7 +1999,7 @@
         },
         "filter_modal": {
           "title": "Application Filter List",
-          "user_tips": "Please enter the executable file name of the application, one per line, case insensitive, can be fuzzy matched. For example: chrome.exe, weixin.exe, Cherry Studio.exe, etc."
+          "user_tips": "Please enter the executable file name of the application, one per line, case insensitive, can be fuzzy matched. For example: chrome.exe, weixin.exe, Symbiote Desktop.exe, etc."
         }
       }
     }

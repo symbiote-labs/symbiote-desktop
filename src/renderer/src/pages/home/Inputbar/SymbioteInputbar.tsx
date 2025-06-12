@@ -1,12 +1,11 @@
 import { isVisionModel } from '@renderer/config/models'
-import { QuickPanelProvider, useQuickPanel } from '@renderer/components/QuickPanel'
+import { useQuickPanel } from '@renderer/components/QuickPanel'
 import db from '@renderer/databases'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessageOperations'
-import { useMessageStyle } from '@renderer/hooks/useSettings'
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
-import { useShortcut, useShortcutDisplay } from '@renderer/hooks/useShortcuts'
+import { useShortcutDisplay } from '@renderer/hooks/useShortcuts'
 import { addAssistantMessagesToTopic, getDefaultTopic } from '@renderer/services/AssistantService'
 import { EventEmitter } from '@renderer/services/EventService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
@@ -16,15 +15,15 @@ import { useAppDispatch } from '@renderer/store'
 import { sendMessage as sendMessageThunk } from '@renderer/store/thunk/messageThunk'
 import { Assistant, FileType, FileTypes, Topic } from '@renderer/types'
 import type { MessageInputBaseParams } from '@renderer/types/newMessage'
-import { classNames, delay, formatFileSize, getFileExtension } from '@renderer/utils'
+import { classNames, getFileExtension } from '@renderer/utils'
 import { getFilesFromDropEvent } from '@renderer/utils/input'
 import { documentExts, imageExts, textExts } from '@shared/config/constant'
-import { Button, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import TextArea, { TextAreaRef } from 'antd/es/input/TextArea'
 import dayjs from 'dayjs'
-import { debounce, isEmpty } from 'lodash'
+import { isEmpty } from 'lodash'
 import { CirclePause } from 'lucide-react'
-import React, { CSSProperties, FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -53,26 +52,21 @@ const SymbioteInputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, to
     fontSize,
     pasteLongTextAsFile,
     pasteLongTextThreshold,
-    showInputEstimatedTokens,
     enableBackspaceDeleteModel
   } = useSettings()
   const [expended, setExpend] = useState(false)
   const [estimateTokenCount, setEstimateTokenCount] = useState(0)
-  const [contextCount, setContextCount] = useState({ current: 0, max: 0 })
+  const [contextCount] = useState({ current: 0, max: 0 })
   const textareaRef = useRef<TextAreaRef>(null)
   const [files, setFiles] = useState<FileType[]>(_files)
   const { t } = useTranslation()
   const containerRef = useRef(null)
   const { searching } = useRuntime()
-  const { isBubbleStyle } = useMessageStyle()
   const { pauseMessages } = useMessageOperations(topic)
   const loading = useTopicLoading(topic)
   const dispatch = useAppDispatch()
-  const [isDragging, setIsDragging] = useState(false)
   const [isFileDragging, setIsFileDragging] = useState(false)
-  const [textareaHeight, setTextareaHeight] = useState<number>()
-  const startDragY = useRef<number>(0)
-  const startHeight = useRef<number>(0)
+  const [textareaHeight] = useState<number>()
   const currentMessageId = useRef<string>('')
   const isVision = useMemo(() => isVisionModel(model), [model])
   const supportExts = useMemo(() => [...textExts, ...documentExts, ...(isVision ? imageExts : [])], [isVision])
@@ -100,10 +94,6 @@ const SymbioteInputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, to
     })
     return totalTokens
   }, [files])
-
-  const isExpended = useMemo(() => {
-    return expended || files.length > 0
-  }, [expended, files.length])
 
   const addNewTopic = useCallback(async () => {
     await modelGenerating()

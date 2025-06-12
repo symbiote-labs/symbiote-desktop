@@ -1214,7 +1214,7 @@
           "box_id": "筆記本ID",
           "box_id_placeholder": "請輸入筆記本ID",
           "root_path": "文檔根路徑",
-          "root_path_placeholder": "例如：/CherryStudio",
+          "root_path_placeholder": "例如：/SymbioteDesktop",
           "check": {
             "title": "連接檢查",
             "button": "檢查",

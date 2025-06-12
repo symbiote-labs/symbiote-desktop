@@ -126,7 +126,7 @@ const ObsidianExportDialog: React.FC<ObsidianExportDialogProps> = ({
     title,
     tags: obsidianTags || '',
     createdAt: new Date().toISOString().split('T')[0],
-    source: 'Cherry Studio',
+    source: 'Symbiote Desktop',
     processingMethod: processingMethod,
     folder: ''
   })

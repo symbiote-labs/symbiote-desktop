@@ -1,7 +1,10 @@
-import React, { useState } from 'react'
 import { useAuth } from '@renderer/context/AuthProvider'
-import { Input, Button, Checkbox, Alert } from 'antd'
-import { AtSign, KeyRound } from 'lucide-react'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { setSymbioteBaseUrl } from '@renderer/store/settings'
+import { Alert, Button, Checkbox, Input, Space } from 'antd'
+import { message } from 'antd'
+import { AtSign, KeyRound, Link } from 'lucide-react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
 
 interface LoginProps {
@@ -17,25 +20,31 @@ interface FormData {
 
 const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
   const { login } = useAuth()
+  const dispatch = useAppDispatch()
+  const symbioteBaseUrl = useAppSelector((state) => state.settings.symbioteBaseUrl)
+
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
     remember: false
   })
   const [errors, setErrors] = useState<Partial<FormData>>({})
-  const [message, setMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showBaseUrlConfig, setShowBaseUrlConfig] = useState(false)
+  const [localBaseUrl, setLocalBaseUrl] = useState(symbioteBaseUrl)
+  const [isSavingBaseUrl, setIsSavingBaseUrl] = useState(false)
 
   const handleChange = (field: keyof FormData) => (e: any) => {
     const value = field === 'remember' ? e.target.checked : e.target.value
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value
     }))
 
     // Clear field-specific error when user types
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
         [field]: undefined
       }))
@@ -59,6 +68,30 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
     return Object.keys(newErrors).length === 0
   }
 
+  const handleSaveBaseUrl = async () => {
+    if (!localBaseUrl) {
+      message.error('Base URL is required')
+      return
+    }
+
+    setIsSavingBaseUrl(true)
+    try {
+      dispatch(setSymbioteBaseUrl(localBaseUrl))
+      message.success('Base URL updated successfully! You can now try logging in again.')
+      setShowBaseUrlConfig(false)
+    } catch (error) {
+      console.error('Failed to save base URL:', error)
+      message.error('Failed to save base URL')
+    } finally {
+      setIsSavingBaseUrl(false)
+    }
+  }
+
+  const handleCancelBaseUrlConfig = () => {
+    setLocalBaseUrl(symbioteBaseUrl)
+    setShowBaseUrlConfig(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -67,19 +100,22 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
     }
 
     setIsLoading(true)
-    setMessage('')
+    setErrorMessage('')
 
     try {
       const result = await login(formData.email, formData.password, formData.remember)
 
       if (result.success) {
-        setMessage('')
+        setErrorMessage('')
+        setShowBaseUrlConfig(false) // Hide base URL config on successful login
         onSuccess?.()
       } else {
-        setMessage(result.error || 'Login failed')
+        setErrorMessage(result.error || 'Login failed')
+        // Show base URL configuration option after login failure
+        setShowBaseUrlConfig(true)
       }
     } catch (error) {
-      setMessage('An error occurred. Please try again later.')
+      setErrorMessage('An error occurred. Please try again later.')
     } finally {
       setIsLoading(false)
     }
@@ -89,14 +125,7 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
     <Container>
       <Title>Sign In to Symbiote Labs</Title>
 
-      {message && (
-        <Alert
-          message={message}
-          type="error"
-          showIcon
-          style={{ marginBottom: '16px' }}
-        />
-      )}
+      {errorMessage && <Alert message={errorMessage} type="error" showIcon style={{ marginBottom: '16px' }} />}
 
       <FormContainer onSubmit={handleSubmit}>
         <FormItem>
@@ -132,29 +161,51 @@ const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onSuccess }) => {
         </FormItem>
 
         <FormItem>
-          <Checkbox
-            checked={formData.remember}
-            onChange={handleChange('remember')}
-          >
+          <Checkbox checked={formData.remember} onChange={handleChange('remember')}>
             Remember me
           </Checkbox>
         </FormItem>
 
-        <SubmitButton
-          type="primary"
-          htmlType="submit"
-          loading={isLoading}
-          block
-        >
+        <SubmitButton type="primary" htmlType="submit" loading={isLoading} block>
           {isLoading ? 'Signing In...' : 'Sign In'}
         </SubmitButton>
       </FormContainer>
 
+      {showBaseUrlConfig && (
+        <BaseUrlConfigContainer>
+          <Alert
+            message="Connection Issues?"
+            description="If you're having trouble signing in, you may need to update the server URL. The current server URL might be incorrect or unreachable."
+            type="info"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
+          <BaseUrlConfigForm>
+            <FormItem>
+              <Label htmlFor="baseUrl">Server URL</Label>
+              <InputContainer>
+                <StyledInput
+                  id="baseUrl"
+                  type="url"
+                  placeholder="https://use.symbiotelabs.ai"
+                  value={localBaseUrl}
+                  onChange={(e) => setLocalBaseUrl(e.target.value)}
+                />
+                <Link className="input-icon" />
+              </InputContainer>
+            </FormItem>
+            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Button onClick={handleCancelBaseUrlConfig}>Cancel</Button>
+              <Button type="primary" onClick={handleSaveBaseUrl} loading={isSavingBaseUrl}>
+                Save URL
+              </Button>
+            </Space>
+          </BaseUrlConfigForm>
+        </BaseUrlConfigContainer>
+      )}
+
       <FooterText>
-        Don't have an account?{' '}
-        <LinkText onClick={onSwitchToRegister}>
-          Create an account
-        </LinkText>
+        Don't have an account? <LinkText onClick={onSwitchToRegister}>Create an account</LinkText>
       </FooterText>
     </Container>
   )
@@ -244,6 +295,20 @@ const LinkText = styled.span`
   &:hover {
     text-decoration: underline;
   }
+`
+
+const BaseUrlConfigContainer = styled.div`
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+`
+
+const BaseUrlConfigForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 `
 
 export default Login
