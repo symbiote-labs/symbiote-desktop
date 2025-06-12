@@ -1,6 +1,6 @@
 {
   "name": "SymbioteDesktop",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "private": true,
   "description": "A powerful AI assistant for creatives.",
   "main": "./out/main/index.js",
