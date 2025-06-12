@@ -6,7 +6,7 @@ import { useMessageOperations, useTopicLoading } from '@renderer/hooks/useMessag
 import { modelGenerating, useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import { useShortcutDisplay } from '@renderer/hooks/useShortcuts'
-import { addAssistantMessagesToTopic, getDefaultTopic } from '@renderer/services/AssistantService'
+import { getDefaultTopic } from '@renderer/services/AssistantService'
 import { EventEmitter } from '@renderer/services/EventService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
 import { getUserMessage } from '@renderer/services/MessagesService'
@@ -101,7 +101,6 @@ const SymbioteInputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, to
     const newTopic = getDefaultTopic(assistant.id)
 
     await db.topics.add({ id: newTopic.id, messages: [] })
-    await addAssistantMessagesToTopic({ assistant, topic: newTopic })
 
     addTopic(newTopic)
     setActiveTopic(newTopic)

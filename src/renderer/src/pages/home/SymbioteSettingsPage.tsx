@@ -14,7 +14,7 @@ import {
   setSymbioteConfigSections
 } from '@renderer/store/settings'
 import { MCPServer } from '@renderer/types'
-import { loadCustomMiniApp, ORIGIN_DEFAULT_MIN_APPS, updateDefaultMinApps } from '@renderer/config/minapps'
+import { loadCustomMiniApp, updateDefaultMinApps } from '@renderer/config/minapps'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
 import { Alert, Badge, Button, Input, message, Modal, Space, Typography } from 'antd'
 import { Bot, CheckCircle, Clock, Copy, Eye, Link, Settings2, User, Wifi, WifiOff, XCircle } from 'lucide-react'

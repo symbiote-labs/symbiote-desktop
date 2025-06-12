@@ -64,6 +64,7 @@ export type AssistantSettings = {
   reasoning_effort?: ReasoningEffortOptions
   qwenThinkMode?: boolean
   toolUseMode?: 'function' | 'prompt'
+  hideMessages?: boolean
 }
 
 export type Agent = Omit<Assistant, 'model'> & {

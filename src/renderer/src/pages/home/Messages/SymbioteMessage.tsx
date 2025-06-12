@@ -120,7 +120,7 @@ const SymbioteMessageItem: FC<Props> = ({
     return () => unsubscribes.forEach((unsub) => unsub())
   }, [message.id, messageHighlightHandler])
 
-  if (hidePresetMessages && message.isPreset) {
+  if (hidePresetMessages) {
     return null
   }
 
