@@ -1,6 +1,8 @@
 import { CheckOutlined, ExpandOutlined, LoadingOutlined, WarningOutlined } from '@ant-design/icons'
+import MCPToolProgressDisplay from '@renderer/components/MCPToolProgressDisplay'
 import { useCodeStyle } from '@renderer/context/CodeStyleProvider'
 import { useSettings } from '@renderer/hooks/useSettings'
+import type { MCPToolProgressChunk } from '@renderer/types/chunk'
 import type { ToolMessageBlock } from '@renderer/types/newMessage'
 import { Collapse, message as antdMessage, Modal, Tabs, Tooltip } from 'antd'
 import { FC, memo, useEffect, useMemo, useState } from 'react'
@@ -15,10 +17,41 @@ const MessageTools: FC<Props> = ({ blocks }) => {
   const [activeKeys, setActiveKeys] = useState<string[]>([])
   const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({})
   const [expandedResponse, setExpandedResponse] = useState<{ content: string; title: string } | null>(null)
+  const [userInteracted, setUserInteracted] = useState<Record<string, boolean>>({})
   const { t } = useTranslation()
   const { messageFont, fontSize } = useSettings()
 
   const toolResponse = blocks.metadata?.rawMcpToolResponse
+  const progressChunks = (blocks.metadata?.progressChunks as MCPToolProgressChunk[]) || []
+
+  // Auto-expand/collapse based on progress and completion status
+  useEffect(() => {
+    if (!toolResponse) return
+
+    const toolId = toolResponse.id
+    const isInvoking = toolResponse.status === 'invoking'
+    const isDone = toolResponse.status === 'done'
+
+    // Auto-expand when tool starts invoking
+    if (isInvoking && !activeKeys.includes(toolId)) {
+      console.log(`[MessageTools] Auto-expanding tool ${toolId} due to invoking status`)
+      setActiveKeys((prev) => [...prev, toolId])
+    }
+
+    // Auto-collapse after tool completes (with a small delay to let user see completion)
+    // Only auto-collapse if user hasn't manually interacted with this tool
+    if (isDone && activeKeys.includes(toolId) && !userInteracted[toolId]) {
+      console.log(`[MessageTools] Auto-collapsing tool ${toolId} after completion`)
+      const timeoutId = setTimeout(() => {
+        setActiveKeys((prev) => prev.filter((key) => key !== toolId))
+      }, 2000) // 2 second delay to show completion status
+
+      return () => clearTimeout(timeoutId)
+    }
+
+    // Return cleanup function for all cases
+    return undefined
+  }, [toolResponse?.status, progressChunks.length, toolResponse?.id, activeKeys, userInteracted])
 
   const resultString = useMemo(() => {
     try {
@@ -47,7 +80,13 @@ const MessageTools: FC<Props> = ({ blocks }) => {
   }
 
   const handleCollapseChange = (keys: string | string[]) => {
-    setActiveKeys(Array.isArray(keys) ? keys : [keys])
+    const newKeys = Array.isArray(keys) ? keys : [keys]
+    setActiveKeys(newKeys)
+
+    // Mark tool as user-interacted when user manually changes collapse state
+    if (toolResponse?.id) {
+      setUserInteracted((prev) => ({ ...prev, [toolResponse.id]: true }))
+    }
   }
 
   // Format tool responses for collapse items
@@ -113,7 +152,16 @@ const MessageTools: FC<Props> = ({ blocks }) => {
           </ActionButtonsContainer>
         </MessageTitleLabel>
       ),
-      children: isDone && result && (
+      children: isInvoking ? (
+        progressChunks.length > 0 ? (
+          <MCPToolProgressDisplay toolName={tool.name} toolId={id} progressChunks={progressChunks} />
+        ) : (
+          <div style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-2)' }}>
+            <LoadingOutlined spin style={{ marginRight: 8 }} />
+            {t('message.tools.invoking')}...
+          </div>
+        )
+      ) : isDone && result ? (
         <ToolResponseContainer
           style={{
             fontFamily: messageFont === 'serif' ? 'var(--font-family-serif)' : 'var(--font-family)',
@@ -121,7 +169,7 @@ const MessageTools: FC<Props> = ({ blocks }) => {
           }}>
           <CollapsedContent isExpanded={activeKeys.includes(id)} resultString={resultString} />
         </ToolResponseContainer>
-      )
+      ) : null
     })
 
     return items
