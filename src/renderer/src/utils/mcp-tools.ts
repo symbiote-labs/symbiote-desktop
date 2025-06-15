@@ -471,7 +471,7 @@ export async function parseAndCallTools<R>(
     )
   }
 
-  const toolPromises = curToolResponses.map(async (toolResponse) => {
+  for (const toolResponse of curToolResponses) {
     const images: string[] = []
 
     // Create progress handler for this tool call
@@ -479,7 +479,9 @@ export async function parseAndCallTools<R>(
       onChunk?.(progressChunk)
     }
 
+    // Execute tool call sequentially to preserve order
     const toolCallResponse = await callMCPTool(toolResponse, progressHandler)
+
     upsertMCPToolResponse(
       allToolResponses,
       {
@@ -509,10 +511,12 @@ export async function parseAndCallTools<R>(
       })
     }
 
-    return convertToMessage(toolResponse, toolCallResponse, model)
-  })
+    const message = convertToMessage(toolResponse, toolCallResponse, model)
+    if (message) {
+      toolResults.push(message)
+    }
+  }
 
-  toolResults.push(...(await Promise.all(toolPromises)).filter((t) => typeof t !== 'undefined'))
   return toolResults
 }
 
