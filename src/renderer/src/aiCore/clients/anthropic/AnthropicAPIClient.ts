@@ -319,8 +319,23 @@ export class AnthropicAPIClient extends BaseApiClient<
     }
 
     const newMessages: AnthropicSdkMessageParam[] = [...currentReqMessages, assistantMessage]
+
     if (toolResults && toolResults.length > 0) {
-      newMessages.push(...toolResults)
+      if (toolResults.length === 1) {
+        newMessages.push(toolResults[0])
+      } else {
+        // Combine multiple tool_result blocks into a single user message
+        const combinedContent: ContentBlockParam[] = []
+        for (const tr of toolResults) {
+          if (Array.isArray(tr.content)) {
+            combinedContent.push(...(tr.content as ContentBlockParam[]))
+          }
+        }
+        newMessages.push({
+          role: 'user',
+          content: combinedContent
+        } as AnthropicSdkMessageParam)
+      }
     }
     return newMessages
   }
