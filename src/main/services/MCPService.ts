@@ -520,17 +520,24 @@ class McpService {
             // Forward progress to renderer only if toolCallId is provided and we have a main window
             if (toolCallId && mainWindow && !mainWindow.isDestroyed()) {
               try {
-                mainWindow.webContents.send('mcp:tool-call-progress', {
+                const progressData = {
                   type: 'mcp_tool_progress',
                   toolCallId,
                   progressToken: progress.progressToken || '',
                   progress: progress.progress || 0,
                   total: progress.total,
                   message: progress.message
-                })
+                }
+                Logger.info(`[MCP] 🚀 SENDING progress to renderer for ${name}:`, progressData)
+                mainWindow.webContents.send('mcp:tool-call-progress', progressData)
+                Logger.info(`[MCP] ✅ Progress event sent successfully for ${name}`)
               } catch (error) {
-                Logger.error(`[MCP] Failed to send progress update:`, error)
+                Logger.error(`[MCP] ❌ Failed to send progress update:`, error)
               }
+            } else {
+              Logger.info(
+                `[MCP] 🔍 Progress NOT forwarded - toolCallId: ${toolCallId}, hasMainWindow: ${!!mainWindow}, isDestroyed: ${mainWindow?.isDestroyed()}`
+              )
             }
           }
         }
@@ -553,16 +560,17 @@ class McpService {
   }
 
   /**
-   * Call a tool on an MCP server
+   * Call a tool on an MCP server with optional progress forwarding
    */
   public async callTool(
     _: Electron.IpcMainInvokeEvent,
-    { server, name, args }: { server: MCPServer; name: string; args: any }
+    { server, name, args, toolCallId }: { server: MCPServer; name: string; args: any; toolCallId?: string }
   ): Promise<MCPCallToolResponse> {
-    return this.callToolInternal(server, name, args)
+    return this.callToolInternal(server, name, args, toolCallId)
   }
 
   /**
+   * @deprecated Use callTool with toolCallId parameter instead
    * Call a tool on an MCP server with progress forwarding
    */
   public async callToolWithProgress(

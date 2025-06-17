@@ -10,9 +10,10 @@ interface Props {
   toolName: string
   toolId: string
   progressChunks: MCPToolProgressChunk[]
+  isPreparingTool?: boolean // New prop to indicate tool preparation phase
 }
 
-const MCPToolProgressDisplay: FC<Props> = ({ toolName, progressChunks }) => {
+const MCPToolProgressDisplay: FC<Props> = ({ toolName, progressChunks, isPreparingTool = false }) => {
   const { t } = useTranslation()
   const { messageFont } = useSettings()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -22,6 +23,14 @@ const MCPToolProgressDisplay: FC<Props> = ({ toolName, progressChunks }) => {
   const progressPercent = latestProgress?.total
     ? Math.round((latestProgress.progress / latestProgress.total) * 100)
     : undefined
+
+  // Debug logging for component updates
+  useEffect(() => {
+    console.log('[MCPToolProgressDisplay] 🎯 Component rendered for tool:', toolName)
+    console.log('[MCPToolProgressDisplay] 📊 Progress chunks count:', progressChunks.length)
+    console.log('[MCPToolProgressDisplay] 📈 Latest progress:', latestProgress)
+    console.log('[MCPToolProgressDisplay] 📏 Progress percent:', progressPercent)
+  }, [toolName, progressChunks.length, latestProgress, progressPercent])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -33,7 +42,7 @@ const MCPToolProgressDisplay: FC<Props> = ({ toolName, progressChunks }) => {
       <ProgressHeader>
         <ToolName>{toolName}</ToolName>
         <StatusIndicator>
-          {t('message.tools.invoking')}
+          {isPreparingTool ? t('message.tools.preparing') : t('message.tools.invoking')}
           <LoadingOutlined spin style={{ marginLeft: 6 }} />
         </StatusIndicator>
       </ProgressHeader>

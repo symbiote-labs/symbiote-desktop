@@ -41,13 +41,13 @@ const setupProgressListener = () => {
   progressListenerSetup = true
 
   window.api.mcp.onToolProgress((progressData: any) => {
-    console.log('[RENDERER] Received tool progress data:', progressData)
+    console.log('[RENDERER] 📨 RECEIVED tool progress data:', progressData)
     const { toolCallId, ...progress } = progressData
-    console.log('[RENDERER] Tool call ID:', toolCallId, 'Progress:', progress)
-    console.log('[RENDERER] Active progress handlers:', Array.from(toolProgressHandlers.keys()))
+    console.log('[RENDERER] 🔍 Tool call ID:', toolCallId, 'Progress:', progress)
+    console.log('[RENDERER] 📋 Active progress handlers:', Array.from(toolProgressHandlers.keys()))
 
     if (toolProgressHandlers.has(toolCallId)) {
-      console.log('[RENDERER] Found progress handler for tool call:', toolCallId)
+      console.log('[RENDERER] ✅ Found progress handler for tool call:', toolCallId)
       const handler = toolProgressHandlers.get(toolCallId)!
       const chunk: MCPToolProgressChunk = {
         type: ChunkType.MCP_TOOL_PROGRESS,
@@ -57,10 +57,12 @@ const setupProgressListener = () => {
         total: progress.total,
         message: progress.message
       }
-      console.log('[RENDERER] Calling progress handler with chunk:', chunk)
+      console.log('[RENDERER] 🚀 Calling progress handler with chunk:', chunk)
       handler(chunk)
+      console.log('[RENDERER] ✅ Progress handler called successfully')
     } else {
-      console.warn('[RENDERER] No progress handler found for tool call:', toolCallId)
+      console.warn('[RENDERER] ❌ No progress handler found for tool call:', toolCallId)
+      console.warn('[RENDERER] 📋 Available handlers:', Array.from(toolProgressHandlers.keys()))
     }
   })
 }
@@ -179,32 +181,25 @@ export async function callMCPTool(
 
     // Set up progress listener for this tool call if onChunk is provided
     if (onChunk) {
-      console.log('[RENDERER] Setting up progress handler for tool call:', toolCallId)
+      console.log('[RENDERER] 🔧 Setting up progress handler for tool call:', toolCallId)
       setupProgressListener()
       toolProgressHandlers.set(toolCallId, onChunk)
-      console.log('[RENDERER] Progress handlers after adding:', Array.from(toolProgressHandlers.keys()))
+      console.log('[RENDERER] ✅ Progress handler registered successfully')
+      console.log('[RENDERER] 📋 Progress handlers after adding:', Array.from(toolProgressHandlers.keys()))
     } else {
-      console.log('[RENDERER] No onChunk callback provided for tool call:', toolCallId)
+      console.log('[RENDERER] ⚠️ No onChunk callback provided for tool call:', toolCallId)
     }
 
     let resp: MCPCallToolResponse
 
     try {
-      // Use streaming API if we have progress handler, otherwise use regular API
-      if (onChunk) {
-        resp = await window.api.mcp.callToolWithProgress({
-          server,
-          name: toolResponse.tool.name,
-          args: toolResponse.arguments,
-          toolCallId
-        })
-      } else {
-        resp = await window.api.mcp.callTool({
-          server,
-          name: toolResponse.tool.name,
-          args: toolResponse.arguments
-        })
-      }
+      // Always use the unified callTool API with optional progress tracking
+      resp = await window.api.mcp.callTool({
+        server,
+        name: toolResponse.tool.name,
+        args: toolResponse.arguments,
+        toolCallId
+      })
     } finally {
       // Clean up progress handler
       if (onChunk) {
@@ -471,7 +466,9 @@ export async function parseAndCallTools<R>(
     )
   }
 
-  for (const toolResponse of curToolResponses) {
+  // Execute all tools in parallel for better Anthropic compatibility
+  // Anthropic expects all tool_result blocks to be available in the next message
+  const toolPromises = curToolResponses.map(async (toolResponse) => {
     const images: string[] = []
 
     // Create progress handler for this tool call
@@ -479,7 +476,7 @@ export async function parseAndCallTools<R>(
       onChunk?.(progressChunk)
     }
 
-    // Execute tool call sequentially to preserve order
+    // Execute tool call with progress tracking
     const toolCallResponse = await callMCPTool(toolResponse, progressHandler)
 
     upsertMCPToolResponse(
@@ -512,8 +509,16 @@ export async function parseAndCallTools<R>(
     }
 
     const message = convertToMessage(toolResponse, toolCallResponse, model)
-    if (message) {
-      toolResults.push(message)
+    return { toolResponse, toolCallResponse, message }
+  })
+
+  // Wait for all tools to complete and collect results
+  const toolExecutionResults = await Promise.all(toolPromises)
+
+  // Add all messages to results in the original order
+  for (const result of toolExecutionResults) {
+    if (result.message) {
+      toolResults.push(result.message)
     }
   }
 
