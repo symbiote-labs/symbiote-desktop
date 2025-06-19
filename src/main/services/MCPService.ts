@@ -486,7 +486,9 @@ class McpService {
     try {
       Logger.info(`[MCP] Calling tool: ${name} on server: ${server.name}`)
       Logger.info(`[MCP] Tool args:`, typeof args === 'object' ? JSON.stringify(args, null, 2) : args)
-      Logger.info(`[MCP] Server timeout setting: ${server.timeout ? server.timeout * 1000 : 60000}ms`)
+      Logger.info(
+        `[MCP] Using progress-aware timeout: ${server.timeout ? server.timeout * 1000 : 300000}ms (resets on progress)`
+      )
 
       if (typeof args === 'string') {
         try {
@@ -502,46 +504,99 @@ class McpService {
       // Get the main window for sending progress updates if toolCallId is provided
       const mainWindow = toolCallId ? windowService.getMainWindow() : null
 
-      // Always use client.request with progress tracking enabled
-      const result = await client.request(
-        {
-          method: 'tools/call',
-          params: {
-            name,
-            arguments: args
-          }
-        },
-        z.any(), // Accept any valid MCP response
-        {
-          timeout: server.timeout ? server.timeout * 1000 : 60000, // Use server timeout or default
-          onprogress: (progress) => {
-            Logger.debug(`[MCP] Progress update for ${name} on ${server.name}:`, progress)
+      // Implement progress-aware timeout to work around MCP SDK bug
+      // The MCP SDK doesn't reset timeout on progress, so we implement our own timeout management
+      const baseTimeout = server.timeout ? server.timeout * 1000 : 300000 // 5 minutes default
+      let timeoutId: NodeJS.Timeout | null = null
+      let isCompleted = false
 
-            // Forward progress to renderer only if toolCallId is provided and we have a main window
-            if (toolCallId && mainWindow && !mainWindow.isDestroyed()) {
-              try {
-                const progressData = {
-                  type: 'mcp_tool_progress',
-                  toolCallId,
-                  progressToken: progress.progressToken || '',
-                  progress: progress.progress || 0,
-                  total: progress.total,
-                  message: progress.message
-                }
-                Logger.info(`[MCP] 🚀 SENDING progress to renderer for ${name}:`, progressData)
-                mainWindow.webContents.send('mcp:tool-call-progress', progressData)
-                Logger.info(`[MCP] ✅ Progress event sent successfully for ${name}`)
-              } catch (error) {
-                Logger.error(`[MCP] ❌ Failed to send progress update:`, error)
+      const createProgressAwareRequest = (): Promise<any> => {
+        return new Promise((resolve, reject) => {
+          // Set up our own timeout that gets reset on progress
+          const resetTimeout = () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            if (isCompleted) return
+
+            timeoutId = setTimeout(() => {
+              if (!isCompleted) {
+                isCompleted = true
+                const timeoutError = new Error(`MCP request timeout after ${baseTimeout}ms with no progress updates`)
+                timeoutError.name = 'McpTimeoutError'
+                reject(timeoutError)
               }
-            } else {
-              Logger.info(
-                `[MCP] 🔍 Progress NOT forwarded - toolCallId: ${toolCallId}, hasMainWindow: ${!!mainWindow}, isDestroyed: ${mainWindow?.isDestroyed()}`
-              )
-            }
+            }, baseTimeout)
           }
-        }
-      )
+
+          // Start initial timeout
+          resetTimeout()
+
+          // Make the actual MCP request
+          client
+            .request(
+              {
+                method: 'tools/call',
+                params: {
+                  name,
+                  arguments: args
+                }
+              },
+              z.any(),
+              {
+                timeout: baseTimeout * 2, // Set SDK timeout higher than our custom timeout
+                onprogress: (progress) => {
+                  if (isCompleted) return
+
+                  Logger.debug(`[MCP] Progress update for ${name} on ${server.name}:`, progress)
+                  Logger.info(
+                    `[MCP] ⏰ Resetting timeout for ${name} due to progress update (${progress.progress || 0}${progress.total ? `/${progress.total}` : ''})`
+                  )
+
+                  // Reset our custom timeout on each progress update
+                  resetTimeout()
+
+                  // Forward progress to renderer only if toolCallId is provided and we have a main window
+                  if (toolCallId && mainWindow && !mainWindow.isDestroyed()) {
+                    try {
+                      const progressData = {
+                        type: 'mcp_tool_progress',
+                        toolCallId,
+                        progressToken: progress.progressToken || '',
+                        progress: progress.progress || 0,
+                        total: progress.total,
+                        message: progress.message
+                      }
+                      Logger.info(`[MCP] 🚀 SENDING progress to renderer for ${name}:`, progressData)
+                      mainWindow.webContents.send('mcp:tool-call-progress', progressData)
+                      Logger.info(`[MCP] ✅ Progress event sent successfully for ${name}`)
+                    } catch (error) {
+                      Logger.error(`[MCP] ❌ Failed to send progress update:`, error)
+                    }
+                  } else {
+                    Logger.info(
+                      `[MCP] 🔍 Progress NOT forwarded - toolCallId: ${toolCallId}, hasMainWindow: ${!!mainWindow}, isDestroyed: ${mainWindow?.isDestroyed()}`
+                    )
+                  }
+                }
+              }
+            )
+            .then((result) => {
+              if (!isCompleted) {
+                isCompleted = true
+                if (timeoutId) clearTimeout(timeoutId)
+                resolve(result)
+              }
+            })
+            .catch((error) => {
+              if (!isCompleted) {
+                isCompleted = true
+                if (timeoutId) clearTimeout(timeoutId)
+                reject(error)
+              }
+            })
+        })
+      }
+
+      const result = await createProgressAwareRequest()
 
       const duration = Date.now() - startTime
       Logger.info(`[MCP] Tool call completed successfully in ${duration}ms for ${name} on ${server.name}`)
