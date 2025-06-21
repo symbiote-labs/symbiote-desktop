@@ -24,6 +24,9 @@ import { setUserDataDir } from './utils/file'
 
 Logger.initialize()
 
+// Configure IPC transport to forward main process logs to renderer DevTools
+Logger.transports.ipc.level = 'info'
+
 /**
  * Disable chromium's window animations
  * main purpose for this is to avoid the transparent window flashing when it is shown
