@@ -6,7 +6,7 @@ import { selectSymbioteAssistant } from '@renderer/store/assistants'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { Assistant } from '@renderer/types'
-import { FC, useEffect, useState, useMemo } from 'react'
+import { FC, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 

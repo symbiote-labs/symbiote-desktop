@@ -11,12 +11,13 @@ import {
   setLastSymbioteConfigFetch,
   setSymbioteBaseUrl,
   setSymbioteConfigErrors,
-  setSymbioteConfigSections
+  setSymbioteConfigSections,
+  setSymbioteAutoRefreshEnabled
 } from '@renderer/store/settings'
 import { MCPServer } from '@renderer/types'
 import { loadCustomMiniApp, updateDefaultMinApps } from '@renderer/config/minapps'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
-import { Alert, Badge, Button, Input, message, Modal, Space, Typography } from 'antd'
+import { Alert, Badge, Button, Input, message, Modal, Space, Switch, Typography } from 'antd'
 import { Bot, CheckCircle, Clock, Copy, Eye, Link, Settings2, User, Wifi, WifiOff, XCircle } from 'lucide-react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
@@ -39,7 +40,8 @@ const SymbioteSettings: React.FC = () => {
     lastSymbioteConfigUpdate,
     lastSymbioteConfigFetch,
     symbioteConfigSections = [],
-    symbioteConfigErrors = {}
+    symbioteConfigErrors = {},
+    symbioteAutoRefreshEnabled
   } = useAppSelector((state) => state.settings)
 
   // Get agent and assistant from store
@@ -489,6 +491,20 @@ const SymbioteSettings: React.FC = () => {
           <SettingDivider />
 
           <SettingRow>
+            <SettingRowTitle>Auto-Refresh Configuration</SettingRowTitle>
+            <Space align="center">
+              <Switch
+                checked={symbioteAutoRefreshEnabled}
+                onChange={(checked) => dispatch(setSymbioteAutoRefreshEnabled(checked))}
+                disabled={!isAuthenticated}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {symbioteAutoRefreshEnabled ? 'Enabled (every 15 minutes)' : 'Disabled'}
+              </Text>
+            </Space>
+          </SettingRow>
+
+          <SettingRow>
             <SettingRowTitle>Fetch Updated Config</SettingRowTitle>
             <Button type="primary" onClick={handleFetchConfig} loading={isFetchingConfig} disabled={!isAuthenticated}>
               Fetch Symbiote Assistant Config
@@ -538,6 +554,11 @@ const SymbioteSettings: React.FC = () => {
                 <strong>Comprehensive Config:</strong> Fetches a complete assistant configuration from your Symbiote
                 Labs server, including embedded MCP servers and settings. This supplements the basic agent
                 auto-configuration with a full-featured assistant.
+              </Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                <strong>Auto-Refresh:</strong> When enabled, the configuration will be automatically updated every 15 minutes
+                while you're authenticated. You can disable this and use the manual "Fetch Config" button instead.
               </Text>
             </div>
           </SettingRow>

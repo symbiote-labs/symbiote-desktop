@@ -9,7 +9,7 @@ import { useShowTopics } from '@renderer/hooks/useStore'
 import { Assistant, Topic } from '@renderer/types'
 import { Flex } from 'antd'
 import { debounce } from 'lodash'
-import React, { FC, useMemo, useState } from 'react'
+import React, { FC, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import styled from 'styled-components'
 
@@ -26,7 +26,7 @@ interface Props {
 
 const SymbioteChat: FC<Props> = (props) => {
   const { assistant } = useAssistant(props.assistant.id)
-  const { topicPosition, messageStyle, showAssistants } = useSettings()
+  const { topicPosition, messageStyle } = useSettings()
   const { showTopics } = useShowTopics()
   const { isMultiSelectMode } = useChatContext(props.activeTopic)
 
