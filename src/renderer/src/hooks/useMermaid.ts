@@ -46,9 +46,32 @@ export const useMermaid = () => {
 
         if (!mounted) return
 
+        // Custom theme variables to override the yellow colors
+        const customThemeVariables = {
+          primaryColor: '#799CE5',        // Lighter blue (40% lighter than #3B78D7)
+          primaryBorderColor: '#3B78D7',  // Original blue for borders
+          primaryTextColor: '#000000',    // Black text for contrast
+          noteBkgColor: '#B7C0F3',       // Very light blue (80% lighter) for notes
+          noteBorderColor: '#5A8ADE',     // Medium light blue for note borders
+          tertiaryColor: '#E8F2FF',      // Very light blue for cluster backgrounds
+          secondaryColor: '#F68e32',     // Light orange (80% lighter than #E67E22)
+          secondaryBorderColor: '#E67E22', // Original orange for secondary borders
+          fontSize: '16px',              // Larger font size
+          fontWeight: 'bold',
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        }
+
         mermaid.initialize({
           startOnLoad: false, // 禁用自动启动
-          theme: theme === ThemeMode.dark ? 'dark' : 'default'
+          theme: theme === ThemeMode.dark ? 'dark' : 'base', // Use 'base' theme for customization
+          themeVariables: theme === ThemeMode.dark ? {} : customThemeVariables, // Apply custom colors in light mode
+          flowchart: {
+            defaultDirection: 'TD', // Top-Down (vertical) by default - can be overridden per diagram
+            htmlLabels: true,
+            curve: 'basis'
+          },
+          fontSize: 16, // Global font size
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         })
 
         setError(null)
