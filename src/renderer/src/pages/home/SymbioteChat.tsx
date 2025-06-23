@@ -34,12 +34,7 @@ const SymbioteChat: FC<Props> = (props) => {
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
   const [filterIncludeUser, setFilterIncludeUser] = useState(false)
 
-  const maxWidth = useMemo(() => {
-    const showRightTopics = showTopics && topicPosition === 'right'
-    const minusAssistantsWidth = showAssistants ? '- var(--assistants-width)' : ''
-    const minusRightTopicsWidth = showRightTopics ? '- var(--assistants-width)' : ''
-    return `calc(100vw - var(--sidebar-width) ${minusAssistantsWidth} ${minusRightTopicsWidth})`
-  }, [showAssistants, showTopics, topicPosition])
+
 
   useHotkeys('esc', () => {
     contentSearchRef.current?.disable()
@@ -107,7 +102,7 @@ const SymbioteChat: FC<Props> = (props) => {
 
   return (
     <Container id="symbiote-chat" className={messageStyle}>
-      <Main ref={mainRef} id="symbiote-chat-main" vertical flex={1} justify="space-between" style={{ maxWidth }}>
+      <Main ref={mainRef} id="symbiote-chat-main" vertical flex={1} justify="space-between">
         <ContentSearch
           ref={contentSearchRef}
           searchTarget={mainRef as React.RefObject<HTMLElement>}
@@ -146,12 +141,16 @@ const Container = styled.div`
   flex-direction: row;
   height: 100%;
   flex: 1;
+  min-width: 0;
+  width: 100%;
 `
 
 const Main = styled(Flex)`
   height: calc(100vh - var(--navbar-height));
   transform: translateZ(0);
   position: relative;
+  min-width: 0;
+  flex: 1;
 `
 
 export default SymbioteChat

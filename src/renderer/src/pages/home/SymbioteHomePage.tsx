@@ -6,7 +6,7 @@ import { selectSymbioteAssistant } from '@renderer/store/assistants'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { Assistant } from '@renderer/types'
-import { FC, useEffect, useState } from 'react'
+import { FC, useEffect, useState, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -114,6 +114,7 @@ const Container = styled.div`
   flex: 1;
   flex-direction: column;
   max-width: calc(100vw - var(--sidebar-width));
+  background-color: var(--color-background);
 `
 
 const ContentContainer = styled.div`
@@ -121,6 +122,8 @@ const ContentContainer = styled.div`
   flex: 1;
   flex-direction: row;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
 `
 
 export default HomePage
