@@ -643,5 +643,27 @@ export const PROVIDER_CONFIG = {
       docs: 'https://cephalon.cloud/apitoken/1864244127731589124',
       models: 'https://cephalon.cloud/model'
     }
+  },
+  lanyun: {
+    api: {
+      url: 'https://maas-api.lanyun.net'
+    },
+    websites: {
+      official: 'https://lanyun.net',
+      apiKey: 'https://maas.lanyun.net/api/#/system/apiKey',
+      docs: 'https://archive.lanyun.net/maas/doc/',
+      models: 'https://maas.lanyun.net/api/#/model/modelSquare'
+    }
+  },
+  vertexai: {
+    api: {
+      url: 'https://console.cloud.google.com/apis/api/aiplatform.googleapis.com/overview'
+    },
+    websites: {
+      official: 'https://cloud.google.com/vertex-ai',
+      apiKey: 'https://console.cloud.google.com/apis/credentials',
+      docs: 'https://cloud.google.com/vertex-ai/generative-ai/docs',
+      models: 'https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models'
+    }
   }
 }
