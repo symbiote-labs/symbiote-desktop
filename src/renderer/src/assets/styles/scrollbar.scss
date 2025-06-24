@@ -1,36 +1,37 @@
 :root {
-  --color-scrollbar-thumb: rgba(255, 255, 255, 0.15);
-  --color-scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+  --color-scrollbar-thumb: rgba(255, 255, 255, 0.4);
+  --color-scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
 }
 
 body[theme-mode='light'] {
-  --color-scrollbar-thumb: rgba(0, 0, 0, 0.15);
-  --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
+  --color-scrollbar-thumb: rgba(0, 0, 0, 0.4);
+  --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.6);
 }
 
-/* 全局初始化滚动条样式 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* 全局初始化滚动条样式 - 增加特异性和优先级 */
+html body *::-webkit-scrollbar {
+  width: 10px !important;
+  height: 10px !important;
 }
 
-::-webkit-scrollbar-track,
-::-webkit-scrollbar-corner {
-  background: transparent;
+html body *::-webkit-scrollbar-track,
+html body *::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
-::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  background: var(--color-scrollbar-thumb);
+html body *::-webkit-scrollbar-thumb {
+  border-radius: 10px !important;
+  background: var(--color-scrollbar-thumb) !important;
   &:hover {
-    background: var(--color-scrollbar-thumb-hover);
+    background: var(--color-scrollbar-thumb-hover) !important;
   }
 }
 
-pre:not(.shiki)::-webkit-scrollbar-thumb {
-  border-radius: 0;
-  background: rgba(0, 0, 0, 0.08);
+/* 保持代码块的特殊样式 */
+html body pre:not(.shiki)::-webkit-scrollbar-thumb {
+  border-radius: 0 !important;
+  background: rgba(0, 0, 0, 0.08) !important;
   &:hover {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.15) !important;
   }
 }

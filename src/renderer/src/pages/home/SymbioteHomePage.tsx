@@ -114,6 +114,7 @@ const Container = styled.div`
   flex: 1;
   flex-direction: column;
   max-width: calc(100vw - var(--sidebar-width));
+  background-color: var(--color-background);
 `
 
 const ContentContainer = styled.div`
@@ -121,6 +122,8 @@ const ContentContainer = styled.div`
   flex: 1;
   flex-direction: row;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
 `
 
 export default HomePage

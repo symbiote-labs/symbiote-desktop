@@ -208,9 +208,10 @@ span.highlight.selected {
   transform: translate(-50%, -50%);
   /* Styling for visibility */
   /*background: rgba(0,0,0,0.7);*/
-  color: #3c78d8;
+  color: #3b78D7;
   /*padding: 12px 12px;*/
   font-size: 18px;
+  font-weight: bolder;
   z-index: 9999;
   pointer-events: none; /* So it doesn't block clicks */
 }
@@ -224,7 +225,7 @@ span.highlight.selected {
 .home-navbar-right button { display: none; }
 
 [theme-mode=light] {
---chat-background-user: #3c78d8;
+--chat-background-user: #3b78D7;
 }
 
 /* Brand Color Theme - Blue Variant with Typography */
@@ -234,13 +235,13 @@ span.highlight.selected {
   --m3-font-family-code: "Roboto Mono", monospace;
 
   /* Primary Brand Colors */
-  --ant-color-primary: #3c78d8;
+  --ant-color-primary: #3b78d7;
   --ant-color-primary-hover: #2a6cd5;
   --ant-color-primary-active: #2a6cd5;
-  --ant-blue-6: #3c78d8;
+  --ant-blue-6: #3b78d7;
   --ant-blue-5: #2a6cd5;
   --ant-blue-7: #5e97e8;
-  --chat-background-user: #3c78d8;
+  --chat-background-user: #3b78D7;
 
   /* Typography Integration */
   --ant-font-family: var(--m3-font-family);
@@ -249,9 +250,9 @@ span.highlight.selected {
   /* Light Mode Colors */
   --ant-color-primary-bg: #e1ebf7;
   --ant-color-primary-bg-hover: #d4e2f6;
-  --ant-color-primary-border: #3c78d8;
+  --ant-color-primary-border: #3b78D7;
   --ant-color-primary-border-hover: #2a6cd5;
-  --ant-color-primary-text: #3c78d8;
+  --ant-color-primary-text: #3b78D7;
   --ant-color-primary-text-hover: #2a6cd5;
   --ant-color-primary-text-active: #0d2040;
 
@@ -305,17 +306,17 @@ input, textarea, select, button {
 }
 
 body[data-theme="light"] {
-  --chat-background-user: #3c78d8;
+  --chat-background-user: #3b78D7;
 }
 
 /* Dark Mode Colors */
 .css-var-r0, [data-theme="dark"] {
   /* Primary Colors - Dark */
   --ant-color-primary: #95b5ea;
-  --ant-color-primary-hover: #3c78d8;
+  --ant-color-primary-hover: #3b78D7;
   --ant-color-primary-active: #2a6cd5;
   --ant-blue-6: #95b5ea;
-  --ant-blue-5: #3c78d8;
+  --ant-blue-5: #3b78D7;
   --ant-blue-7: #d4e2f6;
 
   /* Typography remains consistent */
@@ -336,7 +337,7 @@ body[data-theme="light"] {
   --ant-color-primary-border-hover: #2a6cd5;
   --ant-color-primary-text: #95b5ea;
   --ant-color-primary-text-hover: #d4e2f6;
-  --ant-color-primary-text-active: #3c78d8;
+  --ant-color-primary-text-active: #3b78D7;
 
   /* Surface Colors - Dark */
   --ant-color-fill: rgba(148, 181, 234, 0.18);
@@ -358,20 +359,20 @@ body[data-theme="light"] {
 /* Brand Color Theme - Blue Variant */
 :root {
   /* Primary Brand Colors */
-  --ant-color-primary: #3c78d8;
+  --ant-color-primary: #3b78D7;
   --ant-color-primary-hover: #2a6cd5;
   --ant-color-primary-active: #2a6cd5;
-  --ant-blue-6: #3c78d8;
+  --ant-blue-6: #3b78D7;
   --ant-blue-5: #2a6cd5;
   --ant-blue-7: #5e97e8;
-  --chat-background-user: #3c78d8;
+  --chat-background-user: #3b78D7;
 
   /* Light Mode Colors */
   --ant-color-primary-bg: #e1ebf7;
   --ant-color-primary-bg-hover: #d4e2f6;
-  --ant-color-primary-border: #3c78d8;
+  --ant-color-primary-border: #3b78D7;
   --ant-color-primary-border-hover: #2a6cd5;
-  --ant-color-primary-text: #3c78d8;
+  --ant-color-primary-text: #3b78D7;
   --ant-color-primary-text-hover: #2a6cd5;
   --ant-color-primary-text-active: #0d2040;
 
@@ -398,13 +399,13 @@ body[data-theme="light"] {
 
 /* Dark Mode Colors */
 .css-var-r0, [data-theme="dark"] {
-  --chat-background-user: #3c78d8;
+  --chat-background-user: #3b78D7;
   /* Primary Colors - Dark */
   --ant-color-primary: #95b5ea;
-  --ant-color-primary-hover: #3c78d8;
+  --ant-color-primary-hover: #3b78D7;
   --ant-color-primary-active: #2a6cd5;
   --ant-blue-6: #95b5ea;
-  --ant-blue-5: #3c78d8;
+  --ant-blue-5: #3b78D7;
   --ant-blue-7: #d4e2f6;
 
   /* Background Colors - Dark */
@@ -421,7 +422,7 @@ body[data-theme="light"] {
   --ant-color-primary-border-hover: #2a6cd5;
   --ant-color-primary-text: #95b5ea;
   --ant-color-primary-text-hover: #d4e2f6;
-  --ant-color-primary-text-active: #3c78d8;
+  --ant-color-primary-text-active: #3b78D7;
 
   /* Surface Colors - Dark */
   --ant-color-fill: rgba(148, 181, 234, 0.18);

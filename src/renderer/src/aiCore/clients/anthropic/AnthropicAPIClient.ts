@@ -60,12 +60,7 @@ import {
   AnthropicSdkRawOutput
 } from '@renderer/types/sdk'
 import { addImageFileToContents } from '@renderer/utils/formats'
-import {
-  anthropicToolUseToMcpTool,
-  isEnabledToolUse,
-  mcpToolCallResponseToAnthropicMessage,
-  mcpToolsToAnthropicTools
-} from '@renderer/utils/mcp-tools'
+import { anthropicToolUseToMcpTool, isEnabledToolUse, mcpToolsToAnthropicTools } from '@renderer/utils/mcp-tools'
 import { findFileBlocks, findImageBlocks, getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { buildSystemPrompt } from '@renderer/utils/prompt'
 
@@ -250,17 +245,25 @@ export class AnthropicAPIClient extends BaseApiClient<
   public convertMcpToolResponseToSdkMessageParam(
     mcpToolResponse: MCPToolResponse,
     resp: MCPCallToolResponse,
-    model: Model
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _model: Model
   ): AnthropicSdkMessageParam | undefined {
-    if ('toolUseId' in mcpToolResponse && mcpToolResponse.toolUseId) {
-      return mcpToolCallResponseToAnthropicMessage(mcpToolResponse, resp, model)
-    } else if ('toolCallId' in mcpToolResponse) {
+    // For Anthropic, always use tool_result blocks for proper tool result handling
+    // Get the tool use ID from either toolCallId or toolUseId field
+    const toolUseId =
+      'toolCallId' in mcpToolResponse && mcpToolResponse.toolCallId
+        ? mcpToolResponse.toolCallId
+        : 'toolUseId' in mcpToolResponse && mcpToolResponse.toolUseId
+          ? mcpToolResponse.toolUseId
+          : undefined
+
+    if (toolUseId) {
       return {
         role: 'user',
         content: [
           {
             type: 'tool_result',
-            tool_use_id: mcpToolResponse.toolCallId!,
+            tool_use_id: toolUseId,
             content: resp.content
               .map((item) => {
                 if (item.type === 'text') {
@@ -319,8 +322,23 @@ export class AnthropicAPIClient extends BaseApiClient<
     }
 
     const newMessages: AnthropicSdkMessageParam[] = [...currentReqMessages, assistantMessage]
+
     if (toolResults && toolResults.length > 0) {
-      newMessages.push(...toolResults)
+      if (toolResults.length === 1) {
+        newMessages.push(toolResults[0])
+      } else {
+        // Combine multiple tool_result blocks into a single user message
+        const combinedContent: ContentBlockParam[] = []
+        for (const tr of toolResults) {
+          if (Array.isArray(tr.content)) {
+            combinedContent.push(...(tr.content as ContentBlockParam[]))
+          }
+        }
+        newMessages.push({
+          role: 'user',
+          content: combinedContent
+        } as AnthropicSdkMessageParam)
+      }
     }
     return newMessages
   }
@@ -511,7 +529,8 @@ export class AnthropicAPIClient extends BaseApiClient<
 
   getResponseChunkTransformer(): ResponseChunkTransformer<AnthropicSdkRawChunk> {
     return () => {
-      let accumulatedJson = ''
+      // Per-tool-call JSON accumulation instead of global
+      const toolCallJsonAccumulation: Record<number, string> = {}
       const toolCalls: Record<number, ToolUseBlock> = {}
 
       return {
@@ -588,6 +607,8 @@ export class AnthropicAPIClient extends BaseApiClient<
                 }
                 case 'tool_use': {
                   toolCalls[rawChunk.index] = contentBlock
+                  // Initialize JSON accumulation for this specific tool call
+                  toolCallJsonAccumulation[rawChunk.index] = ''
                   break
                 }
               }
@@ -616,7 +637,11 @@ export class AnthropicAPIClient extends BaseApiClient<
                 }
                 case 'input_json_delta': {
                   if (messageDelta.partial_json) {
-                    accumulatedJson += messageDelta.partial_json
+                    // Accumulate JSON for the specific tool call index
+                    const toolIndex = rawChunk.index
+                    if (toolCallJsonAccumulation[toolIndex] !== undefined) {
+                      toolCallJsonAccumulation[toolIndex] += messageDelta.partial_json
+                    }
                   }
                   break
                 }
@@ -627,6 +652,8 @@ export class AnthropicAPIClient extends BaseApiClient<
               const toolCall = toolCalls[rawChunk.index]
               if (toolCall) {
                 try {
+                  // Use the accumulated JSON for this specific tool call
+                  const accumulatedJson = toolCallJsonAccumulation[rawChunk.index] || '{}'
                   toolCall.input = JSON.parse(accumulatedJson)
                   Logger.debug(`Tool call id: ${toolCall.id}, accumulated json: ${accumulatedJson}`)
                   controller.enqueue({
@@ -634,8 +661,10 @@ export class AnthropicAPIClient extends BaseApiClient<
                     tool_calls: [toolCall]
                   } as MCPToolCreatedChunk)
                 } catch (error) {
-                  Logger.error(`Error parsing tool call input: ${error}`)
+                  Logger.error(`Error parsing tool call input for tool ${toolCall.id}:`, error)
                 }
+                // Clean up after processing
+                delete toolCallJsonAccumulation[rawChunk.index]
               }
               break
             }

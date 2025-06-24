@@ -41,7 +41,8 @@ export const SymbioteInitializer: React.FC = () => {
   const providers = useAppSelector((state) => state.llm.providers)
   const {
     symbioteAgentConfigured,
-    symbioteAssistantConfigured
+    symbioteAssistantConfigured,
+    symbioteAutoRefreshEnabled
   } = useAppSelector((state) => state.settings)
 
   // Track intervals to prevent duplicates
@@ -244,9 +245,9 @@ export const SymbioteInitializer: React.FC = () => {
     }
   }, [isAuthenticated, isLoading, loginSuccessTimestamp, symbioteAgentConfigured, symbioteAssistantConfigured])
 
-  // Set up periodic updates (every 15 minutes)
+  // Set up periodic updates (every 15 minutes) - only if enabled
   useEffect(() => {
-    if (isAuthenticated && !isLoading && symbioteAgentConfigured) {
+    if (isAuthenticated && !isLoading && symbioteAgentConfigured && symbioteAutoRefreshEnabled) {
       // Clear any existing interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -260,6 +261,15 @@ export const SymbioteInitializer: React.FC = () => {
       }, 15 * 60 * 1000) // 15 minutes
 
       Logger.log('[SymbioteInitializer] Periodic update timer set for 15 minutes')
+    } else {
+      // Clear interval if auto-refresh is disabled or conditions not met
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+        if (isAuthenticated && symbioteAgentConfigured && !symbioteAutoRefreshEnabled) {
+          Logger.log('[SymbioteInitializer] Periodic update timer disabled by user setting')
+        }
+      }
     }
 
     // Cleanup interval on unmount or when auth changes
@@ -269,7 +279,7 @@ export const SymbioteInitializer: React.FC = () => {
         intervalRef.current = null
       }
     }
-  }, [isAuthenticated, isLoading, symbioteAgentConfigured])
+  }, [isAuthenticated, isLoading, symbioteAgentConfigured, symbioteAutoRefreshEnabled])
 
   // Update assistant when MCP servers change
   useEffect(() => {

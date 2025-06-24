@@ -151,8 +151,42 @@ const api = {
     restartServer: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_RestartServer, server),
     stopServer: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_StopServer, server),
     listTools: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListTools, server),
-    callTool: ({ server, name, args }: { server: MCPServer; name: string; args: any }) =>
-      ipcRenderer.invoke(IpcChannel.Mcp_CallTool, { server, name, args }),
+    callTool: ({
+      server,
+      name,
+      args,
+      toolCallId
+    }: {
+      server: MCPServer
+      name: string
+      args: any
+      toolCallId?: string
+    }) => ipcRenderer.invoke(IpcChannel.Mcp_CallTool, { server, name, args, toolCallId }),
+    callToolWithProgress: ({
+      server,
+      name,
+      args,
+      toolCallId
+    }: {
+      server: MCPServer
+      name: string
+      args: any
+      toolCallId: string
+    }) => ipcRenderer.invoke(IpcChannel.Mcp_ToolCallProgress, { server, name, args, toolCallId }),
+    onToolProgress: (listener: (data: any) => void) => {
+      console.log('[PRELOAD] 🔧 Setting up onToolProgress listener')
+      const wrappedListener = (_event: any, data: any) => {
+        console.log('[PRELOAD] 📨 Received mcp:tool-call-progress event:', data)
+        listener(data)
+        console.log('[PRELOAD] ✅ Event forwarded to renderer listener')
+      }
+      ipcRenderer.on('mcp:tool-call-progress', wrappedListener)
+      console.log('[PRELOAD] ✅ onToolProgress listener registered successfully')
+      return () => {
+        console.log('[PRELOAD] 🧹 Removing onToolProgress listener')
+        ipcRenderer.removeListener('mcp:tool-call-progress', wrappedListener)
+      }
+    },
     listPrompts: (server: MCPServer) => ipcRenderer.invoke(IpcChannel.Mcp_ListPrompts, server),
     getPrompt: ({ server, name, args }: { server: MCPServer; name: string; args?: Record<string, any> }) =>
       ipcRenderer.invoke(IpcChannel.Mcp_GetPrompt, { server, name, args }),

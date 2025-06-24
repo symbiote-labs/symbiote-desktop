@@ -187,6 +187,7 @@ export interface SettingsState {
   symbioteAssistantConfigured: boolean
   lastSymbioteConfigUpdate: number
   symbioteBaseUrl: string
+  symbioteAutoRefreshEnabled: boolean
   // Symbiote Config API tracking
   lastSymbioteConfigFetch: number
   symbioteConfigSections: string[]
@@ -339,6 +340,7 @@ export const initialState: SettingsState = {
   symbioteAssistantConfigured: false,
   lastSymbioteConfigUpdate: 0,
   symbioteBaseUrl: 'https://use.symbiotelabs.ai',
+  symbioteAutoRefreshEnabled: false,
   // Symbiote Config API tracking
   lastSymbioteConfigFetch: 0,
   symbioteConfigSections: [],
@@ -713,6 +715,9 @@ const settingsSlice = createSlice({
     setSymbioteBaseUrl: (state, action: PayloadAction<string>) => {
       state.symbioteBaseUrl = action.payload
     },
+    setSymbioteAutoRefreshEnabled: (state, action: PayloadAction<boolean>) => {
+      state.symbioteAutoRefreshEnabled = action.payload
+    },
     setLastSymbioteConfigFetch: (state, action: PayloadAction<number>) => {
       state.lastSymbioteConfigFetch = action.payload
     },
@@ -835,6 +840,7 @@ export const {
   setSymbioteAssistantConfigured,
   setLastSymbioteConfigUpdate,
   setSymbioteBaseUrl,
+  setSymbioteAutoRefreshEnabled,
   setLastSymbioteConfigFetch,
   setSymbioteConfigSections,
   setSymbioteConfigErrors,

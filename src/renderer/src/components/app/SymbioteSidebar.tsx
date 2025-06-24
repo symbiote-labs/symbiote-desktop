@@ -378,7 +378,7 @@ const Icon = styled.div<{ theme: string }>`
     background-color: ${({ theme }) => (theme === 'dark' ? 'var(--color-black)' : 'var(--color-white)')};
     border: 0.5px solid var(--color-border);
     .icon {
-      color: var(--color-primary);
+      color: #E67E22; /* Warm orange that complements #3B78D7 */
     }
   }
 
@@ -406,7 +406,7 @@ const Icon = styled.div<{ theme: string }>`
     left: 0;
     border-radius: inherit;
     opacity: 0.3;
-    border: 0.5px solid var(--color-primary);
+    border: 0.5px solid #E67E22; /* Match the new active color */
   }
 `
 

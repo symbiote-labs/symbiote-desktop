@@ -24,6 +24,9 @@ import { setUserDataDir } from './utils/file'
 
 Logger.initialize()
 
+// Configure IPC transport to forward main process logs to renderer DevTools
+Logger.transports.ipc.level = 'info'
+
 /**
  * Disable chromium's window animations
  * main purpose for this is to avoid the transparent window flashing when it is shown
@@ -32,6 +35,12 @@ Logger.initialize()
  */
 if (isWin) {
   app.commandLine.appendSwitch('wm-window-animations-disabled')
+}
+
+// Disable sandbox to resolve Linux sandbox configuration issues
+if (process.env.ELECTRON_DISABLE_SANDBOX === '1' || isDev) {
+  app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('disable-gpu-sandbox')
 }
 
 // Enable features for unresponsive renderer js call stacks
