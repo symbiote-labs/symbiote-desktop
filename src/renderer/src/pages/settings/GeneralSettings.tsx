@@ -3,6 +3,7 @@ import { useSettings } from '@renderer/hooks/useSettings'
 import i18n from '@renderer/i18n'
 import { RootState, useAppDispatch } from '@renderer/store'
 import {
+  setAutoInstallMCPBinaries,
   setEnableDataCollection,
   setEnableSpellCheck,
   setLanguage,

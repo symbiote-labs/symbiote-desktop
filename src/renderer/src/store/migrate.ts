@@ -1612,7 +1612,7 @@ const migrateConfig = {
       return state
     }
   },
-  '113': (state: RootState) => {
+  '115': (state: RootState) => {
     try {
       const providers = state.llm.providers;
       let madeChanges = false;
@@ -1677,7 +1677,7 @@ const migrateConfig = {
       }
       return state;
     } catch (error) {
-      console.error("Migration 110 error:", error);
+      console.error("Migration 115 error:", error);
       return state; // Return original state on error to prevent breaking app
     }
   }
