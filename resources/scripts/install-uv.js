@@ -2,8 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 const { execSync } = require('child_process')
-const tar = require('tar')
-const AdmZip = require('adm-zip')
+// Conditional requires - only load what we need for the current platform
+let tar, AdmZip
 const { downloadWithRedirects } = require('./download')
 
 // Base URL for downloading uv binaries
@@ -30,6 +30,54 @@ const UV_PACKAGES = {
   'linux-musl-x64': 'uv-x86_64-unknown-linux-musl.tar.gz',
   'linux-musl-armv6l': 'uv-arm-unknown-linux-musleabihf.tar.gz',
   'linux-musl-armv7l': 'uv-armv7-unknown-linux-musleabihf.tar.gz'
+}
+
+/**
+ * Native Node.js ZIP extraction for Windows using PowerShell
+ * Fallback method when external modules aren't available
+ */
+function extractZipNative(zipPath, extractDir) {
+  try {
+    if (os.platform() === 'win32') {
+      // Use PowerShell's Expand-Archive on Windows
+      const powershellCmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`
+      execSync(powershellCmd, { stdio: 'inherit' })
+      return true
+    } else {
+      // Use unzip command on Unix-like systems
+      execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { stdio: 'inherit' })
+      return true
+    }
+  } catch (error) {
+    console.warn(`Native extraction failed: ${error.message}`)
+    return false
+  }
+}
+
+/**
+ * Lazy load required modules based on file type
+ */
+function loadExtractionModule(packageName) {
+  if (packageName.endsWith('.zip')) {
+    if (!AdmZip) {
+      try {
+        AdmZip = require('adm-zip')
+      } catch (error) {
+        console.warn(`adm-zip module not available, using native extraction: ${error.message}`)
+        return null
+      }
+    }
+    return AdmZip
+  } else {
+    if (!tar) {
+      try {
+        tar = require('tar')
+      } catch (error) {
+        throw new Error(`tar module not available: ${error.message}`)
+      }
+    }
+    return tar
+  }
 }
 
 /**
@@ -68,15 +116,27 @@ async function downloadUvBinary(platform, arch, version = DEFAULT_UV_VERSION, is
 
     // 根据文件扩展名选择解压方法
     if (packageName.endsWith('.zip')) {
-      // 使用 adm-zip 处理 zip 文件
-      const zip = new AdmZip(tempFilename)
-      zip.extractAllTo(binDir, true)
+      // Try external module first, fallback to native
+      const AdmZipClass = loadExtractionModule(packageName)
+
+      if (AdmZipClass) {
+        // Use adm-zip if available
+        const zip = new AdmZipClass(tempFilename)
+        zip.extractAllTo(binDir, true)
+      } else {
+        // Fallback to native extraction
+        if (!extractZipNative(tempFilename, binDir)) {
+          throw new Error('Both adm-zip module and native extraction failed')
+        }
+      }
+
       fs.unlinkSync(tempFilename)
       console.log(`Successfully installed uv ${version} for ${platform}-${arch}`)
       return true
     } else {
       // tar.gz 文件的处理保持不变
-      await tar.x({
+      const tarModule = loadExtractionModule(packageName)
+      await tarModule.x({
         file: tempFilename,
         cwd: tempdir,
         z: true

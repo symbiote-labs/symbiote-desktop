@@ -20,6 +20,7 @@
   "scripts": {
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
+    "dev:nosandbox": "ELECTRON_DISABLE_SANDBOX=1 electron-vite dev",
     "debug": "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
     "build": "npm run typecheck && electron-vite build",
     "build:check": "yarn typecheck && yarn check:i18n && yarn test",
@@ -61,6 +62,7 @@
     "@libsql/client": "0.14.0",
     "@libsql/win32-x64-msvc": "^0.4.7",
     "@strongtz/win32-arm64-msvc": "^0.4.7",
+    "adm-zip": "^0.5.0",
     "jsdom": "26.1.0",
     "os-proxy-config": "^1.1.2",
     "selection-hook": "^0.9.23",

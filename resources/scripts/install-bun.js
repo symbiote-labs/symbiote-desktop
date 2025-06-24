@@ -2,7 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 const { execSync } = require('child_process')
-const AdmZip = require('adm-zip')
+// Conditional require - only load what we need
+let AdmZip
 const { downloadWithRedirects } = require('./download')
 
 // Base URL for downloading bun binaries
@@ -24,6 +25,43 @@ const BUN_PACKAGES = {
   'linux-musl-x64': 'bun-linux-x64-musl.zip',
   'linux-musl-x64-baseline': 'bun-linux-x64-musl-baseline.zip',
   'linux-musl-arm64': 'bun-linux-aarch64-musl.zip'
+}
+
+/**
+ * Native Node.js ZIP extraction for Windows using PowerShell
+ * Fallback method when external modules aren't available
+ */
+function extractZipNative(zipPath, extractDir) {
+  try {
+    if (os.platform() === 'win32') {
+      // Use PowerShell's Expand-Archive on Windows
+      const powershellCmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractDir}' -Force"`
+      execSync(powershellCmd, { stdio: 'inherit' })
+      return true
+    } else {
+      // Use unzip command on Unix-like systems
+      execSync(`unzip -o "${zipPath}" -d "${extractDir}"`, { stdio: 'inherit' })
+      return true
+    }
+  } catch (error) {
+    console.warn(`Native extraction failed: ${error.message}`)
+    return false
+  }
+}
+
+/**
+ * Lazy load AdmZip module when needed
+ */
+function loadAdmZip() {
+  if (!AdmZip) {
+    try {
+      AdmZip = require('adm-zip')
+    } catch (error) {
+      console.warn(`adm-zip module not available, using native extraction: ${error.message}`)
+      return null
+    }
+  }
+  return AdmZip
 }
 
 /**
@@ -64,10 +102,20 @@ async function downloadBunBinary(platform, arch, version = DEFAULT_BUN_VERSION, 
     // Use the new download function
     await downloadWithRedirects(downloadUrl, tempFilename)
 
-    // Extract the zip file using adm-zip
+    // Extract the zip file using adm-zip or native fallback
     console.log(`Extracting ${packageName} to ${binDir}...`)
-    const zip = new AdmZip(tempFilename)
-    zip.extractAllTo(tempdir, true)
+    const AdmZipClass = loadAdmZip()
+
+    if (AdmZipClass) {
+      // Use adm-zip if available
+      const zip = new AdmZipClass(tempFilename)
+      zip.extractAllTo(tempdir, true)
+    } else {
+      // Fallback to native extraction
+      if (!extractZipNative(tempFilename, tempdir)) {
+        throw new Error('Both adm-zip module and native extraction failed')
+      }
+    }
 
     // Move files using Node.js fs
     const sourceDir = path.join(tempdir, packageName.split('.')[0])
