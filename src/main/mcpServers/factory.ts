@@ -22,7 +22,8 @@ export function createInMemoryMCPServer(name: string, args: string[] = [], envs:
       return new BraveSearchServer(envs.BRAVE_API_KEY).server
     }
     case '@cherry/fetch': {
-      return new FetchServer().server
+      const downloadDir = args[0] // First argument is the download directory
+      return new FetchServer(downloadDir).server
     }
     case '@cherry/filesystem': {
       return new FileSystemServer(args).server
