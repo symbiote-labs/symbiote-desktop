@@ -85,7 +85,7 @@ export class AnthropicAPIClient extends BaseApiClient<
       return this.sdkInstance
     }
     this.sdkInstance = new Anthropic({
-      apiKey: this.getApiKey(),
+      apiKey: this.apiKey,
       baseURL: this.getBaseURL(),
       dangerouslyAllowBrowser: true,
       defaultHeaders: {
@@ -120,7 +120,7 @@ export class AnthropicAPIClient extends BaseApiClient<
 
   // @ts-ignore sdk未提供
   override async getEmbeddingDimensions(): Promise<number> {
-    return 0
+    throw new Error("Anthropic SDK doesn't support getEmbeddingDimensions method.")
   }
 
   override getTemperature(assistant: Assistant, model: Model): number | undefined {
@@ -385,12 +385,13 @@ export class AnthropicAPIClient extends BaseApiClient<
    * Anthropic专用的原始流监听器
    * 处理MessageStream对象的特定事件
    */
-  override attachRawStreamListener(
+  attachRawStreamListener(
     rawOutput: AnthropicSdkRawOutput,
     listener: RawStreamListener<AnthropicSdkRawChunk>
   ): AnthropicSdkRawOutput {
     console.log(`[AnthropicApiClient] 附加流监听器到原始输出`)
-
+    // 专用的Anthropic事件处理
+    const anthropicListener = listener as AnthropicStreamListener
     // 检查是否为MessageStream
     if (rawOutput instanceof MessageStream) {
       console.log(`[AnthropicApiClient] 检测到 Anthropic MessageStream，附加专用监听器`)
@@ -404,9 +405,6 @@ export class AnthropicAPIClient extends BaseApiClient<
           listener.onChunk!(event)
         })
       }
-
-      // 专用的Anthropic事件处理
-      const anthropicListener = listener as AnthropicStreamListener
 
       if (anthropicListener.onContentBlock) {
         rawOutput.on('contentBlock', anthropicListener.onContentBlock)
@@ -429,6 +427,10 @@ export class AnthropicAPIClient extends BaseApiClient<
       }
 
       return rawOutput
+    }
+
+    if (anthropicListener.onMessage) {
+      anthropicListener.onMessage(rawOutput)
     }
 
     // 对于非MessageStream响应
@@ -471,7 +473,7 @@ export class AnthropicAPIClient extends BaseApiClient<
         })
 
         if (this.useSystemPromptForTools) {
-          systemPrompt = await buildSystemPrompt(systemPrompt, mcpTools)
+          systemPrompt = await buildSystemPrompt(systemPrompt, mcpTools, assistant)
         }
 
         const systemMessage: TextBlockParam | undefined = systemPrompt
@@ -537,6 +539,7 @@ export class AnthropicAPIClient extends BaseApiClient<
         async transform(rawChunk: AnthropicSdkRawChunk, controller: TransformStreamDefaultController<GenericChunk>) {
           switch (rawChunk.type) {
             case 'message': {
+              let i = 0
               for (const content of rawChunk.content) {
                 switch (content.type) {
                   case 'text': {
@@ -547,7 +550,8 @@ export class AnthropicAPIClient extends BaseApiClient<
                     break
                   }
                   case 'tool_use': {
-                    toolCalls[0] = content
+                    toolCalls[i] = content
+                    i++
                     break
                   }
                   case 'thinking': {
@@ -569,6 +573,22 @@ export class AnthropicAPIClient extends BaseApiClient<
                   }
                 }
               }
+              if (i > 0) {
+                controller.enqueue({
+                  type: ChunkType.MCP_TOOL_CREATED,
+                  tool_calls: Object.values(toolCalls)
+                } as MCPToolCreatedChunk)
+              }
+              controller.enqueue({
+                type: ChunkType.LLM_RESPONSE_COMPLETE,
+                response: {
+                  usage: {
+                    prompt_tokens: rawChunk.usage.input_tokens || 0,
+                    completion_tokens: rawChunk.usage.output_tokens || 0,
+                    total_tokens: (rawChunk.usage.input_tokens || 0) + (rawChunk.usage.output_tokens || 0)
+                  }
+                }
+              })
               break
             }
             case 'content_block_start': {
