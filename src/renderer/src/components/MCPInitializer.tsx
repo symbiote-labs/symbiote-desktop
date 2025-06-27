@@ -1,27 +1,43 @@
-import { useEffect } from 'react'
-import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { builtinMCPServers, addMCPServer } from '@renderer/store/mcp'
 import { nanoid } from '@reduxjs/toolkit'
 import Logger from '@renderer/config/logger'
+import { useAppDispatch, useAppSelector } from '@renderer/store'
+import { addMCPServer, builtinMCPServers, updateMCPServer } from '@renderer/store/mcp'
+import { useEffect } from 'react'
 
 export const MCPInitializer: React.FC = () => {
   const dispatch = useAppDispatch()
   const existingServers = useAppSelector((state) => state.mcp.servers)
 
   useEffect(() => {
-    // Check if Symbiote servers are present, add them if missing
-    const serverNames = existingServers.map((server) => server.name)
+    // Create a map of existing servers by name for quick lookup
+    const existingServerMap = new Map(existingServers.map((server) => [server.name, server]))
 
-    // Check for each Symbiote server
-    const symbioteServers = ['blender-mcp', 'symbiote-unreal-mcp', 'symbiote-mcp']
+    builtinMCPServers.forEach((builtinServer) => {
+      const existingServer = existingServerMap.get(builtinServer.name)
 
-    symbioteServers.forEach((serverName) => {
-      if (!serverNames.includes(serverName)) {
-        const builtinServer = builtinMCPServers.find((server) => server.name === serverName)
-        if (builtinServer) {
-          Logger.log(`[MCPInitializer] Adding missing server: ${serverName}`)
-          dispatch(addMCPServer({ ...builtinServer, id: nanoid() }))
-        }
+      if (!existingServer) {
+        // Add missing server
+        Logger.log(`[MCPInitializer] Adding missing built-in server: ${builtinServer.name}`)
+        dispatch(addMCPServer({ ...builtinServer, id: nanoid() }))
+      } else if (
+        existingServer.description !== builtinServer.description ||
+        existingServer.provider !== builtinServer.provider
+      ) {
+        // Update existing server with new description/provider but preserve user settings
+        Logger.log(`[MCPInitializer] Updating server description: ${builtinServer.name}`)
+        dispatch(
+          updateMCPServer({
+            ...existingServer,
+            description: builtinServer.description,
+            provider: builtinServer.provider,
+            // Only update env if the existing env is empty or has placeholder values
+            env:
+              existingServer.env &&
+              Object.values(existingServer.env).some((val) => typeof val === 'string' && !val.startsWith('YOUR_'))
+                ? existingServer.env
+                : builtinServer.env
+          })
+        )
       }
     })
   }, [dispatch, existingServers])
