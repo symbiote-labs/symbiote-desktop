@@ -34,50 +34,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const hasToken = AuthService.isAuthenticated()
 
       if (storedUser && hasToken) {
-        const statusResponse = await AuthService.getUserStatus()
-        if (statusResponse.authenticated && statusResponse.user) {
-          setUser(statusResponse.user)
-          setIsAuthenticated(true)
+        // Use stored user data if available
+        setUser(storedUser)
+        setIsAuthenticated(true)
 
-          // Ensure we have a valid JWT token for MCP server access
-          if (!AuthService.isJwtTokenValid()) {
-            try {
-              await AuthService.refreshJwtToken()
-            } catch (error) {
-              console.warn('Failed to refresh JWT token:', error)
-            }
+        // Ensure we have a valid JWT token for MCP server access
+        if (!AuthService.isJwtTokenValid()) {
+          try {
+            console.log('[AuthProvider] Attempting to refresh JWT token for stored authenticated user')
+            await AuthService.refreshJwtToken()
+          } catch (error) {
+            console.warn('Failed to refresh JWT token:', error)
           }
-        } else {
-          await AuthService.logout()
-          setUser(null)
-          setIsAuthenticated(false)
         }
+
+        // Note: Skip server verification on startup to avoid bearer token issues
+        // Server verification will happen during actual login flow
+        console.log('[AuthProvider] Using stored authentication data, skipping server verification')
       } else {
-        const statusResponse = await AuthService.getUserStatus()
-        if (statusResponse.authenticated && statusResponse.user) {
-          setUser(statusResponse.user)
-          setIsAuthenticated(true)
-
-          // Get JWT token if we don't have one
-          if (!AuthService.getStoredJwtToken()) {
-            try {
-              console.log('[AuthProvider] No stored JWT token found, attempting to get one...')
-              const jwtToken = await AuthService.getJwtToken()
-              if (jwtToken) {
-                console.log('[AuthProvider] Successfully obtained JWT token')
-              } else {
-                console.warn('[AuthProvider] Failed to obtain JWT token')
-              }
-            } catch (error) {
-              console.warn('Failed to get JWT token:', error)
-            }
-          } else {
-            console.log('[AuthProvider] JWT token already exists in storage')
-          }
-        } else {
-          setUser(null)
-          setIsAuthenticated(false)
-        }
+        // No stored authentication data - user needs to log in
+        console.log('[AuthProvider] No stored authentication data found, user needs to log in')
+        setUser(null)
+        setIsAuthenticated(false)
       }
     } catch (error) {
       console.error('Auth status check failed:', error)

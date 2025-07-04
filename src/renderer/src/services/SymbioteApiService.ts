@@ -1,6 +1,7 @@
 import Logger from '@renderer/config/logger'
 import store from '@renderer/store'
 import { MCPServer, Assistant, Provider } from '@renderer/types'
+import AuthService from './AuthService'
 
 interface SymbioteAgentConfig {
   emoji: string
@@ -18,8 +19,6 @@ interface SymbioteConfigResponse {
 }
 
 class SymbioteApiService {
-  private tokenKey = 'symbiote_bearer_token' // Match AuthService token key
-
   private getBaseUrl(): string {
     const state = store.getState()
     const configuredUrl = state.settings.symbioteBaseUrl
@@ -28,28 +27,37 @@ class SymbioteApiService {
     return configuredUrl || 'https://use.symbiotelabs.ai'
   }
 
+  /**
+   * Get JWT token for API requests. FAILS HARD if not available.
+   * No fallbacks - JWT token is required for proper authentication.
+   */
+  private getJwtAuthToken(): string {
+    const jwtToken = AuthService.getStoredJwtToken()
+    if (jwtToken) {
+      Logger.log('[SymbioteApiService] Using JWT token for authentication')
+      return jwtToken
+    }
+
+    // FAIL HARD - no fallbacks allowed
+    const error = 'JWT token not available - SymbioteApiService authentication failed. User must login and obtain JWT token.'
+    Logger.error(`[SymbioteApiService] ${error}`)
+    throw new Error(error)
+  }
+
   async fetchAgentConfig(): Promise<SymbioteAgentConfig | null> {
     try {
-      // Check for bearer token first (when "remember me" was used)
-      const bearerToken = localStorage.getItem(this.tokenKey)
+      // Get JWT token - this will throw if not available (FAIL HARD)
+      const jwtToken = this.getJwtAuthToken()
 
-      // Build headers - include credentials for cookie-based auth
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-
-      // Add Authorization header if we have a bearer token
-      if (bearerToken) {
-        headers['Authorization'] = `Bearer ${bearerToken}`
-        Logger.log('[SymbioteApiService] Using bearer token authentication')
-      } else {
-        Logger.log('[SymbioteApiService] Using cookie-based authentication')
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwtToken}`
       }
 
       const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-agent`, {
         method: 'GET',
         headers,
-        credentials: 'include' // Always include cookies
+        credentials: 'include'
       })
 
       if (!response.ok) {
@@ -107,26 +115,18 @@ class SymbioteApiService {
 
   async fetchSymbioteConfig(): Promise<SymbioteConfigResponse | null> {
     try {
-      // Check for bearer token first (when "remember me" was used)
-      const bearerToken = localStorage.getItem(this.tokenKey)
+      // Get JWT token - this will throw if not available (FAIL HARD)
+      const jwtToken = this.getJwtAuthToken()
 
-      // Build headers - include credentials for cookie-based auth
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-
-      // Add Authorization header if we have a bearer token
-      if (bearerToken) {
-        headers['Authorization'] = `Bearer ${bearerToken}`
-        Logger.log('[SymbioteApiService] Using bearer token authentication for config fetch')
-      } else {
-        Logger.log('[SymbioteApiService] Using cookie-based authentication for config fetch')
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${jwtToken}`
       }
 
       const response = await fetch(`${this.getBaseUrl()}/api/mcp/tools/cherry-studio-assistant`, {
         method: 'GET',
         headers,
-        credentials: 'include' // Always include cookies
+        credentials: 'include'
       })
 
       if (!response.ok) {
