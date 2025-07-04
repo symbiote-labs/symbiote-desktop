@@ -32,7 +32,7 @@ const PROD_MCP_SERVER_URL = "https://symbiotico-prod-mcp-server.icypebble-05af12
 const SymbioteSettings: React.FC = () => {
   const { theme } = useTheme()
   const dispatch = useAppDispatch()
-  const { user, isAuthenticated, isLoading, getJwtToken, refreshToken } = useAuth()
+  const { user, isAuthenticated, isLoading, getJwtToken, refreshJwtToken } = useAuth()
 
   // Get settings from store
   const {
@@ -159,6 +159,12 @@ const SymbioteSettings: React.FC = () => {
     const decoded = decodeJwtToken(token)
     if (!decoded) return { token, valid: false }
 
+    // Calculate time until expiration
+    const now = Math.floor(Date.now() / 1000)
+    const expiresIn = decoded.exp ? decoded.exp - now : null
+    const isExpired = expiresIn !== null && expiresIn <= 0
+    const expiresInMinutes = expiresIn ? Math.floor(expiresIn / 60) : null
+
     return {
       token,
       valid: true,
@@ -167,7 +173,22 @@ const SymbioteSettings: React.FC = () => {
       issuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
       issuer: decoded.iss || 'Unknown',
       audience: decoded.aud || 'Unknown',
-      subject: decoded.sub || 'Unknown'
+      subject: decoded.sub || 'Unknown',
+      isExpired,
+      expiresInMinutes,
+      // Extract additional fields that might be present
+      userId: decoded.user_id || decoded.uid || null,
+      email: decoded.email || null,
+      roles: decoded.roles || [],
+      permissions: decoded.permissions || [],
+      sessionId: decoded.session_id || decoded.sid || null,
+      tokenType: decoded.token_type || 'access',
+      scope: decoded.scope || null,
+      // Custom claims
+      customClaims: Object.keys(decoded).filter(key =>
+        !['exp', 'iat', 'iss', 'aud', 'sub', 'user_id', 'uid', 'email',
+         'roles', 'permissions', 'session_id', 'sid', 'token_type', 'scope'].includes(key)
+      ).reduce((acc, key) => ({ ...acc, [key]: decoded[key] }), {})
     }
   }
 
@@ -522,25 +543,119 @@ const SymbioteSettings: React.FC = () => {
 
                           {tokenInfo.valid && (
                             <Space direction="vertical" size="small" style={{ fontSize: 11 }}>
+                              {/* Basic JWT Claims */}
+                              <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4 }}>
+                                <Text strong style={{ fontSize: 11 }}>Basic Claims:</Text>
+                              </div>
                               <Space wrap>
                                 <Text type="secondary">Issuer: {tokenInfo.issuer}</Text>
                                 <Text type="secondary">Audience: {tokenInfo.audience}</Text>
                                 <Text type="secondary">Subject: {tokenInfo.subject}</Text>
+                                {tokenInfo.tokenType && <Text type="secondary">Type: {tokenInfo.tokenType}</Text>}
                               </Space>
+
+                              {/* Timing Information */}
+                              <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                <Text strong style={{ fontSize: 11 }}>Timing:</Text>
+                              </div>
                               {tokenInfo.issuedAt && (
                                 <Text type="secondary" style={{ fontSize: 10 }}>
                                   Issued: {tokenInfo.issuedAt.toLocaleString()}
                                 </Text>
                               )}
                               {tokenInfo.expiresAt && (
-                                <Text
-                                  type={tokenInfo.expiresAt > new Date() ? "secondary" : "danger"}
-                                  style={{ fontSize: 10 }}
-                                >
-                                  Expires: {tokenInfo.expiresAt.toLocaleString()}
-                                  {tokenInfo.expiresAt <= new Date() && ' (EXPIRED)'}
-                                </Text>
+                                <>
+                                  <Text
+                                    type={tokenInfo.isExpired ? "danger" : "secondary"}
+                                    style={{ fontSize: 10 }}
+                                  >
+                                    Expires: {tokenInfo.expiresAt.toLocaleString()}
+                                    {tokenInfo.isExpired && ' (EXPIRED)'}
+                                  </Text>
+                                  {!tokenInfo.isExpired && tokenInfo.expiresInMinutes !== null && (
+                                    <Text
+                                      type={tokenInfo.expiresInMinutes < 5 ? "warning" : "secondary"}
+                                      style={{ fontSize: 10 }}
+                                    >
+                                      Time remaining: {tokenInfo.expiresInMinutes} minutes
+                                    </Text>
+                                  )}
+                                </>
                               )}
+
+                              {/* User Information */}
+                              {(tokenInfo.userId || tokenInfo.email || tokenInfo.sessionId) && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>User Info:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {tokenInfo.userId && <Text type="secondary" style={{ fontSize: 10 }}>User ID: {tokenInfo.userId}</Text>}
+                                    {tokenInfo.email && <Text type="secondary" style={{ fontSize: 10 }}>Email: {tokenInfo.email}</Text>}
+                                    {tokenInfo.sessionId && <Text type="secondary" style={{ fontSize: 10 }}>Session: {tokenInfo.sessionId}</Text>}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Roles and Permissions */}
+                              {(tokenInfo.roles.length > 0 || tokenInfo.permissions.length > 0 || tokenInfo.scope) && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>Authorization:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {tokenInfo.roles.length > 0 && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Roles: {tokenInfo.roles.join(', ')}
+                                      </Text>
+                                    )}
+                                    {tokenInfo.permissions.length > 0 && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Permissions: {tokenInfo.permissions.join(', ')}
+                                      </Text>
+                                    )}
+                                    {tokenInfo.scope && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Scope: {tokenInfo.scope}
+                                      </Text>
+                                    )}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Custom Claims */}
+                              {Object.keys(tokenInfo.customClaims || {}).length > 0 && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>Custom Claims:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {Object.entries(tokenInfo.customClaims || {}).map(([key, value]) => (
+                                      <Text key={key} type="secondary" style={{ fontSize: 10 }}>
+                                        {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                      </Text>
+                                    ))}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Full Decoded Payload (collapsible) */}
+                              <details style={{ marginTop: 8 }}>
+                                <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--color-primary)' }}>
+                                  View Full Decoded Payload
+                                </summary>
+                                <pre style={{
+                                  fontSize: 10,
+                                  background: 'var(--color-background-soft)',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  marginTop: 4,
+                                  overflow: 'auto',
+                                  maxHeight: '200px'
+                                }}>
+                                  {JSON.stringify(tokenInfo.decoded, null, 2)}
+                                </pre>
+                              </details>
                             </Space>
                           )}
 
@@ -549,6 +664,41 @@ const SymbioteSettings: React.FC = () => {
                               Invalid token format - unable to decode
                             </Text>
                           )}
+
+                          {/* Manual Refresh Button for Valid Tokens */}
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<RefreshCw size={12} />}
+                            loading={isRefreshingJwt}
+                            onClick={async () => {
+                              setIsRefreshingJwt(true)
+                              try {
+                                const newToken = await refreshJwtToken()
+                                if (!newToken) {
+                                  throw new Error('JWT token refresh failed - no token returned')
+                                }
+                                message.success('JWT token refreshed successfully')
+                                // Force component update to show new token
+                                const currentShowState = showJwtToken
+                                setShowJwtToken(!currentShowState)
+                                setTimeout(() => setShowJwtToken(currentShowState), 50)
+                              } catch (error) {
+                                const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                                message.error(`JWT refresh failed: ${errorMessage}`)
+                                console.error('[SymbioteSettings] JWT refresh error:', error)
+                                // FAIL HARD on critical errors
+                                if (errorMessage.includes('critical') || errorMessage.includes('authentication')) {
+                                  throw error
+                                }
+                              } finally {
+                                setIsRefreshingJwt(false)
+                              }
+                            }}
+                            style={{ marginTop: 8 }}
+                          >
+                            Refresh JWT Token
+                          </Button>
                         </Space>
                       </div>
                     )
@@ -566,14 +716,23 @@ const SymbioteSettings: React.FC = () => {
                         onClick={async () => {
                           setIsRefreshingJwt(true)
                           try {
-                            const success = await refreshToken()
-                            if (success) {
-                              message.success('JWT token refreshed successfully')
-                            } else {
-                              message.warning('Failed to refresh JWT token - this is expected with cross-origin restrictions')
+                            const newToken = await refreshJwtToken()
+                            if (!newToken) {
+                              // FAIL HARD: No token returned is a critical failure
+                              throw new Error('JWT token refresh failed - no token returned')
                             }
+                            message.success('JWT token refreshed successfully')
+                            // Force re-render to show updated token info
+                            setShowJwtToken(false)
+                            setTimeout(() => setShowJwtToken(true), 100)
                           } catch (error) {
-                            message.error('Error refreshing JWT token')
+                            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                            message.error(`JWT refresh failed: ${errorMessage}`)
+                            console.error('[SymbioteSettings] JWT refresh error:', error)
+                            // FAIL HARD: Re-throw critical errors
+                            if (errorMessage.includes('critical') || errorMessage.includes('authentication')) {
+                              throw error
+                            }
                           } finally {
                             setIsRefreshingJwt(false)
                           }

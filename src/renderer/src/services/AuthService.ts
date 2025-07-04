@@ -191,7 +191,7 @@ class AuthService {
         }
       }
 
-      console.log('[AuthService] Refreshing existing JWT token')
+            console.log('[AuthService] Refreshing existing JWT token')
       const response = await fetch(`${this.getBaseUrl()}/api/jwt/refresh`, {
         method: 'POST',
         headers: {
@@ -256,9 +256,10 @@ class AuthService {
       console.log('[AuthService] Set-Cookie header:', response.headers.get('set-cookie'))
       console.log('[AuthService] All Set-Cookie headers:', response.headers.getSetCookie?.() || 'getSetCookie not available')
 
-      // Check raw response headers
-      const rawHeaders = response.headers.raw ? response.headers.raw() : {}
-      console.log('[AuthService] Raw headers:', rawHeaders)
+      // Note: response.headers.raw is not available in browser Fetch API
+      // Log available headers instead
+      const headerEntries = Array.from(response.headers.entries())
+      console.log('[AuthService] Available headers:', headerEntries)
 
       console.log('[AuthService] Cookies after login:', document.cookie)
 

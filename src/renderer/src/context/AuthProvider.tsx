@@ -118,6 +118,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuthStatus()
   }, [])
 
+  // Auto-refresh JWT token every 15 minutes when authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      console.log('[AuthProvider] Skip auto-refresh: not authenticated')
+      return
+    }
+
+    console.log('[AuthProvider] Setting up JWT auto-refresh (15-minute interval)')
+
+    // Initial check - refresh if token is expired or will expire soon
+    const checkAndRefreshToken = async () => {
+      try {
+        const token = AuthService.getStoredJwtToken()
+        if (!token) {
+          console.log('[AuthProvider] No JWT token found, attempting to get one')
+          await AuthService.getJwtToken()
+          return
+        }
+
+        // Check if token is valid and not expiring soon (within 5 minutes)
+        if (!AuthService.isJwtTokenValid()) {
+          console.log('[AuthProvider] JWT token invalid or expiring soon, refreshing...')
+          const newToken = await AuthService.refreshJwtToken()
+          if (!newToken) {
+            throw new Error('JWT token refresh failed - no token returned')
+          }
+          console.log('[AuthProvider] JWT token refreshed successfully')
+        }
+      } catch (error) {
+        console.error('[AuthProvider] JWT auto-refresh error:', error)
+        // FAIL HARD: Critical auth failure should not be silent
+        throw new Error(`Critical JWT refresh failure: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+
+    // Run initial check
+    checkAndRefreshToken()
+
+    // Set up interval for auto-refresh every 15 minutes
+    const refreshInterval = setInterval(async () => {
+      console.log('[AuthProvider] Running scheduled JWT token refresh')
+      await checkAndRefreshToken()
+    }, 15 * 60 * 1000) // 15 minutes
+
+    // Cleanup interval on unmount or when authentication changes
+    return () => {
+      console.log('[AuthProvider] Clearing JWT auto-refresh interval')
+      clearInterval(refreshInterval)
+    }
+  }, [isAuthenticated, user])
+
   const getJwtToken = () => {
     return AuthService.getStoredJwtToken()
   }
