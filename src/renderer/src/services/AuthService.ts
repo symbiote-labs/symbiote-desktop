@@ -264,13 +264,19 @@ class AuthService {
       console.log('[AuthService] Cookies after login:', document.cookie)
 
       if (response.ok && data.success) {
+        // Validate user data before proceeding
+        if (!data.user || !data.user.email) {
+          return {
+            success: false,
+            error: 'Invalid user data received from server'
+          }
+        }
+
         // Store authentication token for bearer auth
         const token = this.generateBearerToken(data.user.email)
         localStorage.setItem(this.tokenKey, token)
 
-        if (data.user) {
-          localStorage.setItem(this.userKey, JSON.stringify(data.user))
-        }
+        localStorage.setItem(this.userKey, JSON.stringify(data.user))
 
         // Check if we have any session information in the response
         if (data.session_token || data.csrf_token) {
@@ -315,9 +321,16 @@ class AuthService {
           }
         }
 
-        return data
+        return {
+          success: true,
+          user: data.user,
+          message: data.message
+        }
       } else {
-        throw new Error(data.error || 'Login failed')
+        return {
+          success: false,
+          error: data.error || 'Login failed'
+        }
       }
     } catch (error) {
       return {

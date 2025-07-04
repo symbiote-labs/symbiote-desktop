@@ -17,7 +17,7 @@ import {
 import { MCPServer } from '@renderer/types'
 import { loadCustomMiniApp, updateDefaultMinApps } from '@renderer/config/minapps'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
-import { Alert, Badge, Button, Input, message, Modal, Space, Switch, Typography, Tooltip, Spin } from 'antd'
+import { Alert, Badge, Button, Input, message, Modal, Space, Switch, Typography, Spin } from 'antd'
 import { Bot, CheckCircle, Clock, Copy, Eye, EyeOff, Link, Settings2, User, Wifi, WifiOff, XCircle, ShieldCheck, RefreshCw } from 'lucide-react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
