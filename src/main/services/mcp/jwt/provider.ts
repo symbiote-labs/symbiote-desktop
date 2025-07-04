@@ -104,9 +104,49 @@ export class JwtMcpAuthProvider implements JwtAuthProvider {
   }
 
   /**
-   * Fetches JWT token from the renderer process via direct JavaScript execution
+   * Fetches JWT token from the renderer process via direct JavaScript execution and IPC
    */
   private async getJwtTokenFromRenderer(): Promise<string | null> {
+    // Method 1: Try IPC first (most reliable)
+    try {
+      const { BrowserWindow } = require('electron')
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+
+      if (mainWindow && mainWindow.webContents) {
+        const token = await mainWindow.webContents.executeJavaScript(`
+          (function() {
+            try {
+              // Try localStorage first with the correct key
+              const token = localStorage.getItem('symbiote_jwt_token');
+              if (token && token.includes('.')) { // Basic JWT check
+                console.log('[JWT] Found token in localStorage');
+                return token;
+              }
+              
+              // Try window context if available
+              if (window.__AUTH_CONTEXT__ && window.__AUTH_CONTEXT__.jwtToken) {
+                console.log('[JWT] Found token in window.__AUTH_CONTEXT__');
+                return window.__AUTH_CONTEXT__.jwtToken;
+              }
+              
+              return null;
+            } catch (error) {
+              console.error('Failed to get JWT token:', error);
+              return null;
+            }
+          })()
+        `)
+
+        if (token) {
+          Logger.info('[JwtMcpAuthProvider] Successfully retrieved JWT token from renderer via direct JS')
+          return token
+        }
+      }
+    } catch (error) {
+      Logger.error('[JwtMcpAuthProvider] Failed to get JWT token via direct JS:', error)
+    }
+
+    // Method 2: Try direct window execution with multiple fallbacks (legacy method)
     try {
       const { BrowserWindow } = require('electron')
       const mainWindow = BrowserWindow.getAllWindows()[0]
@@ -117,17 +157,57 @@ export class JwtMcpAuthProvider implements JwtAuthProvider {
       }
 
       // Execute JavaScript directly in the renderer to get the JWT token
+      // Try multiple methods to get the token
       const token = await mainWindow.webContents.executeJavaScript(`
         (function() {
           try {
-            // Try to get token from localStorage directly
-            return localStorage.getItem('${this.tokenStorageKey}');
+            // Method 1: Try to get token from localStorage with common keys
+            const possibleKeys = ['${this.tokenStorageKey}', 'jwt_token', 'access_token', 'auth_token'];
+            for (const key of possibleKeys) {
+              const token = localStorage.getItem(key);
+              if (token && token.includes('.')) { // Basic JWT check (contains dots)
+                console.log('[JWT] Found token in localStorage with key:', key);
+                return token;
+              }
+            }
+
+            // Method 2: Try to access the auth context from window
+            if (window.__AUTH_CONTEXT__ && window.__AUTH_CONTEXT__.jwtToken) {
+              console.log('[JWT] Found token in window.__AUTH_CONTEXT__');
+              return window.__AUTH_CONTEXT__.jwtToken;
+            }
+
+            // Method 3: Try to get token from Redux store if available
+            if (window.__REDUX_STORE__ && window.__REDUX_STORE__.getState) {
+              const state = window.__REDUX_STORE__.getState();
+              if (state.auth && state.auth.jwtToken) {
+                console.log('[JWT] Found token in Redux store');
+                return state.auth.jwtToken;
+              }
+            }
+
+            // Method 4: Try sessionStorage
+            const sessionToken = sessionStorage.getItem('${this.tokenStorageKey}') || sessionStorage.getItem('jwt_token');
+            if (sessionToken && sessionToken.includes('.')) {
+              console.log('[JWT] Found token in sessionStorage');
+              return sessionToken;
+            }
+
+            console.warn('[JWT] No token found in any storage method');
+            return null;
           } catch (error) {
-            console.error('Failed to get JWT token from localStorage:', error);
+            console.error('Failed to get JWT token from renderer:', error);
             return null;
           }
         })()
       `)
+
+      if (token) {
+        Logger.info('[JwtMcpAuthProvider] Successfully retrieved JWT token from renderer via fallback methods')
+        return token
+      } else {
+        Logger.warn('[JwtMcpAuthProvider] No JWT token found in renderer via any method')
+      }
 
       return token
     } catch (error) {

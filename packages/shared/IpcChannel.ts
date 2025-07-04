@@ -80,6 +80,7 @@ export enum IpcChannel {
 
   // Auth
   Auth_RefreshJwtToken = 'auth:refresh-jwt-token',
+  Auth_GetJwtToken = 'auth:get-jwt-token',
 
   // obsidian
   Obsidian_GetVaults = 'obsidian:get-vaults',

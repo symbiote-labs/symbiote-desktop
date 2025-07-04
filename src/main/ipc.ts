@@ -469,6 +469,80 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     setOpenLinkExternal(webviewId, isExternal)
   )
 
+  // auth
+  ipcMain.handle(IpcChannel.Auth_GetJwtToken, async () => {
+    try {
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (!mainWindow || !mainWindow.webContents) {
+        return null
+      }
+
+      // Execute JavaScript in the renderer to get the JWT token
+      const token = await mainWindow.webContents.executeJavaScript(`
+        (function() {
+          try {
+            // Try localStorage first
+            const token = localStorage.getItem('symbiote_jwt_token');
+            if (token) return token;
+            
+            // Try window context if available
+            if (window.__AUTH_CONTEXT__ && window.__AUTH_CONTEXT__.jwtToken) {
+              return window.__AUTH_CONTEXT__.jwtToken;
+            }
+            
+            return null;
+          } catch (error) {
+            console.error('Failed to get JWT token:', error);
+            return null;
+          }
+        })()
+      `)
+
+      log.info('[IPC] JWT token retrieved via IPC:', !!token)
+      return token
+    } catch (error: any) {
+      log.error('[IPC] Failed to get JWT token via IPC:', error.message)
+      return null
+    }
+  })
+
+  ipcMain.handle(IpcChannel.Auth_RefreshJwtToken, async () => {
+    try {
+      const mainWindow = BrowserWindow.getAllWindows()[0]
+      if (!mainWindow || !mainWindow.webContents) {
+        return null
+      }
+
+      // Execute JavaScript in the renderer to refresh the JWT token
+      const token = await mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          try {
+            // Call the auth service refresh method if available
+            if (window.AuthService && window.AuthService.refreshJwtToken) {
+              return await window.AuthService.refreshJwtToken();
+            }
+            
+            // Try to call via window API if available
+            if (window.api && window.api.auth && window.api.auth.refreshJwtToken) {
+              return await window.api.auth.refreshJwtToken();
+            }
+            
+            return null;
+          } catch (error) {
+            console.error('Failed to refresh JWT token:', error);
+            return null;
+          }
+        })()
+      `)
+
+      log.info('[IPC] JWT token refreshed via IPC:', !!token)
+      return token
+    } catch (error: any) {
+      log.error('[IPC] Failed to refresh JWT token via IPC:', error.message)
+      return null
+    }
+  })
+
   // store sync
   storeSyncService.registerIpcHandler()
 

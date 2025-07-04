@@ -264,7 +264,8 @@ const api = {
       // Direct access to localStorage in renderer context
       return localStorage.getItem('symbiote_jwt_token')
     },
-    refreshJwtToken: () => ipcRenderer.invoke(IpcChannel.Auth_RefreshJwtToken)
+    refreshJwtToken: () => ipcRenderer.invoke(IpcChannel.Auth_RefreshJwtToken),
+    getJwtTokenViaIpc: () => ipcRenderer.invoke(IpcChannel.Auth_GetJwtToken)
   },
   storeSync: {
     subscribe: () => ipcRenderer.invoke(IpcChannel.StoreSync_Subscribe),

@@ -148,6 +148,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return await AuthService.refreshJwtToken()
   }
 
+  // Expose JWT token to window object for main process access
+  useEffect(() => {
+    const exposeJwtTokenToWindow = () => {
+      const token = AuthService.getStoredJwtToken()
+      if (token && isAuthenticated) {
+        // Expose to window for main process access
+        ;(window as any).__AUTH_CONTEXT__ = {
+          jwtToken: token,
+          user: user,
+          isAuthenticated: isAuthenticated
+        }
+        console.log('[AuthProvider] JWT token exposed to window.__AUTH_CONTEXT__')
+      } else {
+        // Clear when no token or not authenticated
+        delete (window as any).__AUTH_CONTEXT__
+      }
+    }
+
+    exposeJwtTokenToWindow()
+  }, [isAuthenticated, user]) // Re-run when auth state changes
+
   const value: AuthContextType = {
     user,
     isAuthenticated,

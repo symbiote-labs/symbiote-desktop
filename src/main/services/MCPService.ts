@@ -166,9 +166,28 @@ class McpService {
           } else if (server.baseUrl) {
             if (server.type === 'streamableHttp') {
               Logger.info(`[MCP] Creating StreamableHTTP transport for ${server.name} with URL: ${server.baseUrl}`)
+              
+              // Get initial headers
+              const initialHeaders = { ...(server.headers || {}) }
+              
+              // Add JWT token for JWT providers
+              if (isJwtProvider(authProvider)) {
+                try {
+                  const tokens = await authProvider.tokens()
+                  if (tokens && tokens.access_token) {
+                    initialHeaders['Authorization'] = `Bearer ${tokens.access_token}`
+                    Logger.info(`[MCP] Added JWT Bearer token to StreamableHTTP headers for ${server.name}`)
+                  } else {
+                    Logger.warn(`[MCP] No JWT token available for ${server.name}`)
+                  }
+                } catch (error) {
+                  Logger.error(`[MCP] Failed to get JWT token for ${server.name}:`, error)
+                }
+              }
+              
               const options: StreamableHTTPClientTransportOptions = {
                 requestInit: {
-                  headers: server.headers || {}
+                  headers: initialHeaders
                 },
                 ...(isOAuthProvider(authProvider) && { authProvider })
               }
