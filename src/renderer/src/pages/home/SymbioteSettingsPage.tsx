@@ -17,8 +17,8 @@ import {
 import { MCPServer } from '@renderer/types'
 import { loadCustomMiniApp, updateDefaultMinApps } from '@renderer/config/minapps'
 import { SYMBIOTE_AGENT_ID, SYMBIOTE_ASSISTANT_ID } from '@renderer/utils/symbioteConfig'
-import { Alert, Badge, Button, Input, message, Modal, Space, Switch, Typography } from 'antd'
-import { Bot, CheckCircle, Clock, Copy, Eye, Link, Settings2, User, Wifi, WifiOff, XCircle } from 'lucide-react'
+import { Alert, Badge, Button, Input, message, Modal, Space, Switch, Typography, Spin } from 'antd'
+import { Bot, CheckCircle, Clock, Copy, Eye, EyeOff, Link, Settings2, User, Wifi, WifiOff, XCircle, ShieldCheck, RefreshCw } from 'lucide-react'
 import React, { useState } from 'react'
 import styled from 'styled-components'
 
@@ -27,10 +27,12 @@ import { SettingContainer, SettingDivider, SettingGroup, SettingRow, SettingRowT
 const { Text } = Typography
 const { TextArea } = Input
 
+const PROD_MCP_SERVER_URL = "https://symbiotico-prod-mcp-server.icypebble-05af120f.canadacentral.azurecontainerapps.io"
+
 const SymbioteSettings: React.FC = () => {
   const { theme } = useTheme()
   const dispatch = useAppDispatch()
-  const { user, isAuthenticated, isLoading, getJwtToken } = useAuth()
+  const { user, isAuthenticated, isLoading, getJwtToken, refreshJwtToken } = useAuth()
 
   // Get settings from store
   const {
@@ -61,6 +63,12 @@ const SymbioteSettings: React.FC = () => {
   const [showAgentJson, setShowAgentJson] = useState(false)
   const [showAssistantJson, setShowAssistantJson] = useState(false)
   const [isFetchingConfig, setIsFetchingConfig] = useState(false)
+  const [isRefreshingJwt, setIsRefreshingJwt] = useState(false)
+  const [showJwtToken, setShowJwtToken] = useState(false)
+  const [isTestingAuthDebug, setIsTestingAuthDebug] = useState(false)
+  const [authDebugResult, setAuthDebugResult] = useState<any>(null)
+  const [authDebugError, setAuthDebugError] = useState<string | null>(null)
+  const [showAuthDebugModal, setShowAuthDebugModal] = useState(false)
 
   const handleSaveBaseUrl = async () => {
     setIsSaving(true)
@@ -80,6 +88,8 @@ const SymbioteSettings: React.FC = () => {
     }
   }
 
+
+
   const handleCopyJson = (jsonData: string) => {
     navigator.clipboard
       .writeText(jsonData)
@@ -91,7 +101,82 @@ const SymbioteSettings: React.FC = () => {
       })
   }
 
+  const handleCopyJwtToken = () => {
+    const token = getJwtToken()
+    if (token) {
+      navigator.clipboard
+        .writeText(token)
+        .then(() => {
+          message.success('JWT token copied to clipboard!')
+        })
+        .catch(() => {
+          message.error('Failed to copy JWT token')
+        })
+    }
+  }
 
+  const decodeJwtToken = (token: string) => {
+    try {
+      // Decode JWT payload (second part) without verification for display purposes only
+      const payload = token.split('.')[1]
+      if (!payload) return null
+
+      // Add padding if needed for base64 decoding
+      const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4)
+      const decoded = atob(paddedPayload)
+      return JSON.parse(decoded)
+    } catch (error) {
+      console.error('Error decoding JWT token:', error)
+      return null
+    }
+  }
+
+  const formatJwtTokenDisplay = (token: string) => {
+    if (!showJwtToken) {
+      return `${token.substring(0, 20)}...${token.substring(token.length - 20)}`
+    }
+    return token
+  }
+
+  const getJwtTokenInfo = () => {
+    const token = getJwtToken()
+    if (!token) return null
+
+    const decoded = decodeJwtToken(token)
+    if (!decoded) return { token, valid: false }
+
+    // Calculate time until expiration
+    const now = Math.floor(Date.now() / 1000)
+    const expiresIn = decoded.exp ? decoded.exp - now : null
+    const isExpired = expiresIn !== null && expiresIn <= 0
+    const expiresInMinutes = expiresIn ? Math.floor(expiresIn / 60) : null
+
+    return {
+      token,
+      valid: true,
+      decoded,
+      expiresAt: decoded.exp ? new Date(decoded.exp * 1000) : null,
+      issuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null,
+      issuer: decoded.iss || 'Unknown',
+      audience: decoded.aud || 'Unknown',
+      subject: decoded.sub || 'Unknown',
+      isExpired,
+      expiresInMinutes,
+      // Extract additional fields that might be present
+      userId: decoded.user_id || decoded.uid || null,
+      email: decoded.email || null,
+      roles: decoded.roles || [],
+      permissions: decoded.permissions || [],
+      sessionId: decoded.session_id || decoded.sid || null,
+      tokenType: decoded.token_type || 'access',
+      scope: decoded.scope || null,
+      // Custom claims
+      customClaims: Object.keys(decoded).filter(key =>
+        !['exp', 'iat', 'iss', 'aud', 'sub', 'user_id', 'uid', 'email',
+         'roles', 'permissions', 'session_id', 'sid', 'token_type', 'scope'].includes(key)
+      ).reduce((acc, key) => ({ ...acc, [key]: decoded[key] }), {})
+    }
+  }
 
   // Utility function to process MCP servers and replace DATA_DIRECTORY_PATH_NAME
   const processMCPServers = (servers: MCPServer[]): MCPServer[] => {
@@ -315,6 +400,63 @@ const SymbioteSettings: React.FC = () => {
     return JSON.stringify(obj, null, 2)
   }
 
+  const getMcpServerUrl = () => {
+    // Derive MCP server URL from base URL automatically
+    let url = localBaseUrl || symbioteBaseUrl || 'https://use.symbiotelabs.ai'
+
+    // If base URL contains 'frontend', replace with 'mcp-server'
+    if (url.includes('frontend')) {
+      return url.replace('frontend', 'mcp-server')
+    } else {
+      // For production URLs, try to infer the MCP server URL
+      try {
+        const parsed = new URL(url)
+        if (parsed.hostname === 'use.symbiotelabs.ai') {
+          return 'https://mcp.symbiotelabs.ai'
+        }
+      } catch {
+        // If URL parsing fails, use a reasonable default
+        return 'https://mcp.symbiotelabs.ai'
+      }
+    }
+    return url
+  }
+
+  const handleTestAuthDebug = async () => {
+    setIsTestingAuthDebug(true)
+    setAuthDebugError(null)
+    setAuthDebugResult(null)
+    try {
+      const token = getJwtToken()
+      if (!token) {
+        setAuthDebugError('No JWT token available. Please sign in first.')
+        setIsTestingAuthDebug(false)
+        return
+      }
+      const mcpUrl = getMcpServerUrl()
+      const endpoint = `${mcpUrl.replace(/\/$/, '')}/auth/debug`
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        setAuthDebugError(`Error: ${response.status} ${response.statusText}\n${errorText}`)
+      } else {
+        const data = await response.json()
+        setAuthDebugResult({ ...data, _endpoint: endpoint })
+        setShowAuthDebugModal(true)
+      }
+    } catch (err: any) {
+      setAuthDebugError(`Request failed: ${err.message}`)
+    } finally {
+      setIsTestingAuthDebug(false)
+    }
+  }
+
   return (
     <Container>
       <SettingContainer theme={theme}>
@@ -339,9 +481,257 @@ const SymbioteSettings: React.FC = () => {
                 </Text>
               )}
               {isAuthenticated && (
-                <Space align="center" style={{ marginTop: 8 }}>
-                  {getJwtStatusIcon()}
-                  <Text style={{ fontSize: 12 }}>JWT Token: {getJwtToken() ? 'Available' : 'Not Available'}</Text>
+                <Space direction="vertical" size="small" style={{ marginTop: 8, width: '100%' }}>
+                  <Space align="center">
+                    {getJwtStatusIcon()}
+                    <Text style={{ fontSize: 12 }}>
+                      JWT Token: {getJwtToken() ? 'Available' : 'Not Available (Cross-origin limitation)'}
+                    </Text>
+                    {getJwtToken() && (
+                      <Space>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={showJwtToken ? <EyeOff size={12} /> : <Eye size={12} />}
+                          onClick={() => setShowJwtToken(!showJwtToken)}
+                        >
+                          {showJwtToken ? 'Hide' : 'Show'}
+                        </Button>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<Copy size={12} />}
+                          onClick={handleCopyJwtToken}
+                        >
+                          Copy
+                        </Button>
+                      </Space>
+                    )}
+                  </Space>
+
+                  {getJwtToken() && (() => {
+                    const tokenInfo = getJwtTokenInfo()
+                    if (!tokenInfo) return null
+
+                    return (
+                      <div style={{ marginLeft: 20 }}>
+                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                          <div style={{
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            wordBreak: 'break-all',
+                            background: 'var(--color-background-soft)',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--color-border)',
+                            maxHeight: showJwtToken ? 'none' : '40px',
+                            overflow: showJwtToken ? 'visible' : 'hidden'
+                          }}>
+                            {formatJwtTokenDisplay(tokenInfo.token)}
+                          </div>
+
+                          {tokenInfo.valid && (
+                            <Space direction="vertical" size="small" style={{ fontSize: 11 }}>
+                              {/* Basic JWT Claims */}
+                              <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4 }}>
+                                <Text strong style={{ fontSize: 11 }}>Basic Claims:</Text>
+                              </div>
+                              <Space wrap>
+                                <Text type="secondary">Issuer: {tokenInfo.issuer}</Text>
+                                <Text type="secondary">Audience: {tokenInfo.audience}</Text>
+                                <Text type="secondary">Subject: {tokenInfo.subject}</Text>
+                                {tokenInfo.tokenType && <Text type="secondary">Type: {tokenInfo.tokenType}</Text>}
+                              </Space>
+
+                              {/* Timing Information */}
+                              <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                <Text strong style={{ fontSize: 11 }}>Timing:</Text>
+                              </div>
+                              {tokenInfo.issuedAt && (
+                                <Text type="secondary" style={{ fontSize: 10 }}>
+                                  Issued: {tokenInfo.issuedAt.toLocaleString()}
+                                </Text>
+                              )}
+                              {tokenInfo.expiresAt && (
+                                <>
+                                  <Text
+                                    type={tokenInfo.isExpired ? "danger" : "secondary"}
+                                    style={{ fontSize: 10 }}
+                                  >
+                                    Expires: {tokenInfo.expiresAt.toLocaleString()}
+                                    {tokenInfo.isExpired && ' (EXPIRED)'}
+                                  </Text>
+                                  {!tokenInfo.isExpired && tokenInfo.expiresInMinutes !== null && (
+                                    <Text
+                                      type={tokenInfo.expiresInMinutes < 5 ? "warning" : "secondary"}
+                                      style={{ fontSize: 10 }}
+                                    >
+                                      Time remaining: {tokenInfo.expiresInMinutes} minutes
+                                    </Text>
+                                  )}
+                                </>
+                              )}
+
+                              {/* User Information */}
+                              {(tokenInfo.userId || tokenInfo.email || tokenInfo.sessionId) && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>User Info:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {tokenInfo.userId && <Text type="secondary" style={{ fontSize: 10 }}>User ID: {tokenInfo.userId}</Text>}
+                                    {tokenInfo.email && <Text type="secondary" style={{ fontSize: 10 }}>Email: {tokenInfo.email}</Text>}
+                                    {tokenInfo.sessionId && <Text type="secondary" style={{ fontSize: 10 }}>Session: {tokenInfo.sessionId}</Text>}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Roles and Permissions */}
+                              {(tokenInfo.roles.length > 0 || tokenInfo.permissions.length > 0 || tokenInfo.scope) && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>Authorization:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {tokenInfo.roles.length > 0 && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Roles: {tokenInfo.roles.join(', ')}
+                                      </Text>
+                                    )}
+                                    {tokenInfo.permissions.length > 0 && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Permissions: {tokenInfo.permissions.join(', ')}
+                                      </Text>
+                                    )}
+                                    {tokenInfo.scope && (
+                                      <Text type="secondary" style={{ fontSize: 10 }}>
+                                        Scope: {tokenInfo.scope}
+                                      </Text>
+                                    )}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Custom Claims */}
+                              {Object.keys(tokenInfo.customClaims || {}).length > 0 && (
+                                <>
+                                  <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 4, marginBottom: 4, marginTop: 8 }}>
+                                    <Text strong style={{ fontSize: 11 }}>Custom Claims:</Text>
+                                  </div>
+                                  <Space direction="vertical" size={2}>
+                                    {Object.entries(tokenInfo.customClaims || {}).map(([key, value]) => (
+                                      <Text key={key} type="secondary" style={{ fontSize: 10 }}>
+                                        {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                      </Text>
+                                    ))}
+                                  </Space>
+                                </>
+                              )}
+
+                              {/* Full Decoded Payload (collapsible) */}
+                              <details style={{ marginTop: 8 }}>
+                                <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--color-primary)' }}>
+                                  View Full Decoded Payload
+                                </summary>
+                                <pre style={{
+                                  fontSize: 10,
+                                  background: 'var(--color-background-soft)',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  marginTop: 4,
+                                  overflow: 'auto',
+                                  maxHeight: '200px'
+                                }}>
+                                  {JSON.stringify(tokenInfo.decoded, null, 2)}
+                                </pre>
+                              </details>
+                            </Space>
+                          )}
+
+                          {!tokenInfo.valid && (
+                            <Text type="danger" style={{ fontSize: 11 }}>
+                              Invalid token format - unable to decode
+                            </Text>
+                          )}
+
+                          {/* Manual Refresh Button for Valid Tokens */}
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<RefreshCw size={12} />}
+                            loading={isRefreshingJwt}
+                            onClick={async () => {
+                              setIsRefreshingJwt(true)
+                              try {
+                                const newToken = await refreshJwtToken()
+                                if (!newToken) {
+                                  throw new Error('JWT token refresh failed - no token returned')
+                                }
+                                message.success('JWT token refreshed successfully')
+                                // Force component update to show new token
+                                const currentShowState = showJwtToken
+                                setShowJwtToken(!currentShowState)
+                                setTimeout(() => setShowJwtToken(currentShowState), 50)
+                              } catch (error) {
+                                const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                                message.error(`JWT refresh failed: ${errorMessage}`)
+                                console.error('[SymbioteSettings] JWT refresh error:', error)
+                                // FAIL HARD on critical errors
+                                if (errorMessage.includes('critical') || errorMessage.includes('authentication')) {
+                                  throw error
+                                }
+                              } finally {
+                                setIsRefreshingJwt(false)
+                              }
+                            }}
+                            style={{ marginTop: 8 }}
+                          >
+                            Refresh JWT Token
+                          </Button>
+                        </Space>
+                      </div>
+                    )
+                  })()}
+
+                  {!getJwtToken() && (
+                    <>
+                      <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+                        Note: JWT tokens may not work in development due to cross-origin restrictions
+                      </Text>
+                      <Button
+                        size="small"
+                        type="link"
+                        loading={isRefreshingJwt}
+                        onClick={async () => {
+                          setIsRefreshingJwt(true)
+                          try {
+                            const newToken = await refreshJwtToken()
+                            if (!newToken) {
+                              // FAIL HARD: No token returned is a critical failure
+                              throw new Error('JWT token refresh failed - no token returned')
+                            }
+                            message.success('JWT token refreshed successfully')
+                            // Force re-render to show updated token info
+                            setShowJwtToken(false)
+                            setTimeout(() => setShowJwtToken(true), 100)
+                          } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+                            message.error(`JWT refresh failed: ${errorMessage}`)
+                            console.error('[SymbioteSettings] JWT refresh error:', error)
+                            // FAIL HARD: Re-throw critical errors
+                            if (errorMessage.includes('critical') || errorMessage.includes('authentication')) {
+                              throw error
+                            }
+                          } finally {
+                            setIsRefreshingJwt(false)
+                          }
+                        }}
+                        style={{ padding: 0, height: 'auto', marginTop: 4 }}
+                      >
+                        Try to refresh JWT token
+                      </Button>
+                    </>
+                  )}
                 </Space>
               )}
               {!isAuthenticated && (
@@ -382,9 +772,17 @@ const SymbioteSettings: React.FC = () => {
             </Space.Compact>
           </SettingRow>
           <SettingRow>
+            <SettingRowTitle>MCP Server URL (Auto-derived)</SettingRowTitle>
+            <Text style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              {getMcpServerUrl()}
+            </Text>
+          </SettingRow>
+          <SettingRow>
             <div style={{ width: '100%' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                This URL is used for both authentication and API calls. Changes require a restart to take full effect.
+                <strong>Base URL:</strong> Used for authentication and API calls. Changes require a restart to take full effect.
+                <br />
+                <strong>MCP Server URL:</strong> Automatically derived from the base URL. The Symbiote MCP server is automatically configured with JWT authentication when you sign in.
               </Text>
             </div>
           </SettingRow>
@@ -564,6 +962,58 @@ const SymbioteSettings: React.FC = () => {
           </SettingRow>
         </SettingGroup>
 
+        {/* MCP Auth Debug Section */}
+        <SettingGroup theme={theme}>
+          <SettingTitle>
+            <ShieldCheck size={18} style={{ marginRight: 8 }} />
+            MCP Auth Debug
+          </SettingTitle>
+          <SettingDivider />
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Button
+              type="primary"
+              icon={<RefreshCw size={14} />}
+              loading={isTestingAuthDebug}
+              onClick={handleTestAuthDebug}
+              disabled={!isAuthenticated}
+            >
+              Test MCP /auth/debug Endpoint
+            </Button>
+            {authDebugError && (
+              <Alert
+                message="Auth Debug Error"
+                description={authDebugError}
+                type="error"
+                showIcon
+              />
+            )}
+          </Space>
+          <Modal
+            title="MCP /auth/debug Result"
+            open={showAuthDebugModal}
+            onCancel={() => setShowAuthDebugModal(false)}
+            footer={[
+              <Button key="close" onClick={() => setShowAuthDebugModal(false)}>
+                Close
+              </Button>
+            ]}
+            width={700}
+          >
+            {authDebugResult ? (
+              <>
+                <div style={{ fontSize: 12, marginBottom: 8 }}>
+                  <b>Endpoint:</b> {authDebugResult._endpoint}
+                </div>
+                <pre style={{ fontSize: 12, background: '#f6f8fa', padding: 12, borderRadius: 4 }}>
+                  {JSON.stringify({ ...authDebugResult, _endpoint: undefined }, null, 2)}
+                </pre>
+              </>
+            ) : (
+              <Spin />
+            )}
+          </Modal>
+        </SettingGroup>
+
         {/* Help & Information */}
         <SettingGroup theme={theme}>
           <SettingTitle>
@@ -581,8 +1031,8 @@ const SymbioteSettings: React.FC = () => {
               and API calls use this URL.
             </Text>
             <Text style={{ fontSize: 12 }}>
-              <strong>MCP Integration:</strong> The auto-configured assistant includes all available MCP servers for
-              enhanced functionality.
+              <strong>MCP Integration:</strong> The Symbiote MCP server is automatically configured with JWT authentication
+              when you sign in. JWT tokens are automatically refreshed to maintain connectivity.
             </Text>
           </Space>
         </SettingGroup>
