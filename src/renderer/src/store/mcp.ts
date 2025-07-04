@@ -38,6 +38,35 @@ const mcpSlice = createSlice({
     },
     setIsBunInstalled: (state, action: PayloadAction<boolean>) => {
       state.isBunInstalled = action.payload
+    },
+    updateSymbioteMCPServer: (state, action: PayloadAction<{ mcpServerUrl: string; jwtToken: string | null }>) => {
+      const { mcpServerUrl, jwtToken } = action.payload
+      const symbioteMCPServerName = 'symbiote-mcp'
+
+      // Remove existing symbiote-mcp server if it exists
+      state.servers = state.servers.filter(server => server.name !== symbioteMCPServerName)
+
+      // Only add the server if we have a JWT token (authenticated)
+      if (jwtToken && mcpServerUrl) {
+        const symbioteMCPServer: MCPServer = {
+          id: nanoid(),
+          name: symbioteMCPServerName,
+          type: 'streamableHttp',
+          description: 'MCP server for communicating with Symbiote Labs infrastructure (authenticated)',
+          baseUrl: mcpServerUrl.endsWith('/mcp/') ? mcpServerUrl : `${mcpServerUrl.replace(/\/$/, '')}/mcp/`,
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          isActive: true,
+          provider: 'Symbiote'
+        }
+
+        // Add to the beginning of the servers array
+        state.servers.unshift(symbioteMCPServer)
+      }
+    },
+    removeSymbioteMCPServer: (state) => {
+      state.servers = state.servers.filter(server => server.name !== 'symbiote-mcp')
     }
   },
   selectors: {
@@ -55,7 +84,9 @@ export const {
   deleteMCPServer,
   setMCPServerActive,
   setIsBunInstalled,
-  setIsUvInstalled
+  setIsUvInstalled,
+  updateSymbioteMCPServer,
+  removeSymbioteMCPServer
 } = mcpSlice.actions
 
 // Export the generated selectors from the slice
@@ -155,19 +186,6 @@ export const builtinMCPServers: MCPServer[] = [
     description: 'MCP server for controlling Unreal Engine',
     command: 'uvx',
     args: ['symbiote-unreal-mcp'],
-    isActive: true,
-    provider: 'Symbiote'
-  },
-  {
-    id: nanoid(),
-    name: 'symbiote-mcp',
-    type: 'stdio',
-    description: 'MCP server for communicating with Symbiote Labs infrastructure (proxied)',
-    command: 'bun',
-    args: ['@remote-mcp/client'],
-    env: {
-      REMOTE_MCP_URL: 'https://mcp.symbiotelabs.ai/v1/mcp'
-    },
     isActive: true,
     provider: 'Symbiote'
   }

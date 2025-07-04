@@ -69,9 +69,6 @@ const SymbioteSettings: React.FC = () => {
   const [authDebugResult, setAuthDebugResult] = useState<any>(null)
   const [authDebugError, setAuthDebugError] = useState<string | null>(null)
   const [showAuthDebugModal, setShowAuthDebugModal] = useState(false)
-  const [mcpServerUrl, setMcpServerUrl] = useState<string>(PROD_MCP_SERVER_URL)
-  const [localMcpServerUrl, setLocalMcpServerUrl] = useState<string>(mcpServerUrl)
-  const [isSavingMcpUrl, setIsSavingMcpUrl] = useState(false)
 
   const handleSaveBaseUrl = async () => {
     setIsSaving(true)
@@ -91,18 +88,7 @@ const SymbioteSettings: React.FC = () => {
     }
   }
 
-  const handleSaveMcpServerUrl = async () => {
-    setIsSavingMcpUrl(true)
-    try {
-      setMcpServerUrl(localMcpServerUrl)
-      setTimeout(() => {
-        setIsSavingMcpUrl(false)
-      }, 500)
-    } catch (error) {
-      console.error('Failed to save MCP server URL:', error)
-      setIsSavingMcpUrl(false)
-    }
-  }
+
 
   const handleCopyJson = (jsonData: string) => {
     navigator.clipboard
@@ -415,22 +401,25 @@ const SymbioteSettings: React.FC = () => {
   }
 
   const getMcpServerUrl = () => {
-    if (localMcpServerUrl) return localMcpServerUrl
-    // Derive from frontend base URL if possible
-    let url = localBaseUrl || symbioteBaseUrl
-    if (!url) return PROD_MCP_SERVER_URL
-    try {
-      const parsed = new URL(url)
-      if (parsed.hostname.includes('frontend')) {
-        parsed.hostname = parsed.hostname.replace('frontend', 'mcp-server')
-        return parsed.origin
-      }
-    } catch {
-      if (url.includes('frontend')) {
-        return url.replace('frontend', 'mcp-server')
+    // Derive MCP server URL from base URL automatically
+    let url = localBaseUrl || symbioteBaseUrl || 'https://use.symbiotelabs.ai'
+
+    // If base URL contains 'frontend', replace with 'mcp-server'
+    if (url.includes('frontend')) {
+      return url.replace('frontend', 'mcp-server')
+    } else {
+      // For production URLs, try to infer the MCP server URL
+      try {
+        const parsed = new URL(url)
+        if (parsed.hostname === 'use.symbiotelabs.ai') {
+          return 'https://mcp.symbiotelabs.ai'
+        }
+      } catch {
+        // If URL parsing fails, use a reasonable default
+        return 'https://mcp.symbiotelabs.ai'
       }
     }
-    return PROD_MCP_SERVER_URL
+    return url
   }
 
   const handleTestAuthDebug = async () => {
@@ -783,34 +772,17 @@ const SymbioteSettings: React.FC = () => {
             </Space.Compact>
           </SettingRow>
           <SettingRow>
-            <SettingRowTitle>MCP Server URL</SettingRowTitle>
-            <Space.Compact style={{ width: 300 }}>
-              <Input
-                value={localMcpServerUrl}
-                onChange={(e) => setLocalMcpServerUrl(e.target.value)}
-                placeholder={PROD_MCP_SERVER_URL}
-                style={{ width: 240 }}
-              />
-              <Button
-                type="primary"
-                onClick={handleSaveMcpServerUrl}
-                loading={isSavingMcpUrl}
-                disabled={localMcpServerUrl === mcpServerUrl}>
-                Save
-              </Button>
-            </Space.Compact>
+            <SettingRowTitle>MCP Server URL (Auto-derived)</SettingRowTitle>
+            <Text style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              {getMcpServerUrl()}
+            </Text>
           </SettingRow>
           <SettingRow>
             <div style={{ width: '100%' }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                This URL is used for MCP server authentication and debug requests. If left blank, it will be derived from the base URL by replacing 'frontend' with 'mcp-server'.
-              </Text>
-            </div>
-          </SettingRow>
-          <SettingRow>
-            <div style={{ width: '100%' }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                This URL is used for both authentication and API calls. Changes require a restart to take full effect.
+                <strong>Base URL:</strong> Used for authentication and API calls. Changes require a restart to take full effect.
+                <br />
+                <strong>MCP Server URL:</strong> Automatically derived from the base URL. The Symbiote MCP server is automatically configured with JWT authentication when you sign in.
               </Text>
             </div>
           </SettingRow>
@@ -1059,8 +1031,8 @@ const SymbioteSettings: React.FC = () => {
               and API calls use this URL.
             </Text>
             <Text style={{ fontSize: 12 }}>
-              <strong>MCP Integration:</strong> The auto-configured assistant includes all available MCP servers for
-              enhanced functionality.
+              <strong>MCP Integration:</strong> The Symbiote MCP server is automatically configured with JWT authentication
+              when you sign in. JWT tokens are automatically refreshed to maintain connectivity.
             </Text>
           </Space>
         </SettingGroup>
